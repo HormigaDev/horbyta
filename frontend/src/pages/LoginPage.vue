@@ -1,0 +1,110 @@
+<template>
+  <q-layout view="lHh Lpr lFf">
+    <q-page-container>
+      <q-page class="flex flex-center">
+        <q-card class="q-pa-md shadow-2" style="width: 100%; max-width: 400px">
+          <q-card-section class="text-center">
+            <div class="text-h5 text-weight-bold">HormigaPM</div>
+            <div class="text-subtitle2 text-grey-7">Ingreso al sistema</div>
+          </q-card-section>
+
+          <q-card-section>
+            <q-form @submit.prevent="handleLogin" class="q-gutter-md">
+              <q-input
+                v-model="email"
+                type="email"
+                label="Correo Electrónico"
+                outlined
+                dense
+                no-error-icon
+                autocomplete="off"
+                :error="loginRules.emailRuleState.value.error"
+                :error-message="loginRules.emailRuleState.value.message"
+              >
+                <template #append>
+                  <q-icon name="emergency" style="font-size: 12px" />
+                </template>
+              </q-input>
+              <q-input
+                v-model="password"
+                type="password"
+                label="Contraseña"
+                outlined
+                dense
+                no-error-icon
+                autocomplete="off"
+                :error="loginRules.passwordRuleState.value.error"
+                :error-message="loginRules.passwordRuleState.value.message"
+              >
+                <template #append>
+                  <q-icon name="emergency" style="font-size: 12px" />
+                </template>
+              </q-input>
+
+              <div v-if="errorMessage" class="text-negative text-center text-caption">
+                {{ errorMessage }}
+              </div>
+
+              <div>
+                <q-btn
+                  label="INICIAR SESIÓN"
+                  type="submit"
+                  color="primary"
+                  class="full-width"
+                  :loading="isLoading"
+                />
+              </div>
+            </q-form>
+          </q-card-section>
+        </q-card>
+      </q-page>
+    </q-page-container>
+  </q-layout>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from 'src/stores/auth';
+import { apiFetch } from 'src/boot/fetch';
+import { useLoginRules } from 'src/composables/rules/login.rules';
+
+const router = useRouter();
+const authStore = useAuthStore();
+
+const loginRules = useLoginRules();
+
+const email = ref('');
+const password = ref('');
+const isLoading = ref(false);
+const errorMessage = ref('');
+
+async function handleLogin() {
+  isLoading.value = true;
+  errorMessage.value = '';
+
+  if (loginRules.validateEmail(email.value) || loginRules.validatePassword(password.value)) {
+    isLoading.value = false;
+    password.value = '';
+    return;
+  }
+
+  try {
+    await apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value,
+      }),
+    });
+
+    authStore.setAuthenticated(true);
+    await router.push({ name: 'dashboard' });
+  } catch {
+    errorMessage.value = 'Ocurrió un error inesperado. Intente nuevamente más tarde';
+  } finally {
+    isLoading.value = false;
+    password.value = '';
+  }
+}
+</script>

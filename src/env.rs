@@ -17,7 +17,7 @@ impl Config {
         Self {
             database_url: env::var("DATABASE_URL").expect("CRÍTICO: Falta DABASE_URL en las variables de entorno."),
             jwt_secret: env::var("JWT_SECRET").expect("CRÍTICO: Falta JWT_SECRET en las variables de entorno"),
-            app_uri: env::var("APP_URI").unwrap_or_else(|_| "http://127.0.0.1:8890".to_string()),
+            app_uri: env::var("APP_URI").unwrap_or_else(|_| "127.0.0.1:8890".to_string()),
             is_production: environment == "production",
         }
     }
