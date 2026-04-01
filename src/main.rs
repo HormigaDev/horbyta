@@ -10,11 +10,14 @@ pub mod utils;
 
 use axum::{Router, routing::get};
 use sea_orm::Database;
+use tracing_subscriber;
 
 use crate::{env::Config, state::AppState};
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt::init();
+
     let config = Config::init();
 
     let db = Database::connect(&config.database_url)

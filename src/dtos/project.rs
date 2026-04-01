@@ -1,3 +1,4 @@
+use chrono::{DateTime, FixedOffset};
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -47,6 +48,6 @@ pub struct ProjectSummaryDto {
     pub id: Uuid,
     pub name: String,
     pub category_name: Option<String>,
-    pub created_at: chrono::NaiveDateTime,
-    pub updated_at: chrono::NaiveDateTime,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
 }

@@ -8,7 +8,7 @@ import type {
 } from '../types/project';
 import { apiFetch } from '../boot/fetch';
 
-export const projectsApi = {
+export const ProjectsService = {
   search: (payload: QueryPayload): Promise<PaginatedResponse<ProjectSummary>> =>
     apiFetch('/projects/search', {
       method: 'POST',

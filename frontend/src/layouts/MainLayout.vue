@@ -36,6 +36,18 @@
             </template>
           </q-input>
 
+          <q-btn
+            flat
+            round
+            dense
+            icon="smart_toy"
+            class="q-mr-md"
+            aria-label="Abrir asistente"
+            @click="openChatbot"
+          >
+            <q-tooltip>Abrir asistente</q-tooltip>
+          </q-btn>
+
           <q-btn flat round dense icon="notifications" class="q-mr-sm">
             <q-badge color="negative" floating v-if="notificationsStore.asyncUnreadCount > 0">
               {{ notificationsStore.asyncUnreadCount }}
@@ -342,16 +354,6 @@
       <router-view />
     </q-page-container>
 
-    <q-btn
-      round
-      dense
-      size="lg"
-      icon="smart_toy"
-      class="chatbot-launcher"
-      aria-label="Abrir asistente"
-      @click="openChatbot"
-    />
-
     <ChatbotPanel v-if="chatbotPanelLoaded" v-model="chatbotOpen" />
   </q-layout>
 </template>
@@ -404,15 +406,3 @@ function handleNotificationClick(notif: AppNotification) {
   }
 }
 </script>
-
-<style lang="scss" scoped>
-.chatbot-launcher {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 1500;
-  background: var(--q-primary);
-  color: var(--text-on-primary);
-  box-shadow: 0 10px 26px var(--tooltip-bg);
-}
-</style>

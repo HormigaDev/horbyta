@@ -104,20 +104,129 @@ impl ProjectService {
         let mut condition = Condition::all().add(projects::Column::UserId.eq(user_id));
 
         for filter in payload.filters {
-            let col = match filter.column.as_str() {
-                "name" => projects::Column::Name,
-                "description" => projects::Column::Description,
+            let filter_cond = match filter.column.as_str() {
+                "name" | "description" => {
+                    let col = match filter.column.as_str() {
+                        "name" => projects::Column::Name,
+                        "description" => projects::Column::Description,
+                        _ => continue,
+                    };
+                    let val_str = filter.value.as_str().unwrap_or("").to_string();
+                    match filter.operator {
+                        FilterOperator::Eq => col.eq(val_str),
+                        FilterOperator::Neq => col.ne(val_str),
+                        FilterOperator::Contains => col.contains(&val_str),
+                        FilterOperator::NotContains => col.not_like(&format!("%{}%", val_str)),
+                        _ => continue,
+                    }
+                }
+                "id" | "category_id" => {
+                    let val_str = filter.value.as_str().unwrap_or("");
+                    if let Ok(uuid_val) = uuid::Uuid::parse_str(val_str) {
+                        let col = match filter.column.as_str() {
+                            "id" => projects::Column::Id,
+                            "category_id" => projects::Column::CategoryId,
+                            _ => continue,
+                        };
+                        match filter.operator {
+                            FilterOperator::Eq => col.eq(uuid_val),
+                            FilterOperator::Neq => col.ne(uuid_val),
+                            _ => continue,
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+                "created_at" | "updated_at" => {
+                    let col = match filter.column.as_str() {
+                        "created_at" => projects::Column::CreatedAt,
+                        "updated_at" => projects::Column::UpdatedAt,
+                        _ => continue,
+                    };
+                    match filter.operator {
+                        FilterOperator::Between => {
+                            if let Some(arr) = filter.value.as_array() {
+                                if arr.len() == 2 {
+                                    if let (Some(start_str), Some(end_str)) = (arr[0].as_str(), arr[1].as_str()) {
+                                        if let (Ok(start), Ok(end)) = (
+                                            chrono::DateTime::parse_from_rfc3339(start_str),
+                                            chrono::DateTime::parse_from_rfc3339(end_str),
+                                        ) {
+                                            col.between(start, end)
+                                        } else {
+                                            continue;
+                                        }
+                                    } else {
+                                        continue;
+                                    }
+                                } else {
+                                    continue;
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                        FilterOperator::Eq => {
+                            if let Some(val_str) = filter.value.as_str() {
+                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
+                                    col.eq(date)
+                                } else {
+                                    continue;
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                        FilterOperator::Gt => {
+                            if let Some(val_str) = filter.value.as_str() {
+                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
+                                    col.gt(date)
+                                } else {
+                                    continue;
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                        FilterOperator::Lt => {
+                            if let Some(val_str) = filter.value.as_str() {
+                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
+                                    col.lt(date)
+                                } else {
+                                    continue;
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                        FilterOperator::Gte => {
+                            if let Some(val_str) = filter.value.as_str() {
+                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
+                                    col.gte(date)
+                                } else {
+                                    continue;
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                        FilterOperator::Lte => {
+                            if let Some(val_str) = filter.value.as_str() {
+                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
+                                    col.lte(date)
+                                } else {
+                                    continue;
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                        _ => continue,
+                    }
+                }
                 _ => continue,
             };
-
-            let val_str = filter.value.as_str().unwrap_or("").to_string();
-
-            condition = match filter.operator {
-                FilterOperator::Eq => condition.add(col.eq(filter.value.as_str().unwrap_or(""))),
-                FilterOperator::Contains => condition.add(col.contains(&val_str)),
-                FilterOperator::NotContains => condition.add(col.not_like(&format!("%{}%", val_str))),
-                _ => condition,
-            };
+            condition = condition.add(filter_cond);
         }
 
         let mut query = Projects::find().filter(condition);

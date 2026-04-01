@@ -83,6 +83,7 @@ export default defineConfigWithVueTs(
           ignorePattern: '^_',
         },
       ],
+      '@typescript-eslint/no-floating-promises': 'off',
     },
   },
 

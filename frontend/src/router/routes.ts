@@ -11,6 +11,30 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/DashboardPage.vue'),
         meta: { requiresAuth: true },
       },
+      {
+        path: '/projects',
+        name: 'projects',
+        component: () => import('pages/ProjectsPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/projects/new',
+        name: 'project-create',
+        component: () => import('pages/ProjectFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/projects/:id/edit',
+        name: 'project-edit',
+        component: () => import('pages/ProjectFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/projects/:id',
+        name: 'project-detail',
+        component: () => import('pages/ProjectDetailPage.vue'),
+        meta: { requiresAuth: true },
+      },
     ],
   },
 

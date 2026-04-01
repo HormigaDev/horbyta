@@ -16,23 +16,34 @@ Para evitar un "frontend Frankenstein", todas las vistas de operaciones CRUD deb
     - **Quick Actions (Header, Top-Right):** Botones para acciones globales y de fila (Nuevo, Editar, Eliminar).
 - **Mobile First:** Todo el diseño de la tabla y del header debe estar optimizado para pantallas móviles primero.
 
-## 2. Vistas Master-Detail (ej. `/projects/:id`)
+## 2. Vistas Master-Detail y Formularios
 
-Define cómo se muestra el detalle de una entidad.
+Define cómo se muestran, crean y editan las entidades que requieren su propia página completa.
 
 ### Cuándo usar Master-Detail vs Modales
 
 - **Master-Detail (Página dedicada):** Sólo para entidades complejas o que requieran renderizar textos largos (ej. Proyectos, Tareas).
-- **Modal:** Para entidades simples que no justifican una página entera (ej. Categorías, Tags).
+- **Modal:** Para entidades simples que no justifican una página entera o no contengan campos complejos (ej. Categorías, Tags).
 
-### Estructura de la página Master-Detail
+### Estructura de la Página de Visualización (Master-Detail)
+
+Al abrir el enlace `/projects/:id` (sólo modo vista):
 
 1. **Right Sidebar (Quick Actions Fijas):**
-    - Panel lateral derecho con botones de acceso rápido `fixed`.
-    - **Formato:** Sólo íconos con `q-tooltip`.
+    - Panel lateral derecho con botones de acceso rápido (`fixed` o `sticky`).
     - **Acciones obligatorias:** Volver a la lista, Editar, Eliminar.
 2. **Caja de Especificaciones:**
     - Antes del contenido principal, debe ir una caja/tarjeta con un patrón visual moderno que resuma los metadatos de la entidad (ID, Nombre, Estado, Fechas).
-3. **Contenido Principal (Markdown):**
-    - Si la entidad tiene descripciones o textos largos, utilizar el componente `MarkdownRenderer`.
-    - El renderizador de Markdown será el contenedor que tenga la barra de scroll (no la página entera, de ser necesario).
+3. **Contenido Principal (Lectura limpia de Markdown):**
+    - Si la entidad tiene descripciones o textos largos, utilizar el componente `MarkdownRenderer`. Únicamente se renderiza la vista final, **sin inputs** y el contenedor debe tener barra de scroll (no la página entera).
+
+### Estructura de la Página de Formularios (Crear/Editar)
+
+Al crear (`/projects/new`) o editar (`/projects/:id/edit`), se debe omitir el sidebar lateral.
+
+1. **Campos principales:**
+    - Inputs como Título, Categoría o asginados se muestran en la parte superior en un Layout de cuadrícula normal (full width responsivo).
+2. **Campos de Texto Complejo (Markdown):**
+    - Layout "Side-by-Side" (Lado a lado). Mitad izquierda un input `textarea` gigante, mitad derecha usando `MarkdownRenderer` a tiempo real (solo lectura visual).
+3. **Botones de Guardado / Acciones:**
+    - A diferencia del Master-Detail visual, en los formularios las acciones de "Guardar" y "Cancelar" **se colocan de forma clásica al final del formulario** en la parte inferior, NO en un panel lateral.

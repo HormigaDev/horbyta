@@ -61,7 +61,7 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, type_str, error_message) = match self {
             AppError::Database(_) | AppError::Time(_) | AppError::Header(_) => {
-                tracing::error!("{}", self);
+                tracing::error!("{:?}", self);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "InternalServerError",

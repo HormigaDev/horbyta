@@ -24,6 +24,7 @@
         }
       "
       @request="onRequest"
+      @row-dblclick="onRowDblClick"
       class="custom-table dt-table"
       flat
       square
@@ -100,6 +101,14 @@
             <q-separator vertical class="q-mx-sm" v-if="selected.length > 0" />
 
             <div class="row q-gutter-x-sm" v-if="selected.length > 0">
+              <q-btn
+                v-if="!hideView && selected.length === 1"
+                outline
+                color="secondary"
+                icon="visibility"
+                label="Ver"
+                @click="onView(selected[0] as T)"
+              />
               <q-btn
                 v-if="!hideEdit && selected.length === 1"
                 outline
@@ -253,7 +262,7 @@
   </q-card>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends Record<string, any>">
 import { ref, onMounted, watch, computed } from 'vue';
 import { useDataTableStore } from '../stores/datatable';
 import type { Filter, FilterOperator, FilterSchema } from '../types/query';
@@ -261,74 +270,57 @@ import type { QTableProps } from 'quasar';
 
 type SelectionMode = 'none' | 'single' | 'multiple';
 
-const props = defineProps({
-  tableId: {
-    type: String,
-    required: true,
-  },
-  title: {
-    type: String,
-    default: '',
-  },
-  rows: {
-    type: Array as () => Record<string, unknown>[],
-    default: () => [],
-  },
-  columns: {
-    type: Array as () => NonNullable<QTableProps['columns']>,
-    required: true,
-  },
-  totalItems: {
-    type: Number,
-    default: 0,
-  },
-  loading: {
-    type: Boolean,
-    default: false,
-  },
-  rowKey: {
-    type: String,
-    default: 'id',
-  },
-  selectionMode: {
-    type: String as () => SelectionMode,
-    default: 'multiple',
-  },
-  hideCreate: {
-    type: Boolean,
-    default: false,
-  },
-  hideEdit: {
-    type: Boolean,
-    default: false,
-  },
-  hideDelete: {
-    type: Boolean,
-    default: false,
-  },
-  hideRefresh: {
-    type: Boolean,
-    default: false,
-  },
-  filterSchema: {
-    type: Object as () => FilterSchema,
-    default: () => ({}),
-  },
+interface Props {
+  tableId: string;
+  title?: string;
+  rows?: T[];
+  columns: NonNullable<QTableProps['columns']>;
+  totalItems?: number;
+  loading?: boolean;
+  rowKey?: string;
+  selectionMode?: SelectionMode;
+  hideCreate?: boolean;
+  hideView?: boolean;
+  hideEdit?: boolean;
+  hideDelete?: boolean;
+  hideRefresh?: boolean;
+  filterSchema?: FilterSchema;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  title: '',
+  rows: () => [] as unknown as T[],
+  totalItems: 0,
+  loading: false,
+  rowKey: 'id',
+  selectionMode: 'multiple',
+  hideCreate: false,
+  hideView: false,
+  hideEdit: false,
+  hideDelete: false,
+  hideRefresh: false,
+  filterSchema: () => ({}),
 });
 
-const emit = defineEmits([
-  'request',
-  'create',
-  'edit',
-  'delete',
-  'refresh',
-  'selection-change',
-  'sort',
-  'filters',
-]);
+const emit = defineEmits<{
+  (
+    e: 'request',
+    requestProps: {
+      pagination: { page: number; rowsPerPage: number; sortBy: string | null; descending: boolean };
+    },
+  ): void;
+  (e: 'create'): void;
+  (e: 'view', id: string): void;
+  (e: 'edit', ids: string[]): void;
+  (e: 'delete', ids: string[]): void;
+  (e: 'refresh'): void;
+  (e: 'selection-change', selected: T[]): void;
+  (e: 'sort', val: { sortBy: string | null; descending: boolean }): void;
+  (e: 'filters', filters: Filter[]): void;
+}>();
 
 const store = useDataTableStore();
-const selected = ref<Record<string, unknown>[]>([]);
+const selected = ref<T[]>([]);
 const visibleColumns = ref(props.columns.map((c) => c.name));
 
 const showFilters = ref(false);
@@ -442,7 +434,6 @@ onMounted(() => {
     emit('filters', savedState.filters);
   }
 
-  // Desencadenar la primera carga
   onRequest({ pagination: pagination.value });
 });
 
@@ -454,7 +445,7 @@ watch(
 );
 
 watch(selected, (newSel) => {
-  emit('selection-change', newSel);
+  emit('selection-change', newSel as unknown as T[]);
 });
 
 const onRequest = (requestProps: {
@@ -486,16 +477,35 @@ watch(visibleColumns, (cols) => {
   store.saveTableState(props.tableId, { visibleColumns: cols });
 });
 
+watch(
+  () => props.rows,
+  (newRows) => {
+    if (selected.value.length > 0 && Array.isArray(newRows)) {
+      const rowIds = new Set(newRows.map((r) => r[props.rowKey]));
+      selected.value = selected.value.filter((s) => rowIds.has(s[props.rowKey]));
+    }
+  },
+  { deep: true },
+);
+
 const onCreate = () => emit('create');
+const onView = (row: T) => {
+  if (row) emit('view', String(row[props.rowKey]));
+};
+const onRowDblClick = (evt: Event, row: T) => {
+  if (!props.hideView) {
+    onView(row);
+  }
+};
 const onEdit = () => {
   if (selected.value.length > 0) {
-    const ids = selected.value.map((row) => row[props.rowKey]);
+    const ids = selected.value.map((row) => String(row[props.rowKey]));
     emit('edit', ids);
   }
 };
 const onDelete = () => {
   if (selected.value.length > 0) {
-    const ids = selected.value.map((row) => row[props.rowKey]);
+    const ids = selected.value.map((row) => String(row[props.rowKey]));
     emit('delete', ids);
   }
 };
@@ -511,7 +521,7 @@ const onDelete = () => {
     background-color: transparent !important;
 
     thead tr th {
-      background-color: var(--q-dark-page) !important; // Cabeceras de tabla sutiles
+      background-color: var(--q-dark-page) !important;
       color: var(--text-color) !important;
       border-bottom: 1px solid var(--border-color) !important;
     }
