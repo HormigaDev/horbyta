@@ -24,31 +24,31 @@ pub enum AppError {
     Header(#[from] axum::http::header::InvalidHeaderValue),
 
     #[error("{0}")]
-    BadRequest(&'static str),
+    BadRequest(String),
 
     #[error("{0}")]
-    Unauthorized(&'static str),
+    Unauthorized(String),
 
     #[error("{0}")]
-    Forbidden(&'static str),
+    Forbidden(String),
 
     #[error("{0}")]
-    NotFound(&'static str),
+    NotFound(String),
 
     #[error("{0}")]
-    Conflict(&'static str),
+    Conflict(String),
 
     #[error("{0}")]
-    Unprocessable(&'static str),
+    Unprocessable(String),
 
     #[error("{0}")]
-    NotImplemented(&'static str),
+    NotImplemented(String),
 
     #[error("{0}")]
-    Unavailable(&'static str),
+    Unavailable(String),
 
     #[error("{0}")]
-    Internal(&'static str),
+    Internal(String),
 }
 
 impl From<argon2::password_hash::Error> for AppError {
@@ -65,14 +65,18 @@ impl IntoResponse for AppError {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "InternalServerError",
-                    "Error interno del servidor",
+                    "Error interno del servidor".to_string(),
                 )
             }
-            AppError::Jwt(_) => (StatusCode::UNAUTHORIZED, "JwtError", "Token inválido o expirado"),
+            AppError::Jwt(_) => (
+                StatusCode::UNAUTHORIZED,
+                "JwtError",
+                "Token inválido o expirado".to_string(),
+            ),
             AppError::Hash(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "HashError",
-                "Error procesando credenciales",
+                "Error procesando credenciales".to_string(),
             ),
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, "BadRequest", msg),
             AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, "Unauthorized", msg),

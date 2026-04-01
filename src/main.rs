@@ -4,6 +4,7 @@ pub mod entities;
 pub mod env;
 pub mod error;
 pub mod middlewares;
+pub mod services;
 pub mod state;
 pub mod utils;
 
@@ -34,6 +35,7 @@ async fn main() {
             }),
         )
         .nest("/auth", controllers::auth::auth_controller())
+        .nest("/projects", controllers::projects::projects_controller())
         .with_state(state);
 
     let app = Router::new().nest("/api/v1", api_routes);

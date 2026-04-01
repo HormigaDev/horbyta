@@ -12,17 +12,23 @@ use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde_json::json;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::{dtos::auth::LoginPayload, entities::users, error::AppError, middlewares::auth::Claims, state::AppState};
+use crate::{
+    dtos::auth::LoginPayload,
+    entities::users,
+    error::AppError,
+    middlewares::{auth::Claims, validator::ValidatedJson},
+    state::AppState,
+};
 
 async fn login(
     State(state): State<AppState>,
-    Json(payload): Json<LoginPayload>,
+    ValidatedJson(payload): ValidatedJson<LoginPayload>,
 ) -> Result<impl IntoResponse, AppError> {
     let user_model = users::Entity::find()
         .filter(users::Column::Email.eq(&payload.email))
-        .one(&state.db)
+        .one(state.db.as_ref())
         .await?
-        .ok_or(AppError::Unauthorized("Credenciales inválidas"))?;
+        .ok_or(AppError::Unauthorized("Credenciales inválidas".to_string()))?;
 
     let parsed_hash = PasswordHash::new(&user_model.password_hash)?;
 
@@ -30,7 +36,7 @@ async fn login(
         .verify_password(payload.password.as_bytes(), &parsed_hash)
         .is_err()
     {
-        return Err(AppError::Unauthorized("Credenciales inválidas"));
+        return Err(AppError::Unauthorized("Credenciales inválidas".to_string()));
     }
 
     let time_now = SystemTime::now().duration_since(UNIX_EPOCH)?;
@@ -72,7 +78,7 @@ async fn login(
 
 async fn register() -> Result<impl IntoResponse, AppError> {
     Err::<axum::Json<()>, AppError>(AppError::NotImplemented(
-        "Registro deshabilitado. Sistema de uso personal.",
+        "Registro deshabilitado. Sistema de uso personal.".to_string(),
     ))
 }
 

@@ -52,7 +52,7 @@ impl FromRequestParts<AppState> for UserDto {
 
         // Slow path: Base de datos
         let user_model = users::Entity::find_by_id(user_id)
-            .one(&state.db)
+            .one(state.db.as_ref())
             .await
             .map_err(|_| {
                 (

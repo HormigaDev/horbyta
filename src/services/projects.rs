@@ -1,0 +1,154 @@
+use axum::{extract::FromRequestParts, http::request::Parts};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    QuerySelect, Set,
+};
+use std::sync::Arc;
+use uuid::Uuid;
+
+use crate::{
+    dtos::{
+        project::{CreateProjectDto, UpdateProjectCategoryDto, UpdateProjectDto},
+        query::{FilterOperator, QueryPayload},
+    },
+    entities::{
+        prelude::Projects,
+        projects::{self, Model as ProjectModel},
+    },
+    error::AppError,
+    state::AppState,
+};
+
+#[derive(Clone)]
+pub struct ProjectService {
+    pub db: Arc<DatabaseConnection>,
+}
+
+impl ProjectService {
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
+        Self { db }
+    }
+
+    pub async fn create(&self, user_id: Uuid, dto: CreateProjectDto) -> Result<ProjectModel, AppError> {
+        let project = projects::ActiveModel {
+            user_id: Set(user_id),
+            name: Set(dto.name),
+            description: Set(dto.description),
+            category_id: Set(dto.category_id),
+            ..Default::default()
+        };
+
+        project.insert(self.db.as_ref()).await.map_err(AppError::Database)
+    }
+
+    pub async fn get_by_id(&self, user_id: Uuid, id: Uuid) -> Result<ProjectModel, AppError> {
+        let project = Projects::find()
+            .filter(projects::Column::Id.eq(id))
+            .filter(projects::Column::UserId.eq(user_id))
+            .one(self.db.as_ref())
+            .await?
+            .ok_or_else(|| AppError::NotFound("Proyecto no encontrado".to_string()))?;
+
+        Ok(project)
+    }
+
+    pub async fn update(&self, user_id: Uuid, id: Uuid, dto: UpdateProjectDto) -> Result<ProjectModel, AppError> {
+        let project = self.get_by_id(user_id, id).await?;
+        let mut active_project: projects::ActiveModel = project.into();
+
+        active_project.name = Set(dto.name);
+        active_project.description = Set(dto.description);
+        active_project.category_id = Set(dto.category_id);
+
+        active_project
+            .update(self.db.as_ref())
+            .await
+            .map_err(AppError::Database)
+    }
+
+    pub async fn update_category(
+        &self,
+        user_id: Uuid,
+        id: Uuid,
+        dto: UpdateProjectCategoryDto,
+    ) -> Result<ProjectModel, AppError> {
+        let project = self.get_by_id(user_id, id).await?;
+        let mut active_project: projects::ActiveModel = project.into();
+
+        active_project.category_id = Set(dto.category_id);
+
+        active_project
+            .update(self.db.as_ref())
+            .await
+            .map_err(AppError::Database)
+    }
+
+    pub async fn delete(&self, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
+        let project = self.get_by_id(user_id, id).await?;
+
+        projects::ActiveModel {
+            id: Set(project.id),
+            ..Default::default()
+        }
+        .delete(self.db.as_ref())
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn search(&self, user_id: Uuid, payload: QueryPayload) -> Result<(Vec<ProjectModel>, u64), AppError> {
+        let mut condition = Condition::all().add(projects::Column::UserId.eq(user_id));
+
+        // ... query builder loop and match omitted for simplicity here, expanding:
+        for filter in payload.filters {
+            let col = match filter.column.as_str() {
+                "name" => projects::Column::Name,
+                "description" => projects::Column::Description,
+                _ => continue,
+            };
+
+            let val_str = filter.value.as_str().unwrap_or("").to_string();
+
+            condition = match filter.operator {
+                FilterOperator::Eq => condition.add(col.eq(filter.value.as_str().unwrap_or(""))),
+                FilterOperator::Contains => condition.add(col.contains(&val_str)),
+                FilterOperator::NotContains => condition.add(col.not_like(&format!("%{}%", val_str))),
+                _ => condition,
+            };
+        }
+
+        let mut query = Projects::find().filter(condition);
+
+        if let Some(order_col) = payload.order_by {
+            let col = match order_col.as_str() {
+                "name" => projects::Column::Name,
+                "created_at" => projects::Column::CreatedAt,
+                _ => projects::Column::CreatedAt,
+            };
+
+            let order = if payload.order_asc {
+                sea_orm::Order::Asc
+            } else {
+                sea_orm::Order::Desc
+            };
+            query = query.order_by(col, order);
+        } else {
+            query = query.order_by_desc(projects::Column::CreatedAt);
+        }
+
+        let total_items = query.clone().count(self.db.as_ref()).await?;
+        let offset = (payload.page - 1) * payload.limit;
+
+        let models = query.limit(payload.limit).offset(offset).all(self.db.as_ref()).await?;
+
+        Ok((models, total_items))
+    }
+}
+
+impl FromRequestParts<AppState> for ProjectService {
+    type Rejection = AppError;
+
+    async fn from_request_parts(_parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
+        Ok(ProjectService::new(state.db.clone()))
+    }
+}

@@ -1,5 +1,6 @@
 use moka::future::Cache;
 use sea_orm::DatabaseConnection;
+use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -7,7 +8,7 @@ use crate::{dtos::user::UserDto, env::Config};
 
 #[derive(Clone)]
 pub struct AppState {
-    pub db: DatabaseConnection,
+    pub db: Arc<DatabaseConnection>,
     pub user_cache: Cache<Uuid, UserDto>,
     pub config: Config,
 }
@@ -19,6 +20,10 @@ impl AppState {
             .max_capacity(10_000)
             .build();
 
-        Self { db, user_cache, config }
+        Self {
+            db: Arc::new(db),
+            user_cache,
+            config,
+        }
     }
 }
