@@ -67,6 +67,22 @@ export default defineConfigWithVueTs(
 
       // allow debugger during development only
       'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off',
+
+      // ignore unused variables if they start with an underscore
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+      'vue/no-unused-vars': [
+        'error',
+        {
+          ignorePattern: '^_',
+        },
+      ],
     },
   },
 
