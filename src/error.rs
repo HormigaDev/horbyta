@@ -24,6 +24,9 @@ pub enum AppError {
     Header(#[from] axum::http::header::InvalidHeaderValue),
 
     #[error("{0}")]
+    BadRequest(&'static str),
+
+    #[error("{0}")]
     Unauthorized(&'static str),
 
     #[error("{0}")]
@@ -34,6 +37,9 @@ pub enum AppError {
 
     #[error("{0}")]
     Conflict(&'static str),
+
+    #[error("{0}")]
+    Unprocessable(&'static str),
 
     #[error("{0}")]
     NotImplemented(&'static str),
@@ -53,22 +59,32 @@ impl From<argon2::password_hash::Error> for AppError {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        let (status, error_message) = match self {
+        let (status, type_str, error_message) = match self {
             AppError::Database(_) | AppError::Time(_) | AppError::Header(_) => {
                 tracing::error!("{}", self);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor")
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "InternalServerError",
+                    "Error interno del servidor",
+                )
             }
-            AppError::Jwt(_) => (StatusCode::UNAUTHORIZED, "Token inválido o expirado"),
-            AppError::Hash(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Error procesando credenciales"),
-            AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
-            AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
-            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
-            AppError::Conflict(msg) => (StatusCode::CONFLICT, msg),
-            AppError::NotImplemented(msg) => (StatusCode::NOT_IMPLEMENTED, msg),
-            AppError::Unavailable(msg) => (StatusCode::SERVICE_UNAVAILABLE, msg),
-            AppError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+            AppError::Jwt(_) => (StatusCode::UNAUTHORIZED, "JwtError", "Token inválido o expirado"),
+            AppError::Hash(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "HashError",
+                "Error procesando credenciales",
+            ),
+            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, "BadRequest", msg),
+            AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, "Unauthorized", msg),
+            AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, "Forbidden", msg),
+            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, "NotFound", msg),
+            AppError::Conflict(msg) => (StatusCode::CONFLICT, "Conflict", msg),
+            AppError::Unprocessable(msg) => (StatusCode::UNPROCESSABLE_ENTITY, "UnprocessableEntity", msg),
+            AppError::NotImplemented(msg) => (StatusCode::NOT_IMPLEMENTED, "NotImplemented", msg),
+            AppError::Unavailable(msg) => (StatusCode::SERVICE_UNAVAILABLE, "ServiceUnavailable", msg),
+            AppError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, "InternalServerError", msg),
         };
 
-        (status, Json(json!({ "error": error_message }))).into_response()
+        (status, Json(json!({ "error": error_message, "type": type_str }))).into_response()
     }
 }

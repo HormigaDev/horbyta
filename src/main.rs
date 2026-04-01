@@ -5,6 +5,7 @@ pub mod env;
 pub mod error;
 pub mod middlewares;
 pub mod state;
+pub mod utils;
 
 use axum::{Router, routing::get};
 use sea_orm::Database;
@@ -24,7 +25,7 @@ async fn main() {
     let api_routes = Router::new()
         .route(
             "/health",
-            get(|user: crate::dtos::UserDto| async move {
+            get(|user: crate::dtos::user::UserDto| async move {
                 axum::Json(serde_json::json!({
                     "status": "ok",
                     "message": "HormigaPM API v1 Operativa",

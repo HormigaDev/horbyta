@@ -12,7 +12,7 @@ use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde_json::json;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::{dtos::LoginPayload, entities::users, error::AppError, middlewares::auth::Claims, state::AppState};
+use crate::{dtos::auth::LoginPayload, entities::users, error::AppError, middlewares::auth::Claims, state::AppState};
 
 async fn login(
     State(state): State<AppState>,
@@ -71,7 +71,7 @@ async fn login(
 }
 
 async fn register() -> Result<impl IntoResponse, AppError> {
-    Err::<String, AppError>(AppError::NotImplemented(
+    Err::<axum::Json<()>, AppError>(AppError::NotImplemented(
         "Registro deshabilitado. Sistema de uso personal.",
     ))
 }

@@ -3,7 +3,7 @@ use sea_orm::DatabaseConnection;
 use std::time::Duration;
 use uuid::Uuid;
 
-use crate::{dtos::UserDto, env::Config};
+use crate::{dtos::user::UserDto, env::Config};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -19,10 +19,6 @@ impl AppState {
             .max_capacity(10_000)
             .build();
 
-        Self {
-            db,
-            user_cache,
-            config,
-        }
+        Self { db, user_cache, config }
     }
 }

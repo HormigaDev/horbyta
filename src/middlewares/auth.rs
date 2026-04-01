@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::{dtos::UserDto, entities::users, state::AppState};
+use crate::{dtos::user::UserDto, entities::users, state::AppState};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Claims {
@@ -24,17 +24,24 @@ impl FromRequestParts<AppState> for UserDto {
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
         let jar = CookieJar::from_headers(&parts.headers);
 
-        let token = jar
-            .get("hormiga_auth")
-            .map(|c| c.value())
-            .ok_or_else(|| (StatusCode::UNAUTHORIZED, Json(json!({"error": "No session"}))))?;
+        let token = jar.get("hormiga_auth").map(|c| c.value()).ok_or_else(|| {
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "No session", "type": "Unauthorized"})),
+            )
+        })?;
 
         let token_data = decode::<Claims>(
             token,
             &DecodingKey::from_secret(state.config.jwt_secret.as_bytes()),
             &Validation::default(),
         )
-        .map_err(|_| (StatusCode::UNAUTHORIZED, Json(json!({"error": "Invalid Token"}))))?;
+        .map_err(|_| {
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Invalid Token", "type": "JwtError"})),
+            )
+        })?;
 
         let user_id = token_data.claims.sub;
 
@@ -47,8 +54,18 @@ impl FromRequestParts<AppState> for UserDto {
         let user_model = users::Entity::find_by_id(user_id)
             .one(&state.db)
             .await
-            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "DB Error"}))))?
-            .ok_or_else(|| (StatusCode::UNAUTHORIZED, Json(json!({"error": "Invalid Token"}))))?;
+            .map_err(|_| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": "DB Error", "type": "Database"})),
+                )
+            })?
+            .ok_or_else(|| {
+                (
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({"error": "Invalid Token", "type": "Unauthorized"})),
+                )
+            })?;
 
         let user_dto = UserDto {
             id: user_model.id,
