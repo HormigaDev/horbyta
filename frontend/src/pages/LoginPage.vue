@@ -90,7 +90,7 @@ async function handleLogin() {
   }
 
   try {
-    await apiFetch('/auth/login', {
+    const response = await apiFetch('/auth/login', {
       method: 'POST',
       body: JSON.stringify({
         email: email.value,
@@ -98,7 +98,7 @@ async function handleLogin() {
       }),
     });
 
-    authStore.setAuthenticated(true);
+    authStore.setAuthenticated(true, response.user);
     await router.push({ name: 'dashboard' });
   } catch {
     errorMessage.value = 'Ocurrió un error inesperado. Intente nuevamente más tarde';

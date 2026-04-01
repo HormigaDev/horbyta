@@ -21,8 +21,12 @@ export default route(function (/* { store, ssrContext } */) {
     history: createHistory(process.env.VUE_ROUTER_BASE),
   });
 
-  Router.beforeEach((to, from, next) => {
+  Router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore();
+
+    if (!authStore.isInitialized) {
+      await authStore.checkAuth();
+    }
 
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
       next({ name: 'login' });

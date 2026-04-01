@@ -8,6 +8,7 @@ async function apiFetch(url: string, options: RequestInit = {}) {
       'Content-Type': 'application/json',
       ...options.headers,
     },
+    credentials: 'include',
   });
 
   if (response.status === 401) {

@@ -24,8 +24,12 @@ async fn main() {
     let api_routes = Router::new()
         .route(
             "/health",
-            get(|_user: crate::dtos::UserDto| async {
-                axum::Json(serde_json::json!({ "status": "ok", "message": "HormigaPM API v1 Operativa" }))
+            get(|user: crate::dtos::UserDto| async move {
+                axum::Json(serde_json::json!({
+                    "status": "ok",
+                    "message": "HormigaPM API v1 Operativa",
+                    "user": user
+                }))
             }),
         )
         .nest("/auth", controllers::auth::auth_controller())

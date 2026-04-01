@@ -52,6 +52,7 @@ impl FromRequestParts<AppState> for UserDto {
 
         let user_dto = UserDto {
             id: user_model.id,
+            name: user_model.name,
             email: user_model.email,
             created_at: user_model.created_at,
             updated_at: user_model.updated_at,

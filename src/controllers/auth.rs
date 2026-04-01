@@ -58,7 +58,13 @@ async fn login(
 
     let body = Json(json!({
         "message": "Autenticación exitosa",
-        "user_id": user_model.id
+        "user": {
+            "id": user_model.id,
+            "name": user_model.name,
+            "email": user_model.email,
+            "created_at": user_model.created_at,
+            "updated_at": user_model.updated_at
+        }
     }));
 
     Ok((StatusCode::OK, headers, body))

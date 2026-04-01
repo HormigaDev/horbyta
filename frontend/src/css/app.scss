@@ -1,56 +1,74 @@
 :root {
-  --q-primary: #3f51b5; /* Indigo */
-  --q-secondary: #009688;
-  --q-accent: #9c27b0;
+  --q-primary: #5865f2; /* Indigo pastel tipo Discord */
+  --q-secondary: #757575; /* Gris neutro */
+  --q-accent: #9e9e9e; /* Gris claro */
 
-  --q-positive: #21ba45;
-  --q-negative: #c10015;
-  --q-info: #31ccec;
-  --q-warning: #f2c037;
+  --q-positive: #4caf50;
+  --q-negative: #f44336;
+  --q-info: #00bcd4;
+  --q-warning: #ffb300;
 
-  --q-dark: #1e1e1e; /* Github dark vars can be adjusted here */
-  --q-dark-page: #0d1117; /* GitHub specific background */
+  /* Grises neutros, sin tonos azulados, más suaves y no tan negros */
+  --q-dark: #2d2d2d;
+  --q-dark-page: #232323;
 
-  --text-color: #c9d1d9; /* Default github text */
-  --card-bg: #161b22;
-  --border-color: #30363d;
+  --text-color: #e0e0e0;
+  --card-bg: #2d2d2d;
+  --border-color: #424242;
+  --tooltip-bg: rgba(30, 30, 30, 0.95);
+}
+
+::selection {
+  background: var(--q-primary);
+  color: var(--text-color);
 }
 
 [data-theme='light'] {
-  --q-primary: #3f51b5;
-  --q-secondary: #26a69a;
-  --q-accent: #9c27b0;
+  --q-primary: #5865f2;
+  --q-secondary: #757575;
+  --q-accent: #9e9e9e;
 
-  --q-dark: #1d1d1d;
-  --q-dark-page: #121212;
+  --q-dark: #2d2d2d;
+  --q-dark-page: #f5f5f5; /* Gris neutro muy claro */
 
-  --text-color: #24292f;
+  --text-color: #333333;
   --card-bg: #ffffff;
-  --border-color: #d0d7de;
+  --border-color: #e0e0e0;
+  --tooltip-bg: rgba(255, 255, 255, 0.95);
 }
 
 [data-theme='dark'] {
-  /* Same as :root essentially, explicitly stated */
-  --q-primary: #3f51b5;
-  --q-secondary: #009688;
-  --q-accent: #9c27b0;
+  --q-primary: #5865f2;
+  --q-accent: #9e9e9e;
 
-  --q-dark: #1e1e1e;
-  --q-dark-page: #0d1117;
+  --q-dark: #2d2d2d;
+  --q-dark-page: #232323;
 
-  --text-color: #c9d1d9;
-  --card-bg: #161b22;
-  --border-color: #30363d;
+  --text-color: #e0e0e0;
+  --card-bg: #2d2d2d;
+  --border-color: #424242;
+  --tooltip-bg: rgba(30, 30, 30, 0.95);
 }
 
 body {
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif !important;
   background-color: var(--q-dark-page);
   color: var(--text-color);
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 [data-theme='light'] body {
-  background-color: #f6f8fa; /* GitHub light BG */
+  background-color: #f5f5f5; /* Light BG neutro */
   color: var(--text-color);
 }
 
@@ -68,6 +86,22 @@ body {
 
 .text-grey-7 {
   color: #8b949e !important;
+}
+
+/* Tooltip estilización moderna */
+.q-tooltip {
+  font-size: 13px !important;
+  padding: 6px 12px;
+  background-color: var(--tooltip-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(4px);
+}
+
+/* Menu y Layout borders */
+.q-drawer {
+  border-right: 1px solid var(--border-color) !important;
+  background: var(--card-bg) !important;
 }
 
 /* Base theming rules */
