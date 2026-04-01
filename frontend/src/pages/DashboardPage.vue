@@ -3,7 +3,9 @@
     <div class="row q-col-gutter-md">
       <!-- DataTable Mocks Section -->
       <div class="col-12">
-        <h4 class="text-h4 text-weight-bold q-mt-none text-grey-8">Demo: Data Table (CRUD)</h4>
+        <h4 class="text-h4 text-weight-bold q-mt-none" style="color: var(--text-color)">
+          Demo: Data Table (CRUD)
+        </h4>
       </div>
 
       <div class="col-12">
@@ -22,7 +24,7 @@
         >
           <!-- Custom action en la esquina superior -->
           <template #top-actions>
-            <q-btn flat round dense icon="print" color="grey-7">
+            <q-btn flat round dense icon="print" style="color: var(--text-muted)">
               <q-tooltip>Imprimir</q-tooltip>
             </q-btn>
           </template>
@@ -50,7 +52,9 @@
 
       <!-- ...resto markdown demo -->
       <div class="col-12 q-mt-xl">
-        <h4 class="text-h4 text-weight-bold q-mt-none text-grey-8">Demo: Editor Markdown</h4>
+        <h4 class="text-h4 text-weight-bold q-mt-none" style="color: var(--text-color)">
+          Demo: Editor Markdown
+        </h4>
       </div>
 
       <div class="col-12 col-md-6">
@@ -76,34 +80,33 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useQuasar } from 'quasar';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import DataTable from 'src/components/DataTable.vue';
 import { mockColumns, mockRows } from 'src/data/mockDataTable';
+import { useUI } from 'src/composables/useUI';
 
-const $q = useQuasar();
+const { notify, notifyAsync, confirmDelete, showLoading, hideLoading } = useUI();
 const currentRows = ref([...mockRows]);
 
-// Funciones para probar el DataTable
 const handleRefresh = () => {
-  $q.notify({ type: 'info', message: 'Tabla Recargada...' });
+  notifyAsync('Tabla Recargada...', 'info');
 };
 const handleCreate = () => {
-  $q.notify({ type: 'positive', message: 'Abriendo Modal Crear...' });
+  notify('Abriendo Modal Crear...', 'positive');
 };
 const handleEdit = (ids: string[]) => {
-  $q.notify({ type: 'warning', message: `Editando los registros: ${ids.join(', ')}` });
+  notify(`Editando los registros: ${ids.join(', ')}`, 'warning');
 };
-const handleDelete = (ids: string[]) => {
-  $q.dialog({
-    title: 'Confirmar Eliminación',
-    message: `¿Estás seguro de que deseas eliminar los ${ids.length} elementos seleccionados?`,
-    cancel: true,
-    persistent: true,
-  }).onOk(() => {
-    currentRows.value = currentRows.value.filter((row) => !ids.includes(row.id));
-    $q.notify({ type: 'negative', message: 'Registros Eliminados.' });
-  });
+const handleDelete = async (ids: string[]) => {
+  const confirmed = await confirmDelete(`los ${ids.length} elementos seleccionados`);
+  if (confirmed) {
+    showLoading('Eliminando registro...');
+    setTimeout(() => {
+      currentRows.value = currentRows.value.filter((row) => !ids.includes(row.id));
+      hideLoading();
+      notify(`Registros Eliminados exitosamente.`, 'negative');
+    }, 2000);
+  }
 };
 
 const markdownText = ref(`

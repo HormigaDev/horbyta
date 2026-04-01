@@ -16,6 +16,8 @@
       loading-label="Cargando registros..."
       :selected-rows-label="
         (numberOfRows: number) => {
+          if (numberOfRows <= 0) return '';
+
           return numberOfRows > 1
             ? `${numberOfRows} Registros seleccionados`
             : `1 Registro seleccionado`;
@@ -44,7 +46,7 @@
               round
               dense
               icon="refresh"
-              color="grey-7"
+              style="color: var(--text-muted)"
               @click="emit('refresh')"
             >
               <q-tooltip>Actualizar Datos</q-tooltip>
@@ -55,9 +57,9 @@
               round
               dense
               icon="filter_alt"
-              color="grey-7"
+              style="color: var(--text-muted)"
               @click="showFilters = !showFilters"
-              :class="{ 'text-primary': filters.length > 0 }"
+              :style="filters.length > 0 ? 'color: var(--q-primary) !important' : ''"
             >
               <q-tooltip>Filtros</q-tooltip>
               <q-badge v-if="filters.length > 0" color="red" floating>{{ filters.length }}</q-badge>
@@ -81,7 +83,9 @@
                 <q-item
                   v-bind="itemProps"
                   @click="toggleOption(opt)"
-                  :class="selected ? 'text-primary bg-grey-3' : ''"
+                  :style="
+                    selected ? 'color: var(--q-primary); background-color: var(--bg-hover)' : ''
+                  "
                 >
                   <q-item-section>
                     <q-item-label>{{ opt.label }}</q-item-label>
@@ -129,10 +133,10 @@
         <q-slide-transition>
           <div
             v-show="showFilters"
-            class="q-mt-sm q-pa-sm bg-grey-2 rounded-borders full-width"
+            class="q-mt-sm q-pa-sm rounded-borders full-width"
             style="
               border: 1px solid var(--border-color);
-              background-color: var(--q-dark-page) !important;
+              background-color: var(--card-bg) !important;
             "
           >
             <div
@@ -235,8 +239,10 @@
 
       <template #no-data>
         <div class="full-width row flex-center text-primary q-pa-xl text-center">
-          <q-icon size="4em" name="inbox" color="grey-5" />
-          <div class="text-h6 text-grey-7 q-mt-sm">No hay registros para mostrar</div>
+          <q-icon size="4em" name="inbox" style="color: var(--text-muted)" />
+          <div class="text-h6 q-mt-sm" style="color: var(--text-muted)">
+            No hay registros para mostrar
+          </div>
         </div>
       </template>
 

@@ -43,8 +43,13 @@ export default defineConfig((/* ctx */) => {
     },
 
     framework: {
-      config: {},
-      plugins: [],
+      config: {
+        loading: {
+          spinnerColor: 'primary',
+          backgroundColor: 'black', // Ignored if overriding by CSS
+        },
+      },
+      plugins: ['Dialog', 'Notify', 'Loading'],
     },
     animations: [],
     ssr: {

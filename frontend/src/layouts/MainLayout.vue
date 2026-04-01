@@ -37,7 +37,90 @@
           </q-input>
 
           <q-btn flat round dense icon="notifications" class="q-mr-sm">
+            <q-badge color="negative" floating v-if="notificationsStore.asyncUnreadCount > 0">
+              {{ notificationsStore.asyncUnreadCount }}
+            </q-badge>
             <q-tooltip>Notificaciones</q-tooltip>
+            <q-menu auto-close class="bg-dark">
+              <q-list style="min-width: 300px; max-width: 350px">
+                <q-item-label
+                  header
+                  class="row items-center justify-between text-white"
+                  style="background-color: var(--q-dark-page)"
+                >
+                  Notificaciones
+                  <q-btn
+                    v-if="notificationsStore.asyncUnreadCount > 0"
+                    flat
+                    dense
+                    size="sm"
+                    color="primary"
+                    label="Marcar leídas"
+                    @click.stop="notificationsStore.markAllAsRead"
+                  />
+                </q-item-label>
+                <q-separator />
+
+                <template v-if="notificationsStore.asyncNotifications.length === 0">
+                  <q-item>
+                    <q-item-section class="text-center q-py-md" style="color: var(--text-muted)">
+                      No hay notificaciones
+                    </q-item-section>
+                  </q-item>
+                </template>
+
+                <q-item
+                  v-for="notif in notificationsStore.asyncNotifications.slice(0, 5)"
+                  :key="notif.id"
+                  clickable
+                  :style="
+                    !notif.read
+                      ? 'border-bottom: 1px solid var(--border-color); background-color: var(--bg-hover)'
+                      : 'border-bottom: 1px solid var(--border-color); background-color: var(--card-bg)'
+                  "
+                  @click="handleNotificationClick(notif)"
+                >
+                  <q-item-section avatar>
+                    <q-icon
+                      :name="
+                        notif.type === 'positive'
+                          ? 'check_circle'
+                          : notif.type === 'negative'
+                            ? 'error'
+                            : notif.type === 'warning'
+                              ? 'warning'
+                              : 'info'
+                      "
+                      :color="notif.type"
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label
+                      lines="2"
+                      :class="!notif.read ? 'text-weight-bold' : ''"
+                      style="color: var(--text-color)"
+                      >{{ notif.message }}</q-item-label
+                    >
+                    <q-item-label caption style="color: var(--text-muted)">{{
+                      new Date(notif.createdAt).toLocaleTimeString()
+                    }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side v-if="!notif.read">
+                    <q-badge rounded color="negative" />
+                  </q-item-section>
+                </q-item>
+
+                <q-separator v-if="notificationsStore.asyncNotifications.length > 5" />
+                <q-item
+                  clickable
+                  v-if="notificationsStore.asyncNotifications.length > 5"
+                  class="text-center text-primary"
+                  @click="notificationsStore.clearAll"
+                >
+                  <q-item-section>Borrar todas</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
           </q-btn>
 
           <q-btn
@@ -137,7 +220,7 @@
 
           <q-separator class="q-my-sm" inset />
 
-          <div class="text-caption text-grey text-center" style="font-size: 10px">
+          <div class="text-caption text-center" style="font-size: 10px; color: var(--text-muted)">
             {{ appVersion }}
           </div>
         </div>
@@ -193,8 +276,13 @@
             <q-separator class="q-my-md" />
 
             <q-item clickable v-ripple>
-              <q-item-section avatar><q-icon name="notifications" /></q-item-section>
+              <q-item-section avatar>
+                <q-icon name="notifications" />
+              </q-item-section>
               <q-item-section>Notificaciones</q-item-section>
+              <q-item-section side v-if="notificationsStore.asyncUnreadCount > 0">
+                <q-badge color="negative">{{ notificationsStore.asyncUnreadCount }}</q-badge>
+              </q-item-section>
             </q-item>
 
             <q-item clickable v-ripple @click="themeStore.toggleTheme()">
@@ -239,7 +327,10 @@
               <q-item-section>Cerrar Sesión</q-item-section>
             </q-item>
 
-            <div class="text-caption text-grey text-center q-mt-md" style="font-size: 10px">
+            <div
+              class="text-caption text-center q-mt-md"
+              style="font-size: 10px; color: var(--text-muted)"
+            >
               {{ appVersion }}
             </div>
           </q-list>
@@ -254,11 +345,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from 'src/stores/auth';
 import { useThemeStore } from 'src/stores/theme';
 import { APP_VERSION } from 'src/data/constants';
+import { useNotificationsStore } from 'src/stores/notifications';
+import { useUI } from 'src/composables/useUI';
+import type { AppNotification } from 'src/types/ui';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -267,6 +361,12 @@ const themeStore = useThemeStore();
 const search = ref(''); // TODO: Implementar búsqueda
 const drawer = ref(true);
 const appVersion = APP_VERSION;
+const notificationsStore = useNotificationsStore();
+const { showErrorDialog } = useUI();
+
+onMounted(() => {
+  notificationsStore.init();
+});
 
 function logout() {
   authStore.clearAuth();
@@ -275,5 +375,12 @@ function logout() {
 
 function gotoSettings() {
   console.log('Ir a configuraciones... (TODO)');
+}
+
+function handleNotificationClick(notif: AppNotification) {
+  notificationsStore.markAsRead(notif.id);
+  if (notif.payload) {
+    showErrorDialog(notif.payload);
+  }
 }
 </script>
