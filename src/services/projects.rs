@@ -96,10 +96,13 @@ impl ProjectService {
         Ok(())
     }
 
-    pub async fn search(&self, user_id: Uuid, payload: QueryPayload) -> Result<(Vec<ProjectModel>, u64), AppError> {
+    pub async fn search(
+        &self,
+        user_id: Uuid,
+        payload: QueryPayload,
+    ) -> Result<(Vec<crate::dtos::project::ProjectSummaryDto>, u64), AppError> {
         let mut condition = Condition::all().add(projects::Column::UserId.eq(user_id));
 
-        // ... query builder loop and match omitted for simplicity here, expanding:
         for filter in payload.filters {
             let col = match filter.column.as_str() {
                 "name" => projects::Column::Name,
@@ -139,7 +142,19 @@ impl ProjectService {
         let total_items = query.clone().count(self.db.as_ref()).await?;
         let offset = (payload.page - 1) * payload.limit;
 
-        let models = query.limit(payload.limit).offset(offset).all(self.db.as_ref()).await?;
+        let models = query
+            .left_join(crate::entities::categories::Entity)
+            .select_only()
+            .column(projects::Column::Id)
+            .column(projects::Column::Name)
+            .column_as(crate::entities::categories::Column::Name, "category_name")
+            .column(projects::Column::CreatedAt)
+            .column(projects::Column::UpdatedAt)
+            .limit(payload.limit)
+            .offset(offset)
+            .into_model::<crate::dtos::project::ProjectSummaryDto>()
+            .all(self.db.as_ref())
+            .await?;
 
         Ok((models, total_items))
     }

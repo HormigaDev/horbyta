@@ -86,6 +86,6 @@ pub fn projects_controller() -> Router<AppState> {
     Router::new()
         .route("/search", post(search_projects))
         .route("/", post(create_project))
-        .route("/:id", get(get_project).put(update_project).delete(delete_project))
-        .route("/:id/category", patch(update_project_category))
+        .route("/{id}", get(get_project).put(update_project).delete(delete_project))
+        .route("/{id}/category", patch(update_project_category))
 }

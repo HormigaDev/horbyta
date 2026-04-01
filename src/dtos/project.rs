@@ -1,3 +1,4 @@
+use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
@@ -39,4 +40,13 @@ pub struct UpdateProjectDto {
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct UpdateProjectCategoryDto {
     pub category_id: Option<Uuid>,
+}
+
+#[derive(Debug, Serialize, FromQueryResult)]
+pub struct ProjectSummaryDto {
+    pub id: Uuid,
+    pub name: String,
+    pub category_name: Option<String>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }
