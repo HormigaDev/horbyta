@@ -15,3 +15,4 @@ export interface User {
 
 export * from './query';
 export * from './project';
+export * from './chat';

@@ -341,11 +341,23 @@
     <q-page-container>
       <router-view />
     </q-page-container>
+
+    <q-btn
+      round
+      dense
+      size="lg"
+      icon="smart_toy"
+      class="chatbot-launcher"
+      aria-label="Abrir asistente"
+      @click="openChatbot"
+    />
+
+    <ChatbotPanel v-if="chatbotPanelLoaded" v-model="chatbotOpen" />
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { defineAsyncComponent, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from 'src/stores/auth';
 import { useThemeStore } from 'src/stores/theme';
@@ -360,9 +372,12 @@ const themeStore = useThemeStore();
 
 const search = ref(''); // TODO: Implementar búsqueda
 const drawer = ref(true);
+const chatbotOpen = ref(false);
+const chatbotPanelLoaded = ref(false);
 const appVersion = APP_VERSION;
 const notificationsStore = useNotificationsStore();
 const { showErrorDialog } = useUI();
+const ChatbotPanel = defineAsyncComponent(() => import('src/components/ChatbotPanel.vue'));
 
 onMounted(() => {
   notificationsStore.init();
@@ -377,6 +392,11 @@ function gotoSettings() {
   console.log('Ir a configuraciones... (TODO)');
 }
 
+function openChatbot() {
+  chatbotPanelLoaded.value = true;
+  chatbotOpen.value = true;
+}
+
 function handleNotificationClick(notif: AppNotification) {
   notificationsStore.markAsRead(notif.id);
   if (notif.payload) {
@@ -384,3 +404,15 @@ function handleNotificationClick(notif: AppNotification) {
   }
 }
 </script>
+
+<style lang="scss" scoped>
+.chatbot-launcher {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1500;
+  background: var(--q-primary);
+  color: var(--text-on-primary);
+  box-shadow: 0 10px 26px var(--tooltip-bg);
+}
+</style>
