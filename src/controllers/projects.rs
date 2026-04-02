@@ -14,7 +14,7 @@ use crate::{
         user::UserDto,
     },
     error::AppError,
-    middlewares::validator::ValidatedJson,
+    middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
     services::projects::ProjectService,
     state::AppState,
 };
@@ -22,7 +22,7 @@ use crate::{
 async fn search_projects(
     user: UserDto,
     service: ProjectService,
-    ValidatedJson(payload): ValidatedJson<QueryPayload>,
+    ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
 ) -> Result<impl IntoResponse, AppError> {
     project_filter_schema().validate_payload(&payload)?;
 
@@ -84,7 +84,7 @@ async fn delete_project(
 
 pub fn projects_controller() -> Router<AppState> {
     Router::new()
-        .route("/search", post(search_projects))
+        .route("/search", get(search_projects))
         .route("/", post(create_project))
         .route("/{id}", get(get_project).put(update_project).delete(delete_project))
         .route("/{id}/category", patch(update_project_category))

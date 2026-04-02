@@ -35,6 +35,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/ProjectDetailPage.vue'),
         meta: { requiresAuth: true },
       },
+      {
+        path: '/categories',
+        name: 'categories',
+        component: () => import('pages/CategoriesPage.vue'),
+        meta: { requiresAuth: true },
+      },
     ],
   },
 

@@ -53,6 +53,11 @@ pub struct QueryPayload {
     pub filters: Vec<Filter>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct SearchQuery {
+    pub q: String,
+}
+
 fn default_page() -> u64 {
     1
 }

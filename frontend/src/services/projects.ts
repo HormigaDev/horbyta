@@ -9,11 +9,12 @@ import type {
 import { apiFetch } from '../boot/fetch';
 
 export const ProjectsService = {
-  search: (payload: QueryPayload): Promise<PaginatedResponse<ProjectSummary>> =>
-    apiFetch('/projects/search', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
+  search: (payload: QueryPayload): Promise<PaginatedResponse<ProjectSummary>> => {
+    const params = new URLSearchParams({ q: JSON.stringify(payload) });
+    return apiFetch(`/projects/search?${params.toString()}`, {
+      method: 'GET',
+    });
+  },
 
   create: (data: CreateProjectDto): Promise<Project> =>
     apiFetch('/projects', {

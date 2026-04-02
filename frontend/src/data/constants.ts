@@ -29,3 +29,13 @@ export const PROJECT_COLUMNS = [
     format: (val: string) => new Date(val).toLocaleDateString(),
   },
 ];
+
+export const CATEGORIES_COLUMNS = [
+  {
+    name: 'name',
+    label: 'Nombre',
+    field: 'name',
+    sortable: true,
+    align: 'left' as const,
+  },
+];

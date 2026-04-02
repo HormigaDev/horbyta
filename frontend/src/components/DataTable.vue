@@ -516,14 +516,34 @@ const onDelete = () => {
   background-color: var(--card-bg) !important;
   border-color: var(--border-color) !important;
   color: var(--text-color) !important;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 
   .custom-table {
     background-color: transparent !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+
+    .q-table__middle {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
 
     thead tr th {
+      position: sticky;
+      z-index: 2;
       background-color: var(--q-dark-page) !important;
       color: var(--text-color) !important;
       border-bottom: 1px solid var(--border-color) !important;
+    }
+
+    thead tr:first-child th {
+      top: 0;
     }
 
     tbody tr td {

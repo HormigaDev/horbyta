@@ -1,14 +1,16 @@
 <template>
-  <q-page class="q-pa-md dt-page">
+  <q-page class="q-pa-md flex column">
     <DataTable
-      tableId="projects_table"
+      class="col"
+      table-id="projects_table"
       title="Proyectos"
       :columns="PROJECT_COLUMNS"
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
       @request="onRequest"
-      @create="() => router.push('/projects/new')"
+      @view="(id) => $router.push(`/projects/${id}`)"
+      @create="() => $router.push('/projects/new')"
       @edit="editSelected"
       @delete="confirmDestruction"
       @refresh="fetch"
@@ -17,7 +19,6 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import DataTable from 'src/components/DataTable.vue';
 import { PROJECT_COLUMNS } from 'src/data/constants';
@@ -79,7 +80,7 @@ const onRequest = (props: Record<string, unknown>) => {
 
 const editSelected = (selectedIds: string[]) => {
   if (selectedIds.length === 1) {
-    void router.push(`/projects/${selectedIds[0]}/edit`);
+    router.push(`/projects/${selectedIds[0]}/edit`);
   } else if (selectedIds.length > 1) {
     notify('Selecciona un solo proyecto para editar.', 'warning');
   }
@@ -101,8 +102,4 @@ const confirmDestruction = async (selectedIds: string[]) => {
     }
   }
 };
-
-onMounted(() => {
-  void fetch();
-});
 </script>
