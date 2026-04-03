@@ -31,7 +31,7 @@
     >
       <template #top="_props">
         <div class="row full-width items-center q-pb-sm">
-          <div class="col-xs-12 col-sm text-subtitle1 text-weight-bold" v-if="title">
+          <div class="col-xs-12 col-sm text-h5 text-weight-bold" v-if="title">
             {{ title }}
             <q-badge color="primary" class="q-ml-sm" v-if="totalItems > 0">
               {{ totalItems }}

@@ -16,6 +16,17 @@ pub fn project_filter_schema() -> FilterSchema {
         .add_column("updated_at", ColumnType::Date)
 }
 
+#[derive(Debug, Deserialize, Serialize, Validate, Clone)]
+pub struct CreateMilestoneSubDto {
+    #[validate(length(
+        min = 1,
+        max = 100,
+        message = "El nombre del hito debe tener entre 1 y 100 caracteres."
+    ))]
+    pub name: String,
+    pub due_date: Option<DateTime<FixedOffset>>,
+}
+
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct CreateProjectDto {
     #[validate(length(min = 1, max = 255, message = "El nombre debe tener entre 1 y 255 caracteres"))]
@@ -25,6 +36,9 @@ pub struct CreateProjectDto {
     pub description: Option<String>,
 
     pub category_id: Option<Uuid>,
+
+    #[validate(nested)]
+    pub milestones: Option<Vec<CreateMilestoneSubDto>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
@@ -36,6 +50,9 @@ pub struct UpdateProjectDto {
     pub description: Option<String>,
 
     pub category_id: Option<Uuid>,
+
+    #[validate(nested)]
+    pub new_milestones: Option<Vec<CreateMilestoneSubDto>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Validate)]

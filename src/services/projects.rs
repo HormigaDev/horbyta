@@ -1,7 +1,7 @@
 use axum::{extract::FromRequestParts, http::request::Parts};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-    QuerySelect, Set,
+    QuerySelect, Set, TransactionTrait,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -12,6 +12,7 @@ use crate::{
         query::{FilterOperator, QueryPayload},
     },
     entities::{
+        milestones,
         prelude::Projects,
         projects::{self, Model as ProjectModel},
     },
@@ -30,6 +31,8 @@ impl ProjectService {
     }
 
     pub async fn create(&self, user_id: Uuid, dto: CreateProjectDto) -> Result<ProjectModel, AppError> {
+        let txn = self.db.begin().await.map_err(AppError::Database)?;
+
         let project = projects::ActiveModel {
             user_id: Set(user_id),
             name: Set(dto.name),
@@ -38,7 +41,30 @@ impl ProjectService {
             ..Default::default()
         };
 
-        project.insert(self.db.as_ref()).await.map_err(AppError::Database)
+        let created_project = project.insert(&txn).await.map_err(AppError::Database)?;
+
+        if let Some(milestones_dto) = dto.milestones {
+            if !milestones_dto.is_empty() {
+                let new_milestones: Vec<milestones::ActiveModel> = milestones_dto
+                    .into_iter()
+                    .map(|m_dto| milestones::ActiveModel {
+                        project_id: Set(created_project.id),
+                        name: Set(m_dto.name),
+                        due_date: Set(m_dto.due_date),
+                        ..Default::default()
+                    })
+                    .collect();
+
+                crate::entities::prelude::Milestones::insert_many(new_milestones)
+                    .exec(&txn)
+                    .await
+                    .map_err(AppError::Database)?;
+            }
+        }
+
+        txn.commit().await.map_err(AppError::Database)?;
+
+        Ok(created_project)
     }
 
     pub async fn get_by_id(&self, user_id: Uuid, id: Uuid) -> Result<ProjectModel, AppError> {
@@ -54,16 +80,37 @@ impl ProjectService {
 
     pub async fn update(&self, user_id: Uuid, id: Uuid, dto: UpdateProjectDto) -> Result<ProjectModel, AppError> {
         let project = self.get_by_id(user_id, id).await?;
-        let mut active_project: projects::ActiveModel = project.into();
+        let txn = self.db.begin().await.map_err(AppError::Database)?;
 
+        let mut active_project: projects::ActiveModel = project.into();
         active_project.name = Set(dto.name);
         active_project.description = Set(dto.description);
         active_project.category_id = Set(dto.category_id);
 
-        active_project
-            .update(self.db.as_ref())
-            .await
-            .map_err(AppError::Database)
+        let updated_project = active_project.update(&txn).await.map_err(AppError::Database)?;
+
+        if let Some(milestones_dto) = dto.new_milestones {
+            if !milestones_dto.is_empty() {
+                let new_milestones: Vec<milestones::ActiveModel> = milestones_dto
+                    .into_iter()
+                    .map(|m_dto| milestones::ActiveModel {
+                        project_id: Set(updated_project.id),
+                        name: Set(m_dto.name),
+                        due_date: Set(m_dto.due_date),
+                        ..Default::default()
+                    })
+                    .collect();
+
+                crate::entities::prelude::Milestones::insert_many(new_milestones)
+                    .exec(&txn)
+                    .await
+                    .map_err(AppError::Database)?;
+            }
+        }
+
+        txn.commit().await.map_err(AppError::Database)?;
+
+        Ok(updated_project)
     }
 
     pub async fn update_category(

@@ -41,6 +41,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/CategoriesPage.vue'),
         meta: { requiresAuth: true },
       },
+      {
+        path: '/tags',
+        name: 'tags',
+        component: () => import('pages/TagsPage.vue'),
+        meta: { requiresAuth: true },
+      },
     ],
   },
 

@@ -39,3 +39,33 @@ export const CATEGORIES_COLUMNS = [
     align: 'left' as const,
   },
 ];
+
+export const TAGS_COLUMNS = [
+  {
+    name: 'name',
+    label: 'Nombre',
+    field: 'name',
+    sortable: true,
+    align: 'left' as const,
+  },
+];
+
+export const MILESTONES_COLUMNS = [
+  { name: 'name', label: 'Nombre', field: 'name', sortable: true, align: 'left' as const },
+  {
+    name: 'due_date',
+    label: 'Fecha Vencimiento',
+    field: 'due_date',
+    sortable: true,
+    align: 'center' as const,
+    format: (val: string | null) => (val ? new Date(val).toLocaleDateString() : 'N/A'),
+  },
+  {
+    name: 'created_at',
+    label: 'Creado',
+    field: 'created_at',
+    sortable: true,
+    align: 'center' as const,
+    format: (val: string) => new Date(val).toLocaleDateString(),
+  },
+];

@@ -8,6 +8,7 @@
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
+      hide-view
       @request="onRequest"
       @create="handleCreate"
       @edit="handleEdit"
