@@ -218,13 +218,13 @@
         </div>
 
         <div class="absolute-bottom column flex-center q-pb-md q-gutter-y-sm w-100">
-          <q-btn flat round dense icon="post_add" color="primary">
+          <q-btn flat round dense icon="post_add" color="primary" to="/tasks/new">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               Nueva Tarea
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="create_new_folder" color="primary">
+          <q-btn flat round dense icon="create_new_folder" color="primary" to="/projects/new">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               Nuevo Proyecto
             </q-tooltip>
