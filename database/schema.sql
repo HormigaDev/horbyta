@@ -8,6 +8,7 @@ create table users (
     id uuid primary key default uuidv7(),
     name varchar(100) not null unique,
     email varchar(255) not null unique,
+    preferences jsonb,
     password_hash varchar(255) not null,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()

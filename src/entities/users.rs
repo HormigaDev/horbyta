@@ -12,6 +12,8 @@ pub struct Model {
     pub name: String,
     #[sea_orm(unique)]
     pub email: String,
+    #[sea_orm(column_type = "JsonBinary", nullable)]
+    pub preferences: Option<Json>,
     pub password_hash: String,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,

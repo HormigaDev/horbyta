@@ -43,6 +43,7 @@ async fn main() {
         .nest("/milestones", controllers::milestones::milestones_controller())
         .nest("/tasks", controllers::tasks::tasks_controller())
         .nest("/tags", controllers::tags::tags_controller())
+        .nest("/users", controllers::users::users_controller())
         .with_state(state);
 
     let app = Router::new().nest("/api/v1", api_routes);

@@ -191,7 +191,7 @@
 
     <q-drawer v-model="drawer" show-if-above :mini="!$q.screen.lt.md" :mini-width="60" bordered>
       <template v-if="!$q.screen.lt.md">
-        <div class="column flex-center q-pt-md q-gutter-y-sm">
+        <div class="column flex-center q-pt-md q-gutter-y-md">
           <q-btn flat round dense icon="dashboard" to="/">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               Dashboard
@@ -391,7 +391,7 @@ function logout() {
 }
 
 function gotoSettings() {
-  console.log('Ir a configuraciones... (TODO)');
+  void router.push({ name: 'settings' });
 }
 
 function openChatbot() {

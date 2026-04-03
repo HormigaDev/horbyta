@@ -8,6 +8,7 @@ argon2 = "0.5.3"
 axum = "0.8.8"
 axum-extra = { version = "0.12.5", features = ["cookie"] }
 chrono = { version = "0.4.44", features = ["serde"] }
+chrono-tz = "0.10.4"
 dotenvy = "0.15.7"
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
 moka = { version = "0.12.15", features = ["future"] }

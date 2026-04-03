@@ -121,3 +121,25 @@ export const TASKS_COLUMNS = [
     format: (val: string | null) => (val ? new Date(val).toLocaleDateString() : 'N/A'),
   },
 ];
+
+export const COMMON_TIMEZONES = [
+  'UTC',
+  'America/Mexico_City',
+  'America/Bogota',
+  'America/Lima',
+  'America/Santiago',
+  'America/Argentina/Buenos_Aires',
+  'America/Sao_Paulo',
+  'America/New_York',
+  'America/Los_Angeles',
+  'Europe/Madrid',
+  'Europe/London',
+  'Europe/Lisbon',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Asia/Tokyo',
+  'Asia/Dubai',
+  'Asia/Shanghai',
+  'Australia/Sydney',
+  'Africa/Johannesburg',
+] as const;
