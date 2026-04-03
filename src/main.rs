@@ -41,6 +41,7 @@ async fn main() {
         .nest("/projects", controllers::projects::projects_controller())
         .nest("/categories", controllers::categories::categories_controller())
         .nest("/milestones", controllers::milestones::milestones_controller())
+        .nest("/tasks", controllers::tasks::tasks_controller())
         .nest("/tags", controllers::tags::tags_controller())
         .with_state(state);
 

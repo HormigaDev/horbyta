@@ -1,5 +1,17 @@
 import { ref, reactive, computed, type Ref } from 'vue';
-import type { QueryPayload, FilterOperator, FilterSchema, PaginatedResponse } from '../types/query';
+import type {
+  QueryPayload,
+  FilterOperator,
+  FilterSchema,
+  PaginatedResponse,
+  ColumnType,
+  FilterFieldConfig,
+} from '../types/query';
+
+const resolveColumnType = (value: ColumnType | FilterFieldConfig): ColumnType => {
+  if (typeof value === 'string') return value;
+  return value.type;
+};
 
 export function useQuery<T>(
   fetcher: (payload: QueryPayload) => Promise<PaginatedResponse<T>>,
@@ -74,8 +86,7 @@ export function useQuery<T>(
     void fetchItems();
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const addFilter = (column: string, operator: FilterOperator, value: any) => {
+  const addFilter = (column: string, operator: FilterOperator, value: unknown) => {
     if (!schema[column]) {
       error.value = `Campo "${column}" no permitido.`;
       return;
@@ -85,7 +96,7 @@ export function useQuery<T>(
       return;
     }
 
-    const colType = schema[column];
+    const colType = resolveColumnType(schema[column]);
     if ((operator === '><' || operator === '<>') && colType !== 'Text') {
       error.value = `Operador ${operator} no válido para ${colType}.`;
       return;

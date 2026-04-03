@@ -178,13 +178,34 @@
                 />
               </div>
               <div class="col-12 col-sm-5">
+                <slot
+                  v-if="shouldUseSelectByTerm(filter)"
+                  name="filter-value-select-by-term"
+                  :filter="filter"
+                  :index="index"
+                  :column-key="filter.column"
+                  :filters="filters"
+                  :set-value="(value: unknown) => (filter.value = value)"
+                >
+                  <q-input
+                    :model-value="toInputModelValue(filter.value)"
+                    label="Valor"
+                    dense
+                    outlined
+                    :type="getFilterInputType(filter.column)"
+                    :disable="!filter.operator"
+                    @update:model-value="(value) => onInputFilterValue(filter, value)"
+                  />
+                </slot>
                 <q-input
-                  v-model="filter.value"
+                  v-else
+                  :model-value="toInputModelValue(filter.value)"
                   label="Valor"
                   dense
                   outlined
                   :type="getFilterInputType(filter.column)"
                   :disable="!filter.operator"
+                  @update:model-value="(value) => onInputFilterValue(filter, value)"
                 />
               </div>
               <div class="col-xs-12 col-sm-1 flex justify-end">
@@ -262,13 +283,19 @@
   </q-card>
 </template>
 
-<script setup lang="ts" generic="T extends Record<string, any>">
+<script setup lang="ts" generic="T extends object">
 import { ref, onMounted, watch, computed } from 'vue';
 import { useDataTableStore } from '../stores/datatable';
-import type { Filter, FilterOperator, FilterSchema } from '../types/query';
+import type { ColumnType, Filter, FilterOperator, FilterSchema } from '../types/query';
 import type { QTableProps } from 'quasar';
 
 type SelectionMode = 'none' | 'single' | 'multiple';
+
+type LocalFilterFieldConfig = {
+  type: ColumnType;
+  label?: string;
+  useSelectByTerm?: boolean;
+};
 
 interface Props {
   tableId: string;
@@ -328,17 +355,68 @@ const filters = ref<Partial<Filter>[]>([]);
 
 const filterColumnOptions = computed(() => {
   return Object.keys(props.filterSchema).map((key) => {
-    const col = props.columns.find((c) => c.name === key || c.field === key);
+    const col = props.columns.find(
+      (c) => c.name === key || (typeof c.field === 'string' && c.field === key),
+    );
+    const config = getFilterConfig(key);
+
+    const label = config?.label || (col ? String(col.label) : key);
+
     return {
-      label: col ? col.label : key,
+      label,
       value: key,
     };
   });
 });
 
+const isFilterFieldConfig = (value: unknown): value is LocalFilterFieldConfig => {
+  if (typeof value !== 'object' || value === null) return false;
+  const maybeType = (value as { type?: unknown }).type;
+
+  return (
+    maybeType === 'Text' ||
+    maybeType === 'Number' ||
+    maybeType === 'Boolean' ||
+    maybeType === 'Date'
+  );
+};
+
+const getFilterConfig = (columnKey?: string): LocalFilterFieldConfig | null => {
+  if (!columnKey) return null;
+
+  const field = props.filterSchema[columnKey];
+  if (!field) return null;
+
+  if (typeof field === 'string') {
+    return { type: field };
+  }
+
+  if (!isFilterFieldConfig(field)) {
+    return null;
+  }
+
+  return field;
+};
+
+const getFilterType = (columnKey?: string): ColumnType | null => {
+  const config = getFilterConfig(columnKey);
+  if (!config) return null;
+  return config.type;
+};
+
 const getFilterOperators = (columnKey?: string) => {
   if (!columnKey) return [];
-  const type = props.filterSchema[columnKey];
+  const config = getFilterConfig(columnKey);
+  const type = config?.type;
+
+  if (!type) return [];
+
+  if (config.useSelectByTerm) {
+    return [
+      { label: 'Igual (=)', value: '=' },
+      { label: 'Distinto (!=)', value: '!=' },
+    ];
+  }
 
   const options = [
     { label: 'Igual (=)', value: '=' },
@@ -370,10 +448,29 @@ const getFilterOperators = (columnKey?: string) => {
 
 const getFilterInputType = (columnKey?: string) => {
   if (!columnKey) return 'text';
-  const type = props.filterSchema[columnKey];
+  const type = getFilterType(columnKey);
   if (type === 'Number') return 'number';
   if (type === 'Date') return 'date';
   return 'text';
+};
+
+const shouldUseSelectByTerm = (filter: Partial<Filter>) => {
+  if (!filter.column || !filter.operator) return false;
+
+  const config = getFilterConfig(filter.column);
+  if (!config?.useSelectByTerm) return false;
+
+  return filter.operator === '=' || filter.operator === '!=';
+};
+
+const toInputModelValue = (value: unknown): string | number | null => {
+  if (typeof value === 'string' || typeof value === 'number') return value;
+  if (value === null || value === undefined) return null;
+  return null;
+};
+
+const onInputFilterValue = (filter: Partial<Filter>, value: string | number | null) => {
+  filter.value = value;
 };
 
 const addFilter = () => {
@@ -477,12 +574,20 @@ watch(visibleColumns, (cols) => {
   store.saveTableState(props.tableId, { visibleColumns: cols });
 });
 
+const getRowValue = (row: object, key: string): unknown => {
+  return (row as Record<string, unknown>)[key];
+};
+
+const getRowId = (row: object): string => {
+  return String(getRowValue(row, props.rowKey));
+};
+
 watch(
   () => props.rows,
   (newRows) => {
     if (selected.value.length > 0 && Array.isArray(newRows)) {
-      const rowIds = new Set(newRows.map((r) => r[props.rowKey]));
-      selected.value = selected.value.filter((s) => rowIds.has(s[props.rowKey]));
+      const rowIds = new Set(newRows.map((row) => getRowValue(row, props.rowKey)));
+      selected.value = selected.value.filter((row) => rowIds.has(getRowValue(row, props.rowKey)));
     }
   },
   { deep: true },
@@ -490,7 +595,7 @@ watch(
 
 const onCreate = () => emit('create');
 const onView = (row: T) => {
-  if (row) emit('view', String(row[props.rowKey]));
+  if (row) emit('view', getRowId(row));
 };
 const onRowDblClick = (evt: Event, row: T) => {
   if (!props.hideView) {
@@ -499,13 +604,13 @@ const onRowDblClick = (evt: Event, row: T) => {
 };
 const onEdit = () => {
   if (selected.value.length > 0) {
-    const ids = selected.value.map((row) => String(row[props.rowKey]));
+    const ids = selected.value.map((row) => getRowId(row));
     emit('edit', ids);
   }
 };
 const onDelete = () => {
   if (selected.value.length > 0) {
-    const ids = selected.value.map((row) => String(row[props.rowKey]));
+    const ids = selected.value.map((row) => getRowId(row));
     emit('delete', ids);
   }
 };

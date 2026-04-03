@@ -1,7 +1,6 @@
 export const APP_VERSION = 'v1.0.0';
 
-// Más adelante puedes agregar aquí prioridades, complejidades, etc.
-// export const PRIORITIES = [ ... ];
+export * from './selectOptions';
 
 export const PROJECT_COLUMNS = [
   { name: 'name', label: 'Nombre', field: 'name', sortable: true, align: 'left' as const },
@@ -67,5 +66,58 @@ export const MILESTONES_COLUMNS = [
     sortable: true,
     align: 'center' as const,
     format: (val: string) => new Date(val).toLocaleDateString(),
+  },
+];
+
+export const TASKS_COLUMNS = [
+  {
+    name: 'title',
+    label: 'Título',
+    field: 'title',
+    sortable: true,
+    align: 'left' as const,
+  },
+  {
+    name: 'status',
+    label: 'Estado',
+    field: 'status',
+    sortable: true,
+    align: 'center' as const,
+  },
+  {
+    name: 'priority',
+    label: 'Prioridad',
+    field: 'priority',
+    sortable: true,
+    align: 'center' as const,
+  },
+  {
+    name: 'complexity',
+    label: 'Complejidad',
+    field: 'complexity',
+    sortable: true,
+    align: 'center' as const,
+  },
+  {
+    name: 'project_name',
+    label: 'Proyecto',
+    field: 'project_name',
+    sortable: true,
+    align: 'left' as const,
+  },
+  {
+    name: 'milestone_name',
+    label: 'Milestone',
+    field: 'milestone_name',
+    sortable: true,
+    align: 'left' as const,
+  },
+  {
+    name: 'due_date',
+    label: 'Vence',
+    field: 'due_date',
+    sortable: true,
+    align: 'center' as const,
+    format: (val: string | null) => (val ? new Date(val).toLocaleDateString() : 'N/A'),
   },
 ];

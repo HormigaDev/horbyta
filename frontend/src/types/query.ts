@@ -3,8 +3,7 @@ export type FilterOperator = '=' | '!=' | '>' | '<' | '>=' | '<=' | '><' | '<>' 
 export interface Filter {
   column: string;
   operator: FilterOperator;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  value: any;
+  value: unknown;
 }
 
 export interface QueryPayload {
@@ -17,7 +16,13 @@ export interface QueryPayload {
 
 export type ColumnType = 'Text' | 'Number' | 'Boolean' | 'Date';
 
-export type FilterSchema = Record<string, ColumnType>;
+export interface FilterFieldConfig {
+  type: ColumnType;
+  label?: string;
+  useSelectByTerm?: boolean;
+}
+
+export type FilterSchema = Record<string, ColumnType | FilterFieldConfig>;
 
 export interface PaginatedResponse<T> {
   payload: QueryPayload;

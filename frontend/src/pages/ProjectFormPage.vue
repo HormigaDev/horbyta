@@ -24,13 +24,12 @@
             />
           </div>
           <div class="col-12 col-md-4">
-            <q-select
+            <SelectByTerm
               v-model="project.category_id"
               label="Categoría"
-              outlined
-              dense
-              disable
-              :options="[]"
+              :options="categoryOptions"
+              :loading="isCategoriesLoading"
+              @search="onCategorySearch"
             />
           </div>
         </q-card-section>
@@ -147,15 +146,19 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ProjectsService } from 'src/services/projects';
+import { CategoriesService } from 'src/services/categories';
 import { useUI } from 'src/composables/useUI';
 import { useProjectsRules } from 'src/composables/rules/projects.rules';
+import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
+import SelectByTerm from 'src/components/SelectByTerm.vue';
 import type {
   Project,
   CreateProjectDto,
   UpdateProjectDto,
   CreateMilestoneSubDto,
 } from 'src/types/project';
+import type { Category } from 'src/types/category';
 
 const route = useRoute();
 const router = useRouter();
@@ -166,15 +169,48 @@ const { nameRuleState, descriptionRuleState, validateName, validateDescription }
 const isNew = computed(() => route.name === 'project-create');
 const isSubmitting = ref(false);
 
+const {
+  options: categoryOptions,
+  isLoading: isCategoriesLoading,
+  load: loadCategoriesByTerm,
+} = useSelectByTerm<Category>(CategoriesService.search, {
+  termColumn: 'name',
+  orderBy: 'created_at',
+  orderAsc: false,
+  toOption: (category) => ({
+    label: category.name,
+    value: category.id,
+  }),
+});
+
 const milestones = ref<CreateMilestoneSubDto[]>([]);
 const newMilestoneName = ref('');
 const newMilestoneDate = ref('');
 
+const toIsoDateFromDisplay = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const parts = trimmed.split('/');
+  if (parts.length !== 3) return null;
+
+  const [day, month, year] = parts;
+  if (!day || !month || !year) return null;
+
+  return `${year}-${month}-${day}T12:00:00.000Z`;
+};
+
+const onCategorySearch = (term: string) => {
+  if (term.trim().length === 0 && categoryOptions.value.length > 0) return;
+  void loadCategoriesByTerm(term);
+};
+
 const addMilestone = () => {
   if (!newMilestoneName.value.trim()) return;
+
   milestones.value.push({
     name: newMilestoneName.value.trim(),
-    due_date: newMilestoneDate.value ? new Date(newMilestoneDate.value).toISOString() : null,
+    due_date: toIsoDateFromDisplay(newMilestoneDate.value),
   });
   newMilestoneName.value = '';
   newMilestoneDate.value = '';
@@ -207,6 +243,21 @@ const loadProject = async () => {
   try {
     const data = await ProjectsService.getById(projectId);
     project.value = data;
+
+    if (data.category_id) {
+      const exists = categoryOptions.value.some((option) => option.value === data.category_id);
+      if (!exists) {
+        try {
+          const category = await CategoriesService.getById(data.category_id);
+          categoryOptions.value = [
+            { value: category.id, label: category.name },
+            ...categoryOptions.value,
+          ];
+        } catch {
+          // Ignorar: si la categoría fue eliminada, mantenemos el formulario operativo.
+        }
+      }
+    }
   } catch (err: unknown) {
     notifyError('Error cargando el proyecto', err);
     void router.push('/projects');
@@ -264,6 +315,7 @@ const saveProject = async () => {
 };
 
 onMounted(() => {
+  void loadCategoriesByTerm('');
   void loadProject();
 });
 </script>

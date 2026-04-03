@@ -42,6 +42,30 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: '/tasks',
+        name: 'tasks',
+        component: () => import('pages/TasksPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/tasks/new',
+        name: 'task-create',
+        component: () => import('pages/TaskFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/tasks/:id/edit',
+        name: 'task-edit',
+        component: () => import('pages/TaskFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/tasks/:id',
+        name: 'task-detail',
+        component: () => import('pages/TaskDetailPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: '/tags',
         name: 'tags',
         component: () => import('pages/TagsPage.vue'),
