@@ -15,7 +15,6 @@
       @refresh="fetch"
     />
 
-    <!-- Modal Form (Crear/Editar Categoría) -->
     <q-dialog v-model="isDialogOpen" persistent>
       <q-card style="min-width: 400px; max-width: 90vw">
         <q-form @submit="onSubmit">
@@ -31,7 +30,8 @@
               label="Nombre de la categoría *"
               autofocus
               outlined
-              :rules="[(val) => !!val || 'El nombre es requerido']"
+              :error="nameRuleState.error"
+              :error-message="nameRuleState.message"
             />
           </q-card-section>
 
@@ -45,7 +45,7 @@
   </q-page>
 </template>
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import DataTable from 'src/components/DataTable.vue';
 import { CATEGORIES_COLUMNS } from 'src/data/constants';
 import { useQuery } from 'src/composables/useQuery';
@@ -53,8 +53,10 @@ import { useUI } from 'src/composables/useUI';
 import type { FilterSchema } from 'src/types';
 import { CategoriesService } from 'src/services/categories';
 import type { CategoryDto } from 'src/types/category';
+import { useCategoryRules } from 'src/composables/rules/categories.rules';
 
 const { notify, notifyError, confirmDelete } = useUI();
+const { nameRuleState, validateName } = useCategoryRules();
 
 const categoryFilterSchema: FilterSchema = {
   id: 'Text',
@@ -127,6 +129,7 @@ const handleEdit = async (ids: string[]) => {
 const onSubmit = async () => {
   isSaving.value = true;
   try {
+    if (validateName(form.name)) return;
     if (editingId.value) {
       await CategoriesService.update(editingId.value, form);
       notify('Categoría actualizada correctamente', 'positive');
@@ -159,4 +162,6 @@ const confirmDestruction = async (selectedIds: string[]) => {
     }
   }
 };
+
+onMounted(() => fetch());
 </script>
