@@ -11,16 +11,16 @@
       :loading="loading"
       :rows-per-page-options="[5, 10, 20, 50, 100]"
       :visible-columns="visibleColumns"
-      rows-per-page-label="Registros por página"
-      no-results-label="No hay datos para mostrar"
-      loading-label="Cargando registros..."
+      :rows-per-page-label="t('datatable.rowsPerPage')"
+      :no-results-label="t('datatable.noResults')"
+      :loading-label="t('datatable.loading')"
       :selected-rows-label="
         (numberOfRows: number) => {
           if (numberOfRows <= 0) return '';
 
           return numberOfRows > 1
-            ? `${numberOfRows} Registros seleccionados`
-            : `1 Registro seleccionado`;
+            ? t('datatable.selectedRows.multiple', { count: numberOfRows })
+            : t('datatable.selectedRows.single');
         }
       "
       @request="onRequest"
@@ -32,7 +32,7 @@
       <template #top="_props">
         <div class="row full-width items-center q-pb-sm">
           <div class="col-xs-12 col-sm text-h5 text-weight-bold" v-if="title">
-            {{ title }}
+            {{ translateLabel(title) }}
             <q-badge color="primary" class="q-ml-sm" v-if="totalItems > 0">
               {{ totalItems }}
             </q-badge>
@@ -50,7 +50,7 @@
               style="color: var(--text-muted)"
               @click="emit('refresh')"
             >
-              <q-tooltip>Actualizar Datos</q-tooltip>
+              <q-tooltip>{{ t('datatable.tooltip.refresh') }}</q-tooltip>
             </q-btn>
 
             <q-btn
@@ -62,7 +62,7 @@
               @click="showFilters = !showFilters"
               :style="filters.length > 0 ? 'color: var(--q-primary) !important' : ''"
             >
-              <q-tooltip>Filtros</q-tooltip>
+              <q-tooltip>{{ t('datatable.tooltip.filters') }}</q-tooltip>
               <q-badge v-if="filters.length > 0" color="red" floating>{{ filters.length }}</q-badge>
             </q-btn>
 
@@ -72,7 +72,7 @@
               outlined
               dense
               options-dense
-              :display-value="$q.screen.gt.xs ? 'Columnas' : ''"
+              :display-value="$q.screen.gt.xs ? t('datatable.columnsButton') : ''"
               emit-value
               map-options
               :options="columns"
@@ -89,7 +89,7 @@
                   "
                 >
                   <q-item-section>
-                    <q-item-label>{{ opt.label }}</q-item-label>
+                    <q-item-label>{{ translateLabel(opt.label) }}</q-item-label>
                   </q-item-section>
                   <q-item-section side v-if="selected">
                     <q-icon name="check" color="primary" />
@@ -106,7 +106,7 @@
                 outline
                 color="secondary"
                 icon="visibility"
-                label="Ver"
+                :label="t('datatable.actions.view')"
                 @click="onView(selected[0] as T)"
               />
               <q-btn
@@ -114,7 +114,7 @@
                 outline
                 color="primary"
                 icon="edit"
-                label="Editar"
+                :label="t('datatable.actions.edit')"
                 @click="onEdit"
               />
               <q-btn
@@ -122,7 +122,7 @@
                 outline
                 color="negative"
                 icon="delete"
-                :label="$q.screen.gt.xs ? 'Eliminar' : ''"
+                :label="$q.screen.gt.xs ? t('datatable.actions.delete') : ''"
                 @click="onDelete"
               />
             </div>
@@ -132,7 +132,7 @@
                 unelevated
                 color="primary"
                 icon="add"
-                :label="$q.screen.gt.xs ? 'Nuevo' : ''"
+                :label="$q.screen.gt.xs ? t('datatable.actions.new') : ''"
                 @click="onCreate"
               />
             </div>
@@ -157,7 +157,7 @@
                 <q-select
                   v-model="filter.column"
                   :options="filterColumnOptions"
-                  label="Columna"
+                  :label="t('datatable.filter.column')"
                   dense
                   outlined
                   emit-value
@@ -169,7 +169,7 @@
                 <q-select
                   v-model="filter.operator"
                   :options="getFilterOperators(filter.column)"
-                  label="Operador"
+                  :label="t('datatable.filter.operator')"
                   dense
                   outlined
                   emit-value
@@ -189,7 +189,7 @@
                 >
                   <q-input
                     :model-value="toInputModelValue(filter.value)"
-                    label="Valor"
+                    :label="t('datatable.filter.value')"
                     dense
                     outlined
                     :type="getFilterInputType(filter.column)"
@@ -200,7 +200,7 @@
                 <q-input
                   v-else
                   :model-value="toInputModelValue(filter.value)"
-                  label="Valor"
+                  :label="t('datatable.filter.value')"
                   dense
                   outlined
                   :type="getFilterInputType(filter.column)"
@@ -217,7 +217,7 @@
                   size="sm"
                   @click="removeFilter(index)"
                 >
-                  <q-tooltip>Eliminar filtro</q-tooltip>
+                  <q-tooltip>{{ t('datatable.filter.remove') }}</q-tooltip>
                 </q-btn>
               </div>
             </div>
@@ -227,7 +227,7 @@
                 outline
                 color="primary"
                 icon="add"
-                label="Agregar Filtro"
+                :label="t('datatable.filter.add')"
                 size="sm"
                 @click="addFilter"
                 :disable="filters.length >= 5"
@@ -236,7 +236,7 @@
                 <q-btn
                   flat
                   color="negative"
-                  label="Limpiar Todos"
+                  :label="t('datatable.filter.clearAll')"
                   size="sm"
                   @click="clearFilters"
                   v-if="filters.length > 0"
@@ -244,7 +244,7 @@
                 <q-btn
                   unelevated
                   color="primary"
-                  label="Aplicar Filtros"
+                  :label="t('datatable.filter.apply')"
                   size="sm"
                   @click="applyFilters"
                 />
@@ -262,7 +262,7 @@
             <q-checkbox v-model="props.selected" />
           </q-th>
           <q-th v-for="col in props.cols" :key="col.name" :props="props" class="text-weight-bold">
-            {{ col.label }}
+            {{ translateLabel(col.label) }}
           </q-th>
         </q-tr>
       </template>
@@ -271,7 +271,7 @@
         <div class="full-width row flex-center text-primary q-pa-xl text-center">
           <q-icon size="4em" name="inbox" style="color: var(--text-muted)" />
           <div class="text-h6 q-mt-sm" style="color: var(--text-muted)">
-            No hay registros para mostrar
+            {{ t('datatable.noDataTitle') }}
           </div>
         </div>
       </template>
@@ -285,6 +285,7 @@
 
 <script setup lang="ts" generic="T extends object">
 import { ref, onMounted, watch, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useDataTableStore } from '../stores/datatable';
 import type { ColumnType, Filter, FilterOperator, FilterSchema } from '../types/query';
 import type { QTableProps } from 'quasar';
@@ -329,6 +330,8 @@ const props = withDefaults(defineProps<Props>(), {
   filterSchema: () => ({}),
 });
 
+const { t } = useI18n();
+
 const emit = defineEmits<{
   (
     e: 'request',
@@ -363,11 +366,16 @@ const filterColumnOptions = computed(() => {
     const label = config?.label || (col ? String(col.label) : key);
 
     return {
-      label,
+      label: translateLabel(label),
       value: key,
     };
   });
 });
+
+const translateLabel = (label: unknown): string => {
+  const asString = String(label);
+  return asString.includes('.') ? t(asString) : asString;
+};
 
 const isFilterFieldConfig = (value: unknown): value is LocalFilterFieldConfig => {
   if (typeof value !== 'object' || value === null) return false;
@@ -413,34 +421,34 @@ const getFilterOperators = (columnKey?: string) => {
 
   if (config.useSelectByTerm) {
     return [
-      { label: 'Igual (=)', value: '=' },
-      { label: 'Distinto (!=)', value: '!=' },
+      { label: t('datatable.operator.eq'), value: '=' },
+      { label: t('datatable.operator.neq'), value: '!=' },
     ];
   }
 
   const options = [
-    { label: 'Igual (=)', value: '=' },
-    { label: 'Distinto (!=)', value: '!=' },
+    { label: t('datatable.operator.eq'), value: '=' },
+    { label: t('datatable.operator.neq'), value: '!=' },
   ];
 
   if (type === 'Number' || type === 'Date') {
     options.push(
-      { label: 'Mayor (>)', value: '>' },
-      { label: 'Menor (<)', value: '<' },
-      { label: 'Mayor o igual (>=)', value: '>=' },
-      { label: 'Menor o igual (<=)', value: '<=' },
+      { label: t('datatable.operator.gt'), value: '>' },
+      { label: t('datatable.operator.lt'), value: '<' },
+      { label: t('datatable.operator.gte'), value: '>=' },
+      { label: t('datatable.operator.lte'), value: '<=' },
     );
   }
 
   if (type === 'Text') {
     options.push(
-      { label: 'Contiene (><)', value: '><' },
-      { label: 'No contiene (<>)', value: '<>' },
+      { label: t('datatable.operator.contains'), value: '><' },
+      { label: t('datatable.operator.notContains'), value: '<>' },
     );
   }
 
   if (type === 'Date') {
-    options.push({ label: 'Entre ()', value: '()' });
+    options.push({ label: t('datatable.operator.between'), value: '()' });
   }
 
   return options;

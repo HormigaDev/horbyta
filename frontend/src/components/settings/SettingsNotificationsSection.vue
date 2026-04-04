@@ -1,9 +1,9 @@
 <template>
   <q-card flat bordered>
     <q-card-section>
-      <div class="text-h6">Notificaciones</div>
+      <div class="text-h6">{{ t('settings.notifications.title') }}</div>
       <div class="text-caption" style="color: var(--text-muted)">
-        Configura los tipos de notificaciones que quieres recibir.
+        {{ t('settings.notifications.subtitle') }}
       </div>
     </q-card-section>
 
@@ -11,142 +11,144 @@
 
     <q-card-section class="q-gutter-y-md">
       <div class="settings-block q-pa-md">
-        <div class="text-subtitle2 q-mb-sm">Notificaciones de clientes y proyectos</div>
+        <div class="text-subtitle2 q-mb-sm">
+          {{ t('settings.notifications.group.clientsProjects') }}
+        </div>
         <div class="row q-col-gutter-sm">
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.clients_projects.proposal_decision"
               color="primary"
-              label="Cliente aceptó / rechazó una propuesta"
+              :label="t('settings.notifications.item.proposalDecision')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.clients_projects.deliverable_approved"
               color="primary"
-              label="Cliente aprobó un entregable"
+              :label="t('settings.notifications.item.deliverableApproved')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.clients_projects.comment_or_review"
               color="primary"
-              label="Cliente dejó un comentario o revisión"
+              :label="t('settings.notifications.item.commentOrReview')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.clients_projects.added_to_new_project"
               color="primary"
-              label="Te agregaron a un nuevo proyecto"
+              :label="t('settings.notifications.item.addedToProject')"
             />
           </div>
         </div>
       </div>
 
       <div class="settings-block q-pa-md">
-        <div class="text-subtitle2 q-mb-sm">Entregas y Deadlines</div>
+        <div class="text-subtitle2 q-mb-sm">{{ t('settings.notifications.group.deliveries') }}</div>
         <div class="row q-col-gutter-sm">
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.deliveries_deadlines.deadline_24h_48h"
               color="primary"
-              label="Deadline de un entregable en 24h/48h"
+              :label="t('settings.notifications.item.deadline24h48h')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.deliveries_deadlines.deliverable_overdue"
               color="primary"
-              label="Entregable vencido"
+              :label="t('settings.notifications.item.deliverableOverdue')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.deliveries_deadlines.milestone_completed"
               color="primary"
-              label="Milestone completado"
+              :label="t('settings.notifications.item.milestoneCompleted')"
             />
           </div>
         </div>
       </div>
 
       <div class="settings-block q-pa-md">
-        <div class="text-subtitle2 q-mb-sm">Contratos</div>
+        <div class="text-subtitle2 q-mb-sm">{{ t('settings.notifications.group.contracts') }}</div>
         <div class="row q-col-gutter-sm">
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.contracts.contract_sent"
               color="primary"
-              label="Contrato enviado al cliente"
+              :label="t('settings.notifications.item.contractSent')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.contracts.contract_signed"
               color="primary"
-              label="Contrato firmado por el cliente"
+              :label="t('settings.notifications.item.contractSigned')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.contracts.contract_expiring"
               color="primary"
-              label="Contrato por vencer"
+              :label="t('settings.notifications.item.contractExpiring')"
             />
           </div>
         </div>
       </div>
 
       <div class="settings-block q-pa-md">
-        <div class="text-subtitle2 q-mb-sm">Pagos y facturación</div>
+        <div class="text-subtitle2 q-mb-sm">{{ t('settings.notifications.group.billing') }}</div>
         <div class="row q-col-gutter-sm">
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.billing.invoice_sent"
               color="primary"
-              label="Factura enviada al cliente"
+              :label="t('settings.notifications.item.invoiceSent')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.billing.invoice_overdue_unpaid"
               color="primary"
-              label="Factura vencida sin pagar"
+              :label="t('settings.notifications.item.invoiceOverdue')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.billing.payment_received"
               color="primary"
-              label="Pago recibido"
+              :label="t('settings.notifications.item.paymentReceived')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.billing.auto_payment_reminder"
               color="primary"
-              label="Recordatorio automático de cobro"
+              :label="t('settings.notifications.item.autoPaymentReminder')"
             />
           </div>
         </div>
       </div>
 
       <div class="settings-block q-pa-md">
-        <div class="text-subtitle2 q-mb-sm">Tiempo</div>
+        <div class="text-subtitle2 q-mb-sm">{{ t('settings.notifications.group.time') }}</div>
         <div class="row q-col-gutter-sm">
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.time_tracking.long_running_timer"
               color="primary"
-              label="Timer corriendo por más de X horas"
+              :label="t('settings.notifications.item.longRunningTimer')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
               v-model="form.time_tracking.weekly_hours_summary"
               color="primary"
-              label="Resumen de horas semanales"
+              :label="t('settings.notifications.item.weeklySummary')"
             />
           </div>
         </div>
@@ -157,7 +159,7 @@
       <q-btn
         color="primary"
         unelevated
-        label="Guardar notificaciones"
+        :label="t('settings.notifications.saveButton')"
         :loading="isSaving"
         @click="saveNotifications"
       />
@@ -167,6 +169,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { UsersService } from 'src/services/users';
 import { useUI } from 'src/composables/useUI';
 import type {
@@ -183,6 +186,7 @@ const emit = defineEmits<{
   updated: [value: UserSettings];
 }>();
 
+const { t } = useI18n();
 const { notify, notifyError } = useUI();
 const isSaving = ref(false);
 
@@ -256,9 +260,9 @@ async function saveNotifications() {
   try {
     const updated = await UsersService.updateNotifications(buildNotificationsPayload());
     emit('updated', updated);
-    notify('Notificaciones actualizadas', 'positive');
+    notify(t('settings.notifications.success'), 'positive');
   } catch (error: unknown) {
-    notifyError('No se pudieron guardar las notificaciones', error);
+    notifyError(t('settings.notifications.error'), error);
   } finally {
     isSaving.value = false;
   }

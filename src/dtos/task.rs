@@ -13,7 +13,6 @@ pub fn task_filter_schema() -> FilterSchema {
         .add_column("parent_id", ColumnType::Text)
         .add_column("milestone_id", ColumnType::Text)
         .add_column("title", ColumnType::Text)
-        .add_column("description", ColumnType::Text)
         .add_column("status", ColumnType::Text)
         .add_column("priority", ColumnType::Number)
         .add_column("complexity", ColumnType::Number)

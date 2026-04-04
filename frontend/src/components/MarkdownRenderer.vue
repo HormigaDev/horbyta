@@ -7,9 +7,9 @@
         dense
         icon="format_bold"
         @click="applyFormat('bold')"
-        title="Negrita (Ctrl+B)"
+        :title="t('markdown.toolbar.bold')"
       >
-        <q-tooltip>Negrita (Ctrl+B)</q-tooltip>
+        <q-tooltip>{{ t('markdown.toolbar.bold') }}</q-tooltip>
       </q-btn>
       <q-btn
         flat
@@ -17,18 +17,39 @@
         dense
         icon="format_italic"
         @click="applyFormat('italic')"
-        title="Cursiva (Ctrl+I)"
+        :title="t('markdown.toolbar.italic')"
       >
-        <q-tooltip>Cursiva (Ctrl+I)</q-tooltip>
+        <q-tooltip>{{ t('markdown.toolbar.italic') }}</q-tooltip>
       </q-btn>
-      <q-btn flat round dense icon="title" @click="applyFormat('heading')" title="Encabezado">
-        <q-tooltip>Título</q-tooltip>
+      <q-btn
+        flat
+        round
+        dense
+        icon="title"
+        @click="applyFormat('heading')"
+        :title="t('markdown.toolbar.heading')"
+      >
+        <q-tooltip>{{ t('markdown.toolbar.heading') }}</q-tooltip>
       </q-btn>
-      <q-btn flat round dense icon="format_quote" @click="applyFormat('quote')" title="Cita">
-        <q-tooltip>Cita</q-tooltip>
+      <q-btn
+        flat
+        round
+        dense
+        icon="format_quote"
+        @click="applyFormat('quote')"
+        :title="t('markdown.toolbar.quote')"
+      >
+        <q-tooltip>{{ t('markdown.toolbar.quote') }}</q-tooltip>
       </q-btn>
-      <q-btn flat round dense icon="code" @click="applyFormat('code')" title="Código">
-        <q-tooltip>Código</q-tooltip>
+      <q-btn
+        flat
+        round
+        dense
+        icon="code"
+        @click="applyFormat('code')"
+        :title="t('markdown.toolbar.code')"
+      >
+        <q-tooltip>{{ t('markdown.toolbar.code') }}</q-tooltip>
       </q-btn>
     </div>
 
@@ -49,6 +70,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js/lib/core';
@@ -60,6 +82,8 @@ import bash from 'highlight.js/lib/languages/bash';
 import python from 'highlight.js/lib/languages/python';
 import type { QInput } from 'quasar';
 
+const { t } = useI18n();
+
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('typescript', typescript);
 hljs.registerLanguage('rust', rust);
@@ -70,7 +94,6 @@ hljs.registerLanguage('js', javascript);
 hljs.registerLanguage('ts', typescript);
 hljs.registerLanguage('sh', shell);
 
-// Mapex de nombres nativos de hljs al nombre presentacional de la caja
 const langNames: Record<string, string> = {
   javascript: 'javascript',
   ts: 'typescript',

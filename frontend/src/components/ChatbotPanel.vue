@@ -19,7 +19,7 @@
             class="chatbot-drawer"
           >
             <div class="chatbot-drawer-header">
-              <div class="text-subtitle2 text-weight-medium">Chats</div>
+              <div class="text-subtitle2 text-weight-medium">{{ t('chatbot.panel.chats') }}</div>
               <q-btn
                 flat
                 round
@@ -29,10 +29,10 @@
                 :disable="!canCreateNewChat"
                 @click="openNewChat"
               >
-                <q-tooltip v-if="!canCreateNewChat"
-                  >Envia al menos un mensaje para crear otro chat</q-tooltip
-                >
-                <q-tooltip v-else>Nuevo chat</q-tooltip>
+                <q-tooltip v-if="!canCreateNewChat">{{
+                  t('chatbot.panel.newChatDisabled')
+                }}</q-tooltip>
+                <q-tooltip v-else>{{ t('chatbot.panel.newChat') }}</q-tooltip>
               </q-btn>
             </div>
 
@@ -74,7 +74,9 @@
               <q-avatar size="28px" class="q-ml-sm chatbot-avatar">
                 <q-icon name="smart_toy" size="18px" />
               </q-avatar>
-              <q-toolbar-title class="text-subtitle1 text-weight-medium">Asistente</q-toolbar-title>
+              <q-toolbar-title class="text-subtitle1 text-weight-medium">{{
+                t('chatbot.panel.assistant')
+              }}</q-toolbar-title>
               <q-btn flat round dense icon="close" @click="closePanel" />
             </q-toolbar>
           </q-header>
@@ -86,7 +88,7 @@
                   v-if="!activeChat || activeChat.messages.length === 0"
                   class="chatbot-empty-state"
                 >
-                  Escribe un mensaje para iniciar la conversacion.
+                  {{ t('chatbot.panel.emptyState') }}
                 </div>
 
                 <div
@@ -118,7 +120,7 @@
                       <q-icon name="smart_toy" size="14px" />
                     </q-avatar>
                     <div class="chatbot-thinking">
-                      Pensando
+                      {{ t('chatbot.panel.thinking') }}
                       <span class="chatbot-thinking-dots" aria-hidden="true">
                         <span class="chatbot-thinking-dot"></span>
                         <span class="chatbot-thinking-dot"></span>
@@ -147,7 +149,7 @@
                 dense
                 outlined
                 :disable="isSending"
-                placeholder="Escribe tu mensaje..."
+                :placeholder="t('chatbot.panel.inputPlaceholder')"
                 class="chatbot-input"
                 @keydown.enter.exact.prevent="handleSend"
               >
@@ -165,7 +167,7 @@
               </q-input>
             </q-form>
             <small class="chatbot-disclaimer">
-              HormigAI puede cometer errores. Verifique siempre la informacion importante.
+              {{ t('chatbot.panel.disclaimer') }}
             </small>
           </q-footer>
         </q-layout>
@@ -177,6 +179,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { QInput } from 'quasar';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useChatbotStore } from 'src/stores/chatbot';
@@ -200,6 +203,7 @@ const pendingScrollTimeoutIds = ref<number[]>([]);
 const pendingScrollAnimationFrameId = ref<number | null>(null);
 
 const chatStore = useChatbotStore();
+const { t } = useI18n();
 const { confirmDelete } = useUI();
 const { chats, activeChat, activeChatId, canCreateNewChat } = storeToRefs(chatStore);
 
@@ -362,7 +366,7 @@ const openNewChat = () => {
 };
 
 const removeChat = async (chatId: string, title: string) => {
-  const confirmed = await confirmDelete(`el chat ${title}`);
+  const confirmed = await confirmDelete(t('chatbot.panel.deleteTarget', { title }));
   if (!confirmed) {
     return;
   }

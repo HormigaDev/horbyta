@@ -3,13 +3,22 @@
     <div>
       <div style="font-size: 30vh">404</div>
 
-      <div class="text-h2" style="opacity: 0.4">Oops. Nada por aquí...</div>
+      <div class="text-h2" style="opacity: 0.4">{{ t('error.notFound.message') }}</div>
 
-      <q-btn class="q-mt-xl" color="primary" unelevated to="/" label="Volver al inicio" no-caps />
+      <q-btn
+        class="q-mt-xl"
+        color="primary"
+        unelevated
+        to="/"
+        :label="t('error.notFound.backHome')"
+        no-caps
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// Sin lógica requerida
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 </script>

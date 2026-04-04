@@ -4,7 +4,7 @@
       <q-card-section class="row items-center q-pb-none">
         <div class="text-h6 text-negative row items-center q-gutter-sm">
           <q-icon name="error_outline" size="sm" />
-          <span>Detalles del Error (500)</span>
+          <span>{{ t('error.dialog.title') }}</span>
         </div>
         <q-space />
         <q-btn icon="close" flat round dense v-close-popup />
@@ -12,7 +12,7 @@
 
       <q-card-section class="q-mt-sm">
         <div class="text-subtitle2 q-mb-sm text-weight-medium">
-          El servidor encontró un error interno. Payload técnico:
+          {{ t('error.dialog.subtitle') }}
         </div>
         <q-scroll-area style="height: 250px" class="error-container rounded-borders">
           <pre class="q-px-md q-py-sm">{{ formattedPayload }}</pre>
@@ -20,11 +20,16 @@
       </q-card-section>
 
       <q-card-actions align="right" class="q-px-md q-pb-md">
-        <q-btn flat label="Cerrar" style="color: var(--text-muted)" @click="onDialogOK" />
+        <q-btn
+          flat
+          :label="t('common.close')"
+          style="color: var(--text-muted)"
+          @click="onDialogOK"
+        />
         <q-btn
           unelevated
           icon="bug_report"
-          label="Reportar Error"
+          :label="t('error.dialog.reportButton')"
           color="negative"
           @click="onReport"
         />
@@ -36,6 +41,7 @@
 <script setup lang="ts">
 import { useDialogPluginComponent, useQuasar } from 'quasar';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 const props = defineProps<{
   payload: unknown;
@@ -44,6 +50,7 @@ const props = defineProps<{
 defineEmits([...useDialogPluginComponent.emits]);
 const { dialogRef, onDialogHide, onDialogOK } = useDialogPluginComponent();
 const $q = useQuasar();
+const { t } = useI18n();
 
 const formattedPayload = computed(() => {
   try {
@@ -57,7 +64,7 @@ const onReport = () => {
   // TODO: Integrar lógica de reporte de errores al servidor o sistema Sentry/Datadog
   $q.notify({
     type: 'positive',
-    message: 'Reporte interno de error enviado correctamente (TODO)',
+    message: t('error.dialog.reportSuccess'),
     position: 'top-right',
   });
   onDialogOK();

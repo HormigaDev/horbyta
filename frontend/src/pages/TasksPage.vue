@@ -3,8 +3,8 @@
     <DataTable
       class="col"
       table-id="tasks_table"
-      title="Tareas"
-      :columns="TASKS_COLUMNS"
+      :title="t('tasks.list.title')"
+      :columns="getTaskColumns($t)"
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
@@ -21,7 +21,7 @@
         <SelectByTerm
           v-if="slotProps.columnKey === 'project_id'"
           :model-value="typeof slotProps.filter.value === 'string' ? slotProps.filter.value : null"
-          label="Proyecto"
+          :label="t('tasks.list.projectLabel')"
           :options="projectFilterOptions"
           :loading="isProjectFilterLoading"
           @update:model-value="
@@ -33,7 +33,7 @@
         <SelectByTerm
           v-else-if="slotProps.columnKey === 'milestone_id'"
           :model-value="typeof slotProps.filter.value === 'string' ? slotProps.filter.value : null"
-          label="Milestone"
+          :label="t('tasks.list.milestoneLabel')"
           :options="milestoneFilterOptions"
           :loading="isMilestoneFilterLoading"
           @update:model-value="
@@ -49,9 +49,9 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import DataTable from 'src/components/DataTable.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
-import { TASKS_COLUMNS } from 'src/data/constants';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { useUI } from 'src/composables/useUI';
 import { TasksService } from 'src/services/tasks';
@@ -61,24 +61,25 @@ import type { Filter, FilterSchema, QueryPayload } from 'src/types';
 import type { Milestone } from 'src/types/milestone';
 import type { ProjectSummary } from 'src/types/project';
 import type { TaskSummary } from 'src/types/task';
+import { getTaskColumns } from 'src/data/columns';
 
 const router = useRouter();
+const { t } = useI18n();
 const { notify, notifyError, confirmDelete } = useUI();
 
 const taskFilterSchema: FilterSchema = {
-  id: { type: 'Text', label: 'ID' },
-  project_id: { type: 'Text', label: 'Proyecto', useSelectByTerm: true },
-  parent_id: { type: 'Text', label: 'Tarea Padre' },
-  milestone_id: { type: 'Text', label: 'Milestone', useSelectByTerm: true },
-  title: { type: 'Text', label: 'Título' },
-  description: { type: 'Text', label: 'Descripción' },
-  status: { type: 'Text', label: 'Estado' },
-  priority: { type: 'Number', label: 'Prioridad' },
-  complexity: { type: 'Number', label: 'Complejidad' },
-  block_parent: { type: 'Boolean', label: 'Bloquea Padre' },
-  due_date: { type: 'Date', label: 'Fecha límite' },
-  created_at: { type: 'Date', label: 'Creado' },
-  updated_at: { type: 'Date', label: 'Actualizado' },
+  id: { type: 'Text', label: t('tasks.list.filter.id') },
+  project_id: { type: 'Text', label: t('tasks.list.filter.project'), useSelectByTerm: true },
+  parent_id: { type: 'Text', label: t('tasks.list.filter.parentTask') },
+  milestone_id: { type: 'Text', label: t('tasks.list.filter.milestone'), useSelectByTerm: true },
+  title: { type: 'Text', label: t('tasks.list.filter.title') },
+  status: { type: 'Text', label: t('tasks.list.filter.status') },
+  priority: { type: 'Number', label: t('tasks.list.filter.priority') },
+  complexity: { type: 'Number', label: t('tasks.list.filter.complexity') },
+  block_parent: { type: 'Boolean', label: t('tasks.list.filter.blockParent') },
+  due_date: { type: 'Date', label: t('tasks.list.filter.dueDate') },
+  created_at: { type: 'Date', label: t('tasks.list.filter.createdAt') },
+  updated_at: { type: 'Date', label: t('tasks.list.filter.updatedAt') },
 };
 
 const {
@@ -129,7 +130,7 @@ const loadView = async () => {
     items.value = view.items;
     total.value = view.total;
   } catch (err: unknown) {
-    notifyError('Error al cargar la vista inicial de tareas', err);
+    notifyError(t('tasks.list.loadInitialError'), err);
   } finally {
     isLoading.value = false;
   }
@@ -150,7 +151,7 @@ const fetchTasks = async () => {
     items.value = response.items;
     total.value = response.total;
   } catch (err: unknown) {
-    notifyError('Error al obtener las tareas', err);
+    notifyError(t('tasks.list.fetchError'), err);
   } finally {
     isLoading.value = false;
   }
@@ -214,7 +215,7 @@ const handleEdit = (ids: string[]) => {
   if (!ids[0]) return;
 
   if (ids.length > 1) {
-    notify('Selecciona una sola tarea para editar.', 'warning');
+    notify(t('tasks.list.selectOneToEdit'), 'warning');
     return;
   }
 
@@ -224,7 +225,9 @@ const handleEdit = (ids: string[]) => {
 const confirmDestruction = async (selectedIds: string[]) => {
   if (selectedIds.length === 0) return;
 
-  const confirmed = await confirmDelete(`${selectedIds.length} tarea(s)`);
+  const confirmed = await confirmDelete(
+    t('tasks.list.deleteTarget', { count: selectedIds.length }),
+  );
   if (!confirmed) return;
 
   try {
@@ -232,10 +235,10 @@ const confirmDestruction = async (selectedIds: string[]) => {
       await TasksService.delete(id);
     }
 
-    notify('Tareas eliminadas correctamente', 'positive');
+    notify(t('tasks.list.deleteSuccess'), 'positive');
     void fetchTasks();
   } catch (err: unknown) {
-    notifyError('Error al eliminar las tareas', err);
+    notifyError(t('tasks.list.deleteError'), err);
   }
 };
 </script>

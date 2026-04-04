@@ -4,15 +4,15 @@
       <q-card flat bordered>
         <q-card-section class="row items-center justify-between q-col-gutter-md">
           <div>
-            <div class="text-h5">Configuraciones</div>
+            <div class="text-h5">{{ t('settings.page.title') }}</div>
             <div class="text-caption" style="color: var(--text-muted)">
-              Define tus preferencias, datos de usuario y notificaciones.
+              {{ t('settings.page.subtitle') }}
             </div>
           </div>
           <q-btn
             flat
             icon="refresh"
-            label="Recargar"
+            :label="t('settings.page.reload')"
             color="primary"
             :loading="isBootstrapping"
             @click="loadSettings"
@@ -36,9 +36,9 @@
 
       <q-card v-else-if="!isBootstrapping" flat bordered>
         <q-card-section>
-          <div class="text-subtitle1">No se pudo cargar la configuración</div>
+          <div class="text-subtitle1">{{ t('settings.page.emptyTitle') }}</div>
           <div class="text-caption" style="color: var(--text-muted)">
-            Intenta recargar para volver a sincronizar la información.
+            {{ t('settings.page.emptySubtitle') }}
           </div>
         </q-card-section>
       </q-card>
@@ -48,6 +48,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import SettingsPreferencesSection from 'src/components/settings/SettingsPreferencesSection.vue';
 import SettingsUserSection from 'src/components/settings/SettingsUserSection.vue';
 import SettingsNotificationsSection from 'src/components/settings/SettingsNotificationsSection.vue';
@@ -55,6 +56,7 @@ import { useUI } from 'src/composables/useUI';
 import { UsersService } from 'src/services/users';
 import type { UserSettings } from 'src/types/user';
 
+const { t } = useI18n();
 const { notifyError } = useUI();
 
 const isBootstrapping = ref(false);
@@ -66,7 +68,7 @@ async function loadSettings() {
   try {
     settings.value = await UsersService.getMe();
   } catch (error: unknown) {
-    notifyError('No se pudo cargar la configuración de usuario', error);
+    notifyError(t('settings.page.loadError'), error);
     settings.value = null;
   } finally {
     isBootstrapping.value = false;

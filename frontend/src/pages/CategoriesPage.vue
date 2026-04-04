@@ -3,8 +3,8 @@
     <DataTable
       class="col"
       table-id="categories_table"
-      title="Categorías"
-      :columns="CATEGORIES_COLUMNS"
+      :title="t('categories.list.title')"
+      :columns="getCategoryColumns($t)"
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
@@ -20,7 +20,9 @@
       <q-card style="min-width: 400px; max-width: 90vw">
         <q-form @submit="onSubmit">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">{{ editingId ? 'Editar Categoría' : 'Nueva Categoría' }}</div>
+            <div class="text-h6">
+              {{ editingId ? t('categories.dialog.editTitle') : t('categories.dialog.newTitle') }}
+            </div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
@@ -28,7 +30,7 @@
           <q-card-section class="q-pt-md">
             <q-input
               v-model="form.name"
-              label="Nombre de la categoría *"
+              :label="t('categories.dialog.nameLabel')"
               autofocus
               outlined
               :error="nameRuleState.error"
@@ -37,8 +39,8 @@
           </q-card-section>
 
           <q-card-actions align="right" class="text-primary q-px-md q-pb-md">
-            <q-btn flat label="Cancelar" v-close-popup />
-            <q-btn color="primary" label="Guardar" type="submit" :loading="isSaving" />
+            <q-btn flat :label="t('common.cancel')" v-close-popup />
+            <q-btn color="primary" :label="t('common.save')" type="submit" :loading="isSaving" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -47,16 +49,18 @@
 </template>
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import DataTable from 'src/components/DataTable.vue';
-import { CATEGORIES_COLUMNS } from 'src/data/constants';
 import { useQuery } from 'src/composables/useQuery';
 import { useUI } from 'src/composables/useUI';
 import type { FilterSchema } from 'src/types';
 import { CategoriesService } from 'src/services/categories';
 import type { CategoryDto } from 'src/types/category';
 import { useCategoryRules } from 'src/composables/rules/categories.rules';
+import { getCategoryColumns } from 'src/data/columns';
 
 const { notify, notifyError, confirmDelete } = useUI();
+const { t } = useI18n();
 const { nameRuleState, validateName } = useCategoryRules();
 
 const categoryFilterSchema: FilterSchema = {
@@ -123,7 +127,7 @@ const handleEdit = async (ids: string[]) => {
     editingId.value = ids[0];
     isDialogOpen.value = true;
   } catch (err: unknown) {
-    notifyError('Error al obtener la categoría', err);
+    notifyError(t('categories.messages.getError'), err);
   }
 };
 
@@ -133,15 +137,15 @@ const onSubmit = async () => {
     if (validateName(form.name)) return;
     if (editingId.value) {
       await CategoriesService.update(editingId.value, form);
-      notify('Categoría actualizada correctamente', 'positive');
+      notify(t('categories.messages.updateSuccess'), 'positive');
     } else {
       await CategoriesService.create(form);
-      notify('Categoría creada correctamente', 'positive');
+      notify(t('categories.messages.createSuccess'), 'positive');
     }
     isDialogOpen.value = false;
     void fetch();
   } catch (err: unknown) {
-    notifyError('Error al guardar la categoría', err);
+    notifyError(t('categories.messages.saveError'), err);
   } finally {
     isSaving.value = false;
   }
@@ -150,16 +154,18 @@ const onSubmit = async () => {
 const confirmDestruction = async (selectedIds: string[]) => {
   if (selectedIds.length === 0) return;
 
-  const confirmed = await confirmDelete(`${selectedIds.length} categoría(s)`);
+  const confirmed = await confirmDelete(
+    t('categories.messages.deleteTarget', { count: selectedIds.length }),
+  );
   if (confirmed) {
     try {
       for (const id of selectedIds) {
         await CategoriesService.delete(id);
       }
-      notify(`Categorías eliminadas correctamente`, 'positive');
+      notify(t('categories.messages.deleteSuccess'), 'positive');
       void fetch();
     } catch (err: unknown) {
-      notifyError('Error al eliminar las categorías', err);
+      notifyError(t('categories.messages.deleteError'), err);
     }
   }
 };

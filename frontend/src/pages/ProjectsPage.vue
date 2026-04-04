@@ -3,8 +3,8 @@
     <DataTable
       class="col"
       table-id="projects_table"
-      title="Proyectos"
-      :columns="PROJECT_COLUMNS"
+      :title="t('projects.list.title')"
+      :columns="getProjectColumns($t)"
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
@@ -20,14 +20,16 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import DataTable from 'src/components/DataTable.vue';
-import { PROJECT_COLUMNS } from 'src/data/constants';
+import { getProjectColumns } from 'src/data/columns';
 import { useQuery } from 'src/composables/useQuery';
 import { useUI } from 'src/composables/useUI';
 import { ProjectsService } from 'src/services/projects';
 import type { FilterSchema } from 'src/types/query';
 
 const router = useRouter();
+const { t } = useI18n();
 const { notify, notifyError, confirmDelete } = useUI();
 
 const projectFilterSchema: FilterSchema = {
@@ -82,23 +84,25 @@ const editSelected = (selectedIds: string[]) => {
   if (selectedIds.length === 1) {
     router.push(`/projects/${selectedIds[0]}/edit`);
   } else if (selectedIds.length > 1) {
-    notify('Selecciona un solo proyecto para editar.', 'warning');
+    notify(t('projects.list.selectOneToEdit'), 'warning');
   }
 };
 
 const confirmDestruction = async (selectedIds: string[]) => {
   if (selectedIds.length === 0) return;
 
-  const confirmed = await confirmDelete(`${selectedIds.length} proyecto(s)`);
+  const confirmed = await confirmDelete(
+    t('projects.list.deleteTarget', { count: selectedIds.length }),
+  );
   if (confirmed) {
     try {
       for (const id of selectedIds) {
         await ProjectsService.delete(id);
       }
-      notify(`Proyectos eliminados correctamente`, 'positive');
+      notify(t('projects.list.deleteSuccess'), 'positive');
       void fetch();
     } catch (err: unknown) {
-      notifyError('Error al eliminar los proyectos', err);
+      notifyError(t('projects.list.deleteError'), err);
     }
   }
 };

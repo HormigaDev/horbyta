@@ -1,9 +1,9 @@
 <template>
   <q-card flat bordered>
     <q-card-section>
-      <div class="text-h6">Usuario</div>
+      <div class="text-h6">{{ t('settings.user.title') }}</div>
       <div class="text-caption" style="color: var(--text-muted)">
-        Actualiza nombre, correo y contraseña de tu cuenta autenticada.
+        {{ t('settings.user.subtitle') }}
       </div>
     </q-card-section>
 
@@ -11,12 +11,12 @@
 
     <q-card-section class="row q-col-gutter-md">
       <div class="col-12 col-md-6">
-        <q-input v-model="profileForm.name" label="Nombre" outlined dense />
+        <q-input v-model="profileForm.name" :label="t('settings.user.nameLabel')" outlined dense />
       </div>
       <div class="col-12 col-md-6">
         <q-input
           v-model="profileForm.email"
-          label="Correo electrónico"
+          :label="t('settings.user.emailLabel')"
           type="email"
           outlined
           dense
@@ -28,7 +28,7 @@
       <q-btn
         color="primary"
         unelevated
-        label="Guardar usuario"
+        :label="t('settings.user.saveProfileButton')"
         :loading="isSavingProfile"
         @click="saveProfile"
       />
@@ -37,12 +37,12 @@
     <q-separator />
 
     <q-card-section>
-      <div class="text-subtitle1 q-mb-sm">Cambiar contraseña</div>
+      <div class="text-subtitle1 q-mb-sm">{{ t('settings.user.passwordTitle') }}</div>
       <div class="row q-col-gutter-md">
         <div class="col-12 col-md-4">
           <q-input
             v-model="passwordForm.current_password"
-            label="Contraseña actual"
+            :label="t('settings.user.currentPasswordLabel')"
             type="password"
             outlined
             dense
@@ -51,7 +51,7 @@
         <div class="col-12 col-md-4">
           <q-input
             v-model="passwordForm.new_password"
-            label="Nueva contraseña"
+            :label="t('settings.user.newPasswordLabel')"
             type="password"
             outlined
             dense
@@ -60,7 +60,7 @@
         <div class="col-12 col-md-4">
           <q-input
             v-model="passwordForm.confirm_password"
-            label="Confirmar contraseña"
+            :label="t('settings.user.confirmPasswordLabel')"
             type="password"
             outlined
             dense
@@ -73,7 +73,7 @@
       <q-btn
         color="primary"
         unelevated
-        label="Actualizar contraseña"
+        :label="t('settings.user.updatePasswordButton')"
         :loading="isSavingPassword"
         @click="savePassword"
       />
@@ -83,6 +83,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/auth';
 import { UsersService } from 'src/services/users';
 import { useUI } from 'src/composables/useUI';
@@ -97,6 +98,7 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
+const { t } = useI18n();
 const { notify, notifyError } = useUI();
 
 const isSavingProfile = ref(false);
@@ -115,12 +117,12 @@ const passwordForm = reactive<UpdateUserPasswordDto>({
 
 async function saveProfile() {
   if (!profileForm.name.trim()) {
-    notify('El nombre es obligatorio', 'warning');
+    notify(t('settings.user.validation.nameRequired'), 'warning');
     return;
   }
 
   if (!profileForm.email.trim()) {
-    notify('El correo es obligatorio', 'warning');
+    notify(t('settings.user.validation.emailRequired'), 'warning');
     return;
   }
 
@@ -142,9 +144,9 @@ async function saveProfile() {
       updated_at: updated.updated_at,
     });
 
-    notify('Usuario actualizado', 'positive');
+    notify(t('settings.user.profileSuccess'), 'positive');
   } catch (error: unknown) {
-    notifyError('No se pudo actualizar el usuario', error);
+    notifyError(t('settings.user.profileError'), error);
   } finally {
     isSavingProfile.value = false;
   }
@@ -156,17 +158,17 @@ async function savePassword() {
     !passwordForm.new_password.trim() ||
     !passwordForm.confirm_password.trim()
   ) {
-    notify('Completa los tres campos de contraseña', 'warning');
+    notify(t('settings.user.validation.passwordFieldsRequired'), 'warning');
     return;
   }
 
   if (passwordForm.new_password !== passwordForm.confirm_password) {
-    notify('La confirmación no coincide con la nueva contraseña', 'warning');
+    notify(t('settings.user.validation.passwordMismatch'), 'warning');
     return;
   }
 
   if (passwordForm.new_password.length < 8) {
-    notify('La nueva contraseña debe tener al menos 8 caracteres', 'warning');
+    notify(t('settings.user.validation.passwordMin'), 'warning');
     return;
   }
 
@@ -183,9 +185,9 @@ async function savePassword() {
     passwordForm.new_password = '';
     passwordForm.confirm_password = '';
 
-    notify('Contraseña actualizada', 'positive');
+    notify(t('settings.user.passwordSuccess'), 'positive');
   } catch (error: unknown) {
-    notifyError('No se pudo actualizar la contraseña', error);
+    notifyError(t('settings.user.passwordError'), error);
   } finally {
     isSavingPassword.value = false;
   }

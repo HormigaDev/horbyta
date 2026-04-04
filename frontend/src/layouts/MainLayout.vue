@@ -14,10 +14,10 @@
         />
 
         <q-toolbar-title class="text-h6 ellipsis" v-if="authStore.user">
-          Bienvenido <b class="text-weight-bold">{{ authStore.user.name }}</b>
+          {{ t('layout.header.welcome') }} <b class="text-weight-bold">{{ authStore.user.name }}</b>
         </q-toolbar-title>
         <q-toolbar-title class="text-weight-bold text-h6 ellipsis" v-else>
-          Bienvenido
+          {{ t('layout.header.welcome') }}
         </q-toolbar-title>
 
         <q-space v-if="!$q.screen.lt.md" />
@@ -27,7 +27,7 @@
             v-model="search"
             dense
             outlined
-            placeholder="Buscar tareas..."
+            :placeholder="t('layout.header.searchPlaceholder')"
             class="q-mr-md"
             style="width: 250px"
           >
@@ -42,17 +42,17 @@
             dense
             icon="smart_toy"
             class="q-mr-md"
-            aria-label="Abrir asistente"
+            :aria-label="t('layout.header.openAssistant')"
             @click="openChatbot"
           >
-            <q-tooltip>Abrir asistente</q-tooltip>
+            <q-tooltip>{{ t('layout.header.openAssistant') }}</q-tooltip>
           </q-btn>
 
           <q-btn flat round dense icon="notifications" class="q-mr-sm">
             <q-badge color="negative" floating v-if="notificationsStore.asyncUnreadCount > 0">
               {{ notificationsStore.asyncUnreadCount }}
             </q-badge>
-            <q-tooltip>Notificaciones</q-tooltip>
+            <q-tooltip>{{ t('layout.header.notifications') }}</q-tooltip>
             <q-menu auto-close class="bg-dark">
               <q-list style="min-width: 300px; max-width: 350px">
                 <q-item-label
@@ -60,14 +60,14 @@
                   class="row items-center justify-between text-white"
                   style="background-color: var(--q-dark-page)"
                 >
-                  Notificaciones
+                  {{ t('layout.header.notifications') }}
                   <q-btn
                     v-if="notificationsStore.asyncUnreadCount > 0"
                     flat
                     dense
                     size="sm"
                     color="primary"
-                    label="Marcar leídas"
+                    :label="t('layout.header.markAllRead')"
                     @click.stop="notificationsStore.markAllAsRead"
                   />
                 </q-item-label>
@@ -76,7 +76,7 @@
                 <template v-if="notificationsStore.asyncNotifications.length === 0">
                   <q-item>
                     <q-item-section class="text-center q-py-md" style="color: var(--text-muted)">
-                      No hay notificaciones
+                      {{ t('layout.header.noNotifications') }}
                     </q-item-section>
                   </q-item>
                 </template>
@@ -129,7 +129,7 @@
                   class="text-center text-primary"
                   @click="notificationsStore.clearAll"
                 >
-                  <q-item-section>Borrar todas</q-item-section>
+                  <q-item-section>{{ t('layout.header.clearAll') }}</q-item-section>
                 </q-item>
               </q-list>
             </q-menu>
@@ -143,11 +143,13 @@
             @click="themeStore.toggleTheme()"
             class="q-mr-sm"
           >
-            <q-tooltip>{{ themeStore.isDark ? 'Modo Claro' : 'Modo Oscuro' }}</q-tooltip>
+            <q-tooltip>{{
+              themeStore.isDark ? t('layout.header.lightMode') : t('layout.header.darkMode')
+            }}</q-tooltip>
           </q-btn>
 
           <q-btn flat round dense icon="push_pin" class="q-mr-md">
-            <q-tooltip>Tareas Fijadas</q-tooltip>
+            <q-tooltip>{{ t('layout.header.pinnedTasks') }}</q-tooltip>
           </q-btn>
 
           <q-btn round flat>
@@ -159,10 +161,10 @@
                 <q-item>
                   <q-item-section>
                     <q-item-label class="text-weight-bold">{{
-                      authStore.user?.name || 'Usuario'
+                      authStore.user?.name || t('layout.profile.defaultUser')
                     }}</q-item-label>
                     <q-item-label caption>{{
-                      authStore.user?.email || 'email@example.com'
+                      authStore.user?.email || t('layout.profile.defaultEmail')
                     }}</q-item-label>
                   </q-item-section>
                 </q-item>
@@ -173,14 +175,16 @@
                   <q-item-section avatar>
                     <q-icon name="settings" />
                   </q-item-section>
-                  <q-item-section>Configuraciones</q-item-section>
+                  <q-item-section>{{ t('layout.header.settings') }}</q-item-section>
                 </q-item>
 
                 <q-item clickable @click="logout" tag="a">
                   <q-item-section avatar>
                     <q-icon name="logout" color="negative" />
                   </q-item-section>
-                  <q-item-section class="text-negative">Cerrar Sesión</q-item-section>
+                  <q-item-section class="text-negative">{{
+                    t('layout.header.logout')
+                  }}</q-item-section>
                 </q-item>
               </q-list>
             </q-menu>
@@ -194,25 +198,25 @@
         <div class="column flex-center q-pt-md q-gutter-y-md">
           <q-btn flat round dense icon="dashboard" to="/">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
-              Dashboard
+              {{ t('layout.drawer.dashboard') }}
             </q-tooltip>
           </q-btn>
 
           <q-btn flat round dense icon="folder" to="/projects">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
-              Proyectos
+              {{ t('layout.drawer.projects') }}
             </q-tooltip>
           </q-btn>
 
           <q-btn flat round dense icon="task" to="/tasks">
-            <q-tooltip anchor="center right" self="center left" :offset="[10, 10]"
-              >Tareas</q-tooltip
-            >
+            <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">{{
+              t('layout.drawer.tasks')
+            }}</q-tooltip>
           </q-btn>
 
           <q-btn flat round dense icon="settings" to="/settings">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
-              Configuraciones
+              {{ t('layout.drawer.settings') }}
             </q-tooltip>
           </q-btn>
         </div>
@@ -220,13 +224,13 @@
         <div class="absolute-bottom column flex-center q-pb-md q-gutter-y-sm w-100">
           <q-btn flat round dense icon="post_add" color="primary" to="/tasks/new">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
-              Nueva Tarea
+              {{ t('layout.drawer.newTask') }}
             </q-tooltip>
           </q-btn>
 
           <q-btn flat round dense icon="create_new_folder" color="primary" to="/projects/new">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
-              Nuevo Proyecto
+              {{ t('layout.drawer.newProject') }}
             </q-tooltip>
           </q-btn>
 
@@ -250,10 +254,10 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label class="text-weight-bold">{{
-                  authStore.user?.name || 'Usuario'
+                  authStore.user?.name || t('layout.profile.defaultUser')
                 }}</q-item-label>
                 <q-item-label caption>{{
-                  authStore.user?.email || 'email@example.com'
+                  authStore.user?.email || t('layout.profile.defaultEmail')
                 }}</q-item-label>
               </q-item-section>
             </q-item>
@@ -265,21 +269,21 @@
                 <q-item-section avatar>
                   <q-icon name="dashboard" />
                 </q-item-section>
-                <q-item-section>Dashboard</q-item-section>
+                <q-item-section>{{ t('layout.drawer.dashboard') }}</q-item-section>
               </q-item>
 
               <q-item clickable v-ripple to="/projects">
                 <q-item-section avatar>
                   <q-icon name="folder" />
                 </q-item-section>
-                <q-item-section>Proyectos</q-item-section>
+                <q-item-section>{{ t('layout.drawer.projects') }}</q-item-section>
               </q-item>
 
               <q-item clickable v-ripple to="/tasks">
                 <q-item-section avatar>
                   <q-icon name="task" />
                 </q-item-section>
-                <q-item-section>Tareas</q-item-section>
+                <q-item-section>{{ t('layout.drawer.tasks') }}</q-item-section>
               </q-item>
             </q-list>
           </div>
@@ -291,7 +295,7 @@
               <q-item-section avatar>
                 <q-icon name="notifications" />
               </q-item-section>
-              <q-item-section>Notificaciones</q-item-section>
+              <q-item-section>{{ t('layout.header.notifications') }}</q-item-section>
               <q-item-section side v-if="notificationsStore.asyncUnreadCount > 0">
                 <q-badge color="negative">{{ notificationsStore.asyncUnreadCount }}</q-badge>
               </q-item-section>
@@ -302,20 +306,20 @@
                 <q-icon :name="themeStore.isDark ? 'light_mode' : 'dark_mode'" />
               </q-item-section>
               <q-item-section>{{
-                themeStore.isDark ? 'Modo Claro' : 'Modo Oscuro'
+                themeStore.isDark ? t('layout.header.lightMode') : t('layout.header.darkMode')
               }}</q-item-section>
             </q-item>
 
             <q-item clickable v-ripple>
               <q-item-section avatar><q-icon name="push_pin" /></q-item-section>
-              <q-item-section>Tareas Fijadas</q-item-section>
+              <q-item-section>{{ t('layout.header.pinnedTasks') }}</q-item-section>
             </q-item>
 
             <q-item clickable v-ripple to="/settings">
               <q-item-section avatar>
                 <q-icon name="settings" />
               </q-item-section>
-              <q-item-section>Configuraciones</q-item-section>
+              <q-item-section>{{ t('layout.header.settings') }}</q-item-section>
             </q-item>
 
             <q-separator class="q-my-md" />
@@ -324,19 +328,19 @@
               <q-item-section avatar>
                 <q-icon name="post_add" />
               </q-item-section>
-              <q-item-section>Nueva Tarea</q-item-section>
+              <q-item-section>{{ t('layout.drawer.newTask') }}</q-item-section>
             </q-item>
 
             <q-item clickable v-ripple class="text-primary">
               <q-item-section avatar>
                 <q-icon name="create_new_folder" />
               </q-item-section>
-              <q-item-section>Nuevo Proyecto</q-item-section>
+              <q-item-section>{{ t('layout.drawer.newProject') }}</q-item-section>
             </q-item>
 
             <q-item clickable v-ripple @click="logout" class="text-negative q-mt-md">
               <q-item-section avatar><q-icon name="logout" color="negative" /></q-item-section>
-              <q-item-section>Cerrar Sesión</q-item-section>
+              <q-item-section>{{ t('layout.header.logout') }}</q-item-section>
             </q-item>
 
             <div
@@ -361,6 +365,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/auth';
 import { useThemeStore } from 'src/stores/theme';
 import { APP_VERSION } from 'src/data/constants';
@@ -371,6 +376,7 @@ import type { AppNotification } from 'src/types/ui';
 const router = useRouter();
 const authStore = useAuthStore();
 const themeStore = useThemeStore();
+const { t } = useI18n();
 
 const search = ref(''); // TODO: Implementar búsqueda
 const drawer = ref(true);

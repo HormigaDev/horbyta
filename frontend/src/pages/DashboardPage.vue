@@ -1,17 +1,16 @@
 <template>
   <q-page padding>
     <div class="row q-col-gutter-md">
-      <!-- DataTable Mocks Section -->
       <div class="col-12">
         <h4 class="text-h4 text-weight-bold q-mt-none" style="color: var(--text-color)">
-          Demo: Data Table (CRUD)
+          {{ t('dashboard.table.demoTitle') }}
         </h4>
       </div>
 
       <div class="col-12">
         <DataTable
           tableId="dashboard_projects_table"
-          title="Gestión de Proyectos"
+          :title="t('dashboard.table.managementTitle')"
           :columns="mockColumns"
           :rows="currentRows"
           :totalItems="currentRows.length"
@@ -22,10 +21,9 @@
           @delete="handleDelete"
           @refresh="handleRefresh"
         >
-          <!-- Custom action en la esquina superior -->
           <template #top-actions>
             <q-btn flat round dense icon="print" style="color: var(--text-muted)">
-              <q-tooltip>Imprimir</q-tooltip>
+              <q-tooltip>{{ t('dashboard.table.print') }}</q-tooltip>
             </q-btn>
           </template>
 
@@ -50,17 +48,16 @@
         </DataTable>
       </div>
 
-      <!-- ...resto markdown demo -->
       <div class="col-12 q-mt-xl">
         <h4 class="text-h4 text-weight-bold q-mt-none" style="color: var(--text-color)">
-          Demo: Editor Markdown
+          {{ t('dashboard.markdown.demoTitle') }}
         </h4>
       </div>
 
       <div class="col-12 col-md-6">
         <q-card bordered flat>
           <q-card-section>
-            <div class="text-h6 q-mb-md">Modo Edición</div>
+            <div class="text-h6 q-mb-md">{{ t('dashboard.markdown.editMode') }}</div>
             <MarkdownRenderer v-model="markdownText" :edit-mode="true" />
           </q-card-section>
         </q-card>
@@ -69,7 +66,7 @@
       <div class="col-12 col-md-6">
         <q-card bordered flat>
           <q-card-section>
-            <div class="text-h6 q-mb-md">Modo Vista Previa</div>
+            <div class="text-h6 q-mb-md">{{ t('dashboard.markdown.previewMode') }}</div>
             <MarkdownRenderer :model-value="markdownText" :edit-mode="false" />
           </q-card-section>
         </q-card>
@@ -80,31 +77,33 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import DataTable from 'src/components/DataTable.vue';
 import { mockColumns, mockRows } from 'src/data/mockDataTable';
 import { useUI } from 'src/composables/useUI';
 
+const { t } = useI18n();
 const { notify, notifyAsync, confirmDelete, showLoading, hideLoading } = useUI();
 const currentRows = ref([...mockRows]);
 
 const handleRefresh = () => {
-  notifyAsync('Tabla Recargada...', 'info');
+  notifyAsync(t('dashboard.table.refreshMessage'), 'info');
 };
 const handleCreate = () => {
-  notify('Abriendo Modal Crear...', 'positive');
+  notify(t('dashboard.table.createMessage'), 'positive');
 };
 const handleEdit = (ids: string[]) => {
-  notify(`Editando los registros: ${ids.join(', ')}`, 'warning');
+  notify(t('dashboard.table.editMessage', { ids: ids.join(', ') }), 'warning');
 };
 const handleDelete = async (ids: string[]) => {
-  const confirmed = await confirmDelete(`los ${ids.length} elementos seleccionados`);
+  const confirmed = await confirmDelete(t('dashboard.table.deleteTarget', { count: ids.length }));
   if (confirmed) {
-    showLoading('Eliminando registro...');
+    showLoading(t('dashboard.table.deleteLoading'));
     setTimeout(() => {
       currentRows.value = currentRows.value.filter((row) => !ids.includes(row.id));
       hideLoading();
-      notify(`Registros Eliminados exitosamente.`, 'negative');
+      notify(t('dashboard.table.deleteSuccess'), 'negative');
     }, 2000);
   }
 };

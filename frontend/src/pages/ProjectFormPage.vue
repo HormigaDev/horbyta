@@ -4,10 +4,10 @@
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
           <div class="text-h6">
-            {{ isNew ? 'Crear Nuevo Proyecto' : 'Editar Proyecto' }}
+            {{ isNew ? t('projects.form.createTitle') : t('projects.form.editTitle') }}
           </div>
           <div class="text-caption text-grey" v-if="!isNew">
-            Editando proyecto: {{ project.id }}
+            {{ t('projects.form.editingPrefix', { id: project.id }) }}
           </div>
         </q-card-section>
 
@@ -15,7 +15,7 @@
           <div class="col-12 col-md-8">
             <q-input
               v-model="project.name"
-              label="Nombre del Proyecto *"
+              :label="t('projects.form.nameLabel')"
               outlined
               dense
               :error="nameRuleState.error"
@@ -26,7 +26,7 @@
           <div class="col-12 col-md-4">
             <SelectByTerm
               v-model="project.category_id"
-              label="Categoría"
+              :label="t('projects.form.categoryLabel')"
               :options="categoryOptions"
               :loading="isCategoriesLoading"
               @search="onCategorySearch"
@@ -37,12 +37,12 @@
 
       <q-card flat bordered class="q-mb-md">
         <q-card-section>
-          <div class="text-subtitle1 q-mb-sm">Añadir Hitos (Opcional)</div>
+          <div class="text-subtitle1 q-mb-sm">{{ t('projects.form.milestonesTitle') }}</div>
           <div class="row q-col-gutter-sm items-center q-mb-md">
             <div class="col-12 col-md-5">
               <q-input
                 v-model="newMilestoneName"
-                label="Nombre del Hito"
+                :label="t('projects.form.milestoneNameLabel')"
                 outlined
                 dense
                 @keyup.enter="addMilestone"
@@ -52,7 +52,7 @@
               <q-input
                 v-model="newMilestoneDate"
                 mask="##/##/####"
-                label="Fecha Estimada (DD/MM/YYYY)"
+                :label="t('projects.form.milestoneDateLabel')"
                 outlined
                 dense
               >
@@ -61,7 +61,7 @@
                     <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                       <q-date v-model="newMilestoneDate" mask="DD/MM/YYYY">
                         <div class="row items-center justify-end">
-                          <q-btn v-close-popup label="Cerrar" color="primary" flat />
+                          <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
                         </div>
                       </q-date>
                     </q-popup-proxy>
@@ -72,7 +72,7 @@
             <div class="col-12 col-md-3">
               <q-btn
                 color="secondary"
-                label="Agregar"
+                :label="t('common.add')"
                 @click="addMilestone"
                 unelevated
                 :disable="!newMilestoneName"
@@ -97,7 +97,7 @@
 
       <q-card flat bordered class="q-mb-md">
         <q-card-section>
-          <div class="text-subtitle1 q-mb-sm">Descripción del Proyecto (Soporta Markdown)</div>
+          <div class="text-subtitle1 q-mb-sm">{{ t('projects.form.descriptionTitle') }}</div>
           <div class="row q-col-gutter-md" style="min-height: 50vh">
             <div class="col-12 col-md-6" style="display: flex; flex-direction: column">
               <MarkdownRenderer
@@ -120,8 +120,12 @@
                   flex-grow: 1;
                 "
               >
-                <div class="text-caption text-grey q-mb-sm">Vista Previa Markdown</div>
-                <MarkdownRenderer :model-value="project.description || '*Sin descripción*'" />
+                <div class="text-caption text-grey q-mb-sm">
+                  {{ t('projects.form.markdownPreview') }}
+                </div>
+                <MarkdownRenderer
+                  :model-value="project.description || t('projects.form.emptyDescription')"
+                />
               </div>
             </div>
           </div>
@@ -129,9 +133,9 @@
       </q-card>
 
       <div class="row justify-end q-gutter-sm">
-        <q-btn label="Cancelar" flat color="grey" @click="goBack" />
+        <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
         <q-btn
-          label="Guardar Proyecto"
+          :label="t('projects.form.saveButton')"
           color="primary"
           unelevated
           :loading="isSubmitting"
@@ -145,6 +149,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { ProjectsService } from 'src/services/projects';
 import { CategoriesService } from 'src/services/categories';
 import { useUI } from 'src/composables/useUI';
@@ -162,6 +167,7 @@ import type { Category } from 'src/types/category';
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const { notify, notifyError, showLoading, hideLoading } = useUI();
 const { nameRuleState, descriptionRuleState, validateName, validateDescription } =
   useProjectsRules();
@@ -239,7 +245,7 @@ const loadProject = async () => {
   if (isNew.value) return;
 
   const projectId = route.params.id as string;
-  showLoading('Cargando proyecto...');
+  showLoading(t('projects.form.loadingProject'));
   try {
     const data = await ProjectsService.getById(projectId);
     project.value = data;
@@ -259,7 +265,7 @@ const loadProject = async () => {
       }
     }
   } catch (err: unknown) {
-    notifyError('Error cargando el proyecto', err);
+    notifyError(t('projects.form.loadError'), err);
     void router.push('/projects');
   } finally {
     hideLoading();
@@ -281,7 +287,7 @@ const saveProject = async () => {
   if (hasNameError || hasDescError) return;
 
   isSubmitting.value = true;
-  showLoading('Guardando proyecto...');
+  showLoading(t('projects.form.saving'));
 
   try {
     const payload: CreateProjectDto = {
@@ -293,7 +299,7 @@ const saveProject = async () => {
 
     if (isNew.value) {
       const created = await ProjectsService.create(payload);
-      notify('Proyecto creado', 'positive');
+      notify(t('projects.form.createSuccess'), 'positive');
       void router.push(`/projects/${created.id}`);
     } else {
       const updatePayload: UpdateProjectDto = {
@@ -303,11 +309,11 @@ const saveProject = async () => {
         new_milestones: milestones.value.length ? milestones.value : null,
       };
       await ProjectsService.update(project.value.id, updatePayload);
-      notify('Proyecto actualizado', 'positive');
+      notify(t('projects.form.updateSuccess'), 'positive');
       void router.push(`/projects/${project.value.id}`);
     }
   } catch (err: unknown) {
-    notifyError('Error al guardar el proyecto', err);
+    notifyError(t('projects.form.saveError'), err);
   } finally {
     isSubmitting.value = false;
     hideLoading();

@@ -4,10 +4,10 @@
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
           <div class="text-h6">
-            {{ isNew ? 'Crear Nueva Tarea' : 'Editar Tarea' }}
+            {{ isNew ? t('tasks.form.createTitle') : t('tasks.form.editTitle') }}
           </div>
           <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
-            Editando tarea: {{ taskId }}
+            {{ t('tasks.form.editingPrefix', { id: taskId }) }}
           </div>
         </q-card-section>
 
@@ -15,7 +15,7 @@
           <div class="col-12 col-md-8">
             <q-input
               v-model="form.title"
-              label="Título *"
+              :label="t('tasks.form.titleLabel')"
               dense
               outlined
               :error="titleRuleState.error"
@@ -27,7 +27,7 @@
             <q-select
               dense
               v-model="form.status"
-              label="Estado"
+              :label="t('tasks.form.statusLabel')"
               outlined
               emit-value
               map-options
@@ -38,7 +38,7 @@
           <div class="col-12 col-md-6">
             <SelectByTerm
               v-model="form.project_id"
-              label="Proyecto"
+              :label="t('tasks.form.projectLabel')"
               :options="projectOptions"
               :loading="isProjectsLoading"
               @search="onProjectSearch"
@@ -47,7 +47,7 @@
           <div class="col-12 col-md-6">
             <SelectByTerm
               v-model="form.milestone_id"
-              label="Milestone"
+              :label="t('tasks.form.milestoneLabel')"
               :options="milestoneOptions"
               :loading="isMilestonesLoading"
               :disable="!form.project_id"
@@ -59,22 +59,22 @@
             <q-select
               dense
               v-model="form.priority"
-              label="Prioridad"
+              :label="t('tasks.form.priorityLabel')"
               outlined
               emit-value
               map-options
-              :options="PRIORITY_OPTIONS"
+              :options="priorityOptions"
             />
           </div>
           <div class="col-12 col-md-4">
             <q-select
               dense
               v-model="form.complexity"
-              label="Complejidad"
+              :label="t('tasks.form.complexityLabel')"
               outlined
               emit-value
               map-options
-              :options="COMPLEXITY_OPTIONS"
+              :options="complexityOptions"
             />
           </div>
           <div class="col-12 col-md-4">
@@ -82,7 +82,7 @@
               dense
               v-model="dueDateDisplay"
               mask="##/##/####"
-              label="Fecha límite (DD/MM/YYYY)"
+              :label="t('tasks.form.dueDateLabel')"
               outlined
             >
               <template #append>
@@ -90,7 +90,7 @@
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                     <q-date v-model="dueDateDisplay" mask="DD/MM/YYYY">
                       <div class="row items-center justify-end">
-                        <q-btn v-close-popup label="Cerrar" color="primary" flat />
+                        <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
                       </div>
                     </q-date>
                   </q-popup-proxy>
@@ -102,7 +102,7 @@
           <div class="col-12">
             <SelectByTerm
               v-model="form.tag_ids"
-              label="Etiquetas"
+              :label="t('tasks.form.tagsLabel')"
               :options="tagOptions"
               :loading="isTagsLoading"
               multiple
@@ -112,14 +112,18 @@
           </div>
 
           <div class="col-12">
-            <q-toggle v-model="form.block_parent" label="Bloquea tarea padre" color="primary" />
+            <q-toggle
+              v-model="form.block_parent"
+              :label="t('tasks.form.blockParentLabel')"
+              color="primary"
+            />
           </div>
         </q-card-section>
       </q-card>
 
       <q-card flat bordered class="q-mb-md">
         <q-card-section>
-          <div class="text-subtitle1 q-mb-sm">Descripción de la Tarea (Soporta Markdown)</div>
+          <div class="text-subtitle1 q-mb-sm">{{ t('tasks.form.descriptionTitle') }}</div>
           <div class="row q-col-gutter-md" style="min-height: 50vh">
             <div class="col-12 col-md-6" style="display: flex; flex-direction: column">
               <MarkdownRenderer
@@ -139,9 +143,11 @@
                 "
               >
                 <div class="text-caption q-mb-sm" style="color: var(--text-muted)">
-                  Vista Previa Markdown
+                  {{ t('tasks.form.previewTitle') }}
                 </div>
-                <MarkdownRenderer :model-value="form.description || '*Sin descripción*'" />
+                <MarkdownRenderer
+                  :model-value="form.description || t('tasks.form.emptyDescription')"
+                />
               </div>
             </div>
           </div>
@@ -149,9 +155,9 @@
       </q-card>
 
       <div class="row justify-end q-gutter-sm">
-        <q-btn label="Cancelar" flat color="grey" @click="goBack" />
+        <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
         <q-btn
-          label="Guardar Tarea"
+          :label="t('tasks.form.saveButton')"
           color="primary"
           unelevated
           :loading="isSubmitting"
@@ -165,6 +171,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
 import { useUI } from 'src/composables/useUI';
@@ -174,7 +181,6 @@ import { TasksService } from 'src/services/tasks';
 import { ProjectsService } from 'src/services/projects';
 import { MilestonesService } from 'src/services/milestones';
 import { TagsService } from 'src/services/tags';
-import { COMPLEXITY_OPTIONS, PRIORITY_OPTIONS } from 'src/data/constants';
 import type { Filter, QueryPayload } from 'src/types';
 import type { Milestone } from 'src/types/milestone';
 import type { ProjectSummary } from 'src/types/project';
@@ -183,6 +189,7 @@ import type { TaskDto, TaskStatus } from 'src/types/task';
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const { notify, notifyError, showLoading, hideLoading } = useUI();
 const { titleRuleState, validateTitle } = useTasksRules();
 
@@ -192,10 +199,22 @@ const isSubmitting = ref(false);
 const isHydratingTask = ref(false);
 
 const statusOptions: Array<{ label: string; value: TaskStatus }> = [
-  { label: 'Por hacer', value: 'todo' },
-  { label: 'En progreso', value: 'in_progress' },
-  { label: 'En revisión', value: 'review' },
-  { label: 'Completada', value: 'done' },
+  { label: t('tasks.form.status.todo'), value: 'todo' },
+  { label: t('tasks.form.status.in_progress'), value: 'in_progress' },
+  { label: t('tasks.form.status.review'), value: 'review' },
+  { label: t('tasks.form.status.done'), value: 'done' },
+];
+const priorityOptions = [
+  { label: t('tasks.form.priority.1'), value: 1 },
+  { label: t('tasks.form.priority.2'), value: 2 },
+  { label: t('tasks.form.priority.3'), value: 3 },
+  { label: t('tasks.form.priority.4'), value: 4 },
+];
+const complexityOptions = [
+  { label: t('tasks.form.complexity.1'), value: 1 },
+  { label: t('tasks.form.complexity.2'), value: 2 },
+  { label: t('tasks.form.complexity.3'), value: 3 },
+  { label: t('tasks.form.complexity.4'), value: 4 },
 ];
 
 const dueDateDisplay = ref('');
@@ -442,7 +461,7 @@ const saveTask = async () => {
   if (validateTitle(form.title)) return;
 
   isSubmitting.value = true;
-  showLoading('Guardando tarea...');
+  showLoading(t('tasks.form.saving'));
 
   try {
     const payload: TaskDto = {
@@ -461,15 +480,15 @@ const saveTask = async () => {
 
     if (isNew.value) {
       const created = await TasksService.create(payload);
-      notify('Tarea creada correctamente', 'positive');
+      notify(t('tasks.form.createSuccess'), 'positive');
       void router.push(`/tasks/${created.id}`);
     } else {
       await TasksService.update(taskId.value, payload);
-      notify('Tarea actualizada correctamente', 'positive');
+      notify(t('tasks.form.updateSuccess'), 'positive');
       void router.push(`/tasks/${taskId.value}`);
     }
   } catch (err: unknown) {
-    notifyError('Error al guardar la tarea', err);
+    notifyError(t('tasks.form.saveError'), err);
   } finally {
     isSubmitting.value = false;
     hideLoading();
@@ -477,7 +496,7 @@ const saveTask = async () => {
 };
 
 onMounted(async () => {
-  showLoading('Cargando formulario de tarea...');
+  showLoading(t('tasks.form.loadForm'));
   try {
     await loadReferenceData();
     await loadTask();
@@ -490,7 +509,7 @@ onMounted(async () => {
       await ensureMilestoneOption(form.milestone_id);
     }
   } catch (err: unknown) {
-    notifyError('Error cargando el formulario de tarea', err);
+    notifyError(t('tasks.form.loadError'), err);
     void router.push('/tasks');
   } finally {
     hideLoading();

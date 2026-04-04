@@ -4,8 +4,8 @@
       <q-page class="flex flex-center">
         <q-card class="q-pa-md shadow-2" style="width: 100%; max-width: 400px">
           <q-card-section class="text-center">
-            <div class="text-h5 text-weight-bold">HormigaPM</div>
-            <div class="text-subtitle2 text-grey-7">Ingreso al sistema</div>
+            <div class="text-h5 text-weight-bold">{{ t('auth.login.brand') }}</div>
+            <div class="text-subtitle2 text-grey-7">{{ t('auth.login.subtitle') }}</div>
           </q-card-section>
 
           <q-card-section>
@@ -13,7 +13,7 @@
               <q-input
                 v-model="email"
                 type="email"
-                label="Correo Electrónico"
+                :label="t('auth.login.emailLabel')"
                 outlined
                 dense
                 no-error-icon
@@ -28,7 +28,7 @@
               <q-input
                 v-model="password"
                 type="password"
-                label="Contraseña"
+                :label="t('auth.login.passwordLabel')"
                 outlined
                 dense
                 no-error-icon
@@ -47,7 +47,7 @@
 
               <div>
                 <q-btn
-                  label="INICIAR SESIÓN"
+                  :label="t('auth.login.submit')"
                   type="submit"
                   color="primary"
                   class="full-width"
@@ -65,10 +65,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/auth';
 import { apiFetch } from 'src/boot/fetch';
 import { useLoginRules } from 'src/composables/rules/login.rules';
 
+const { t } = useI18n();
 const router = useRouter();
 const authStore = useAuthStore();
 
@@ -101,7 +103,7 @@ async function handleLogin() {
     authStore.setAuthenticated(true, response.user);
     await router.push({ name: 'dashboard' });
   } catch {
-    errorMessage.value = 'Ocurrió un error inesperado. Intente nuevamente más tarde';
+    errorMessage.value = t('auth.login.unexpectedError');
   } finally {
     isLoading.value = false;
     password.value = '';

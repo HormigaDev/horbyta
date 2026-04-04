@@ -38,14 +38,19 @@
     </template>
 
     <template #append>
-      <q-icon name="search" />
+      <q-icon name="search">
+        <q-tooltip>{{ t('selectByTerm.searchTooltip') }}</q-tooltip>
+      </q-icon>
     </template>
   </q-select>
 </template>
 
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { SelectByTermOption } from 'src/composables/useSelectByTerm';
+
+const { t } = useI18n();
 
 interface Props {
   modelValue: string | string[] | null;

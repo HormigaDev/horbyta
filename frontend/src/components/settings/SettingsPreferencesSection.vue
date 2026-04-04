@@ -1,9 +1,9 @@
 <template>
   <q-card flat bordered>
     <q-card-section>
-      <div class="text-h6">Preferencias</div>
+      <div class="text-h6">{{ t('settings.preferences.title') }}</div>
       <div class="text-caption" style="color: var(--text-muted)">
-        Estas opciones se guardan en tu perfil y se podrán usar en futuras features.
+        {{ t('settings.preferences.subtitle') }}
       </div>
     </q-card-section>
 
@@ -13,31 +13,31 @@
       <div class="col-12 col-md-4">
         <q-select
           v-model="form.theme"
-          label="Tema"
+          :label="t('settings.preferences.themeLabel')"
           outlined
           dense
           emit-value
           map-options
-          :options="THEME_OPTIONS"
+          :options="themeOptions"
         />
       </div>
 
       <div class="col-12 col-md-4">
         <q-select
           v-model="form.language"
-          label="Idioma"
+          :label="t('settings.preferences.languageLabel')"
           outlined
           dense
           emit-value
           map-options
-          :options="LANGUAGE_OPTIONS"
+          :options="languageOptions"
         />
       </div>
 
       <div class="col-12 col-md-4">
         <q-select
           v-model="form.timezone"
-          label="Timezone"
+          :label="t('settings.preferences.timezoneLabel')"
           outlined
           dense
           emit-value
@@ -55,7 +55,7 @@
       <q-btn
         color="primary"
         unelevated
-        label="Guardar preferencias"
+        :label="t('settings.preferences.saveButton')"
         :loading="isSaving"
         @click="savePreferences"
       />
@@ -65,9 +65,10 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { UsersService } from 'src/services/users';
 import { useUI } from 'src/composables/useUI';
-import { COMMON_TIMEZONES, THEME_OPTIONS, LANGUAGE_OPTIONS } from 'src/data/constants';
+import { COMMON_TIMEZONES } from 'src/data/constants';
 import { useThemeStore } from 'src/stores/theme';
 import type {
   UserLanguagePreference,
@@ -91,12 +92,23 @@ const emit = defineEmits<{
   updated: [value: UserSettings];
 }>();
 
+const { t } = useI18n();
 const { notify, notifyError } = useUI();
 const themeStore = useThemeStore();
 
 const isSaving = ref(false);
 const allTimezones = ref<string[]>([]);
 const timezoneOptions = ref<SelectOption[]>([]);
+const languageOptions = [
+  { label: t('settings.preferences.language.es'), value: 'es' },
+  { label: t('settings.preferences.language.en'), value: 'en' },
+  { label: t('settings.preferences.language.pt'), value: 'pt' },
+];
+const themeOptions = [
+  { label: t('settings.preferences.theme.system'), value: 'system' },
+  { label: t('settings.preferences.theme.dark'), value: 'dark' },
+  { label: t('settings.preferences.theme.light'), value: 'light' },
+];
 
 const form = reactive({
   theme: 'system' as UserThemePreference,
@@ -146,7 +158,7 @@ function filterTimezoneOptions(value: string, update: QuasarFilterUpdateFn) {
 
 async function savePreferences() {
   if (!form.timezone.trim()) {
-    notify('Debes seleccionar una timezone válida', 'warning');
+    notify(t('settings.preferences.invalidTimezone'), 'warning');
     return;
   }
 
@@ -166,9 +178,9 @@ async function savePreferences() {
     themeStore.applyTheme(isDarkMode);
 
     emit('updated', updated);
-    notify('Preferencias actualizadas', 'positive');
+    notify(t('settings.preferences.success'), 'positive');
   } catch (error: unknown) {
-    notifyError('No se pudieron guardar las preferencias', error);
+    notifyError(t('settings.preferences.error'), error);
   } finally {
     isSaving.value = false;
   }

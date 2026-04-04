@@ -3,8 +3,8 @@
     <DataTable
       class="col"
       table-id="tags_table"
-      title="Etiquetas"
-      :columns="TAGS_COLUMNS"
+      :title="t('tags.list.title')"
+      :columns="getTagColumns($t)"
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
@@ -20,7 +20,9 @@
       <q-card style="min-width: 400px; max-width: 90vw">
         <q-form @submit="onSubmit">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">{{ editingId ? 'Editar Etiqueta' : 'Nueva Etiqueta' }}</div>
+            <div class="text-h6">
+              {{ editingId ? t('tags.dialog.editTitle') : t('tags.dialog.newTitle') }}
+            </div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
@@ -28,7 +30,7 @@
           <q-card-section class="q-pt-md">
             <q-input
               v-model="form.name"
-              label="Nombre de la etiqueta *"
+              :label="t('tags.dialog.nameLabel')"
               autofocus
               outlined
               :error="nameRuleState.error"
@@ -37,8 +39,8 @@
           </q-card-section>
 
           <q-card-actions align="right" class="text-primary q-px-md q-pb-md">
-            <q-btn flat label="Cancelar" v-close-popup />
-            <q-btn color="primary" label="Guardar" type="submit" :loading="isSaving" />
+            <q-btn flat :label="t('common.cancel')" v-close-popup />
+            <q-btn color="primary" :label="t('common.save')" type="submit" :loading="isSaving" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -48,16 +50,18 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import DataTable from 'src/components/DataTable.vue';
-import { TAGS_COLUMNS } from 'src/data/constants';
 import { useQuery } from 'src/composables/useQuery';
 import { useUI } from 'src/composables/useUI';
 import type { FilterSchema } from 'src/types';
 import { TagsService } from 'src/services/tags';
 import type { TagDto } from 'src/types/tag';
 import { useTagRules } from 'src/composables/rules/tags.rules';
+import { getTagColumns } from 'src/data/columns';
 
 const { notify, notifyError, confirmDelete } = useUI();
+const { t } = useI18n();
 const { nameRuleState, validateName } = useTagRules();
 
 const tagFilterSchema: FilterSchema = {
@@ -124,7 +128,7 @@ const handleEdit = async (ids: string[]) => {
     editingId.value = ids[0];
     isDialogOpen.value = true;
   } catch (err: unknown) {
-    notifyError('Error al obtener la etiqueta', err);
+    notifyError(t('tags.messages.getError'), err);
   }
 };
 
@@ -134,15 +138,15 @@ const onSubmit = async () => {
     if (validateName(form.name)) return;
     if (editingId.value) {
       await TagsService.update(editingId.value, form);
-      notify('Etiqueta actualizada correctamente', 'positive');
+      notify(t('tags.messages.updateSuccess'), 'positive');
     } else {
       await TagsService.create(form);
-      notify('Etiqueta creada correctamente', 'positive');
+      notify(t('tags.messages.createSuccess'), 'positive');
     }
     isDialogOpen.value = false;
     void fetch();
   } catch (err: unknown) {
-    notifyError('Error al guardar la etiqueta', err);
+    notifyError(t('tags.messages.saveError'), err);
   } finally {
     isSaving.value = false;
   }
@@ -151,16 +155,18 @@ const onSubmit = async () => {
 const confirmDestruction = async (selectedIds: string[]) => {
   if (selectedIds.length === 0) return;
 
-  const confirmed = await confirmDelete(`${selectedIds.length} etiqueta(s)`);
+  const confirmed = await confirmDelete(
+    t('tags.messages.deleteTarget', { count: selectedIds.length }),
+  );
   if (confirmed) {
     try {
       for (const id of selectedIds) {
         await TagsService.delete(id);
       }
-      notify(`Etiquetas eliminadas correctamente`, 'positive');
+      notify(t('tags.messages.deleteSuccess'), 'positive');
       void fetch();
     } catch (err: unknown) {
-      notifyError('Error al eliminar las etiquetas', err);
+      notifyError(t('tags.messages.deleteError'), err);
     }
   }
 };
