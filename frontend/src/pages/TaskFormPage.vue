@@ -124,7 +124,7 @@
       <q-card flat bordered class="q-mb-md">
         <q-card-section>
           <div class="text-subtitle1 q-mb-sm">{{ t('tasks.form.descriptionTitle') }}</div>
-          <div class="row q-col-gutter-md" style="min-height: 50vh">
+          <div class="row q-col-gutter-md" style="min-height: 30vh">
             <div class="col-12 col-md-6" style="display: flex; flex-direction: column">
               <MarkdownRenderer
                 v-model="taskDescription"
@@ -496,7 +496,6 @@ const saveTask = async () => {
 };
 
 onMounted(async () => {
-  showLoading(t('tasks.form.loadForm'));
   try {
     await loadReferenceData();
     await loadTask();
@@ -511,8 +510,6 @@ onMounted(async () => {
   } catch (err: unknown) {
     notifyError(t('tasks.form.loadError'), err);
     void router.push('/tasks');
-  } finally {
-    hideLoading();
   }
 });
 </script>
@@ -521,6 +518,6 @@ onMounted(async () => {
 .fit-textarea :deep(.q-field__control),
 .fit-textarea :deep(.q-field__native) {
   height: 100%;
-  min-height: 50vh;
+  min-height: 30vh;
 }
 </style>

@@ -13,7 +13,6 @@
     emit-value
     map-options
     use-input
-    fill-input
     input-debounce="0"
     outlined
     dense

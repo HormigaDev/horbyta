@@ -130,7 +130,11 @@ renderer.code = function ({ text, lang }) {
           </div>`;
 };
 
-marked.use({ renderer });
+marked.use({
+  renderer,
+  gfm: true,
+  breaks: true,
+});
 
 const props = defineProps({
   modelValue: {

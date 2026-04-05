@@ -24,6 +24,7 @@ export const messages = {
   'common.yes': 'Sí',
   'common.no': 'No',
   'common.empty': 'Sin datos',
+  'common.goback': 'Volver',
 
   'auth.login.brand': 'HormigaPM',
   'auth.login.subtitle': 'Ingreso al sistema',
@@ -201,6 +202,11 @@ export const messages = {
   'tasks.detail.status.in_progress': 'En progreso',
   'tasks.detail.status.review': 'En revisión',
   'tasks.detail.status.done': 'Completada',
+
+  'settings.app.title': 'Configuraciones de la aplicación',
+  'settings.app.subtitle': 'Propiedades esenciales para el funcionamiento de la app',
+  'settings.app.tags': 'Etiquetas',
+  'settings.app.categories': 'Categorías',
 
   'settings.page.title': 'Configuraciones',
   'settings.page.subtitle': 'Define tus preferencias, datos de usuario y notificaciones.',

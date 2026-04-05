@@ -135,19 +135,6 @@
             </q-menu>
           </q-btn>
 
-          <q-btn
-            flat
-            round
-            dense
-            :icon="themeStore.isDark ? 'light_mode' : 'dark_mode'"
-            @click="themeStore.toggleTheme()"
-            class="q-mr-sm"
-          >
-            <q-tooltip>{{
-              themeStore.isDark ? t('layout.header.lightMode') : t('layout.header.darkMode')
-            }}</q-tooltip>
-          </q-btn>
-
           <q-btn flat round dense icon="push_pin" class="q-mr-md">
             <q-tooltip>{{ t('layout.header.pinnedTasks') }}</q-tooltip>
           </q-btn>
@@ -301,15 +288,6 @@
               </q-item-section>
             </q-item>
 
-            <q-item clickable v-ripple @click="themeStore.toggleTheme()">
-              <q-item-section avatar>
-                <q-icon :name="themeStore.isDark ? 'light_mode' : 'dark_mode'" />
-              </q-item-section>
-              <q-item-section>{{
-                themeStore.isDark ? t('layout.header.lightMode') : t('layout.header.darkMode')
-              }}</q-item-section>
-            </q-item>
-
             <q-item clickable v-ripple>
               <q-item-section avatar><q-icon name="push_pin" /></q-item-section>
               <q-item-section>{{ t('layout.header.pinnedTasks') }}</q-item-section>
@@ -367,7 +345,6 @@ import { defineAsyncComponent, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/auth';
-import { useThemeStore } from 'src/stores/theme';
 import { APP_VERSION } from 'src/data/constants';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { useUI } from 'src/composables/useUI';
@@ -375,7 +352,6 @@ import type { AppNotification } from 'src/types/ui';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const themeStore = useThemeStore();
 const { t } = useI18n();
 
 const search = ref(''); // TODO: Implementar búsqueda

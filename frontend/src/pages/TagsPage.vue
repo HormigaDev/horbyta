@@ -14,7 +14,11 @@
       @edit="handleEdit"
       @delete="confirmDestruction"
       @refresh="fetch"
-    />
+    >
+      <template #top-actions>
+        <q-btn dense flat :label="$t('common.goback')" @click="$router.back()" icon="arrow_back" />
+      </template>
+    </DataTable>
 
     <q-dialog v-model="isDialogOpen" persistent>
       <q-card style="min-width: 400px; max-width: 90vw">

@@ -21,6 +21,8 @@
       </q-card>
 
       <template v-if="settings">
+        <SettingsAppSection />
+
         <SettingsPreferencesSection
           :preferences="settings.preferences"
           @updated="handleSettingsUpdated"
@@ -49,6 +51,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import SettingsAppSection from 'src/components/settings/SettingsAppSection.vue';
 import SettingsPreferencesSection from 'src/components/settings/SettingsPreferencesSection.vue';
 import SettingsUserSection from 'src/components/settings/SettingsUserSection.vue';
 import SettingsNotificationsSection from 'src/components/settings/SettingsNotificationsSection.vue';
