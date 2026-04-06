@@ -1,5 +1,5 @@
 [package]
-name = "hormigapm"
+name = "horbyta"
 version = "0.1.0"
 edition = "2024"
 
@@ -22,3 +22,8 @@ tracing = "0.1.44"
 tracing-subscriber = {version = "0.3.23", features = ["fmt", "env-filter"]}
 uuid = { version = "1.23.0", features = ["v7"] }
 validator = { version = "0.20.0", features = ["derive"] }
+tonic  = { version = "0.11", features = ["tls", "transport"] }
+prost  = "0.12"
+
+[build-dependencies]
+tonic-build = "0.11"

@@ -1,2 +1,23 @@
-/target
+# Secrets
 .env
+.env.local
+.env.production
+ 
+# Rust
+target/
+Cargo.lock   # remove this line if publishing a library (keep for binaries)
+ 
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+ai_service/generated/   # compiled proto stubs — generated at build time
+ 
+# Docker
+*.log
+ 
+# OS
+.DS_Store
+Thumbs.db

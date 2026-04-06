@@ -1,0 +1,64 @@
+services:
+  horbyta_app:
+    build:
+      context: ..
+      dockerfile: .docker/Dockerfile.rust
+      args:
+        BINARY_NAME: ${BINARY_NAME}
+    image: pm/horbyta-app:${APP_VERSION:-latest}
+    container_name: horbyta_app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${RUST_PORT:-8080}:8080"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      RUST_LOG: ${RUST_LOG:-info,sqlx=warn}
+      PORT: "8080"
+      HORBYTA_AI_ADDR: "horbyta_ai:${GRPC_PORT:-50051}"
+      JWT_SECRET: ${JWT_SECRET}
+      APP_ENV: production
+    depends_on:
+      horbyta_ai:
+        condition: service_healthy
+    networks:
+      - pm_internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  horbyta_ai:
+    build:
+      context: ..
+      dockerfile: .docker/Dockerfile.python
+    image: pm/horbyta-ai:${APP_VERSION:-latest}
+    container_name: horbyta_ai
+    restart: unless-stopped
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GRPC_PORT: "${GRPC_PORT:-50051}"
+      APP_ENV: production
+      LOG_LEVEL: ${AI_LOG_LEVEL:-INFO}
+    networks:
+      - pm_internal
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  pm_internal:
+    name: pm_internal
+    driver: bridge
