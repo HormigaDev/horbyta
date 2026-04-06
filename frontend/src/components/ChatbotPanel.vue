@@ -177,13 +177,17 @@
 </template>
 
 <script setup lang="ts">
-import { storeToRefs } from 'pinia';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { QInput } from 'quasar';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
-import { useChatbotStore } from 'src/stores/chatbot';
+import { useQuery } from 'src/composables/useQuery';
 import { useUI } from 'src/composables/useUI';
+import { useWebSocket } from 'src/composables/useWebSocket';
+import { ChatsService, type ChatSummary } from 'src/services/chats';
+import { useNotificationsStore } from 'src/stores/notifications';
+import type { ChatMessage, ChatThread } from 'src/types/chat';
+import type { FilterSchema } from 'src/types/query';
 
 interface ChatbotPanelProps {
   modelValue: boolean;
@@ -201,11 +205,39 @@ const messagesBottomAnchor = ref<HTMLElement | null>(null);
 const SCROLL_RETRY_DELAYS: readonly number[] = [0, 40, 120, 260];
 const pendingScrollTimeoutIds = ref<number[]>([]);
 const pendingScrollAnimationFrameId = ref<number | null>(null);
+const wsUnsubscribers = ref<Array<() => void>>([]);
+const websocketBound = ref(false);
 
-const chatStore = useChatbotStore();
 const { t } = useI18n();
-const { confirmDelete } = useUI();
-const { chats, activeChat, activeChatId, canCreateNewChat } = storeToRefs(chatStore);
+const { confirmDelete, notifyError, notify, showLoading, hideLoading } = useUI();
+const notificationsStore = useNotificationsStore();
+const websocket = useWebSocket({ path: '/ws', autoConnect: true, autoReconnect: true });
+
+const chatFilterSchema: FilterSchema = {
+  id: 'Text',
+  session_id: 'Text',
+  title: 'Text',
+  created_at: 'Date',
+  updated_at: 'Date',
+};
+
+const chatsQuery = useQuery<ChatSummary>(
+  ChatsService.search,
+  chatFilterSchema,
+  20,
+  'updated_at',
+  false,
+);
+const chats = computed(() => chatsQuery.items.value);
+const activeChat = ref<ChatThread | null>(null);
+const activeChatId = ref('');
+const canCreateNewChat = computed(() => {
+  if (!activeChat.value) {
+    return true;
+  }
+
+  return activeChat.value.messages.some((message) => message.role === 'user');
+});
 
 const isOpen = computed({
   get: () => props.modelValue,
@@ -215,12 +247,191 @@ const isOpen = computed({
 const activeMessages = computed(() => activeChat.value?.messages ?? []);
 const dateFormatter = new Intl.DateTimeFormat();
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const appendMessageToActiveChat = (message: ChatMessage) => {
+  if (!activeChat.value) {
+    return;
+  }
+
+  activeChat.value = {
+    ...activeChat.value,
+    updatedAt: message.createdAt,
+    messages: [...activeChat.value.messages, message],
+  };
+};
+
+const loadActiveChat = async (chatId: string) => {
+  const chat = await ChatsService.getById(chatId);
+  activeChatId.value = chat.id;
+  activeChat.value = chat;
+};
+
+const applyTitleChange = async (chatId: string, title: string) => {
+  try {
+    await ChatsService.updateTitle(chatId, { title });
+    await chatsQuery.fetch();
+  } catch (err: unknown) {
+    notifyError(t('chatbot.panel.updateTitleError'), err, true);
+  }
+};
+
+const maybeUpdateChatTitleFromPrompt = async (chatId: string, promptValue: string) => {
+  if (!activeChat.value || activeChat.value.title !== 'Nuevo chat') {
+    return;
+  }
+
+  const nextTitle = promptValue.slice(0, 52).trim();
+  if (!nextTitle) {
+    return;
+  }
+
+  activeChat.value = {
+    ...activeChat.value,
+    title: nextTitle,
+  };
+
+  await applyTitleChange(chatId, nextTitle);
+};
+
+const createChat = async (force = false): Promise<ChatThread | null> => {
+  if (!force && !canCreateNewChat.value) {
+    return null;
+  }
+
+  showLoading(t('common.loading'));
+  try {
+    const created = await ChatsService.create();
+    await chatsQuery.fetch();
+    activeChatId.value = created.id;
+    activeChat.value = created;
+    return created;
+  } catch (err: unknown) {
+    notifyError(t('chatbot.panel.createError'), err, true);
+    return null;
+  } finally {
+    hideLoading();
+  }
+};
+
+const initializeChats = async () => {
+  showLoading(t('common.loading'));
+  try {
+    await chatsQuery.fetch();
+
+    if (chats.value.length === 0) {
+      const created = await ChatsService.create();
+      await chatsQuery.fetch();
+      activeChatId.value = created.id;
+      activeChat.value = created;
+      return;
+    }
+
+    const firstChatId = chats.value[0]?.id;
+    if (firstChatId) {
+      await loadActiveChat(firstChatId);
+    }
+  } catch (err: unknown) {
+    notifyError(t('chatbot.panel.loadError'), err, true);
+  } finally {
+    hideLoading();
+  }
+};
+
+const cleanupWebSocketListeners = () => {
+  wsUnsubscribers.value.forEach((unsubscribe) => unsubscribe());
+  wsUnsubscribers.value = [];
+  websocketBound.value = false;
+};
+
+const bindWebSocketListeners = () => {
+  if (websocketBound.value || !websocket.isConnected.value) {
+    return;
+  }
+
+  const offMessage = websocket.on('message', (payload: unknown) => {
+    const content =
+      isRecord(payload) && typeof payload.content === 'string' ? payload.content : null;
+    if (!content) {
+      return;
+    }
+
+    appendMessageToActiveChat({
+      id: crypto.randomUUID(),
+      role: 'bot',
+      content,
+      createdAt: new Date().toISOString(),
+    });
+
+    isSending.value = false;
+    void nextTick().then(() => {
+      scheduleScrollToBottom();
+      focusPromptInput();
+    });
+  });
+
+  const offError = websocket.on('error', (payload: unknown) => {
+    const message =
+      isRecord(payload) && typeof payload.message === 'string'
+        ? payload.message
+        : t('chatbot.panel.sendError');
+    isSending.value = false;
+    notifyError(message, payload, true);
+  });
+
+  const offNotification = websocket.on('notification', (payload: unknown) => {
+    if (!isRecord(payload)) {
+      return;
+    }
+
+    notificationsStore.addAsyncNotificationFromEvent({
+      id: typeof payload.id === 'string' ? payload.id : undefined,
+      message: typeof payload.message === 'string' ? payload.message : undefined,
+      title: typeof payload.title === 'string' ? payload.title : undefined,
+      body: typeof payload.body === 'string' ? payload.body : null,
+      type:
+        payload.type === 'positive' ||
+        payload.type === 'negative' ||
+        payload.type === 'warning' ||
+        payload.type === 'info'
+          ? payload.type
+          : 'info',
+      source: 'async',
+      payload: payload.payload,
+      createdAt: typeof payload.createdAt === 'string' ? payload.createdAt : undefined,
+      preferenceKey: typeof payload.preferenceKey === 'string' ? payload.preferenceKey : undefined,
+    });
+  });
+
+  wsUnsubscribers.value = [offMessage, offError, offNotification];
+  websocketBound.value = true;
+};
+
+const ensureWebSocketReady = async () => {
+  if (!websocket.isConnected.value) {
+    await websocket.connect();
+  }
+  bindWebSocketListeners();
+};
+
+const disconnectWebSocket = () => {
+  cleanupWebSocketListeners();
+  websocket.disconnect();
+};
+
 onMounted(() => {
-  chatStore.init();
-  scrollToBottom();
+  void initializeChats().finally(() => {
+    scrollToBottom();
+  });
+
+  void ensureWebSocketReady().catch((err: unknown) => {
+    notifyError(t('chatbot.panel.websocketError'), err, true);
+  });
 });
 
 onBeforeUnmount(() => {
+  disconnectWebSocket();
   clearScheduledScrollWork();
 });
 
@@ -262,6 +473,13 @@ const focusPromptInput = () => {
 
 const handleDialogShow = async () => {
   drawerOpen.value = false;
+
+  try {
+    await ensureWebSocketReady();
+  } catch (err: unknown) {
+    notifyError(t('chatbot.panel.websocketError'), err, true);
+  }
+
   await nextTick();
   scheduleScrollToBottom();
   focusPromptInput();
@@ -355,14 +573,17 @@ const formatDate = (rawDate: string) => {
 };
 
 const selectChat = (chatId: string) => {
-  chatStore.setActiveChat(chatId);
+  void loadActiveChat(chatId).catch((err: unknown) => {
+    notifyError(t('chatbot.panel.loadError'), err, true);
+  });
 };
 
 const openNewChat = () => {
-  const created = chatStore.createNewChat();
-  if (created) {
-    prompt.value = '';
-  }
+  void createChat().then((created) => {
+    if (created) {
+      prompt.value = '';
+    }
+  });
 };
 
 const removeChat = async (chatId: string, title: string) => {
@@ -371,7 +592,31 @@ const removeChat = async (chatId: string, title: string) => {
     return;
   }
 
-  chatStore.deleteChat(chatId);
+  showLoading(t('common.loading'));
+  try {
+    await ChatsService.delete(chatId);
+    await chatsQuery.fetch();
+
+    const nextChatId = chats.value[0]?.id;
+    if (!nextChatId) {
+      const created = await createChat(true);
+      if (!created) {
+        activeChat.value = null;
+        activeChatId.value = '';
+      }
+      return;
+    }
+
+    if (chatId === activeChatId.value) {
+      await loadActiveChat(nextChatId);
+    }
+
+    notify(t('chatbot.panel.deleteSuccess'), 'positive');
+  } catch (err: unknown) {
+    notifyError(t('chatbot.panel.deleteError'), err, true);
+  } finally {
+    hideLoading();
+  }
 };
 
 const handleSend = async () => {
@@ -379,27 +624,51 @@ const handleSend = async () => {
     return;
   }
 
-  const sent = chatStore.sendUserMessage(prompt.value);
-  if (!sent) {
+  const messageText = prompt.value.trim();
+  if (!messageText) {
     return;
   }
 
+  let chatId = activeChatId.value;
+  if (!chatId) {
+    const created = await createChat(true);
+    if (!created) {
+      return;
+    }
+    chatId = created.id;
+  }
+
+  const userMessage: ChatMessage = {
+    id: crypto.randomUUID(),
+    role: 'user',
+    content: messageText,
+    createdAt: new Date().toISOString(),
+  };
+
+  appendMessageToActiveChat(userMessage);
   prompt.value = '';
   isSending.value = true;
 
+  await maybeUpdateChatTitleFromPrompt(chatId, messageText);
+
   await nextTick();
   scheduleScrollToBottom();
 
-  await new Promise<void>((resolve) => {
-    window.setTimeout(() => {
-      chatStore.sendRandomBotReply();
-      resolve();
-    }, 760);
-  });
+  try {
+    await ensureWebSocketReady();
+    websocket.send({
+      type: 'chat',
+      id: userMessage.id,
+      data: {
+        chat_id: chatId,
+        content: messageText,
+      },
+    });
+  } catch (err: unknown) {
+    isSending.value = false;
+    notifyError(t('chatbot.panel.sendError'), err, true);
+  }
 
-  isSending.value = false;
-  await nextTick();
-  scheduleScrollToBottom();
   focusPromptInput();
 };
 </script>

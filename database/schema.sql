@@ -83,10 +83,48 @@ create table conversation_history (
     id uuid primary key default uuidv7(),
     user_id uuid not null references users (id) on delete cascade,
     session_id uuid not null,
+    title varchar(255) not null,
     messages jsonb not null default '[]'::jsonb,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
     constraint uq_conversation_user_session unique (user_id, session_id)
+);
+
+create table notifications (
+    id uuid primary key default uuidv7(),
+    user_id uuid not null references users (id) on delete cascade,
+    preference_key varchar(80) not null,
+    title varchar(255) not null,
+    body text,
+    payload jsonb,
+    severity varchar(20) not null default 'info',
+    source varchar(40) not null default 'system',
+    is_read boolean not null default false,
+    read_at timestamptz,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint chk_notifications_preference_key check (
+        preference_key in (
+            'clients_projects.proposal_decision',
+            'clients_projects.deliverable_approved',
+            'clients_projects.comment_or_review',
+            'clients_projects.added_to_new_project',
+            'deliveries_deadlines.deadline_24h_48h',
+            'deliveries_deadlines.deliverable_overdue',
+            'deliveries_deadlines.milestone_completed',
+            'contracts.contract_sent',
+            'contracts.contract_signed',
+            'contracts.contract_expiring',
+            'billing.invoice_sent',
+            'billing.invoice_overdue_unpaid',
+            'billing.payment_received',
+            'billing.auto_payment_reminder',
+            'time_tracking.long_running_timer',
+            'time_tracking.weekly_hours_summary'
+        )
+    ),
+    constraint chk_notifications_severity check (severity in ('info', 'positive', 'warning', 'negative'))
 );
 
 -- ---------------------------------
@@ -107,6 +145,9 @@ create index idx_tasks_priority on tasks(priority);
 create index idx_tasks_complexity on tasks(complexity);
 create index idx_task_tags_tag_id on task_tags(tag_id);
 create index idx_conversation_history_user on conversation_history(user_id);
+create index idx_notifications_user_read_created on notifications(user_id, is_read, created_at desc);
+create index idx_notifications_user_preference on notifications(user_id, preference_key);
+create index idx_notifications_created_at on notifications(created_at desc);
 
 -- ---------------------------------
 -- FUNCIONES Y TRIGGERS (UPDATED_AT AUTOMÁTICO)
@@ -130,7 +171,8 @@ begin
         'milestones',
         'tags',
         'tasks',
-        'conversation_history'
+        'conversation_history',
+        'notifications'
     ]
     loop
         execute format(
@@ -157,6 +199,7 @@ comment on table tags is 'Etiquetas transversales para clasificación libre. Ún
 comment on table tasks is 'Núcleo del PM. Soporta jerarquía infinita (parent_id) y puede existir sin proyecto (inbox).';
 comment on table task_tags is 'Tabla pivote para relación muchos a muchos entre tareas y etiquetas.';
 comment on table conversation_history is 'Tabla para guardar los mensajes de chat con la IA';
+comment on table notifications is 'Notificaciones asíncronas persistentes para el usuario, respetando sus preferencias.';
 
 comment on column tasks.parent_id is 'Referencia recursiva para soportar subtareas de n-niveles.';
 comment on column tasks.status is 'Estado del flujo de trabajo. Restringido a 4 valores predefinidos por CHECK.';

@@ -284,6 +284,7 @@ export const messages = {
   'layout.header.searchPlaceholder': 'Buscar tareas...',
   'layout.header.openAssistant': 'Abrir asistente',
   'layout.header.notifications': 'Notificaciones',
+  'layout.notifications.subtitle': 'Actividad asíncrona y avisos pendientes',
   'layout.header.markAllRead': 'Marcar leídas',
   'layout.header.noNotifications': 'No hay notificaciones',
   'layout.header.clearAll': 'Borrar todas',
@@ -328,6 +329,13 @@ export const messages = {
   'chatbot.panel.disclaimer':
     'HormigAI puede cometer errores. Verifique siempre la información importante.',
   'chatbot.panel.deleteTarget': 'el chat {title}',
+  'chatbot.panel.loadError': 'No se pudo cargar el historial de chats',
+  'chatbot.panel.createError': 'No se pudo crear el chat',
+  'chatbot.panel.deleteSuccess': 'Chat eliminado correctamente',
+  'chatbot.panel.deleteError': 'No se pudo eliminar el chat',
+  'chatbot.panel.updateTitleError': 'No se pudo actualizar el título del chat',
+  'chatbot.panel.sendError': 'No se pudo enviar el mensaje al asistente',
+  'chatbot.panel.websocketError': 'No se pudo establecer conexión en tiempo real',
 
   'markdown.toolbar.bold': 'Negrita (Ctrl+B)',
   'markdown.toolbar.italic': 'Cursiva (Ctrl+I)',

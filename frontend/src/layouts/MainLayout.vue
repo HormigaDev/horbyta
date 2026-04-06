@@ -48,91 +48,18 @@
             <q-tooltip>{{ t('layout.header.openAssistant') }}</q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="notifications" class="q-mr-sm">
+          <q-btn
+            flat
+            round
+            dense
+            icon="notifications"
+            class="q-mr-sm"
+            @click="openNotificationsCenter"
+          >
             <q-badge color="negative" floating v-if="notificationsStore.asyncUnreadCount > 0">
               {{ notificationsStore.asyncUnreadCount }}
             </q-badge>
             <q-tooltip>{{ t('layout.header.notifications') }}</q-tooltip>
-            <q-menu auto-close class="bg-dark">
-              <q-list style="min-width: 300px; max-width: 350px">
-                <q-item-label
-                  header
-                  class="row items-center justify-between text-white"
-                  style="background-color: var(--q-dark-page)"
-                >
-                  {{ t('layout.header.notifications') }}
-                  <q-btn
-                    v-if="notificationsStore.asyncUnreadCount > 0"
-                    flat
-                    dense
-                    size="sm"
-                    color="primary"
-                    :label="t('layout.header.markAllRead')"
-                    @click.stop="notificationsStore.markAllAsRead"
-                  />
-                </q-item-label>
-                <q-separator />
-
-                <template v-if="notificationsStore.asyncNotifications.length === 0">
-                  <q-item>
-                    <q-item-section class="text-center q-py-md" style="color: var(--text-muted)">
-                      {{ t('layout.header.noNotifications') }}
-                    </q-item-section>
-                  </q-item>
-                </template>
-
-                <q-item
-                  v-for="notif in notificationsStore.asyncNotifications.slice(0, 5)"
-                  :key="notif.id"
-                  clickable
-                  :style="
-                    !notif.read
-                      ? 'border-bottom: 1px solid var(--border-color); background-color: var(--bg-hover)'
-                      : 'border-bottom: 1px solid var(--border-color); background-color: var(--card-bg)'
-                  "
-                  @click="handleNotificationClick(notif)"
-                >
-                  <q-item-section avatar>
-                    <q-icon
-                      :name="
-                        notif.type === 'positive'
-                          ? 'check_circle'
-                          : notif.type === 'negative'
-                            ? 'error'
-                            : notif.type === 'warning'
-                              ? 'warning'
-                              : 'info'
-                      "
-                      :color="notif.type"
-                    />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label
-                      lines="2"
-                      :class="!notif.read ? 'text-weight-bold' : ''"
-                      style="color: var(--text-color)"
-                      >{{ notif.message }}</q-item-label
-                    >
-                    <q-item-label caption style="color: var(--text-muted)">{{
-                      new Date(notif.createdAt).toLocaleTimeString()
-                    }}</q-item-label>
-                  </q-item-section>
-                  <q-item-section side v-if="!notif.read">
-                    <q-badge rounded color="negative" />
-                  </q-item-section>
-                </q-item>
-
-                <q-separator v-if="notificationsStore.asyncNotifications.length > 5" />
-                <q-item
-                  clickable
-                  v-if="notificationsStore.asyncNotifications.length > 5"
-                  class="text-center text-primary"
-                  @click="notificationsStore.clearAll"
-                >
-                  <q-item-section>{{ t('layout.header.clearAll') }}</q-item-section>
-                </q-item>
-              </q-list>
-            </q-menu>
           </q-btn>
 
           <q-btn flat round dense icon="push_pin" class="q-mr-md">
@@ -336,6 +263,137 @@
       <router-view />
     </q-page-container>
 
+    <q-dialog v-model="notificationsCenterOpen" maximized persistent>
+      <q-card class="notifications-center-card">
+        <q-card-section class="row items-center justify-between notifications-center-header">
+          <div>
+            <div class="text-h6">{{ t('layout.header.notifications') }}</div>
+            <div class="text-caption" style="color: var(--text-muted)">
+              {{ t('layout.notifications.subtitle') }}
+            </div>
+          </div>
+
+          <div class="row items-center q-gutter-sm">
+            <q-btn
+              v-if="notificationsStore.asyncUnreadCount > 0"
+              flat
+              dense
+              color="primary"
+              :label="t('layout.header.markAllRead')"
+              @click="notificationsStore.markAllAsRead"
+            />
+            <q-btn flat round dense icon="close" @click="notificationsCenterOpen = false" />
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section class="notifications-center-body">
+          <div
+            v-if="notificationsStore.asyncNotifications.length === 0"
+            class="notifications-empty-state"
+          >
+            <q-icon name="notifications_none" size="40px" color="grey-6" />
+            <div class="text-subtitle1 q-mt-sm">{{ t('layout.header.noNotifications') }}</div>
+          </div>
+
+          <q-list v-else class="notifications-list">
+            <q-item
+              v-for="notif in notificationsStore.asyncNotifications"
+              :key="notif.id"
+              clickable
+              class="notifications-list-item"
+              :class="{ 'notifications-list-item-unread': !notif.read }"
+              @click="handleNotificationClick(notif)"
+            >
+              <q-item-section avatar>
+                <q-avatar :color="resolveNotificationColor(notif.type)" text-color="white">
+                  <q-icon :name="resolveNotificationIcon(notif.type)" />
+                </q-avatar>
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label class="text-weight-medium">{{
+                  notif.title || notif.message
+                }}</q-item-label>
+                <q-item-label lines="2" caption>
+                  {{ notif.body || notif.message }}
+                </q-item-label>
+                <q-item-label caption class="q-mt-xs">{{
+                  formatNotificationDate(notif.createdAt)
+                }}</q-item-label>
+              </q-item-section>
+
+              <q-item-section side top>
+                <q-badge v-if="!notif.read" rounded color="negative" class="q-mt-sm" />
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-actions align="between" class="q-px-md q-py-sm">
+          <q-btn
+            flat
+            color="negative"
+            :label="t('layout.header.clearAll')"
+            @click="notificationsStore.clearAll"
+          />
+          <q-btn
+            flat
+            color="primary"
+            :label="t('common.close')"
+            @click="notificationsCenterOpen = false"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="notificationDetailsOpen">
+      <q-card class="notification-detail-card">
+        <q-card-section class="row items-start justify-between">
+          <div>
+            <div class="text-h6">
+              {{ selectedNotification?.title || selectedNotification?.message }}
+            </div>
+            <div class="text-caption" style="color: var(--text-muted)">
+              {{
+                selectedNotification ? formatNotificationDate(selectedNotification.createdAt) : ''
+              }}
+            </div>
+          </div>
+          <q-btn flat round dense icon="close" @click="notificationDetailsOpen = false" />
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section>
+          <div class="notification-detail-body">
+            {{ selectedNotification?.body || selectedNotification?.message }}
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-actions align="right">
+          <q-btn
+            v-if="selectedNotification?.payload"
+            flat
+            color="primary"
+            :label="t('common.details')"
+            @click="openSelectedNotificationPayload"
+          />
+          <q-btn
+            flat
+            color="primary"
+            :label="t('common.close')"
+            @click="notificationDetailsOpen = false"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <ChatbotPanel v-if="chatbotPanelLoaded" v-model="chatbotOpen" />
   </q-layout>
 </template>
@@ -358,6 +416,9 @@ const search = ref(''); // TODO: Implementar búsqueda
 const drawer = ref(true);
 const chatbotOpen = ref(false);
 const chatbotPanelLoaded = ref(false);
+const notificationsCenterOpen = ref(false);
+const notificationDetailsOpen = ref(false);
+const selectedNotification = ref<AppNotification | null>(null);
 const appVersion = APP_VERSION;
 const notificationsStore = useNotificationsStore();
 const { showErrorDialog } = useUI();
@@ -365,6 +426,7 @@ const ChatbotPanel = defineAsyncComponent(() => import('src/components/ChatbotPa
 
 onMounted(() => {
   notificationsStore.init();
+  chatbotPanelLoaded.value = true;
 });
 
 function logout() {
@@ -381,10 +443,120 @@ function openChatbot() {
   chatbotOpen.value = true;
 }
 
+function openNotificationsCenter() {
+  notificationsCenterOpen.value = true;
+}
+
+function resolveNotificationIcon(type: AppNotification['type']) {
+  if (type === 'positive') return 'check_circle';
+  if (type === 'negative') return 'error';
+  if (type === 'warning') return 'warning';
+  return 'info';
+}
+
+function resolveNotificationColor(type: AppNotification['type']) {
+  if (type === 'positive') return 'positive';
+  if (type === 'negative') return 'negative';
+  if (type === 'warning') return 'warning';
+  return 'info';
+}
+
+function formatNotificationDate(rawDate: string) {
+  return new Date(rawDate).toLocaleString();
+}
+
 function handleNotificationClick(notif: AppNotification) {
   notificationsStore.markAsRead(notif.id);
+
+  if (notif.body && notif.body.trim().length > 0) {
+    selectedNotification.value = notif;
+    notificationDetailsOpen.value = true;
+    return;
+  }
+
   if (notif.payload) {
     showErrorDialog(notif.payload);
   }
 }
+
+function openSelectedNotificationPayload() {
+  if (!selectedNotification.value?.payload) {
+    return;
+  }
+
+  showErrorDialog(selectedNotification.value.payload);
+}
 </script>
+
+<style scoped>
+.notifications-center-card {
+  width: min(860px, 96vw);
+  max-width: 96vw;
+  height: min(82vh, 780px);
+  margin: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--card-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.notifications-center-header {
+  flex-shrink: 0;
+}
+
+.notifications-center-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+}
+
+.notifications-empty-state {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: var(--text-muted);
+}
+
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notifications-list-item {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.notifications-list-item-unread {
+  background: var(--bg-hover);
+}
+
+.notification-detail-card {
+  width: min(680px, 94vw);
+  max-width: 94vw;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+}
+
+.notification-detail-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-color);
+}
+
+@media (max-width: 768px) {
+  .notifications-center-card {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    margin: 0;
+  }
+}
+</style>

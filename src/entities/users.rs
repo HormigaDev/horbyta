@@ -9,20 +9,24 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     #[sea_orm(unique)]
-    pub name: String,
-    #[sea_orm(unique)]
     pub email: String,
-    #[sea_orm(column_type = "JsonBinary", nullable)]
-    pub preferences: Option<Json>,
     pub password_hash: String,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
+    #[sea_orm(unique)]
+    pub name: String,
+    #[sea_orm(column_type = "JsonBinary", nullable)]
+    pub preferences: Option<Json>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(has_many = "super::categories::Entity")]
     Categories,
+    #[sea_orm(has_many = "super::conversation_history::Entity")]
+    ConversationHistory,
+    #[sea_orm(has_many = "super::notifications::Entity")]
+    Notifications,
     #[sea_orm(has_many = "super::projects::Entity")]
     Projects,
     #[sea_orm(has_many = "super::tags::Entity")]
@@ -34,6 +38,18 @@ pub enum Relation {
 impl Related<super::categories::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Categories.def()
+    }
+}
+
+impl Related<super::conversation_history::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::ConversationHistory.def()
+    }
+}
+
+impl Related<super::notifications::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Notifications.def()
     }
 }
 

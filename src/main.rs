@@ -38,6 +38,7 @@ async fn main() {
             }),
         )
         .nest("/auth", controllers::auth::auth_controller())
+        .nest("/chats", controllers::chats::chats_controller())
         .nest("/projects", controllers::projects::projects_controller())
         .nest("/categories", controllers::categories::categories_controller())
         .nest("/milestones", controllers::milestones::milestones_controller())

@@ -1,8 +1,10 @@
 pub mod auth;
 pub mod category;
+pub mod chat;
 pub mod milestone;
 pub mod project;
 pub mod query;
 pub mod tag;
 pub mod task;
 pub mod user;
+pub mod websocket;

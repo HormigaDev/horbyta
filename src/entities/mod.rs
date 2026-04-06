@@ -3,7 +3,9 @@
 pub mod prelude;
 
 pub mod categories;
+pub mod conversation_history;
 pub mod milestones;
+pub mod notifications;
 pub mod projects;
 pub mod tags;
 pub mod task_tags;
