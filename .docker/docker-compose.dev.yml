@@ -3,14 +3,21 @@ services:
     build:
       context: ..
       dockerfile: .docker/Dockerfile.rust.dev
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
     environment:
       RUST_LOG: ${RUST_LOG:-debug,sqlx=debug,tower_http=debug}
+      RUSTFLAGS: "-C debuginfo=0 -C link-arg=-Wl,--no-keep-memory"
+      CARGO_BUILD_JOBS: "1"
       APP_ENV: development
-    command: >
-      bash -c "
-        ./init.sh check-only &&
-        cargo watch -x 'run' -w src
-      "
+      DATABASE_URL: ${DATABASE_URL}
+      PORT: "8080"
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://horbyta_ai:${GRPC_PORT:-50051}}
+      JWT_SECRET: ${JWT_SECRET}
+    command:
+      - "echo '[INIT] Rust manual mode enabled. Container will stay alive for manual execution.' && exec sleep infinity"
+    healthcheck:
+      disable: true
     volumes:
       - ../src:/app/src:ro
       - ../Cargo.toml:/app/Cargo.toml:ro
@@ -20,7 +27,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 2G
 
   horbyta_ai:
     environment:

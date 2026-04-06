@@ -92,6 +92,22 @@ export const ChatsService = {
     return mapDetail(response as ChatDetailApi);
   },
 
+  updateMessages: async (id: string, messages: ChatMessage[]): Promise<ChatThread> => {
+    const response = await apiFetch(`/chats/${id}/messages`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        messages: messages.map((msg) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          createdAt: msg.created_at,
+        })),
+      }),
+    });
+
+    return mapDetail(response as ChatDetailApi);
+  },
+
   delete: (id: string): Promise<{ message: string }> =>
     apiFetch(`/chats/${id}`, {
       method: 'DELETE',

@@ -51,7 +51,7 @@
                 >
                   <q-item-section>
                     <q-item-label lines="1">{{ chat.title }}</q-item-label>
-                    <q-item-label caption>{{ formatDate(chat.updatedAt) }}</q-item-label>
+                    <q-item-label caption>{{ formatDate(chat.updated_at) }}</q-item-label>
                   </q-item-section>
                   <q-item-section side>
                     <q-btn
@@ -114,7 +114,37 @@
                   </div>
                 </div>
 
-                <div v-if="isSending" class="chatbot-message-row chatbot-message-bot">
+                <div v-if="isGenerating" class="chatbot-message-row chatbot-message-bot">
+                  <div class="chatbot-bot-stack">
+                    <q-avatar size="24px" class="chatbot-bot-message-avatar">
+                      <q-icon name="smart_toy" size="14px" />
+                    </q-avatar>
+                    <div class="chatbot-thinking">
+                      {{ t('chatbot.panel.thinking') }}
+                      <span class="chatbot-thinking-dots" aria-hidden="true">
+                        <span class="chatbot-thinking-dot"></span>
+                        <span class="chatbot-thinking-dot"></span>
+                        <span class="chatbot-thinking-dot"></span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="streamingContent" class="chatbot-message-row chatbot-message-bot">
+                  <div class="chatbot-bot-stack">
+                    <q-avatar size="24px" class="chatbot-bot-message-avatar">
+                      <q-icon name="smart_toy" size="14px" />
+                    </q-avatar>
+                    <div class="chatbot-bot-markdown">
+                      <MarkdownRenderer :model-value="streamingContent" :edit-mode="false" />
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  v-if="isSending && !isGenerating && !streamingContent"
+                  class="chatbot-message-row chatbot-message-bot"
+                >
                   <div class="chatbot-bot-stack">
                     <q-avatar size="24px" class="chatbot-bot-message-avatar">
                       <q-icon name="smart_toy" size="14px" />
@@ -148,7 +178,7 @@
                 autogrow
                 dense
                 outlined
-                :disable="isSending"
+                :disable="isSending || isGenerating"
                 :placeholder="t('chatbot.panel.inputPlaceholder')"
                 class="chatbot-input"
                 @keydown.enter.exact.prevent="handleSend"
@@ -160,7 +190,7 @@
                     dense
                     icon="arrow_upward"
                     color="primary"
-                    :disable="isSending || !prompt.trim()"
+                    :disable="isSending || isGenerating || !prompt.trim()"
                     @click="handleSend"
                   />
                 </template>
@@ -184,9 +214,9 @@ import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useQuery } from 'src/composables/useQuery';
 import { useUI } from 'src/composables/useUI';
 import { useWebSocket } from 'src/composables/useWebSocket';
-import { ChatsService, type ChatSummary } from 'src/services/chats';
+import { ChatsService } from 'src/services/chats';
 import { useNotificationsStore } from 'src/stores/notifications';
-import type { ChatMessage, ChatThread } from 'src/types/chat';
+import type { ChatMessage, ChatSummary, ChatThread } from 'src/types/chat';
 import type { FilterSchema } from 'src/types/query';
 
 interface ChatbotPanelProps {
@@ -199,6 +229,8 @@ const emit = defineEmits<{ (event: 'update:modelValue', value: boolean): void }>
 const drawerOpen = ref(false);
 const prompt = ref('');
 const isSending = ref(false);
+const isGenerating = ref(false);
+const streamingContent = ref('');
 const promptInputRef = ref<QInput | null>(null);
 const messagesContainer = ref<HTMLElement | null>(null);
 const messagesBottomAnchor = ref<HTMLElement | null>(null);
@@ -257,7 +289,7 @@ const appendMessageToActiveChat = (message: ChatMessage) => {
 
   activeChat.value = {
     ...activeChat.value,
-    updatedAt: message.createdAt,
+    updated_at: message.created_at,
     messages: [...activeChat.value.messages, message],
   };
 };
@@ -357,18 +389,48 @@ const bindWebSocketListeners = () => {
       return;
     }
 
-    appendMessageToActiveChat({
+    const assistantMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'bot',
       content,
-      createdAt: new Date().toISOString(),
-    });
+      created_at: new Date().toISOString(),
+    };
+
+    appendMessageToActiveChat(assistantMessage);
+
+    if (activeChat.value && activeChatId.value) {
+      void ChatsService.updateMessages(activeChatId.value, activeChat.value.messages).catch(
+        (err: unknown) => {
+          console.error('Failed to save messages to chat', err);
+        },
+      );
+    }
 
     isSending.value = false;
+    isGenerating.value = false;
+    streamingContent.value = '';
     void nextTick().then(() => {
       scheduleScrollToBottom();
       focusPromptInput();
     });
+  });
+
+  const offGenerating = websocket.on('generating', () => {
+    isGenerating.value = true;
+    streamingContent.value = '';
+    isSending.value = true;
+    void nextTick().then(() => {
+      scheduleScrollToBottom();
+    });
+  });
+
+  const offTyping = websocket.on('typing', (payload: unknown) => {
+    if (isRecord(payload) && typeof payload.delta === 'string') {
+      streamingContent.value += payload.delta;
+      void nextTick().then(() => {
+        scheduleScrollToBottom();
+      });
+    }
   });
 
   const offError = websocket.on('error', (payload: unknown) => {
@@ -377,6 +439,8 @@ const bindWebSocketListeners = () => {
         ? payload.message
         : t('chatbot.panel.sendError');
     isSending.value = false;
+    isGenerating.value = false;
+    streamingContent.value = '';
     notifyError(message, payload, true);
   });
 
@@ -385,26 +449,45 @@ const bindWebSocketListeners = () => {
       return;
     }
 
-    notificationsStore.addAsyncNotificationFromEvent({
-      id: typeof payload.id === 'string' ? payload.id : undefined,
-      message: typeof payload.message === 'string' ? payload.message : undefined,
-      title: typeof payload.title === 'string' ? payload.title : undefined,
-      body: typeof payload.body === 'string' ? payload.body : null,
-      type:
-        payload.type === 'positive' ||
-        payload.type === 'negative' ||
-        payload.type === 'warning' ||
-        payload.type === 'info'
-          ? payload.type
-          : 'info',
-      source: 'async',
-      payload: payload.payload,
-      createdAt: typeof payload.createdAt === 'string' ? payload.createdAt : undefined,
-      preferenceKey: typeof payload.preferenceKey === 'string' ? payload.preferenceKey : undefined,
-    });
+    const notificationEvent: Record<string, unknown> = {};
+
+    if (typeof payload.id === 'string') {
+      notificationEvent.id = payload.id;
+    }
+    if (typeof payload.message === 'string') {
+      notificationEvent.message = payload.message;
+    }
+    if (typeof payload.title === 'string') {
+      notificationEvent.title = payload.title;
+    }
+    if (typeof payload.body === 'string') {
+      notificationEvent.body = payload.body;
+    }
+    if (
+      payload.type === 'positive' ||
+      payload.type === 'negative' ||
+      payload.type === 'warning' ||
+      payload.type === 'info'
+    ) {
+      notificationEvent.type = payload.type;
+    }
+    notificationEvent.source = 'async';
+    if (payload.payload !== undefined) {
+      notificationEvent.payload = payload.payload;
+    }
+    if (typeof payload.createdAt === 'string') {
+      notificationEvent.createdAt = payload.createdAt;
+    }
+    if (typeof payload.preferenceKey === 'string') {
+      notificationEvent.preferenceKey = payload.preferenceKey;
+    }
+
+    notificationsStore.addAsyncNotificationFromEvent(
+      notificationEvent as Parameters<typeof notificationsStore.addAsyncNotificationFromEvent>[0],
+    );
   });
 
-  wsUnsubscribers.value = [offMessage, offError, offNotification];
+  wsUnsubscribers.value = [offMessage, offGenerating, offTyping, offError, offNotification];
   websocketBound.value = true;
 };
 
@@ -436,7 +519,12 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  [() => activeMessages.value.length, () => isSending.value],
+  [
+    () => activeMessages.value.length,
+    () => isSending.value,
+    () => isGenerating.value,
+    () => streamingContent.value,
+  ],
   async () => {
     if (!isOpen.value) {
       return;
@@ -642,7 +730,7 @@ const handleSend = async () => {
     id: crypto.randomUUID(),
     role: 'user',
     content: messageText,
-    createdAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
   };
 
   appendMessageToActiveChat(userMessage);

@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        chat::{CreateChatDto, UpdateChatTitleDto, chat_filter_schema},
+        chat::{CreateChatDto, UpdateChatMessagesDto, UpdateChatTitleDto, chat_filter_schema},
         query::QueryPayload,
         user::UserDto,
     },
@@ -35,11 +35,7 @@ async fn search_chats(
     })))
 }
 
-async fn get_chat(
-    user: UserDto,
-    service: ChatService,
-    Path(id): Path<Uuid>,
-) -> Result<impl IntoResponse, AppError> {
+async fn get_chat(user: UserDto, service: ChatService, Path(id): Path<Uuid>) -> Result<impl IntoResponse, AppError> {
     let chat = service.get_by_id(user.id, id).await?;
     Ok(Json(chat))
 }
@@ -63,11 +59,17 @@ async fn update_chat_title(
     Ok(Json(chat))
 }
 
-async fn delete_chat(
+async fn update_chat_messages(
     user: UserDto,
     service: ChatService,
     Path(id): Path<Uuid>,
+    ValidatedJson(payload): ValidatedJson<UpdateChatMessagesDto>,
 ) -> Result<impl IntoResponse, AppError> {
+    let chat = service.update_messages(user.id, id, payload).await?;
+    Ok(Json(chat))
+}
+
+async fn delete_chat(user: UserDto, service: ChatService, Path(id): Path<Uuid>) -> Result<impl IntoResponse, AppError> {
     service.delete(user.id, id).await?;
     Ok(Json(json!({ "message": "Chat eliminado" })))
 }
@@ -78,4 +80,5 @@ pub fn chats_controller() -> Router<AppState> {
         .route("/", post(create_chat))
         .route("/{id}", get(get_chat).delete(delete_chat))
         .route("/{id}/title", axum::routing::patch(update_chat_title))
+        .route("/{id}/messages", axum::routing::patch(update_chat_messages))
 }

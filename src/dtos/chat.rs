@@ -36,6 +36,11 @@ pub struct UpdateChatTitleDto {
     pub title: String,
 }
 
+#[derive(Debug, Deserialize, Serialize, Validate)]
+pub struct UpdateChatMessagesDto {
+    pub messages: Value,
+}
+
 #[derive(Debug, Serialize, Deserialize, FromQueryResult)]
 pub struct ChatSummaryDto {
     pub id: Uuid,

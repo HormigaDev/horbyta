@@ -1157,6 +1157,7 @@ dependencies = [
  "moka",
  "password-hash 0.6.0",
  "prost",
+ "prost-types",
  "sea-orm",
  "serde",
  "serde_json",

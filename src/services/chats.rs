@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        chat::{ChatDetailDto, ChatSummaryDto, CreateChatDto, UpdateChatTitleDto},
+        chat::{ChatDetailDto, ChatSummaryDto, CreateChatDto, UpdateChatMessagesDto, UpdateChatTitleDto},
         query::{FilterOperator, QueryPayload},
     },
     entities::{
@@ -67,6 +67,20 @@ impl ChatService {
         let model = self.get_model(user_id, id).await?;
         let mut active: conversation_history::ActiveModel = model.into();
         active.title = Set(dto.title.trim().to_string());
+
+        let updated = active.update(self.db.as_ref()).await.map_err(AppError::Database)?;
+        Ok(Self::to_detail(updated))
+    }
+
+    pub async fn update_messages(
+        &self,
+        user_id: Uuid,
+        id: Uuid,
+        dto: UpdateChatMessagesDto,
+    ) -> Result<ChatDetailDto, AppError> {
+        let model = self.get_model(user_id, id).await?;
+        let mut active: conversation_history::ActiveModel = model.into();
+        active.messages = Set(dto.messages);
 
         let updated = active.update(self.db.as_ref()).await.map_err(AppError::Database)?;
         Ok(Self::to_detail(updated))
@@ -230,7 +244,11 @@ impl ChatService {
             query = query.order_by_desc(conversation_history::Column::UpdatedAt);
         }
 
-        let total = query.clone().count(self.db.as_ref()).await.map_err(AppError::Database)?;
+        let total = query
+            .clone()
+            .count(self.db.as_ref())
+            .await
+            .map_err(AppError::Database)?;
         let offset = (payload.page - 1) * payload.limit;
 
         let rows = query

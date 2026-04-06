@@ -1,3 +1,4 @@
+pub mod ai;
 pub mod categories;
 pub mod chats;
 pub mod milestones;

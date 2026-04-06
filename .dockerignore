@@ -1,0 +1,35 @@
+# Huge/local artifacts
+
+.git
+.vscode
+target
+\*\*/target
+flycheck0
+
+# Frontend artifacts
+
+frontend/node_modules
+frontend/dist
+frontend/.quasar
+
+# Python artifacts
+
+**/**pycache**
+**/_.pyc
+\*\*/_.pyo \*_/_.pyd
+
+# Env and local files
+
+.env
+.env.\*
+!.env.template
+
+# Build/cache artifacts
+
+**/.DS_Store
+**/coverage
+\*\*/.pytest_cache
+
+# Do not include previous compose-generated outputs
+
+horbyta_ai/generated

@@ -24,7 +24,12 @@ uuid = { version = "1.23.0", features = ["v7"] }
 validator = { version = "0.20.0", features = ["derive"] }
 tonic  = { version = "0.11", features = ["tls", "transport"] }
 prost  = "0.12"
+prost-types = "0.12"
 futures = "0.3"
 
 [build-dependencies]
 tonic-build = "0.11"
+
+[profile.dev]
+debug = 0
+incremental = true

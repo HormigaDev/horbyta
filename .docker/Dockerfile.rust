@@ -16,7 +16,10 @@ RUN rm -rf src
 
 FROM deps AS builder
 
-COPY . .
+COPY build.rs ./
+COPY src ./src
+COPY proto ./proto
+COPY scripts ./scripts
 
 RUN touch src/main.rs
 RUN cargo build --release --locked

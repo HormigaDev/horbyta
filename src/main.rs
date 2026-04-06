@@ -24,7 +24,9 @@ async fn main() {
         .await
         .expect("CRÍTICO: No se pudo conectar a Postgres. Verifica DATABASE_URL.");
 
-    let state = AppState::new(db, config.clone());
+    let state = AppState::new(db, config.clone())
+        .await
+        .expect("CRÍTICO: No se pudo inicializar AppState. Verifica AI_SERVICE_URL.");
 
     let api_routes = Router::new()
         .route(
