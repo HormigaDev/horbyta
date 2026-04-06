@@ -1,7 +1,7 @@
 use axum::{
     extract::{
-        ws::{WebSocket, WebSocketUpgrade},
         State,
+        ws::{WebSocket, WebSocketUpgrade},
     },
     http::HeaderMap,
     http::StatusCode,
