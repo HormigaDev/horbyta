@@ -19,6 +19,7 @@ RUN mkdir -p /build/generated \
     && /opt/venv/bin/python -m grpc_tools.protoc \
     -I /build/proto \
     --python_out=/build/generated \
+    --pyi_out=/build/generated \
     --grpc_python_out=/build/generated \
     /build/proto/horbyta_service.proto
 

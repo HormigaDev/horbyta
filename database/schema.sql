@@ -79,6 +79,16 @@ create table task_tags (
     primary key(task_id, tag_id)
 );
 
+create table conversation_history (
+    id uuid primary key default uuidv7(),
+    user_id uuid not null references users (id) on delete cascade,
+    session_id uuid not null,
+    messages jsonb not null default '[]'::jsonb,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    constraint uq_conversation_user_session unique (user_id, session_id)
+);
+
 -- ---------------------------------
 -- ÍNDICES
 -- ---------------------------------
@@ -96,6 +106,7 @@ create index idx_tasks_status on tasks(status);
 create index idx_tasks_priority on tasks(priority);
 create index idx_tasks_complexity on tasks(complexity);
 create index idx_task_tags_tag_id on task_tags(tag_id);
+create index idx_conversation_history_user on conversation_history(user_id);
 
 -- ---------------------------------
 -- FUNCIONES Y TRIGGERS (UPDATED_AT AUTOMÁTICO)
@@ -118,7 +129,8 @@ begin
         'projects',
         'milestones',
         'tags',
-        'tasks'
+        'tasks',
+        'conversation_history'
     ]
     loop
         execute format(
@@ -144,6 +156,7 @@ comment on table milestones is 'Puntos de control temporales dentro de un proyec
 comment on table tags is 'Etiquetas transversales para clasificación libre. Únicas por usuario.';
 comment on table tasks is 'Núcleo del PM. Soporta jerarquía infinita (parent_id) y puede existir sin proyecto (inbox).';
 comment on table task_tags is 'Tabla pivote para relación muchos a muchos entre tareas y etiquetas.';
+comment on table conversation_history is 'Tabla para guardar los mensajes de chat con la IA';
 
 comment on column tasks.parent_id is 'Referencia recursiva para soportar subtareas de n-niveles.';
 comment on column tasks.status is 'Estado del flujo de trabajo. Restringido a 4 valores predefinidos por CHECK.';

@@ -8,13 +8,13 @@ services:
       APP_ENV: development
     command: >
       bash -c "
-        ./init.sh check-pnly &&
+        ./init.sh check-only &&
         cargo watch -x 'run' -w src
       "
     volumes:
-      - ./src:/app/src:ro
-      - ./Cargo.toml:/app/Cargo.toml:ro
-      - ./Cargo.lock:/app/Cargo.lock:ro
+      - ../src:/app/src:ro
+      - ../Cargo.toml:/app/Cargo.toml:ro
+      - ../Cargo.lock:/app/Cargo.lock:ro
       - cargo_cache:/usr/local/cargo/registry
       - target_cache:/app/target
     deploy:
@@ -27,10 +27,12 @@ services:
       APP_ENV: development
       LOG_LEVEL: DEBUG
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GRPC_PORT: ${GRPC_PORT:-50051}
     ports:
       - "127.0.0.1:${GRPC_PORT:-50051}:${GRPC_PORT:-50051}"
     volumes:
-      - ./horbyta_ai/src:/app/src/:ro
+      - ../horbyta_ai/src:/app/src/:ro
+      - ../horbyta_ai/generated:/app/generated
     deploy:
       resources:
         limits:
