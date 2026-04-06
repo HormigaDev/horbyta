@@ -47,9 +47,14 @@ pub enum AppError {
     #[error("{0}")]
     Unavailable(String),
 
+    #[error("Error interno")]
+    InternalError,
+
     #[error("{0}")]
     Internal(String),
 }
+
+pub type ApiError = AppError;
 
 impl From<argon2::password_hash::Error> for AppError {
     fn from(err: argon2::password_hash::Error) -> Self {
@@ -60,7 +65,7 @@ impl From<argon2::password_hash::Error> for AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, type_str, error_message) = match self {
-            AppError::Database(_) | AppError::Time(_) | AppError::Header(_) => {
+            AppError::Database(_) | AppError::Time(_) | AppError::Header(_) | AppError::InternalError => {
                 tracing::error!("{:?}", self);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,

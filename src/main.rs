@@ -44,9 +44,13 @@ async fn main() {
         .nest("/tasks", controllers::tasks::tasks_controller())
         .nest("/tags", controllers::tags::tags_controller())
         .nest("/users", controllers::users::users_controller())
-        .with_state(state);
+        .with_state(state.clone());
 
-    let app = Router::new().nest("/api/v1", api_routes);
+    let ws_routes = Router::new()
+        .route("/", get(controllers::websocket::websocket_handler))
+        .with_state(state.clone());
+
+    let app = Router::new().nest("/api/v1", api_routes).nest("/ws", ws_routes);
 
     let listener = tokio::net::TcpListener::bind(&config.app_uri).await.unwrap();
 

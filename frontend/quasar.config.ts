@@ -39,6 +39,11 @@ export default defineConfig((/* ctx */) => {
           target: 'http://127.0.0.1:8890',
           changeOrigin: true,
         },
+        '/ws': {
+          target: 'ws://127.0.0.1:8890',
+          ws: true,
+          changeOrigin: true,
+        },
       },
     },
 

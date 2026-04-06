@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 argon2 = "0.5.3"
-axum = "0.8.8"
+axum = { version = "0.8.8", features = ["ws"] }
 axum-extra = { version = "0.12.5", features = ["cookie"] }
 chrono = { version = "0.4.44", features = ["serde"] }
 chrono-tz = "0.10.4"
@@ -24,6 +24,7 @@ uuid = { version = "1.23.0", features = ["v7"] }
 validator = { version = "0.20.0", features = ["derive"] }
 tonic  = { version = "0.11", features = ["tls", "transport"] }
 prost  = "0.12"
+futures = "0.3"
 
 [build-dependencies]
 tonic-build = "0.11"
