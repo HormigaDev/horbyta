@@ -28,7 +28,7 @@ const parseMessage = (value: unknown): ChatMessage | null => {
     return null;
   }
 
-  const { id, role, content, createdAt } = value;
+  const { id, role, content, created_at } = value;
   if (typeof id !== 'string') {
     return null;
   }
@@ -37,7 +37,7 @@ const parseMessage = (value: unknown): ChatMessage | null => {
     return null;
   }
 
-  if (typeof content !== 'string' || typeof createdAt !== 'string') {
+  if (typeof content !== 'string' || typeof created_at !== 'string') {
     return null;
   }
 
@@ -45,7 +45,7 @@ const parseMessage = (value: unknown): ChatMessage | null => {
     id,
     role,
     content,
-    createdAt,
+    created_at,
   };
 };
 
@@ -54,12 +54,12 @@ const parseThread = (value: unknown): ChatThread | null => {
     return null;
   }
 
-  const { id, title, createdAt, updatedAt, messages } = value;
+  const { id, title, created_at, updated_at, messages } = value;
   if (
     typeof id !== 'string' ||
     typeof title !== 'string' ||
-    typeof createdAt !== 'string' ||
-    typeof updatedAt !== 'string' ||
+    typeof created_at !== 'string' ||
+    typeof updated_at !== 'string' ||
     !Array.isArray(messages)
   ) {
     return null;
@@ -72,8 +72,8 @@ const parseThread = (value: unknown): ChatThread | null => {
   return {
     id,
     title,
-    createdAt,
-    updatedAt,
+    created_at,
+    updated_at,
     messages: parsedMessages,
   };
 };
@@ -83,8 +83,8 @@ const createChat = (): ChatThread => {
   return {
     id: crypto.randomUUID(),
     title: DEFAULT_CHAT_TITLE,
-    createdAt: now,
-    updatedAt: now,
+    created_at: now,
+    updated_at: now,
     messages: [],
   };
 };
@@ -226,14 +226,14 @@ export const useChatbotStore = defineStore('chatbot', () => {
       id: crypto.randomUUID(),
       role: 'user',
       content: messageText,
-      createdAt: now,
+      created_at: now,
     });
 
     if (chat.title === DEFAULT_CHAT_TITLE) {
       chat.title = messageText.slice(0, MAX_CHAT_TITLE_LENGTH).trimEnd();
     }
 
-    chat.updatedAt = now;
+    chat.updated_at = now;
     save();
     return true;
   };
@@ -248,11 +248,11 @@ export const useChatbotStore = defineStore('chatbot', () => {
       id: crypto.randomUUID(),
       role: 'bot',
       content,
-      createdAt: now,
+      created_at: now,
     };
 
     chat.messages.push(botMessage);
-    chat.updatedAt = now;
+    chat.updated_at = now;
     save();
     return botMessage;
   };
