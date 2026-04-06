@@ -2,46 +2,137 @@ syntax = "proto3";
 
 package horbyta_service;
 
+import "google/protobuf/struct.proto";
+
 service AiService {
-  rpc Chat (ChatRequest) returns (stream ChatChunk);
+  /**
+   * Executes a multi-turn conversation with tool use support.
+   * 
+   * Context requirements (via gRPC metadata headers):
+   *   - x-user-id: UUID of the authenticated user
+   *   - x-session-id: UUID of the conversation session
+   * 
+   * Streams ChatEvent payloads until completion or error.
+   */
+  rpc Chat (ChatRequest) returns (stream ChatEvent);
+
+  /**
+   * Submits execution result for a pending tool call.
+   * Must be invoked before the tool_wait_timeout on the Chat stream expires.
+   * 
+   * Context requirements (via gRPC metadata headers):
+   *   - x-session-id: UUID of the conversation session (must match Chat session)
+   */
   rpc SubmitToolResult (ToolResultRequest) returns (ToolResultResponse);
 }
 
-message ChatRequest {
-  string user_id       = 1;
-  string session_id    = 2;
-  string user_message  = 3;
-  repeated ToolSchema available_tools = 4;
+/**
+ * Represents a message in the conversation history.
+ * Supports multiple roles and flexible content for extensibility.
+ */
+message Message {
+  enum Role {
+    ROLE_UNSPECIFIED = 0;
+    USER = 1;
+    ASSISTANT = 2;
+    SYSTEM = 3;
+  }
+
+  Role role = 1;
+  string content = 2;       // For USER and ASSISTANT roles (text only)
+  ToolCall tool_call = 3;   // For ASSISTANT role (signifies tool invocation)
+  ToolResult tool_result = 4; // For SYSTEM role (tool execution result)
 }
 
-message ChatChunk {
+/**
+ * Request to execute a conversation turn with optional tool definitions.
+ * user_id and session_id are provided via gRPC context metadata, not here.
+ */
+message ChatRequest {
+  // Full message history for stateless processing.
+  // The assistant will use this to understand context and make decisions.
+  repeated Message messages = 1;
+
+  // Available tools the assistant can invoke.
+  repeated ToolDefinition available_tools = 2;
+}
+
+/**
+ * Event streamed from Chat RPC. One of the following payloads is present.
+ */
+message ChatEvent {
   oneof payload {
-    string   text_delta = 1;
-    ToolCall tool_call  = 2;
-    string   done       = 3;
-    string   error      = 4;
+    TextDelta text_delta = 1;
+    ToolCall tool_call = 2;
+    Done done = 3;
+    Error error = 4;
   }
 }
 
-message ToolSchema {
-  string name            = 1;
-  string description     = 2;
-  string parameters_json = 3;
+/**
+ * Incremental text output from the model.
+ */
+message TextDelta {
+  string text = 1;
 }
 
+/**
+ * Tool invocation initiated by the model.
+ * Awaits execution result via SubmitToolResult RPC.
+ */
 message ToolCall {
-  string id             = 1;
-  string name           = 2;
-  string arguments_json = 3;
+  string id = 1;              // Unique identifier for this tool invocation
+  string name = 2;            // Name of the tool to invoke
+  google.protobuf.Struct arguments = 3; // Arguments as typed JSON
 }
 
+/**
+ * Tool execution result, stored in conversation history.
+ */
+message ToolResult {
+  string tool_call_id = 1;         // Correlates to the ToolCall.id
+  string name = 2;                 // Name of the tool that was executed
+  bool success = 3;                // Whether execution succeeded
+  google.protobuf.Struct result = 4; // Execution output as typed JSON
+  string error_message = 5;        // Error details if success=false
+}
+
+/**
+ * Successful conversation completion.
+ */
+message Done {
+  // Reserved for future extensions (e.g., token usage, model metadata)
+}
+
+/**
+ * Conversation error. Terminates the stream.
+ */
+message Error {
+  string code = 1;     // Error classification (e.g., "INVALID_ARGUMENT", "TOOL_TIMEOUT")
+  string message = 2;  // Human-readable error description
+}
+
+/**
+ * Defines a tool the assistant can invoke.
+ * Follows OpenAI-compatible schema for broad ecosystem compatibility.
+ */
+message ToolDefinition {
+  string name = 1;
+  string description = 2;
+  google.protobuf.Struct parameters = 3; // JSON Schema as typed struct
+}
+
+/**
+ * Request to submit a tool execution result.
+ * user_id and session_id are provided via gRPC context metadata.
+ */
 message ToolResultRequest {
-  string user_id       = 1;
-  string session_id    = 2;
-  string tool_call_id  = 3;
-  string result_json   = 4;
-  bool   success       = 5;
-  string error_message = 6;
+  string tool_call_id = 1;         // ID of the ToolCall to respond to
+  bool success = 2;                // Whether execution succeeded
+  google.protobuf.Struct result = 3; // Execution output as typed JSON
+  string error_message = 4;        // Error details if success=false
 }
 
-message ToolResultResponse {}
+message ToolResultResponse {
+  // Reserved for future extensions
+}

@@ -3,12 +3,17 @@ from __future__ import annotations
 import asyncio
 import enum
 import os
+import sys
 from dataclasses import dataclass
 from typing import Any, AsyncIterator, cast
 
 import structlog
 from google import genai
 from google.genai import types
+from google.protobuf import struct_pb2, json_format
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'generated'))
+from generated import horbyta_service_pb2 as pb2
 
 logger = structlog.get_logger(__name__)
 
@@ -39,12 +44,13 @@ class GeminiClient:
 
     async def stream_turn(
         self,
-        messages: list[dict],
-        tools: list[dict],
+        messages: list[pb2.Message],
+        tools: list[pb2.ToolDefinition],
     ) -> AsyncIterator[GeminiChunk]:
         """
         Streams a single conversational turn.
-        `messages` is the full history loaded from the DB.
+        Messages: full history with roles (USER, ASSISTANT, SYSTEM).
+        Tools: available tool definitions for the assistant.
         """
         contents = self._to_gemini_contents(messages)
         gemini_tools = self._build_tools(tools) if tools else None
@@ -76,7 +82,6 @@ class GeminiClient:
         if tools:
             kwargs["tools"] = tools
 
-        # SDK returns a sync iterator, so pull items via thread hops to keep async flow non-blocking.
         stream = await asyncio.to_thread(self._client.models.generate_content_stream, **kwargs)
 
         while True:
@@ -111,47 +116,51 @@ class GeminiClient:
         yield GeminiChunk(kind=ChunkKind.DONE, data=None)
 
     @staticmethod
-    def _to_gemini_contents(messages: list[dict]) -> list[types.Content]:
+    def _to_gemini_contents(messages: list[pb2.Message]) -> list[types.Content]:
+        """Convert protobuf Message[] with roles to Gemini Content[]."""
         contents: list[types.Content] = []
 
         for msg in messages:
-            role = msg["role"]
+            role_name = pb2.Message.Role.Name(msg.role).lower()
 
-            if role in ("user", "model") and "content" in msg:
+            if role_name in ("user", "assistant") and msg.content:
                 contents.append(
                     types.Content(
-                        role=role,
-                        parts=[types.Part(text=msg["content"])],
+                        role=role_name,
+                        parts=[types.Part(text=msg.content)],
                     )
                 )
 
-            elif role == "model" and "tool_call" in msg:
-                tc = msg["tool_call"]
+            elif role_name == "assistant" and msg.HasField("tool_call"):
+                tc = msg.tool_call
+                args_dict = GeminiClient._struct_to_dict(tc.arguments) if tc.arguments else {}
                 contents.append(
                     types.Content(
                         role="model",
                         parts=[
                             types.Part(
                                 function_call=types.FunctionCall(
-                                    id=tc["id"],
-                                    name=tc["name"],
-                                    args=tc["arguments"],
+                                    id=tc.id,
+                                    name=tc.name,
+                                    args=args_dict,
                                 )
                             )
                         ],
                     )
                 )
 
-            elif role == "tool":
+            elif role_name == "system" and msg.HasField("tool_result"):
+                tr = msg.tool_result
+                result_dict = GeminiClient._struct_to_dict(tr.result) if tr.result else {}
                 contents.append(
                     types.Content(
                         role="tool",
                         parts=[
                             types.Part(
                                 function_response=types.FunctionResponse(
-                                    id=msg["tool_call_id"],
-                                    name=msg["name"],
-                                    response=msg["content"],
+                                    id=tr.tool_call_id,
+                                    name=tr.name,
+                                    response=result_dict,
                                 )
                             )
                         ],
@@ -161,14 +170,22 @@ class GeminiClient:
         return contents
 
     @staticmethod
-    def _build_tools(tools: list[dict]) -> list[types.Tool]:
+    def _build_tools(tools: list[pb2.ToolDefinition]) -> list[types.Tool]:
+        """Build Gemini Tool definitions from protobuf ToolDefinition[]."""
         declarations = [
             types.FunctionDeclaration(
-                name=t["name"],
-                description=t["description"],
-                parameters=t.get("parameters"),
+                name=t.name,
+                description=t.description,
+                parameters=cast(Any, GeminiClient._struct_to_dict(t.parameters)) if t.parameters else None,
             )
             for t in tools
         ]
         tool_ctor = cast(Any, types.Tool)
         return [tool_ctor(function_declarations=declarations)]
+
+    @staticmethod
+    def _struct_to_dict(struct: struct_pb2.Struct) -> dict[str, Any] | None:
+        """Convert protobuf Struct to Python dict."""
+        if not struct or not struct.fields:
+            return None
+        return json_format.MessageToDict(struct, preserving_proto_field_name=True)
