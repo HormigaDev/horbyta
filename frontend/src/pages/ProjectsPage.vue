@@ -8,7 +8,9 @@
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
+      :filter-schema="projectFilterSchema"
       @request="onRequest"
+      @filters="onFilters"
       @view="(id) => $router.push(`/projects/${id}`)"
       @create="() => $router.push('/projects/new')"
       @edit="editSelected"
@@ -23,6 +25,8 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import DataTable from 'src/components/DataTable.vue';
 import { getProjectColumns } from 'src/data/columns';
+import { useCrudDelete } from 'src/composables/useCrudDelete';
+import { useCrudListHandlers } from 'src/composables/useCrudListHandlers';
 import { useQuery } from 'src/composables/useQuery';
 import { useUI } from 'src/composables/useUI';
 import { ProjectsService } from 'src/services/projects';
@@ -41,7 +45,7 @@ const projectFilterSchema: FilterSchema = {
   updated_at: 'Date',
 };
 
-const { items, total, isLoading, query, fetch, setPage, setLimit } = useQuery(
+const { items, total, isLoading, query, fetch } = useQuery(
   ProjectsService.search,
   projectFilterSchema,
   10,
@@ -49,36 +53,10 @@ const { items, total, isLoading, query, fetch, setPage, setLimit } = useQuery(
   false,
 );
 
-// Table request handler mapping from Quasar
-const onRequest = (props: Record<string, unknown>) => {
-  const pagination = props.pagination as {
-    page: number;
-    rowsPerPage: number;
-    sortBy: string;
-    descending: boolean;
-  };
-
-  if (pagination.rowsPerPage && pagination.rowsPerPage !== query.limit) {
-    setLimit(pagination.rowsPerPage);
-  }
-
-  if (pagination.page && pagination.page !== query.page) {
-    setPage(pagination.page);
-  }
-
-  if (pagination.sortBy) {
-    if (query.order_by !== pagination.sortBy) {
-      query.order_by = pagination.sortBy;
-      query.order_asc = !pagination.descending;
-      fetch();
-    } else if (query.order_asc === pagination.descending) {
-      query.order_asc = !pagination.descending;
-      fetch();
-    }
-  } else {
-    fetch();
-  }
-};
+const { onRequest, onFilters } = useCrudListHandlers({
+  query,
+  fetch,
+});
 
 const editSelected = (selectedIds: string[]) => {
   if (selectedIds.length === 1) {
@@ -88,22 +66,14 @@ const editSelected = (selectedIds: string[]) => {
   }
 };
 
-const confirmDestruction = async (selectedIds: string[]) => {
-  if (selectedIds.length === 0) return;
-
-  const confirmed = await confirmDelete(
-    t('projects.list.deleteTarget', { count: selectedIds.length }),
-  );
-  if (confirmed) {
-    try {
-      for (const id of selectedIds) {
-        await ProjectsService.delete(id);
-      }
-      notify(t('projects.list.deleteSuccess'), 'positive');
-      void fetch();
-    } catch (err: unknown) {
-      notifyError(t('projects.list.deleteError'), err);
-    }
-  }
-};
+const { deleteSelected: confirmDestruction } = useCrudDelete({
+  deleteById: (id) => ProjectsService.delete(id),
+  confirmDelete,
+  notify,
+  notifyError,
+  buildDeleteTarget: (count) => t('projects.list.deleteTarget', { count }),
+  buildDeleteSuccess: () => t('projects.list.deleteSuccess'),
+  buildDeleteError: () => t('projects.list.deleteError'),
+  afterDelete: fetch,
+});
 </script>

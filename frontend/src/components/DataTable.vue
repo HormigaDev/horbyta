@@ -503,7 +503,6 @@ const applyFilters = () => {
   ) as Filter[];
   store.saveTableState(props.tableId, { filters: validFilters });
   emit('filters', validFilters);
-  onRequest({ pagination: pagination.value });
 };
 
 const onFilterColumnChange = (filter: Partial<Filter>) => {
@@ -536,7 +535,7 @@ onMounted(() => {
   }
   if (savedState.filters) {
     filters.value = [...savedState.filters] as Partial<Filter>[];
-    emit('filters', savedState.filters);
+    return emit('filters', savedState.filters);
   }
 
   onRequest({ pagination: pagination.value });

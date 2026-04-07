@@ -52,6 +52,7 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import DataTable from 'src/components/DataTable.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
+import { useCrudDelete } from 'src/composables/useCrudDelete';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { useUI } from 'src/composables/useUI';
 import { TasksService } from 'src/services/tasks';
@@ -222,23 +223,14 @@ const handleEdit = (ids: string[]) => {
   void router.push(`/tasks/${ids[0]}/edit`);
 };
 
-const confirmDestruction = async (selectedIds: string[]) => {
-  if (selectedIds.length === 0) return;
-
-  const confirmed = await confirmDelete(
-    t('tasks.list.deleteTarget', { count: selectedIds.length }),
-  );
-  if (!confirmed) return;
-
-  try {
-    for (const id of selectedIds) {
-      await TasksService.delete(id);
-    }
-
-    notify(t('tasks.list.deleteSuccess'), 'positive');
-    void fetchTasks();
-  } catch (err: unknown) {
-    notifyError(t('tasks.list.deleteError'), err);
-  }
-};
+const { deleteSelected: confirmDestruction } = useCrudDelete({
+  deleteById: (id) => TasksService.delete(id),
+  confirmDelete,
+  notify,
+  notifyError,
+  buildDeleteTarget: (count) => t('tasks.list.deleteTarget', { count }),
+  buildDeleteSuccess: () => t('tasks.list.deleteSuccess'),
+  buildDeleteError: () => t('tasks.list.deleteError'),
+  afterDelete: fetchTasks,
+});
 </script>

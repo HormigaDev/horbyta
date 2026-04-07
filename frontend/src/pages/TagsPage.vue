@@ -8,8 +8,10 @@
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
+      :filter-schema="tagFilterSchema"
       hide-view
       @request="onRequest"
+      @filters="onFilters"
       @create="handleCreate"
       @edit="handleEdit"
       @delete="confirmDestruction"
@@ -20,35 +22,21 @@
       </template>
     </DataTable>
 
-    <q-dialog v-model="isDialogOpen" persistent>
-      <q-card style="min-width: 400px; max-width: 90vw">
-        <q-form @submit="onSubmit">
-          <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">
-              {{ editingId ? t('tags.dialog.editTitle') : t('tags.dialog.newTitle') }}
-            </div>
-            <q-space />
-            <q-btn icon="close" flat round dense v-close-popup />
-          </q-card-section>
-
-          <q-card-section class="q-pt-md">
-            <q-input
-              v-model="form.name"
-              :label="t('tags.dialog.nameLabel')"
-              autofocus
-              outlined
-              :error="nameRuleState.error"
-              :error-message="nameRuleState.message"
-            />
-          </q-card-section>
-
-          <q-card-actions align="right" class="text-primary q-px-md q-pb-md">
-            <q-btn flat :label="t('common.cancel')" v-close-popup />
-            <q-btn color="primary" :label="t('common.save')" type="submit" :loading="isSaving" />
-          </q-card-actions>
-        </q-form>
-      </q-card>
-    </q-dialog>
+    <SimpleNameDialog
+      v-model="isDialogOpen"
+      :value="form.name"
+      :editing="Boolean(editingId)"
+      :create-title="t('tags.dialog.newTitle')"
+      :edit-title="t('tags.dialog.editTitle')"
+      :name-label="t('tags.dialog.nameLabel')"
+      :cancel-label="t('common.cancel')"
+      :save-label="t('common.save')"
+      :saving="isSaving"
+      :error="nameRuleState.error"
+      :error-message="nameRuleState.message"
+      @update:value="(value) => (form.name = value)"
+      @submit="onSubmit"
+    />
   </q-page>
 </template>
 
@@ -56,6 +44,9 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import DataTable from 'src/components/DataTable.vue';
+import SimpleNameDialog from 'src/components/SimpleNameDialog.vue';
+import { useCrudDelete } from 'src/composables/useCrudDelete';
+import { useCrudListHandlers } from 'src/composables/useCrudListHandlers';
 import { useQuery } from 'src/composables/useQuery';
 import { useUI } from 'src/composables/useUI';
 import type { FilterSchema } from 'src/types';
@@ -73,7 +64,7 @@ const tagFilterSchema: FilterSchema = {
   name: 'Text',
 };
 
-const { items, total, isLoading, query, fetch, setPage, setLimit } = useQuery(
+const { items, total, isLoading, query, fetch } = useQuery(
   TagsService.search,
   tagFilterSchema,
   10,
@@ -88,35 +79,10 @@ const form = reactive<TagDto>({
   name: '',
 });
 
-const onRequest = (props: Record<string, unknown>) => {
-  const pagination = props.pagination as {
-    page: number;
-    rowsPerPage: number;
-    sortBy: string;
-    descending: boolean;
-  };
-
-  if (pagination.rowsPerPage && pagination.rowsPerPage !== query.limit) {
-    setLimit(pagination.rowsPerPage);
-  }
-
-  if (pagination.page && pagination.page !== query.page) {
-    setPage(pagination.page);
-  }
-
-  if (pagination.sortBy) {
-    if (query.order_by !== pagination.sortBy) {
-      query.order_by = pagination.sortBy;
-      query.order_asc = !pagination.descending;
-      fetch();
-    } else if (query.order_asc === pagination.descending) {
-      query.order_asc = !pagination.descending;
-      fetch();
-    }
-  } else {
-    fetch();
-  }
-};
+const { onRequest, onFilters } = useCrudListHandlers({
+  query,
+  fetch,
+});
 
 const handleCreate = () => {
   editingId.value = null;
@@ -156,24 +122,16 @@ const onSubmit = async () => {
   }
 };
 
-const confirmDestruction = async (selectedIds: string[]) => {
-  if (selectedIds.length === 0) return;
-
-  const confirmed = await confirmDelete(
-    t('tags.messages.deleteTarget', { count: selectedIds.length }),
-  );
-  if (confirmed) {
-    try {
-      for (const id of selectedIds) {
-        await TagsService.delete(id);
-      }
-      notify(t('tags.messages.deleteSuccess'), 'positive');
-      void fetch();
-    } catch (err: unknown) {
-      notifyError(t('tags.messages.deleteError'), err);
-    }
-  }
-};
+const { deleteSelected: confirmDestruction } = useCrudDelete({
+  deleteById: (id) => TagsService.delete(id),
+  confirmDelete,
+  notify,
+  notifyError,
+  buildDeleteTarget: (count) => t('tags.messages.deleteTarget', { count }),
+  buildDeleteSuccess: () => t('tags.messages.deleteSuccess'),
+  buildDeleteError: () => t('tags.messages.deleteError'),
+  afterDelete: fetch,
+});
 
 onMounted(() => fetch());
 </script>
