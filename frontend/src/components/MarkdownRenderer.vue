@@ -351,6 +351,15 @@ const handleKeydown = (e: KeyboardEvent) => {
     h3 {
       font-size: 1.25em;
     }
+    h4 {
+      font-size: 1.15em;
+    }
+    h5 {
+      font-size: 1em;
+    }
+    h6 {
+      font-size: 0.75em;
+    }
 
     a {
       color: var(--md-color-link);
