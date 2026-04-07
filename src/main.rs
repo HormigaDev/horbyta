@@ -8,8 +8,16 @@ pub mod services;
 pub mod state;
 pub mod utils;
 
-use axum::{Router, routing::get};
+use axum::{
+    Router,
+    http::{
+        HeaderValue, Method,
+        header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
+    },
+    routing::get,
+};
 use sea_orm::Database;
+use tower_http::cors::CorsLayer;
 use tracing_subscriber;
 
 use crate::{env::Config, state::AppState};
@@ -54,6 +62,27 @@ async fn main() {
         .with_state(state.clone());
 
     let app = Router::new().nest("/api/v1", api_routes).nest("/ws", ws_routes);
+    let app = if config.is_production {
+        app
+    } else {
+        let allowed_origin =
+            HeaderValue::from_str(&config.frontend_origin).expect("CRÍTICO: FRONTEND_ORIGIN inválido.");
+
+        app.layer(
+            CorsLayer::new()
+                .allow_origin(allowed_origin)
+                .allow_methods([
+                    Method::GET,
+                    Method::POST,
+                    Method::PATCH,
+                    Method::PUT,
+                    Method::DELETE,
+                    Method::OPTIONS,
+                ])
+                .allow_headers([ACCEPT, AUTHORIZATION, CONTENT_TYPE])
+                .allow_credentials(true),
+        )
+    };
 
     let listener = tokio::net::TcpListener::bind(&config.app_uri).await.unwrap();
 

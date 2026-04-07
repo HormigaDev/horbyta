@@ -17,7 +17,7 @@ from generated import horbyta_service_pb2 as pb2
 
 logger = structlog.get_logger(__name__)
 
-_MODEL = "gemini-2.0-flash"
+_MODEL = "gemini-2.5-flash"
 _MAX_RETRIES = 3
 _RETRY_BACKOFF_BASE = 1.5
 _STREAM_END = object()
@@ -123,7 +123,7 @@ class GeminiClient:
         for msg in messages:
             role_name = pb2.Message.Role.Name(msg.role).lower()
 
-            if role_name in ("user", "assistant") and msg.content:
+            if role_name in ("user", "model") and msg.content:
                 contents.append(
                     types.Content(
                         role=role_name,
@@ -131,7 +131,7 @@ class GeminiClient:
                     )
                 )
 
-            elif role_name == "assistant" and msg.HasField("tool_call"):
+            elif role_name == "model" and msg.HasField("tool_call"):
                 tc = msg.tool_call
                 args_dict = GeminiClient._struct_to_dict(tc.arguments) if tc.arguments else {}
                 contents.append(

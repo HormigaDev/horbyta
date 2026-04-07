@@ -23,6 +23,8 @@ COPY proto ./proto
 COPY scripts/init-rust.sh ./init.sh
 RUN chmod +x ./init.sh
 
+ENV PATH="/usr/local/cargo/bin:${PATH}"
+
 HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 \
     CMD curl -sf http://localhost:${PORT:-8080}/health || exit 1
 

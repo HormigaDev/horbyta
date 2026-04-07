@@ -51,6 +51,27 @@ class AiServiceServicer(pb2_grpc.AiServiceServicer):
                 session_id = value
         return user_id, session_id
 
+    @staticmethod
+    def _derive_title(messages: list[pb2.Message]) -> str:
+        """Derive a stable title from the first user message, capped to 255 chars."""
+        for message in messages:
+            if message.role != pb2.Message.Role.USER or not message.content:
+                continue
+
+            words = message.content.split()
+            if not words:
+                break
+
+            return " ".join(words[:3])[:255]
+
+        for message in messages:
+            if message.content:
+                words = message.content.split()
+                if words:
+                    return " ".join(words[:3])[:255]
+
+        return "Nuevo chat"
+
     async def Chat(
         self,
         request: pb2.ChatRequest,
@@ -72,6 +93,9 @@ class AiServiceServicer(pb2_grpc.AiServiceServicer):
                 "messages cannot be empty",
             )
             return
+
+        conversation_title = self._derive_title(list(request.messages))
+        await self._repo.ensure_conversation(user_id, session_id, conversation_title)
 
         log.info("chat_started", message_count=len(request.messages), tool_count=len(request.available_tools))
 
@@ -102,7 +126,12 @@ class AiServiceServicer(pb2_grpc.AiServiceServicer):
                                 role=pb2.Message.Role.ASSISTANT,
                                 tool_call=tool_call_this_round,
                             )
-                            await self._repo.append_message(user_id, session_id, assistant_message)
+                            await self._repo.append_message(
+                                user_id,
+                                session_id,
+                                assistant_message,
+                                title=conversation_title,
+                            )
                         except Exception as exc:
                             log.error("db_append_tool_call_failed", error=str(exc))
                             yield pb2.ChatEvent(
@@ -131,7 +160,12 @@ class AiServiceServicer(pb2_grpc.AiServiceServicer):
                             role=pb2.Message.Role.ASSISTANT,
                             content=text_content,
                         )
-                        await self._repo.append_message(user_id, session_id, assistant_message)
+                        await self._repo.append_message(
+                            user_id,
+                            session_id,
+                            assistant_message,
+                            title=conversation_title,
+                        )
                     except Exception as exc:
                         log.error("db_append_text_failed", error=str(exc))
                         yield pb2.ChatEvent(
@@ -154,7 +188,12 @@ class AiServiceServicer(pb2_grpc.AiServiceServicer):
                     role=pb2.Message.Role.SYSTEM,
                     tool_result=tool_result,
                 )
-                await self._repo.append_message(user_id, session_id, system_message)
+                await self._repo.append_message(
+                    user_id,
+                    session_id,
+                    system_message,
+                    title=conversation_title,
+                )
             except Exception as exc:
                 log.error("db_append_tool_result_failed", error=str(exc))
                 yield pb2.ChatEvent(

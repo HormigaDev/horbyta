@@ -17,6 +17,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const isConnecting = ref(false);
   const error = ref<string | null>(null);
   const state = ref<WebSocketConnectionState>('CLOSED');
+  const reconnectAttempts = ref(0);
+  const manuallyClosed = ref(false);
+  const listeners = ref<Map<string, Set<(data: unknown) => void>>>(new Map());
 
   const getWebSocketUrl = (): string => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -24,10 +27,54 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     return `${protocol}//${host}${path}`;
   };
 
+  const dispatchMessage = (event: MessageEvent) => {
+    try {
+      const message = JSON.parse(event.data) as WebSocketMessage;
+      const typedListeners = listeners.value.get(message.type);
+      if (!typedListeners || typedListeners.size === 0) {
+        return;
+      }
+
+      for (const handler of typedListeners) {
+        handler(message.data);
+      }
+    } catch (err) {
+      console.error('Failed to parse WebSocket message:', err);
+    }
+  };
+
+  const reconnect = async (maxRetries = 5): Promise<void> => {
+    if (!autoReconnect || manuallyClosed.value) {
+      state.value = 'CLOSED';
+      return;
+    }
+
+    if (reconnectAttempts.value >= maxRetries) {
+      state.value = 'CLOSED';
+      error.value = 'Max reconnection attempts reached';
+      return;
+    }
+
+    reconnectAttempts.value += 1;
+    state.value = 'RECONNECTING';
+    const delay = Math.pow(2, reconnectAttempts.value - 1) * 1000;
+
+    await new Promise((resolve) => setTimeout(resolve, delay));
+
+    try {
+      await connect(1);
+      reconnectAttempts.value = 0;
+    } catch (err) {
+      console.error('Auto-reconnect failed:', err);
+      await reconnect(maxRetries);
+    }
+  };
+
   const connect = async (retries = 3): Promise<void> => {
     if (isConnected.value || isConnecting.value) return;
 
     isConnecting.value = true;
+    manuallyClosed.value = false;
     error.value = null;
     let lastError: Error | null = null;
 
@@ -44,8 +91,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
           const onOpen = () => {
             isConnected.value = true;
+            isConnecting.value = false;
             state.value = 'OPEN';
             error.value = null;
+            ws.value?.addEventListener('message', dispatchMessage);
+            ws.value?.addEventListener('close', () => {
+              isConnected.value = false;
+              void reconnect();
+            });
             cleanup();
             resolve();
           };
@@ -92,7 +145,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   };
 
   const disconnect = (): void => {
+    manuallyClosed.value = true;
     if (ws.value) {
+      ws.value.removeEventListener('message', dispatchMessage);
       ws.value.close();
       ws.value = null;
     }
@@ -108,52 +163,25 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   };
 
   const on = (type: string, handler: (data: unknown) => void): (() => void) => {
-    if (!ws.value) {
-      throw new Error('WebSocket is not initialized');
-    }
-
-    const messageHandler = (event: MessageEvent) => {
-      try {
-        const message = JSON.parse(event.data) as WebSocketMessage;
-        if (message.type === type) {
-          handler(message.data);
-        }
-      } catch (err) {
-        console.error('Failed to parse WebSocket message:', err);
-      }
-    };
-
-    ws.value.addEventListener('message', messageHandler);
+    const currentListeners = listeners.value.get(type) ?? new Set<(data: unknown) => void>();
+    currentListeners.add(handler);
+    listeners.value.set(type, currentListeners);
 
     return () => {
-      ws.value?.removeEventListener('message', messageHandler);
+      const typedListeners = listeners.value.get(type);
+      if (!typedListeners) {
+        return;
+      }
+
+      typedListeners.delete(handler);
+      if (typedListeners.size === 0) {
+        listeners.value.delete(type);
+      }
     };
   };
 
-  const setupAutoReconnect = (maxRetries = 5) => {
-    if (!ws.value) return;
-
-    let reconnectAttempts = 0;
-
-    const handleClose = () => {
-      isConnected.value = false;
-      state.value = 'RECONNECTING';
-
-      if (reconnectAttempts < maxRetries && autoReconnect) {
-        reconnectAttempts++;
-        const delay = Math.pow(2, reconnectAttempts - 1) * 1000;
-        setTimeout(() => {
-          connect(1).catch((err) => {
-            console.error('Auto-reconnect failed:', err);
-          });
-        }, delay);
-      } else {
-        state.value = 'CLOSED';
-        error.value = 'Max reconnection attempts reached';
-      }
-    };
-
-    ws.value.addEventListener('close', handleClose);
+  const setupAutoReconnect = () => {
+    // Kept for compatibility with existing callers.
   };
 
   onMounted(async () => {
@@ -161,7 +189,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
     try {
       await connect();
-      setupAutoReconnect();
     } catch (err) {
       console.error('Failed to connect WebSocket on mount:', err);
     }

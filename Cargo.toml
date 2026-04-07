@@ -26,6 +26,7 @@ tonic  = { version = "0.11", features = ["tls", "transport"] }
 prost  = "0.12"
 prost-types = "0.12"
 futures = "0.3"
+tower-http = { version = "0.6", features = ["cors"] }
 
 [build-dependencies]
 tonic-build = "0.11"

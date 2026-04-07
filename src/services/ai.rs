@@ -103,7 +103,7 @@ async fn send_typing_message(
         msg_type: "typing".to_string(),
         data: Some(json!({
             "delta": chunk,
-            "role": "assistant"
+            "role": "model"
         })),
         id: None,
     };
@@ -128,7 +128,7 @@ async fn send_complete_message(
         msg_type: "message".to_string(),
         data: Some(json!({
             "content": content,
-            "role": "assistant"
+            "role": "model"
         })),
         id: None,
     };

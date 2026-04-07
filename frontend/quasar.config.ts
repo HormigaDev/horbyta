@@ -37,12 +37,12 @@ export default defineConfig((/* ctx */) => {
       proxy: {
         '/api': {
           target: 'http://127.0.0.1:8890',
-          changeOrigin: true,
+          changeOrigin: false,
         },
         '/ws': {
           target: 'ws://127.0.0.1:8890',
           ws: true,
-          changeOrigin: true,
+          changeOrigin: false,
         },
       },
     },
@@ -65,7 +65,7 @@ export default defineConfig((/* ctx */) => {
     },
 
     pwa: {
-      workboxMode: 'GenerateSW',
+      workboxMode: 'GenerateSW' as const,
     },
 
     cordova: {},

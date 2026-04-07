@@ -25,6 +25,9 @@ dev-python: setup
 dev-rust: setup
 	$(COMPOSE_DEV) up --build --no-deps horbyta_app -d
 
+restart-python:
+	$(COMPOSE_DEV) restart horbyta_ai
+
 ## prod: Levanta en producción (detached)
 prod: setup
 	$(COMPOSE_PROD) up --build -d

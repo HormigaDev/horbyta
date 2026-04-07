@@ -10,7 +10,10 @@ use serde_json::{Value, json};
 use uuid::Uuid;
 
 use crate::{
-    dtos::{user::UserPreferences, websocket::WsMessage},
+    dtos::{
+        user::UserPreferences,
+        websocket::{ChatClientPayload, WsMessage},
+    },
     entities::{conversation_history::Entity as ConversationHistory, notifications, prelude::Users, prelude::*},
     error::AppError,
     middlewares::auth::Claims,
@@ -129,17 +132,15 @@ impl WebSocketService {
             .as_ref()
             .ok_or_else(|| AppError::BadRequest("Missing data field".to_string()))?;
 
-        let chat_id = data
-            .get("chat_id")
-            .and_then(Value::as_str)
-            .ok_or_else(|| AppError::BadRequest("Missing chat_id in data".to_string()))?
+        let payload: ChatClientPayload = serde_json::from_value(data.clone())
+            .map_err(|_| AppError::BadRequest("Invalid chat payload".to_string()))?;
+
+        let chat_id = payload
+            .chat_id
             .parse::<Uuid>()
             .map_err(|_| AppError::BadRequest("Invalid chat_id format".to_string()))?;
 
-        let user_content = data
-            .get("content")
-            .and_then(Value::as_str)
-            .ok_or_else(|| AppError::BadRequest("Missing content in data".to_string()))?;
+        let user_content = payload.content.as_str();
 
         tracing::info!(
             user_id = %user_id,
@@ -163,7 +164,7 @@ impl WebSocketService {
             .stream_chat_response(user_id, session_id, messages, sender)
             .await?;
 
-        if let Some(notification) = self.create_chat_notification(user_id, session_id, data).await? {
+        if let Some(notification) = self.create_chat_notification(user_id, session_id, &payload).await? {
             self.send_notification_event(sender, &notification).await?
         }
 
@@ -179,7 +180,7 @@ impl WebSocketService {
                 let content = msg.get("content").and_then(Value::as_str).unwrap_or("");
 
                 let role_enum = match role {
-                    "bot" | "assistant" => 2,
+                    "model" => 2,
                     "system" => 3,
                     _ => 1,
                 };
@@ -219,7 +220,7 @@ impl WebSocketService {
         &self,
         user_id: Uuid,
         session_id: &str,
-        message: &Value,
+        message: &ChatClientPayload,
     ) -> Result<Option<notifications::Model>, AppError> {
         let user = Users::find_by_id(user_id)
             .one(self.state.db.as_ref())
@@ -233,12 +234,20 @@ impl WebSocketService {
         }
 
         let message_preview = message
-            .as_object()
-            .and_then(|value| value.get("content"))
-            .and_then(Value::as_str)
-            .map(|content| content.chars().take(140).collect::<String>());
+            .content
+            .split_whitespace()
+            .take(140)
+            .collect::<Vec<&str>>()
+            .join(" ")
+            .chars()
+            .take(140)
+            .collect::<String>();
 
-        let body = message_preview.map(|preview| format!("IA respondió al chat {}: {}", session_id, preview));
+        let body = if message_preview.is_empty() {
+            None
+        } else {
+            Some(format!("IA respondió al chat {}: {}", session_id, message_preview))
+        };
 
         let notification = notifications::ActiveModel {
             user_id: Set(user_id),
@@ -306,8 +315,9 @@ impl WebSocketService {
             let origin = origin.to_str().map_err(|_| StatusCode::BAD_REQUEST)?;
             let host = host.to_str().map_err(|_| StatusCode::BAD_REQUEST)?;
             let same_origin = origin.contains(&format!("//{host}"));
+            let allowed_dev_origin = !self.state.config.is_production && origin == self.state.config.frontend_origin;
 
-            if !same_origin {
+            if !same_origin && !allowed_dev_origin {
                 return Err(StatusCode::FORBIDDEN);
             }
         }

@@ -46,7 +46,7 @@ async fn handle_socket(socket: WebSocket, user_id: Uuid, session_id: String, ser
                     Err(error) => {
                         tracing::error!("WebSocket message processing error: {}", error);
                         service.send_processing_error(&mut sender).await;
-                        break;
+                        continue;
                     }
                     _ => {}
                 }
