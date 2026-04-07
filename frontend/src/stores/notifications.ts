@@ -81,7 +81,6 @@ export const useNotificationsStore = defineStore('notifications', {
 
       const newNotification: AppNotification = {
         id: crypto.randomUUID(),
-        backendId,
         source: 'async',
         message,
         title,
@@ -89,9 +88,10 @@ export const useNotificationsStore = defineStore('notifications', {
         type: event.type ?? 'info',
         read: false,
         createdAt,
-        preferenceKey: event.preferenceKey,
         payload: event.payload,
       };
+      event.preferenceKey && (newNotification.preferenceKey = event.preferenceKey);
+      backendId && (newNotification.backendId = backendId);
 
       this.notifications.unshift(newNotification);
       this.save();

@@ -77,6 +77,7 @@ export default defineConfigWithVueTs(
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+      '@typescript-eslint/no-unused-expressions': 'off',
       'vue/no-unused-vars': [
         'error',
         {
