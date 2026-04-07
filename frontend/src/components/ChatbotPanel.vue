@@ -10,63 +10,15 @@
     <div class="chatbot-shell" @click.self="closePanel">
       <div class="chatbot-panel" @click.stop>
         <q-layout view="hHh Lpr lFf" container class="chatbot-layout">
-          <q-drawer
-            v-model="drawerOpen"
-            overlay
-            bordered
-            :width="260"
-            :breakpoint="900"
-            class="chatbot-drawer"
-          >
-            <div class="chatbot-drawer-header">
-              <div class="text-subtitle2 text-weight-medium">{{ t('chatbot.panel.chats') }}</div>
-              <q-btn
-                flat
-                round
-                dense
-                icon="add"
-                color="primary"
-                :disable="!canCreateNewChat"
-                @click="openNewChat"
-              >
-                <q-tooltip v-if="!canCreateNewChat">{{
-                  t('chatbot.panel.newChatDisabled')
-                }}</q-tooltip>
-                <q-tooltip v-else>{{ t('chatbot.panel.newChat') }}</q-tooltip>
-              </q-btn>
-            </div>
-
-            <q-separator />
-
-            <div class="chatbot-drawer-list">
-              <q-list padding>
-                <q-item
-                  v-for="chat in chats"
-                  :key="chat.id"
-                  clickable
-                  :active="chat.id === activeChatId"
-                  active-class="chatbot-chat-item-active"
-                  class="chatbot-chat-item"
-                  @click="selectChat(chat.id)"
-                >
-                  <q-item-section>
-                    <q-item-label lines="1">{{ chat.title }}</q-item-label>
-                    <q-item-label caption>{{ formatDate(chat.updated_at) }}</q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <q-btn
-                      flat
-                      round
-                      dense
-                      icon="delete"
-                      color="negative"
-                      @click.stop="removeChat(chat.id, chat.title)"
-                    />
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </div>
-          </q-drawer>
+          <ChatbotSidebar
+            v-model:drawer-open="drawerOpen"
+            :chats="chats"
+            :active-chat-id="activeChatId"
+            :can-create-new-chat="canCreateNewChat"
+            @create-chat="handleOpenNewChat"
+            @select-chat="selectChat"
+            @remove-chat="removeChat"
+          />
 
           <q-header class="chatbot-header">
             <q-toolbar class="chatbot-toolbar">
@@ -83,85 +35,21 @@
 
           <q-page-container class="chatbot-page-container">
             <div class="chatbot-page">
-              <div ref="messagesContainer" class="chatbot-messages">
-                <div
-                  v-if="!activeChat || activeChat.messages.length === 0"
-                  class="chatbot-empty-state"
-                >
-                  {{ t('chatbot.panel.emptyState') }}
-                </div>
+              <div ref="_messagesContainer" class="chatbot-messages">
+                <ChatbotMessagesContent
+                  :active-chat="activeChat"
+                  :active-messages="activeMessages"
+                  :is-generating="isGenerating"
+                  :is-sending="isSending"
+                  :streaming-content="streamingContent"
+                  :working-status-message="workingStatusMessage"
+                  :tool-events="toolEvents"
+                  :visible-tool-events="visibleToolEvents"
+                  @tool-badge-click="onToolBadgeClick"
+                />
 
                 <div
-                  v-for="message in activeMessages"
-                  :key="message.id"
-                  v-memo="[message.id, message.content]"
-                  :class="[
-                    'chatbot-message-row',
-                    message.role === 'user' ? 'chatbot-message-user' : 'chatbot-message-bot',
-                  ]"
-                >
-                  <div v-if="message.role === 'user'" class="chatbot-user-bubble">
-                    {{ message.content }}
-                  </div>
-
-                  <div v-else class="chatbot-bot-stack">
-                    <q-avatar size="24px" class="chatbot-bot-message-avatar">
-                      <q-icon name="smart_toy" size="14px" />
-                    </q-avatar>
-                    <div class="chatbot-bot-markdown">
-                      <MarkdownRenderer :model-value="message.content" :edit-mode="false" />
-                    </div>
-                  </div>
-                </div>
-
-                <div v-if="isGenerating" class="chatbot-message-row chatbot-message-bot">
-                  <div class="chatbot-bot-stack">
-                    <q-avatar size="24px" class="chatbot-bot-message-avatar">
-                      <q-icon name="smart_toy" size="14px" />
-                    </q-avatar>
-                    <div class="chatbot-thinking">
-                      {{ t('chatbot.panel.thinking') }}
-                      <span class="chatbot-thinking-dots" aria-hidden="true">
-                        <span class="chatbot-thinking-dot"></span>
-                        <span class="chatbot-thinking-dot"></span>
-                        <span class="chatbot-thinking-dot"></span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div v-if="streamingContent" class="chatbot-message-row chatbot-message-bot">
-                  <div class="chatbot-bot-stack">
-                    <q-avatar size="24px" class="chatbot-bot-message-avatar">
-                      <q-icon name="smart_toy" size="14px" />
-                    </q-avatar>
-                    <div class="chatbot-bot-markdown">
-                      <MarkdownRenderer :model-value="streamingContent" :edit-mode="false" />
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  v-if="isSending && !isGenerating && !streamingContent"
-                  class="chatbot-message-row chatbot-message-bot"
-                >
-                  <div class="chatbot-bot-stack">
-                    <q-avatar size="24px" class="chatbot-bot-message-avatar">
-                      <q-icon name="smart_toy" size="14px" />
-                    </q-avatar>
-                    <div class="chatbot-thinking">
-                      {{ t('chatbot.panel.thinking') }}
-                      <span class="chatbot-thinking-dots" aria-hidden="true">
-                        <span class="chatbot-thinking-dot"></span>
-                        <span class="chatbot-thinking-dot"></span>
-                        <span class="chatbot-thinking-dot"></span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  ref="messagesBottomAnchor"
+                  ref="_messagesBottomAnchor"
                   class="chatbot-scroll-anchor"
                   aria-hidden="true"
                 ></div>
@@ -169,37 +57,13 @@
             </div>
           </q-page-container>
 
-          <q-footer class="chatbot-footer">
-            <q-form class="chatbot-input-form" @submit.prevent="handleSend">
-              <q-input
-                ref="promptInputRef"
-                v-model="prompt"
-                type="textarea"
-                autogrow
-                dense
-                outlined
-                :disable="isSending || isGenerating"
-                :placeholder="t('chatbot.panel.inputPlaceholder')"
-                class="chatbot-input"
-                @keydown.enter.exact.prevent="handleSend"
-              >
-                <template #append>
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    icon="arrow_upward"
-                    color="primary"
-                    :disable="isSending || isGenerating || !prompt.trim()"
-                    @click="handleSend"
-                  />
-                </template>
-              </q-input>
-            </q-form>
-            <small class="chatbot-disclaimer">
-              {{ t('chatbot.panel.disclaimer') }}
-            </small>
-          </q-footer>
+          <ChatbotComposer
+            ref="composerRef"
+            v-model:prompt="prompt"
+            :is-sending="isSending"
+            :is-generating="isGenerating"
+            @send="handleSend"
+          />
         </q-layout>
       </div>
     </div>
@@ -208,16 +72,20 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import type { QInput } from 'quasar';
-import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
-import { useQuery } from 'src/composables/useQuery';
+import ChatbotComposer from 'src/components/chatbot/ChatbotComposer.vue';
+import ChatbotMessagesContent from 'src/components/chatbot/ChatbotMessagesContent.vue';
+import ChatbotSidebar from 'src/components/chatbot/ChatbotSidebar.vue';
+import { useChatbotAutoScroll } from 'src/composables/useChatbotAutoScroll';
+import { useChatbotChats } from 'src/composables/useChatbotChats';
+import { useChatbotRealtime } from 'src/composables/useChatbotRealtime';
+import { useChatbotToolActivity } from 'src/composables/useChatbotToolActivity';
 import { useUI } from 'src/composables/useUI';
 import { useWebSocket } from 'src/composables/useWebSocket';
-import { ChatsService } from 'src/services/chats';
 import { useNotificationsStore } from 'src/stores/notifications';
-import type { ChatMessage, ChatSummary, ChatThread } from 'src/types/chat';
-import type { FilterSchema } from 'src/types/query';
+import type { ToolEvent } from 'src/composables/useChatbotToolActivity';
+import type { ChatMessage } from 'src/types/chat';
 
 interface ChatbotPanelProps {
   modelValue: boolean;
@@ -231,164 +99,69 @@ const prompt = ref('');
 const isSending = ref(false);
 const isGenerating = ref(false);
 const streamingContent = ref('');
-const promptInputRef = ref<QInput | null>(null);
-const messagesContainer = ref<HTMLElement | null>(null);
-const messagesBottomAnchor = ref<HTMLElement | null>(null);
-const SCROLL_RETRY_DELAYS: readonly number[] = [0, 40, 120, 260];
-const pendingScrollTimeoutIds = ref<number[]>([]);
-const pendingScrollAnimationFrameId = ref<number | null>(null);
-const wsUnsubscribers = ref<Array<() => void>>([]);
-const websocketBound = ref(false);
+const composerRef = ref<InstanceType<typeof ChatbotComposer> | null>(null);
+
+const {
+  messagesContainer: _messagesContainer,
+  messagesBottomAnchor: _messagesBottomAnchor,
+  clearScheduledScrollWork,
+  scrollToBottom,
+  scheduleScrollToBottom,
+} = useChatbotAutoScroll();
 
 const { t } = useI18n();
+const router = useRouter();
 const { confirmDelete, notifyError, notify, showLoading, hideLoading } = useUI();
 const notificationsStore = useNotificationsStore();
 const websocket = useWebSocket({ path: '/ws', autoConnect: true, autoReconnect: true });
 
-const chatFilterSchema: FilterSchema = {
-  id: 'Text',
-  session_id: 'Text',
-  title: 'Text',
-  created_at: 'Date',
-  updated_at: 'Date',
-};
-
-const chatsQuery = useQuery<ChatSummary>(
-  ChatsService.search,
-  chatFilterSchema,
-  20,
-  'updated_at',
-  false,
-);
-const chats = computed(() => chatsQuery.items.value);
-const activeChat = ref<ChatThread | null>(null);
-const activeChatId = ref('');
-const canCreateNewChat = computed(() => {
-  if (!activeChat.value) {
-    return true;
-  }
-
-  return activeChat.value.messages.some((message) => message.role === 'user');
+const {
+  chats,
+  activeChat,
+  activeChatId,
+  activeMessages,
+  canCreateNewChat,
+  appendMessageToActiveChat,
+  persistActiveMessages,
+  maybeUpdateChatTitleFromPrompt,
+  createChat,
+  initializeChats,
+  selectChat,
+  openNewChat,
+  removeChat,
+} = useChatbotChats({
+  t,
+  notifyError,
+  notify,
+  showLoading,
+  hideLoading,
+  confirmDelete,
 });
+
+const {
+  toolEvents,
+  workingStatusMessage,
+  visibleToolEvents,
+  startRun,
+  markCompleted,
+  markError,
+  applyAiStatusPayload,
+  applyToolStatusPayload,
+} = useChatbotToolActivity({ t });
 
 const isOpen = computed({
   get: () => props.modelValue,
   set: (value: boolean) => emit('update:modelValue', value),
 });
 
-const activeMessages = computed(() => activeChat.value?.messages ?? []);
-const dateFormatter = new Intl.DateTimeFormat();
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
-const appendMessageToActiveChat = (message: ChatMessage) => {
-  if (!activeChat.value) {
-    return;
-  }
-
-  activeChat.value = {
-    ...activeChat.value,
-    updated_at: message.created_at,
-    messages: [...activeChat.value.messages, message],
-  };
-};
-
-const loadActiveChat = async (chatId: string) => {
-  const chat = await ChatsService.getById(chatId);
-  activeChatId.value = chat.id;
-  activeChat.value = chat;
-};
-
-const applyTitleChange = async (chatId: string, title: string) => {
-  try {
-    await ChatsService.updateTitle(chatId, { title });
-    await chatsQuery.fetch();
-  } catch (err: unknown) {
-    notifyError(t('chatbot.panel.updateTitleError'), err, true);
-  }
-};
-
-const maybeUpdateChatTitleFromPrompt = async (chatId: string, promptValue: string) => {
-  if (!activeChat.value || activeChat.value.title !== 'Nuevo chat') {
-    return;
-  }
-
-  const nextTitle = promptValue.slice(0, 52).trim();
-  if (!nextTitle) {
-    return;
-  }
-
-  activeChat.value = {
-    ...activeChat.value,
-    title: nextTitle,
-  };
-
-  await applyTitleChange(chatId, nextTitle);
-};
-
-const createChat = async (force = false): Promise<ChatThread | null> => {
-  if (!force && !canCreateNewChat.value) {
-    return null;
-  }
-
-  showLoading(t('common.loading'));
-  try {
-    const created = await ChatsService.create();
-    await chatsQuery.fetch();
-    activeChatId.value = created.id;
-    activeChat.value = created;
-    return created;
-  } catch (err: unknown) {
-    notifyError(t('chatbot.panel.createError'), err, true);
-    return null;
-  } finally {
-    hideLoading();
-  }
-};
-
-const initializeChats = async () => {
-  showLoading(t('common.loading'));
-  try {
-    await chatsQuery.fetch();
-
-    if (chats.value.length === 0) {
-      const created = await ChatsService.create();
-      await chatsQuery.fetch();
-      activeChatId.value = created.id;
-      activeChat.value = created;
-      return;
-    }
-
-    const firstChatId = chats.value[0]?.id;
-    if (firstChatId) {
-      await loadActiveChat(firstChatId);
-    }
-  } catch (err: unknown) {
-    notifyError(t('chatbot.panel.loadError'), err, true);
-  } finally {
-    hideLoading();
-  }
-};
-
-const cleanupWebSocketListeners = () => {
-  wsUnsubscribers.value.forEach((unsubscribe) => unsubscribe());
-  wsUnsubscribers.value = [];
-  websocketBound.value = false;
-};
-
-const bindWebSocketListeners = () => {
-  if (websocketBound.value || !websocket.isConnected.value) {
-    return;
-  }
-
-  const offMessage = websocket.on('message', (payload: unknown) => {
-    const content =
-      isRecord(payload) && typeof payload.content === 'string' ? payload.content : null;
-    if (!content) {
-      return;
-    }
-
+const { ensureWebSocketReady, disconnectWebSocket } = useChatbotRealtime({
+  websocket,
+  t,
+  notifyError,
+  addAsyncNotificationFromEvent: (event) => {
+    notificationsStore.addAsyncNotificationFromEvent(event);
+  },
+  onMessage: (content: string) => {
     const assistantMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'bot',
@@ -397,111 +170,39 @@ const bindWebSocketListeners = () => {
     };
 
     appendMessageToActiveChat(assistantMessage);
-
-    if (activeChat.value && activeChatId.value) {
-      void ChatsService.updateMessages(activeChatId.value, activeChat.value.messages).catch(
-        (err: unknown) => {
-          console.error('Failed to save messages to chat', err);
-        },
-      );
-    }
-
+    persistActiveMessages();
     isSending.value = false;
     isGenerating.value = false;
     streamingContent.value = '';
+    markCompleted();
     void nextTick().then(() => {
       scheduleScrollToBottom();
       focusPromptInput();
     });
-  });
-
-  const offGenerating = websocket.on('generating', () => {
+  },
+  onGenerating: () => {
     isGenerating.value = true;
     streamingContent.value = '';
     isSending.value = true;
     void nextTick().then(() => {
       scheduleScrollToBottom();
     });
-  });
-
-  const offTyping = websocket.on('typing', (payload: unknown) => {
-    if (isRecord(payload) && typeof payload.delta === 'string') {
-      streamingContent.value += payload.delta;
-      void nextTick().then(() => {
-        scheduleScrollToBottom();
-      });
-    }
-  });
-
-  const offError = websocket.on('error', (payload: unknown) => {
-    const message =
-      isRecord(payload) && typeof payload.message === 'string'
-        ? payload.message
-        : t('chatbot.panel.sendError');
+  },
+  onTyping: (delta: string) => {
+    streamingContent.value += delta;
+    void nextTick().then(() => {
+      scheduleScrollToBottom();
+    });
+  },
+  onError: () => {
     isSending.value = false;
     isGenerating.value = false;
     streamingContent.value = '';
-    notifyError(message, payload, true);
-  });
-
-  const offNotification = websocket.on('notification', (payload: unknown) => {
-    if (!isRecord(payload)) {
-      return;
-    }
-
-    const notificationEvent: Record<string, unknown> = {};
-
-    if (typeof payload.id === 'string') {
-      notificationEvent.id = payload.id;
-    }
-    if (typeof payload.message === 'string') {
-      notificationEvent.message = payload.message;
-    }
-    if (typeof payload.title === 'string') {
-      notificationEvent.title = payload.title;
-    }
-    if (typeof payload.body === 'string') {
-      notificationEvent.body = payload.body;
-    }
-    if (
-      payload.type === 'positive' ||
-      payload.type === 'negative' ||
-      payload.type === 'warning' ||
-      payload.type === 'info'
-    ) {
-      notificationEvent.type = payload.type;
-    }
-    notificationEvent.source = 'async';
-    if (payload.payload !== undefined) {
-      notificationEvent.payload = payload.payload;
-    }
-    if (typeof payload.createdAt === 'string') {
-      notificationEvent.createdAt = payload.createdAt;
-    }
-    if (typeof payload.preferenceKey === 'string') {
-      notificationEvent.preferenceKey = payload.preferenceKey;
-    }
-
-    notificationsStore.addAsyncNotificationFromEvent(
-      notificationEvent as Parameters<typeof notificationsStore.addAsyncNotificationFromEvent>[0],
-    );
-  });
-
-  wsUnsubscribers.value = [offMessage, offGenerating, offTyping, offError, offNotification];
-  websocketBound.value = true;
-};
-
-const ensureWebSocketReady = async () => {
-  if (!websocket.isConnected.value) {
-    await websocket.connect();
-  }
-  bindWebSocketListeners();
-};
-
-const disconnectWebSocket = () => {
-  cleanupWebSocketListeners();
-  websocket.disconnect();
-};
+    markError();
+  },
+  onAiStatus: applyAiStatusPayload,
+  onToolStatus: applyToolStatusPayload,
+});
 
 onMounted(() => {
   void initializeChats().finally(() => {
@@ -555,7 +256,7 @@ const closePanel = () => {
 
 const focusPromptInput = () => {
   window.requestAnimationFrame(() => {
-    promptInputRef.value?.focus();
+    composerRef.value?.focusInput();
   });
 };
 
@@ -573,138 +274,10 @@ const handleDialogShow = async () => {
   focusPromptInput();
 };
 
-const isScrollableElement = (element: HTMLElement): boolean => {
-  const style = window.getComputedStyle(element);
-  const overflowY = style.overflowY;
-  return (
-    (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
-    element.scrollHeight > element.clientHeight
-  );
-};
-
-const collectScrollableAncestors = (element: HTMLElement | null): HTMLElement[] => {
-  const scrollables: HTMLElement[] = [];
-  let current = element?.parentElement ?? null;
-
-  while (current) {
-    if (isScrollableElement(current)) {
-      scrollables.push(current);
-    }
-
-    if (current.classList.contains('chatbot-shell')) {
-      break;
-    }
-
-    current = current.parentElement;
-  }
-
-  return scrollables;
-};
-
-const scrollElementToBottom = (element: HTMLElement) => {
-  element.scrollTop = element.scrollHeight;
-  element.scrollTo({ top: element.scrollHeight, behavior: 'auto' });
-};
-
-const clearScheduledScrollWork = () => {
-  if (pendingScrollAnimationFrameId.value !== null) {
-    window.cancelAnimationFrame(pendingScrollAnimationFrameId.value);
-    pendingScrollAnimationFrameId.value = null;
-  }
-
-  pendingScrollTimeoutIds.value.forEach((timeoutId) => {
-    window.clearTimeout(timeoutId);
+const handleOpenNewChat = () => {
+  openNewChat(() => {
+    prompt.value = '';
   });
-
-  pendingScrollTimeoutIds.value = [];
-};
-
-const scrollToBottom = () => {
-  const anchor = messagesBottomAnchor.value;
-  if (anchor) {
-    anchor.scrollIntoView({ block: 'end', inline: 'nearest', behavior: 'auto' });
-  }
-
-  const targets = new Set<HTMLElement>();
-
-  if (messagesContainer.value) {
-    targets.add(messagesContainer.value);
-  }
-
-  const ancestorSource = anchor ?? messagesContainer.value;
-  collectScrollableAncestors(ancestorSource).forEach((element) => {
-    targets.add(element);
-  });
-
-  targets.forEach((element) => {
-    scrollElementToBottom(element);
-  });
-};
-
-const scheduleScrollToBottom = () => {
-  clearScheduledScrollWork();
-
-  SCROLL_RETRY_DELAYS.forEach((delay) => {
-    const timeoutId = window.setTimeout(() => {
-      pendingScrollAnimationFrameId.value = window.requestAnimationFrame(() => {
-        scrollToBottom();
-        pendingScrollAnimationFrameId.value = null;
-      });
-    }, delay);
-
-    pendingScrollTimeoutIds.value.push(timeoutId);
-  });
-};
-
-const formatDate = (rawDate: string) => {
-  return dateFormatter.format(new Date(rawDate));
-};
-
-const selectChat = (chatId: string) => {
-  void loadActiveChat(chatId).catch((err: unknown) => {
-    notifyError(t('chatbot.panel.loadError'), err, true);
-  });
-};
-
-const openNewChat = () => {
-  void createChat().then((created) => {
-    if (created) {
-      prompt.value = '';
-    }
-  });
-};
-
-const removeChat = async (chatId: string, title: string) => {
-  const confirmed = await confirmDelete(t('chatbot.panel.deleteTarget', { title }));
-  if (!confirmed) {
-    return;
-  }
-
-  showLoading(t('common.loading'));
-  try {
-    await ChatsService.delete(chatId);
-    await chatsQuery.fetch();
-
-    const nextChatId = chats.value[0]?.id;
-    if (!nextChatId) {
-      const created = await createChat(true);
-      if (!created) {
-        activeChat.value = null;
-        activeChatId.value = '';
-      }
-      return;
-    }
-
-    if (chatId === activeChatId.value) {
-      await loadActiveChat(nextChatId);
-    }
-
-    notify(t('chatbot.panel.deleteSuccess'), 'positive');
-  } catch (err: unknown) {
-    notifyError(t('chatbot.panel.deleteError'), err, true);
-  } finally {
-    hideLoading();
-  }
 };
 
 const handleSend = async () => {
@@ -736,6 +309,7 @@ const handleSend = async () => {
   appendMessageToActiveChat(userMessage);
   prompt.value = '';
   isSending.value = true;
+  startRun();
 
   await maybeUpdateChatTitleFromPrompt(chatId, messageText);
 
@@ -759,273 +333,16 @@ const handleSend = async () => {
 
   focusPromptInput();
 };
+
+const onToolBadgeClick = (event: ToolEvent) => {
+  if (!event.badge?.route) {
+    return;
+  }
+
+  void router.push(event.badge.route);
+};
 </script>
 
 <style lang="scss" scoped>
-.chatbot-shell {
-  width: 100vw;
-  height: 100dvh;
-  display: flex;
-  justify-content: flex-end;
-  background: var(--tooltip-bg);
-}
-
-.chatbot-panel {
-  width: 60vw;
-  min-width: 360px;
-  max-width: 940px;
-  height: 100dvh;
-  position: relative;
-  z-index: 1;
-  overflow: hidden;
-  margin: 0;
-  background: var(--card-bg);
-  border-left: 1px solid var(--border-color);
-}
-
-.chatbot-layout {
-  height: 100%;
-  min-height: 0;
-  background: var(--card-bg);
-}
-
-.chatbot-drawer {
-  background: var(--card-bg);
-  display: flex;
-  flex-direction: column;
-}
-
-.chatbot-drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px;
-}
-
-.chatbot-drawer-list {
-  flex: 1;
-  overflow: auto;
-}
-
-.chatbot-chat-item {
-  border-radius: 8px;
-}
-
-.chatbot-chat-item-active {
-  background: var(--bg-hover);
-  color: var(--text-color);
-}
-
-.chatbot-header {
-  border-bottom: 1px solid var(--border-color);
-  background: var(--card-bg);
-}
-
-.chatbot-toolbar {
-  color: var(--text-color);
-}
-
-.chatbot-avatar {
-  background: var(--bg-hover);
-  color: var(--q-primary);
-}
-
-.chatbot-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  background: var(--card-bg);
-}
-
-.chatbot-page-container {
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.chatbot-messages {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 16px 48px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  background: var(--card-bg);
-}
-
-.chatbot-empty-state {
-  margin: auto;
-  color: var(--text-muted);
-}
-
-.chatbot-message-row {
-  display: flex;
-  width: 100%;
-}
-
-.chatbot-message-user {
-  justify-content: flex-end;
-}
-
-.chatbot-message-bot {
-  justify-content: center;
-}
-
-.chatbot-bot-stack {
-  width: min(100%, 720px);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.chatbot-bot-message-avatar {
-  background: var(--bg-hover);
-  color: var(--q-primary);
-}
-
-.chatbot-user-bubble {
-  max-width: min(78%, 720px);
-  padding: 10px 14px;
-  border-radius: 14px;
-  background: var(--q-primary);
-  color: var(--text-on-primary);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.chatbot-bot-markdown {
-  width: 100%;
-}
-
-.chatbot-bot-markdown :deep(.markdown-container) {
-  border: none;
-  background: transparent;
-}
-
-.chatbot-bot-markdown :deep(.markdown-preview) {
-  padding: 0;
-  background: transparent;
-}
-
-.chatbot-bot-markdown :deep(.markdown-preview > *:last-child) {
-  margin-bottom: 0;
-}
-
-.chatbot-thinking {
-  width: fit-content;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-muted);
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
-  padding: 8px 12px;
-}
-
-.chatbot-thinking-dots {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.chatbot-thinking-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  opacity: 0.25;
-  animation: chatbot-thinking-pulse 1.1s infinite ease-in-out;
-}
-
-.chatbot-thinking-dot:nth-child(2) {
-  animation-delay: 0.18s;
-}
-
-.chatbot-thinking-dot:nth-child(3) {
-  animation-delay: 0.36s;
-}
-
-.chatbot-scroll-anchor {
-  width: 100%;
-  height: 1px;
-}
-
-@keyframes chatbot-thinking-pulse {
-  0%,
-  80%,
-  100% {
-    opacity: 0.25;
-    transform: translateY(0);
-  }
-
-  40% {
-    opacity: 1;
-    transform: translateY(-1px);
-  }
-}
-
-.chatbot-input-form {
-  width: 80%;
-  margin: 0 auto;
-}
-
-.chatbot-footer {
-  flex-shrink: 0;
-  padding: 12px;
-  border-top: 1px solid var(--border-color);
-  background: var(--card-bg);
-}
-
-.chatbot-disclaimer {
-  display: block;
-  width: 100%;
-  text-align: center;
-  color: var(--text-muted);
-  margin-top: 8px;
-}
-
-.chatbot-input :deep(.q-field__control) {
-  background: transparent;
-}
-
-:deep(.q-dialog__backdrop) {
-  background: var(--tooltip-bg);
-}
-
-:deep(.chatbot-dialog .q-dialog__inner) {
-  padding: 0;
-  justify-content: flex-end;
-  align-items: stretch;
-}
-
-:deep(.chatbot-dialog .q-dialog__inner--maximized) {
-  padding: 0;
-}
-
-:deep(.chatbot-dialog .q-dialog__inner > div) {
-  pointer-events: all;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  max-width: 100vw;
-  max-height: 100dvh;
-}
-
-:deep(.chatbot-layout .q-page-container) {
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-}
-
-@media (max-width: 1023px) {
-  .chatbot-panel {
-    width: 100vw;
-    min-width: 0;
-    max-width: 100vw;
-  }
-}
+@import './ChatbotPanel.styles.scss';
 </style>

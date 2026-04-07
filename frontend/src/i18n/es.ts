@@ -336,6 +336,7 @@ export const messages = {
   'chatbot.panel.updateTitleError': 'No se pudo actualizar el título del chat',
   'chatbot.panel.sendError': 'No se pudo enviar el mensaje al asistente',
   'chatbot.panel.websocketError': 'No se pudo establecer conexión en tiempo real',
+  'chatbot.panel.toolWorking': 'Ejecutando herramienta:',
 
   'markdown.toolbar.bold': 'Negrita (Ctrl+B)',
   'markdown.toolbar.italic': 'Cursiva (Ctrl+I)',
