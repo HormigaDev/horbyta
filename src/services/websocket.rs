@@ -150,6 +150,8 @@ impl WebSocketService {
         );
 
         self.send_generating_status(sender).await?;
+        self.send_ai_runtime_status(sender, "processing", "Analizando solicitud")
+            .await?;
 
         let chat = ConversationHistory::find_by_id(chat_id)
             .one(self.state.db.as_ref())
@@ -160,9 +162,22 @@ impl WebSocketService {
         let messages = self.build_proto_messages(&chat.messages, user_content)?;
 
         let mut ai_service = self.state.ai_service.lock().await;
-        ai_service
+        let ai_result = ai_service
             .stream_chat_response(user_id, session_id, messages, sender)
-            .await?;
+            .await;
+
+        match ai_result {
+            Ok(()) => {
+                self.send_ai_runtime_status(sender, "idle", "Proceso completado")
+                    .await?;
+            }
+            Err(err) => {
+                let _ = self
+                    .send_ai_runtime_status(sender, "error", "Error durante la ejecucion")
+                    .await;
+                return Err(err);
+            }
+        }
 
         if let Some(notification) = self.create_chat_notification(user_id, session_id, &payload).await? {
             self.send_notification_event(sender, &notification).await?
@@ -213,6 +228,24 @@ impl WebSocketService {
             data: None,
             id: None,
         };
+        self.send_ws_message(sender, &status_msg).await
+    }
+
+    async fn send_ai_runtime_status(
+        &self,
+        sender: &mut futures::stream::SplitSink<WebSocket, Message>,
+        status: &str,
+        message: &str,
+    ) -> Result<(), AppError> {
+        let status_msg = WsMessage {
+            msg_type: "ai_status".to_string(),
+            data: Some(json!({
+                "status": status,
+                "message": message
+            })),
+            id: None,
+        };
+
         self.send_ws_message(sender, &status_msg).await
     }
 

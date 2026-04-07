@@ -21,6 +21,13 @@ _MODEL = "gemini-2.5-flash"
 _MAX_RETRIES = 3
 _RETRY_BACKOFF_BASE = 1.5
 _STREAM_END = object()
+_PROMPTS_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "prompts"))
+_PROMPT_EN_PATH = os.path.join(_PROMPTS_DIR, "assistant_system_prompt.en.md")
+
+
+def _load_system_prompt(path: str) -> str:
+    with open(path, "r", encoding="utf-8") as file:
+        return file.read().strip()
 
 
 class ChunkKind(enum.Enum):
@@ -41,6 +48,7 @@ class GeminiClient:
         if not api_key:
             raise RuntimeError("GEMINI_API_KEY environment variable is not set")
         self._client = genai.Client(api_key=api_key)
+        self._system_prompt = _load_system_prompt(_PROMPT_EN_PATH)
 
     async def stream_turn(
         self,
@@ -78,7 +86,11 @@ class GeminiClient:
         contents: list[types.Content],
         tools: list[types.Tool] | None,
     ) -> AsyncIterator[GeminiChunk]:
-        kwargs: dict = {"model": _MODEL, "contents": contents}
+        kwargs: dict = {
+            "model": _MODEL,
+            "contents": contents,
+            "config": types.GenerateContentConfig(system_instruction=self._system_prompt),
+        }
         if tools:
             kwargs["tools"] = tools
 

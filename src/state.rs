@@ -16,15 +16,17 @@ pub struct AppState {
 
 impl AppState {
     pub async fn new(db: DatabaseConnection, config: Config) -> Result<Self, crate::error::AppError> {
+        let db = Arc::new(db);
+
         let user_cache = Cache::builder()
             .time_to_idle(Duration::from_secs(15 * 60))
             .max_capacity(10_000)
             .build();
 
-        let ai_service = AiService::connect(&config.ai_service_url).await?;
+        let ai_service = AiService::connect(&config.ai_service_url, db.clone()).await?;
 
         Ok(Self {
-            db: Arc::new(db),
+            db,
             user_cache,
             config,
             ai_service: Arc::new(tokio::sync::Mutex::new(ai_service)),
