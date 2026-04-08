@@ -1,6 +1,7 @@
 <template>
   <q-page class="q-pa-md row items-start q-col-gutter-md">
-    <div class="col-12 col-md-10">
+    <div class="col-12 col-md-2"></div>
+    <div class="col-12 col-md-8">
       <q-card
         class="q-mb-md"
         flat
@@ -83,6 +84,15 @@
             <q-item-section style="color: var(--text-color)">{{
               t('projects.detail.action.back')
             }}</q-item-section>
+          </q-item>
+
+          <q-item clickable v-ripple class="q-pa-md" @click="() => (tab = 'milestones')">
+            <q-item-section avatar>
+              <q-icon name="visibility" style="color: var(--text-color)" />
+            </q-item-section>
+            <q-item-section style="color: var(--text-color)">
+              {{ t('projects.detail.action.viewMilestones') }}
+            </q-item-section>
           </q-item>
 
           <q-item clickable v-ripple class="text-primary q-pa-md" @click="goToEdit" v-if="project">

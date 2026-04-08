@@ -1,6 +1,7 @@
 <template>
   <q-page class="q-pa-md row items-start q-col-gutter-md">
-    <div class="col-12 col-md-10">
+    <div class="col-12 col-md-2"></div>
+    <div class="col-12 col-md-8">
       <q-card
         class="q-mb-md"
         flat

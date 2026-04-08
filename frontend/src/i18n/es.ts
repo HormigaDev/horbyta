@@ -77,6 +77,7 @@ export const messages = {
   'projects.detail.descriptionTitle': 'Descripción del proyecto',
   'projects.detail.emptyDescription': '*Este proyecto no tiene descripción.*',
   'projects.detail.action.back': 'Volver a lista',
+  'projects.detail.action.viewMilestones': 'Ver hitos',
   'projects.detail.action.edit': 'Editar',
   'projects.detail.action.delete': 'Eliminar',
   'projects.detail.milestonesTitle': 'Hitos',
