@@ -1,10 +1,23 @@
-export type ChatRole = 'user' | 'bot';
+export type ChatRole = 'user' | 'bot' | 'system';
+
+export interface ChatToolBadge {
+  kind: string;
+  label: string;
+  route?: string;
+  id?: string;
+  count?: number;
+}
 
 export interface ChatMessage {
   id: string;
   role: ChatRole;
   content: string;
   created_at: string;
+  tool_name?: string;
+  tool_call_id?: string;
+  tool_success?: boolean;
+  tool_badge?: ChatToolBadge;
+  tool_error?: string;
 }
 
 export interface ChatThread {

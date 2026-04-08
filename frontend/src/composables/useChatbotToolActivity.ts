@@ -16,6 +16,7 @@ export interface ToolEvent {
   toolName: string;
   message: string;
   badge?: ToolBadge;
+  errorDetails?: unknown;
   createdAt: string;
 }
 
@@ -85,10 +86,15 @@ export function useChatbotToolActivity(options: UseChatbotToolActivityOptions) {
 
     let message = `${options.t('chatbot.panel.toolWorking')} ${toolName}`;
     let badge: ToolBadge | null = null;
+    let errorDetails: unknown;
 
     const details = isRecord(payload.details) ? payload.details : null;
     if (details && typeof details.message === 'string') {
       message = details.message;
+    }
+
+    if (details && details.error !== undefined) {
+      errorDetails = details.error;
     }
 
     if (details && isRecord(details.badge)) {
@@ -122,6 +128,10 @@ export function useChatbotToolActivity(options: UseChatbotToolActivityOptions) {
       message,
       createdAt: new Date().toISOString(),
     };
+
+    if (errorDetails !== undefined) {
+      nextEvent.errorDetails = errorDetails;
+    }
 
     if (badge) {
       nextEvent.badge = badge;

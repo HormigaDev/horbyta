@@ -101,7 +101,9 @@ impl ChatService {
     }
 
     pub async fn search(&self, user_id: Uuid, payload: QueryPayload) -> Result<(Vec<ChatSummaryDto>, u64), AppError> {
-        let mut condition = Condition::all().add(conversation_history::Column::UserId.eq(user_id));
+        let mut condition = Condition::all()
+            .add(conversation_history::Column::UserId.eq(user_id))
+            .add(conversation_history::Column::Messages.ne(json!([])));
 
         for filter in payload.filters {
             let filter_cond = match filter.column.as_str() {

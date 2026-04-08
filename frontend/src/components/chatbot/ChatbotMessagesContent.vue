@@ -19,6 +19,21 @@
       {{ message.content }}
     </div>
 
+    <div v-else-if="message.role === 'system'" class="chatbot-bot-stack chatbot-tool-events">
+      <q-chip
+        dense
+        class="chatbot-tool-chip-history"
+        :clickable="Boolean(message.tool_badge?.route) || message.tool_success === false"
+        @click="emitSystemBadgeClick(message)"
+      >
+        <q-icon
+          :name="message.tool_success ? 'task_alt' : 'error'"
+          class="q-mr-xs"
+        />
+        {{ message.tool_badge?.label || message.content }}
+      </q-chip>
+    </div>
+
     <div v-else class="chatbot-bot-stack">
       <q-avatar size="24px" class="chatbot-bot-message-avatar">
         <q-icon name="smart_toy" size="14px" />
@@ -89,9 +104,15 @@
         v-for="event in visibleToolEvents"
         :key="event.key"
         dense
-        :color="event.status === 'error' ? 'negative' : 'primary'"
+        :color="
+          event.status === 'running'
+            ? 'primary'
+            : event.status === 'error'
+              ? 'negative'
+              : 'grey-7'
+        "
         text-color="white"
-        :clickable="Boolean(event.badge?.route)"
+        :clickable="Boolean(event.badge?.route) || event.status === 'error'"
         @click="emit('tool-badge-click', event)"
       >
         <q-icon
@@ -132,6 +153,27 @@ defineProps<Props>();
 const emit = defineEmits<{
   (e: 'tool-badge-click', event: ToolEvent): void;
 }>();
+
+const emitSystemBadgeClick = (message: ChatMessage) => {
+  if (!message.tool_badge) {
+    return;
+  }
+
+  const event: ToolEvent = {
+    key: message.tool_call_id ?? message.id,
+    status: message.tool_success ? 'completed' : 'error',
+    toolName: message.tool_name ?? 'tool',
+    message: message.content,
+    createdAt: message.created_at,
+    badge: message.tool_badge,
+  };
+
+  if (message.tool_error) {
+    event.errorDetails = { error: message.tool_error };
+  }
+
+  emit('tool-badge-click', event);
+};
 
 const { t } = useI18n();
 </script>

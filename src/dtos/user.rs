@@ -21,6 +21,28 @@ fn validate_timezone(timezone: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
+fn validate_ai_model(model: &str) -> Result<(), ValidationError> {
+    const ALLOWED_MODELS: [&str; 11] = [
+        "google/gemini-2.5-flash",
+        "google/gemini-2.5-pro",
+        "google/gemini-3-flash-preview",
+        "google/gemini-3.1-pro-preview",
+        "anthropic/claude-3-haiku",
+        "anthropic/claude-haiku-4.5",
+        "anthropic/claude-sonnet-4.5",
+        "anthropic/claude-sonnet-4.6",
+        "anthropic/claude-opus-4.5",
+        "anthropic/claude-opus-4.6",
+        "openai/gpt-5-codex",
+    ];
+
+    if ALLOWED_MODELS.contains(&model) {
+        return Ok(());
+    }
+
+    Err(ValidationError::new("invalid_ai_model"))
+}
+
 fn validate_password_confirmation(payload: &UpdateUserPasswordDto) -> Result<(), ValidationError> {
     if payload.new_password != payload.confirm_password {
         return Err(ValidationError::new("password_mismatch"));
@@ -34,7 +56,12 @@ fn validate_password_confirmation(payload: &UpdateUserPasswordDto) -> Result<(),
 }
 
 fn validate_non_empty_preferences_patch(payload: &UpdateUserPreferencesDto) -> Result<(), ValidationError> {
-    if payload.theme.is_none() && payload.timezone.is_none() && payload.language.is_none() {
+    if payload.theme.is_none()
+        && payload.timezone.is_none()
+        && payload.language.is_none()
+        && payload.ai_model.is_none()
+        && payload.ai_api_key.is_none()
+    {
         return Err(ValidationError::new("empty_preferences_patch"));
     }
 
@@ -58,8 +85,8 @@ fn validate_non_empty_notifications_patch(payload: &UpdateNotificationPreference
 #[serde(rename_all = "snake_case")]
 pub enum UserThemePreference {
     System,
-    Claro,
-    Oscuro,
+    Light,
+    Dark,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -68,6 +95,26 @@ pub enum UserLanguagePreference {
     En,
     Es,
     Pt,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default, deny_unknown_fields)]
+pub struct UserAiPreferences {
+    pub model: String,
+    #[serde(default)]
+    pub api_key_encrypted: Option<String>,
+    #[serde(default)]
+    pub api_key_configured: bool,
+}
+
+impl Default for UserAiPreferences {
+    fn default() -> Self {
+        Self {
+            model: "google/gemini-2.5-flash".to_string(),
+            api_key_encrypted: None,
+            api_key_configured: false,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -178,6 +225,7 @@ pub struct UserPreferences {
     pub theme: UserThemePreference,
     pub timezone: String,
     pub language: UserLanguagePreference,
+    pub ai: UserAiPreferences,
     pub notifications: NotificationPreferences,
 }
 
@@ -187,6 +235,7 @@ impl Default for UserPreferences {
             theme: UserThemePreference::System,
             timezone: "UTC".to_string(),
             language: UserLanguagePreference::Es,
+            ai: UserAiPreferences::default(),
             notifications: NotificationPreferences::default(),
         }
     }
@@ -194,21 +243,35 @@ impl Default for UserPreferences {
 
 impl UserPreferences {
     pub fn from_json_value(raw: Option<&serde_json::Value>) -> Self {
-        raw.and_then(|value| serde_json::from_value::<Self>(value.clone()).ok())
-            .unwrap_or_default()
+        let mut preferences = raw
+            .and_then(|value| serde_json::from_value::<Self>(value.clone()).ok())
+            .unwrap_or_default();
+
+        preferences.ai.api_key_configured = preferences
+            .ai
+            .api_key_encrypted
+            .as_ref()
+            .map(|value| !value.trim().is_empty())
+            .unwrap_or(false);
+
+        preferences
     }
 
-    pub fn apply_general_patch(&mut self, patch: UpdateUserPreferencesDto) {
+    pub fn apply_general_patch(&mut self, patch: &UpdateUserPreferencesDto) {
         if let Some(theme) = patch.theme {
             self.theme = theme;
         }
 
-        if let Some(timezone) = patch.timezone {
-            self.timezone = timezone;
+        if let Some(timezone) = patch.timezone.as_ref() {
+            self.timezone = timezone.clone();
         }
 
         if let Some(language) = patch.language {
             self.language = language;
+        }
+
+        if let Some(model) = patch.ai_model.as_ref() {
+            self.ai.model = model.clone();
         }
     }
 
@@ -318,6 +381,13 @@ pub struct UpdateUserPreferencesDto {
     pub timezone: Option<String>,
 
     pub language: Option<UserLanguagePreference>,
+
+    #[validate(length(min = 1, max = 128, message = "Modelo AI invalido"))]
+    #[validate(custom(function = "validate_ai_model"))]
+    pub ai_model: Option<String>,
+
+    #[validate(length(min = 8, max = 4096, message = "API key AI invalida"))]
+    pub ai_api_key: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, Default)]
@@ -393,11 +463,14 @@ pub struct UserSettingsDto {
 
 impl From<crate::entities::users::Model> for UserSettingsDto {
     fn from(model: crate::entities::users::Model) -> Self {
+        let mut preferences = UserPreferences::from_json_value(model.preferences.as_ref());
+        // Nunca devolver la clave encriptada al frontend
+        preferences.ai.api_key_encrypted = None;
         Self {
             id: model.id,
             name: model.name,
             email: model.email,
-            preferences: UserPreferences::from_json_value(model.preferences.as_ref()),
+            preferences,
             created_at: model.created_at,
             updated_at: model.updated_at,
         }

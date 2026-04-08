@@ -38,11 +38,23 @@ export function useChatbotChats(options: UseChatbotChatsOptions) {
   const activeMessages = computed(() => activeChat.value?.messages ?? []);
   const canCreateNewChat = computed(() => {
     if (!activeChat.value) {
-      return true;
+      return false;
     }
 
     return activeChat.value.messages.some((message) => message.role === 'user');
   });
+
+  const startDraftChat = (draftChatId: string) => {
+    const now = new Date().toISOString();
+    activeChatId.value = draftChatId;
+    activeChat.value = {
+      id: draftChatId,
+      title: 'Nuevo chat',
+      created_at: now,
+      updated_at: now,
+      messages: [],
+    };
+  };
 
   const appendMessageToActiveChat = (message: ChatMessage) => {
     if (!activeChat.value) {
@@ -57,15 +69,32 @@ export function useChatbotChats(options: UseChatbotChatsOptions) {
   };
 
   const persistActiveMessages = () => {
-    if (!activeChat.value || !activeChatId.value) {
+    // The AI pipeline persists authoritative conversation history (including tool_result events)
+    // on the backend. Frontend must not overwrite it with partial local snapshots.
+  };
+
+  const syncServerChatContext = (
+    requestedChatId: string,
+    effectiveChatId: string,
+    title?: string,
+  ) => {
+    if (!requestedChatId || !effectiveChatId || requestedChatId === effectiveChatId) {
       return;
     }
 
-    void ChatsService.updateMessages(activeChatId.value, activeChat.value.messages).catch(
-      (err: unknown) => {
-        console.error('Failed to save messages to chat', err);
-      },
-    );
+    if (activeChatId.value === requestedChatId) {
+      activeChatId.value = effectiveChatId;
+    }
+
+    if (activeChat.value && activeChat.value.id === requestedChatId) {
+      activeChat.value = {
+        ...activeChat.value,
+        id: effectiveChatId,
+        title: title ?? activeChat.value.title,
+      };
+    }
+
+    void chatsQuery.fetch();
   };
 
   const loadActiveChat = async (chatId: string) => {
@@ -74,16 +103,9 @@ export function useChatbotChats(options: UseChatbotChatsOptions) {
     activeChat.value = chat;
   };
 
-  const applyTitleChange = async (chatId: string, title: string) => {
-    try {
-      await ChatsService.updateTitle(chatId, { title });
-      await chatsQuery.fetch();
-    } catch (err: unknown) {
-      options.notifyError(options.t('chatbot.panel.updateTitleError'), err, true);
-    }
-  };
+  const maybeUpdateChatTitleFromPrompt = (chatId: string, promptValue: string) => {
+    void chatId;
 
-  const maybeUpdateChatTitleFromPrompt = async (chatId: string, promptValue: string) => {
     if (!activeChat.value || activeChat.value.title !== 'Nuevo chat') {
       return;
     }
@@ -97,28 +119,6 @@ export function useChatbotChats(options: UseChatbotChatsOptions) {
       ...activeChat.value,
       title: nextTitle,
     };
-
-    await applyTitleChange(chatId, nextTitle);
-  };
-
-  const createChat = async (force = false): Promise<ChatThread | null> => {
-    if (!force && !canCreateNewChat.value) {
-      return null;
-    }
-
-    options.showLoading(options.t('common.loading'));
-    try {
-      const created = await ChatsService.create();
-      await chatsQuery.fetch();
-      activeChatId.value = created.id;
-      activeChat.value = created;
-      return created;
-    } catch (err: unknown) {
-      options.notifyError(options.t('chatbot.panel.createError'), err, true);
-      return null;
-    } finally {
-      options.hideLoading();
-    }
   };
 
   const initializeChats = async () => {
@@ -127,10 +127,8 @@ export function useChatbotChats(options: UseChatbotChatsOptions) {
       await chatsQuery.fetch();
 
       if (chats.value.length === 0) {
-        const created = await ChatsService.create();
-        await chatsQuery.fetch();
-        activeChatId.value = created.id;
-        activeChat.value = created;
+        activeChat.value = null;
+        activeChatId.value = '';
         return;
       }
 
@@ -152,35 +150,48 @@ export function useChatbotChats(options: UseChatbotChatsOptions) {
   };
 
   const openNewChat = (onCreated?: () => void) => {
-    void createChat().then((created) => {
-      if (created && onCreated) {
-        onCreated();
-      }
-    });
+    if (!canCreateNewChat.value) {
+      return;
+    }
+
+    activeChat.value = null;
+    activeChatId.value = '';
+
+    if (onCreated) {
+      onCreated();
+    }
   };
 
   const removeChat = async (chatId: string, title: string) => {
-    const confirmed = await options.confirmDelete(options.t('chatbot.panel.deleteTarget', { title }));
+    const confirmed = await options.confirmDelete(
+      options.t('chatbot.panel.deleteTarget', { title }),
+    );
     if (!confirmed) {
       return;
     }
 
     options.showLoading(options.t('common.loading'));
     try {
+      const wasActiveChat = activeChatId.value === chatId || activeChat.value?.id === chatId;
+
       await ChatsService.delete(chatId);
+
+      if (wasActiveChat) {
+        activeChatId.value = '';
+        activeChat.value = null;
+      }
+
       await chatsQuery.fetch();
 
       const nextChatId = chats.value[0]?.id;
       if (!nextChatId) {
-        const created = await createChat(true);
-        if (!created) {
-          activeChat.value = null;
-          activeChatId.value = '';
-        }
+        activeChat.value = null;
+        activeChatId.value = '';
+        options.notify(options.t('chatbot.panel.deleteSuccess'), 'positive');
         return;
       }
 
-      if (chatId === activeChatId.value) {
+      if (wasActiveChat) {
         await loadActiveChat(nextChatId);
       }
 
@@ -199,9 +210,10 @@ export function useChatbotChats(options: UseChatbotChatsOptions) {
     activeMessages,
     canCreateNewChat,
     appendMessageToActiveChat,
+    startDraftChat,
     persistActiveMessages,
+    syncServerChatContext,
     maybeUpdateChatTitleFromPrompt,
-    createChat,
     initializeChats,
     selectChat,
     openNewChat,

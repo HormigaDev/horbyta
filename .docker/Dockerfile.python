@@ -37,6 +37,7 @@ WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /build/generated ./generated
 COPY horbyta_ai/src/ ./src
+COPY horbyta_ai/prompts/ ./prompts
 COPY scripts/init-python.sh ./init.sh
 
 RUN chmod +x ./init.sh \

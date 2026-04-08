@@ -1,3 +1,5 @@
+pub mod crypto;
+
 use validator::ValidationError;
 
 pub fn validate_password(password: &str) -> Result<(), ValidationError> {

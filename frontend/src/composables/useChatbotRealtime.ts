@@ -33,6 +33,7 @@ interface UseChatbotRealtimeOptions {
   onError: () => void;
   onAiStatus: (payload: unknown) => void;
   onToolStatus: (payload: unknown) => void;
+  onChatContext: (payload: unknown) => void;
 }
 
 export function useChatbotRealtime(options: UseChatbotRealtimeOptions) {
@@ -51,7 +52,8 @@ export function useChatbotRealtime(options: UseChatbotRealtimeOptions) {
     }
 
     const offMessage = options.websocket.on('message', (payload: unknown) => {
-      const content = isRecord(payload) && typeof payload.content === 'string' ? payload.content : null;
+      const content =
+        isRecord(payload) && typeof payload.content === 'string' ? payload.content : null;
       if (!content) {
         return;
       }
@@ -122,11 +124,23 @@ export function useChatbotRealtime(options: UseChatbotRealtimeOptions) {
     });
 
     const offAiStatus = options.websocket.on('ai_status', (payload: unknown) => {
+      if (isRecord(payload) && payload.status === 'error') {
+        const message =
+          typeof payload.message === 'string'
+            ? payload.message
+            : options.t('chatbot.panel.sendError');
+        options.notifyError(message, payload, true);
+      }
+
       options.onAiStatus(payload);
     });
 
     const offToolStatus = options.websocket.on('tool_status', (payload: unknown) => {
       options.onToolStatus(payload);
+    });
+
+    const offChatContext = options.websocket.on('chat_context', (payload: unknown) => {
+      options.onChatContext(payload);
     });
 
     wsUnsubscribers.value = [
@@ -137,6 +151,7 @@ export function useChatbotRealtime(options: UseChatbotRealtimeOptions) {
       offNotification,
       offAiStatus,
       offToolStatus,
+      offChatContext,
     ];
     websocketBound.value = true;
   };

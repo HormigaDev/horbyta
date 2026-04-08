@@ -36,6 +36,8 @@ impl AiService {
         &mut self,
         user_id: Uuid,
         session_id: &str,
+        model: &str,
+        api_key: &str,
         messages: Vec<Message>,
         sender: &mut futures::stream::SplitSink<axum::extract::ws::WebSocket, axum::extract::ws::Message>,
     ) -> Result<(), AppError> {
@@ -58,6 +60,18 @@ impl AiService {
             session_id
                 .parse::<MetadataValue<_>>()
                 .map_err(|_| AppError::Internal("Invalid session ID format".to_string()))?,
+        );
+        request.metadata_mut().insert(
+            "x-model",
+            model
+                .parse::<MetadataValue<_>>()
+                .map_err(|_| AppError::BadRequest("Invalid model value".to_string()))?,
+        );
+        request.metadata_mut().insert(
+            "x-api-key",
+            api_key
+                .parse::<MetadataValue<_>>()
+                .map_err(|_| AppError::BadRequest("Invalid API key value".to_string()))?,
         );
 
         let mut stream = self
@@ -88,7 +102,7 @@ impl AiService {
                     let exec_result =
                         ai_tools::execute_tool(self.db.clone(), user_id, &tool_call.name, tool_args).await;
 
-                    let (submit_payload, status_details) = match exec_result {
+                    let (submit_payload, status_details, status_kind) = match exec_result {
                         Ok(result) => {
                             let details = build_tool_status_details(&tool_call.name, &result);
                             (
@@ -99,24 +113,30 @@ impl AiService {
                                     error_message: String::new(),
                                 },
                                 details,
+                                "completed",
                             )
                         }
-                        Err(err) => (
-                            ToolResultRequest {
-                                tool_call_id: tool_call.id.clone(),
-                                success: false,
-                                result: None,
-                                error_message: err.to_string(),
-                            },
-                            Some(json!({
-                                "message": format!("Error ejecutando {}", tool_call.name)
-                            })),
-                        ),
+                        Err(err) => {
+                            let error_text = err.to_string();
+                            (
+                                ToolResultRequest {
+                                    tool_call_id: tool_call.id.clone(),
+                                    success: false,
+                                    result: None,
+                                    error_message: error_text.clone(),
+                                },
+                                Some(json!({
+                                    "message": format!("Error ejecutando {}", tool_call.name),
+                                    "error": error_text,
+                                })),
+                                "error",
+                            )
+                        }
                     };
 
                     self.submit_tool_result(session_id, submit_payload).await?;
 
-                    send_tool_status_message(sender, "completed", &tool_call.name, &tool_call.id, status_details)
+                    send_tool_status_message(sender, status_kind, &tool_call.name, &tool_call.id, status_details)
                         .await?;
                 }
                 Some(chat_event::Payload::Done(_)) => {
@@ -226,6 +246,16 @@ fn proto_value_to_json_value(value: &prost_types::Value) -> JsonValue {
     match value.kind.as_ref() {
         Some(prost_types::value::Kind::NullValue(_)) => JsonValue::Null,
         Some(prost_types::value::Kind::NumberValue(v)) => {
+            if v.is_finite() && v.fract() == 0.0 {
+                if *v >= 0.0 && *v <= u64::MAX as f64 {
+                    return JsonValue::Number(serde_json::Number::from(*v as u64));
+                }
+
+                if *v >= i64::MIN as f64 && *v <= i64::MAX as f64 {
+                    return JsonValue::Number(serde_json::Number::from(*v as i64));
+                }
+            }
+
             serde_json::Number::from_f64(*v).map_or(JsonValue::Null, JsonValue::Number)
         }
         Some(prost_types::value::Kind::StringValue(v)) => JsonValue::String(v.clone()),

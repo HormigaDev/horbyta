@@ -25,6 +25,9 @@ dev-python: setup
 dev-rust: setup
 	$(COMPOSE_DEV) up --build --no-deps horbyta_app -d
 
+up-rust: setup
+	$(COMPOSE_DEV) up --no-deps horbyta_app -d
+
 restart-python:
 	$(COMPOSE_DEV) restart horbyta_ai
 

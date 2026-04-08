@@ -44,6 +44,10 @@ export interface UserPreferences {
   theme: UserThemePreference;
   timezone: string;
   language: UserLanguagePreference;
+  ai: {
+    model: string;
+    api_key_configured: boolean;
+  };
   notifications: NotificationPreferences;
 }
 
@@ -74,6 +78,8 @@ export interface UpdateUserPreferencesDto {
   theme?: UserThemePreference;
   timezone?: string;
   language?: UserLanguagePreference;
+  ai_model?: string;
+  ai_api_key?: string;
 }
 
 export interface ClientsProjectsNotificationsPatch {

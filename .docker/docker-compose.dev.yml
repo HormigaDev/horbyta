@@ -16,6 +16,7 @@ services:
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://horbyta_ai:${GRPC_PORT:-50051}}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:9000}
       JWT_SECRET: ${JWT_SECRET}
+      AI_PREFS_ENCRYPTION_KEY: ${AI_PREFS_ENCRYPTION_KEY}
     command:
       - "echo '[INIT] Rust manual mode enabled. Container will stay alive for manual execution.' && exec sleep infinity"
     healthcheck:
@@ -35,8 +36,10 @@ services:
     environment:
       APP_ENV: development
       LOG_LEVEL: DEBUG
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
       GRPC_PORT: ${GRPC_PORT:-50051}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL}
+      OPENROUTER_SITE_URL: ${OPENROUTER_SITE_URL}
+      OPENROUTER_APP_NAME: ${OPENROUTER_APP_NAME}
     ports:
       - "127.0.0.1:${GRPC_PORT:-50051}:${GRPC_PORT:-50051}"
     volumes:

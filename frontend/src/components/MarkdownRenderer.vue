@@ -290,7 +290,7 @@ const handleKeydown = (e: KeyboardEvent) => {
   );
   --md-font-code: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
 
-  border: 1px solid var(--md-color-border);
+  border: none;
   border-radius: 4px;
   overflow: hidden;
   background-color: var(--md-color-bg);

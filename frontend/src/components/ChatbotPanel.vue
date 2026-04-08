@@ -111,7 +111,7 @@ const {
 
 const { t } = useI18n();
 const router = useRouter();
-const { confirmDelete, notifyError, notify, showLoading, hideLoading } = useUI();
+const { confirmDelete, notifyError, notify, showLoading, hideLoading, showErrorDialog } = useUI();
 const notificationsStore = useNotificationsStore();
 const websocket = useWebSocket({ path: '/ws', autoConnect: true, autoReconnect: true });
 
@@ -122,9 +122,10 @@ const {
   activeMessages,
   canCreateNewChat,
   appendMessageToActiveChat,
+  startDraftChat,
   persistActiveMessages,
+  syncServerChatContext,
   maybeUpdateChatTitleFromPrompt,
-  createChat,
   initializeChats,
   selectChat,
   openNewChat,
@@ -137,6 +138,9 @@ const {
   hideLoading,
   confirmDelete,
 });
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
 
 const {
   toolEvents,
@@ -202,6 +206,19 @@ const { ensureWebSocketReady, disconnectWebSocket } = useChatbotRealtime({
   },
   onAiStatus: applyAiStatusPayload,
   onToolStatus: applyToolStatusPayload,
+  onChatContext: (payload: unknown) => {
+    if (!isRecord(payload)) {
+      return;
+    }
+
+    const requestedChatId =
+      typeof payload.requested_chat_id === 'string' ? payload.requested_chat_id : '';
+    const effectiveChatId =
+      typeof payload.effective_chat_id === 'string' ? payload.effective_chat_id : '';
+    const title = typeof payload.title === 'string' ? payload.title : undefined;
+
+    syncServerChatContext(requestedChatId, effectiveChatId, title);
+  },
 });
 
 onMounted(() => {
@@ -292,11 +309,8 @@ const handleSend = async () => {
 
   let chatId = activeChatId.value;
   if (!chatId) {
-    const created = await createChat(true);
-    if (!created) {
-      return;
-    }
-    chatId = created.id;
+    chatId = crypto.randomUUID();
+    startDraftChat(chatId);
   }
 
   const userMessage: ChatMessage = {
@@ -311,7 +325,7 @@ const handleSend = async () => {
   isSending.value = true;
   startRun();
 
-  await maybeUpdateChatTitleFromPrompt(chatId, messageText);
+  maybeUpdateChatTitleFromPrompt(chatId, messageText);
 
   await nextTick();
   scheduleScrollToBottom();
@@ -335,6 +349,16 @@ const handleSend = async () => {
 };
 
 const onToolBadgeClick = (event: ToolEvent) => {
+  if (event.status === 'error') {
+    const payload = event.errorDetails ?? {
+      error: event.message,
+      tool_name: event.toolName,
+      tool_call_id: event.key,
+    };
+    showErrorDialog(payload);
+    return;
+  }
+
   if (!event.badge?.route) {
     return;
   }
@@ -343,6 +367,6 @@ const onToolBadgeClick = (event: ToolEvent) => {
 };
 </script>
 
-<style lang="scss" scoped>
-@import './ChatbotPanel.styles.scss';
+<style lang="scss">
+@import '../css/ChatbotPanel.styles.scss';
 </style>

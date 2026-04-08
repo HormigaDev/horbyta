@@ -221,6 +221,12 @@ export const messages = {
   'settings.preferences.themeLabel': 'Tema',
   'settings.preferences.languageLabel': 'Idioma',
   'settings.preferences.timezoneLabel': 'Timezone',
+  'settings.preferences.aiModelLabel': 'Modelo de IA',
+  'settings.preferences.aiModelInfo':
+    'Algunos modelos pueden consumir muchos créditos. Úsalos con sabiduría',
+  'settings.preferences.aiApiKeyLabel': 'API key de OpenRouter',
+  'settings.preferences.aiApiKeyConfigured': 'API key configurada',
+  'settings.preferences.aiApiKeyMissing': 'API key no configurada',
   'settings.preferences.saveButton': 'Guardar preferencias',
   'settings.preferences.invalidTimezone': 'Debes seleccionar una timezone válida',
   'settings.preferences.success': 'Preferencias actualizadas',

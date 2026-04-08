@@ -10,22 +10,25 @@ use crate::{
         UpdateNotificationPreferencesDto, UpdateUserPasswordDto, UpdateUserPreferencesDto, UpdateUserProfileDto,
         UserPreferences, UserSettingsDto,
     },
+    env::Config,
     entities::{
         prelude::Users,
         users::{self, Model as UserModel},
     },
     error::AppError,
     state::AppState,
+    utils::crypto::encrypt_secret,
 };
 
 #[derive(Clone)]
 pub struct UserService {
     pub db: Arc<DatabaseConnection>,
+    pub config: Config,
 }
 
 impl UserService {
-    pub fn new(db: Arc<DatabaseConnection>) -> Self {
-        Self { db }
+    pub fn new(db: Arc<DatabaseConnection>, config: Config) -> Self {
+        Self { db, config }
     }
 
     async fn get_user_model(&self, user_id: Uuid) -> Result<UserModel, AppError> {
@@ -112,7 +115,20 @@ impl UserService {
     ) -> Result<UserSettingsDto, AppError> {
         let user = self.get_user_model(user_id).await?;
         let mut preferences = UserPreferences::from_json_value(user.preferences.as_ref());
-        preferences.apply_general_patch(dto);
+        preferences.apply_general_patch(&dto);
+
+        if let Some(api_key) = dto.ai_api_key.as_ref() {
+            let cleaned_key = api_key.trim();
+            if cleaned_key.is_empty() {
+                return Err(AppError::BadRequest("La API key AI no puede estar vacia".to_string()));
+            }
+
+            preferences.ai.api_key_encrypted = Some(encrypt_secret(
+                &self.config.ai_prefs_encryption_key,
+                cleaned_key,
+            )?);
+            preferences.ai.api_key_configured = true;
+        }
 
         let preferences_json = Self::serialize_preferences(&preferences)?;
 
@@ -146,6 +162,6 @@ impl FromRequestParts<AppState> for UserService {
     type Rejection = AppError;
 
     async fn from_request_parts(_parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
-        Ok(UserService::new(state.db.clone()))
+        Ok(UserService::new(state.db.clone(), state.config.clone()))
     }
 }

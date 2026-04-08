@@ -10,6 +10,49 @@
     <q-separator />
 
     <q-card-section class="row q-col-gutter-md">
+      <div class="col-12 col-md-6">
+        <q-select
+          v-model="form.aiModel"
+          :label="t('settings.preferences.aiModelLabel')"
+          outlined
+          dense
+          emit-value
+          map-options
+          :options="aiModelOptions"
+        />
+        <div class="text-caption q-mt-xs" style="color: var(--q-warning)">
+          {{ $t('settings.preferences.aiModelInfo') }}
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <q-input
+          v-model="form.aiApiKey"
+          :label="t('settings.preferences.aiApiKeyLabel')"
+          outlined
+          dense
+          :type="showApiKey ? 'text' : 'password'"
+          autocomplete="off"
+        >
+          <template #append>
+            <q-btn
+              flat
+              round
+              dense
+              :icon="showApiKey ? 'visibility_off' : 'visibility'"
+              @click="showApiKey = !showApiKey"
+            />
+          </template>
+        </q-input>
+        <div class="text-caption q-mt-xs" style="color: var(--text-muted)">
+          {{
+            props.preferences?.ai.api_key_configured
+              ? t('settings.preferences.aiApiKeyConfigured')
+              : t('settings.preferences.aiApiKeyMissing')
+          }}
+        </div>
+      </div>
+
       <div class="col-12 col-md-4">
         <q-select
           v-model="form.theme"
@@ -70,6 +113,7 @@ import { useUI } from 'src/composables/useUI';
 import { COMMON_TIMEZONES } from 'src/data/constants';
 import { useThemeStore } from 'src/stores/theme';
 import type {
+  UpdateUserPreferencesDto,
   UserLanguagePreference,
   UserPreferences,
   UserSettings,
@@ -96,8 +140,22 @@ const { notify, notifyError } = useUI();
 const themeStore = useThemeStore();
 
 const isSaving = ref(false);
+const showApiKey = ref(false);
 const allTimezones = ref<string[]>([]);
 const timezoneOptions = ref<SelectOption[]>([]);
+const aiModelOptions = [
+  { label: 'Gemini 2.5 Flash', value: 'google/gemini-2.5-flash' },
+  { label: 'Gemini 2.5 Pro', value: 'google/gemini-2.5-pro' },
+  { label: 'Gemini 3 Flash (preview)', value: 'google/gemini-3-flash-preview' },
+  { label: 'Gemini 3.1 Pro (preview)', value: 'google/gemini-3.1-pro-preview' },
+  { label: 'Claude 3 Haiku', value: 'anthropic/claude-3-haiku' },
+  { label: 'Claude Haiku 4.5', value: 'anthropic/claude-haiku-4.5' },
+  { label: 'Claude Sonnet 4.5', value: 'anthropic/claude-sonnet-4.5' },
+  { label: 'Claude Sonnet 4.6', value: 'anthropic/claude-sonnet-4.6' },
+  { label: 'Claude Opus 4.5', value: 'anthropic/claude-opus-4.5' },
+  { label: 'Claude Opus 4.6', value: 'anthropic/claude-opus-4.6' },
+  { label: 'ChatGPT Codex 5.x', value: 'openai/gpt-5-codex' },
+];
 const languageOptions = [
   { label: t('settings.preferences.language.es'), value: 'es' },
   { label: t('settings.preferences.language.en'), value: 'en' },
@@ -113,6 +171,8 @@ const form = reactive({
   theme: 'system' as UserThemePreference,
   timezone: 'UTC',
   language: 'es' as UserLanguagePreference,
+  aiModel: 'google/gemini-2.5-flash',
+  aiApiKey: '',
 });
 
 function toTimezoneOptions(values: string[]): SelectOption[] {
@@ -164,11 +224,15 @@ async function savePreferences() {
   isSaving.value = true;
 
   try {
-    const updated = await UsersService.updatePreferences({
+    const preferences: UpdateUserPreferencesDto = {
       theme: form.theme,
       timezone: form.timezone,
       language: form.language,
-    });
+      ai_model: form.aiModel,
+    };
+    const apiKey = form.aiApiKey.trim();
+    apiKey && (preferences.ai_api_key = apiKey);
+    const updated = await UsersService.updatePreferences(preferences);
 
     let isDarkMode = updated.preferences.theme === 'dark';
     if (updated.preferences.theme === 'system') {
@@ -177,6 +241,7 @@ async function savePreferences() {
     themeStore.applyTheme(isDarkMode);
 
     emit('updated', updated);
+    form.aiApiKey = '';
     notify(t('settings.preferences.success'), 'positive');
   } catch (error: unknown) {
     notifyError(t('settings.preferences.error'), error);
@@ -193,6 +258,8 @@ watch(
     form.theme = value.theme;
     form.language = value.language;
     form.timezone = value.timezone;
+    form.aiModel = value.ai.model;
+    form.aiApiKey = '';
 
     ensureTimezoneOption(value.timezone);
   },

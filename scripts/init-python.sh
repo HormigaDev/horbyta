@@ -4,7 +4,7 @@ set -euo pipefail
 
 missing=()
 
-[[ -z "${GEMINI_API_KEY:-}" ]] && missing+=("GEMINI_API_KEY")
+[[ -z "${OPENROUTER_BASE_URL:-}" ]] && missing+=("OPENROUTER_BASE_URL")
 [[ -z "${GRPC_PORT:-}" ]] && missing+=("GRPC_PORT")
 
 if (( ${#missing[@]} > 0 )); then

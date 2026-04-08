@@ -19,9 +19,16 @@ use crate::{
     middlewares::auth::Claims,
     services::ai::Message as ProtoMessage,
     state::AppState,
+    utils::crypto::decrypt_secret,
 };
 
 const CHATBOT_NOTIFICATION_KEY: &str = "clients_projects.comment_or_review";
+const DEFAULT_CHAT_TITLE: &str = "Nuevo chat";
+
+struct AiRuntimeConfig {
+    model: String,
+    api_key: String,
+}
 
 #[derive(Clone)]
 pub struct WebSocketService {
@@ -124,7 +131,7 @@ impl WebSocketService {
         &self,
         msg: &WsMessage,
         user_id: Uuid,
-        session_id: &str,
+        _session_id: &str,
         sender: &mut futures::stream::SplitSink<WebSocket, Message>,
     ) -> Result<(), AppError> {
         let data = msg
@@ -135,7 +142,7 @@ impl WebSocketService {
         let payload: ChatClientPayload = serde_json::from_value(data.clone())
             .map_err(|_| AppError::BadRequest("Invalid chat payload".to_string()))?;
 
-        let chat_id = payload
+        let requested_chat_id = payload
             .chat_id
             .parse::<Uuid>()
             .map_err(|_| AppError::BadRequest("Invalid chat_id format".to_string()))?;
@@ -144,49 +151,160 @@ impl WebSocketService {
 
         tracing::info!(
             user_id = %user_id,
-            chat_id = %chat_id,
+            chat_id = %requested_chat_id,
             message = %user_content,
             "Processing chat message"
         );
 
         self.send_generating_status(sender).await?;
-        self.send_ai_runtime_status(sender, "processing", "Analizando solicitud")
+        self.send_ai_runtime_status(sender, "processing", "Analizando solicitud", None)
             .await?;
 
-        let chat = ConversationHistory::find_by_id(chat_id)
-            .one(self.state.db.as_ref())
-            .await
-            .map_err(AppError::Database)?
-            .ok_or_else(|| AppError::NotFound("Chat not found".to_string()))?;
+        let (chat, effective_chat_id, created_new_chat) = self
+            .resolve_or_create_chat(user_id, requested_chat_id, user_content)
+            .await?;
 
-        let messages = self.build_proto_messages(&chat.messages, user_content)?;
+        if created_new_chat {
+            self.send_chat_context(sender, requested_chat_id, effective_chat_id, &chat.title)
+                .await?;
+        }
+
+        let include_user_content = !created_new_chat;
+        let messages = self.build_proto_messages(&chat.messages, user_content, include_user_content)?;
+        let ai_runtime = match self.resolve_ai_runtime_config(user_id).await {
+            Ok(value) => value,
+            Err(err) => {
+                let details = Self::build_ai_error_details(&err);
+                let _ = self
+                    .send_ai_runtime_status(sender, "error", details.message.as_str(), Some(details.payload))
+                    .await;
+                return Ok(());
+            }
+        };
+
+        let chat_id_for_notification = effective_chat_id.to_string();
+        let ai_session_id = chat.session_id.to_string();
 
         let mut ai_service = self.state.ai_service.lock().await;
         let ai_result = ai_service
-            .stream_chat_response(user_id, session_id, messages, sender)
+            .stream_chat_response(
+                user_id,
+            ai_session_id.as_str(),
+                &ai_runtime.model,
+                &ai_runtime.api_key,
+                messages,
+                sender,
+            )
             .await;
 
         match ai_result {
             Ok(()) => {
-                self.send_ai_runtime_status(sender, "idle", "Proceso completado")
+                self.send_ai_runtime_status(sender, "idle", "Proceso completado", None)
                     .await?;
             }
             Err(err) => {
+                let details = Self::build_ai_error_details(&err);
                 let _ = self
-                    .send_ai_runtime_status(sender, "error", "Error durante la ejecucion")
+                    .send_ai_runtime_status(sender, "error", details.message.as_str(), Some(details.payload))
                     .await;
-                return Err(err);
+                tracing::error!("chat_ai_execution_error: {}", err);
+                return Ok(());
             }
         }
 
-        if let Some(notification) = self.create_chat_notification(user_id, session_id, &payload).await? {
+        if let Some(notification) = self
+            .create_chat_notification(user_id, &chat_id_for_notification, &payload)
+            .await?
+        {
             self.send_notification_event(sender, &notification).await?
         }
 
         Ok(())
     }
 
-    fn build_proto_messages(&self, messages_json: &Value, user_content: &str) -> Result<Vec<ProtoMessage>, AppError> {
+    async fn resolve_or_create_chat(
+        &self,
+        user_id: Uuid,
+        requested_chat_id: Uuid,
+        user_content: &str,
+    ) -> Result<(crate::entities::conversation_history::Model, Uuid, bool), AppError> {
+        let existing = ConversationHistory::find_by_id(requested_chat_id)
+            .one(self.state.db.as_ref())
+            .await
+            .map_err(AppError::Database)?;
+
+        if let Some(chat) = existing {
+            if chat.user_id == user_id {
+                return Ok((chat, requested_chat_id, false));
+            }
+        }
+
+        let user_message = json!({
+            "id": Uuid::now_v7().to_string(),
+            "role": "user",
+            "content": user_content,
+            "createdAt": chrono::Utc::now().to_rfc3339(),
+        });
+
+        let title = self.derive_chat_title(user_content);
+
+        let created = crate::entities::conversation_history::ActiveModel {
+            user_id: Set(user_id),
+            session_id: Set(Uuid::now_v7()),
+            title: Set(title),
+            messages: Set(json!([user_message])),
+            ..Default::default()
+        }
+        .insert(self.state.db.as_ref())
+        .await
+        .map_err(AppError::Database)?;
+
+        Ok((created.clone(), created.id, true))
+    }
+
+    fn derive_chat_title(&self, content: &str) -> String {
+        let title = content
+            .split_whitespace()
+            .take(5)
+            .collect::<Vec<&str>>()
+            .join(" ")
+            .trim()
+            .to_string();
+
+        if title.is_empty() {
+            DEFAULT_CHAT_TITLE.to_string()
+        } else {
+            title.chars().take(64).collect::<String>()
+        }
+    }
+
+    async fn send_chat_context(
+        &self,
+        sender: &mut futures::stream::SplitSink<WebSocket, Message>,
+        requested_chat_id: Uuid,
+        effective_chat_id: Uuid,
+        title: &str,
+    ) -> Result<(), AppError> {
+        let context_msg = WsMessage {
+            msg_type: "chat_context".to_string(),
+            data: Some(json!({
+                "requested_chat_id": requested_chat_id,
+                "effective_chat_id": effective_chat_id,
+                "title": title,
+                "created": true
+            })),
+            id: None,
+        };
+
+        self.send_ws_message(sender, &context_msg).await
+    }
+
+    fn build_proto_messages(
+        &self,
+        messages_json: &Value,
+        user_content: &str,
+        include_user_content: bool,
+    ) -> Result<Vec<ProtoMessage>, AppError> {
         let mut messages = Vec::new();
 
         if let Some(arr) = messages_json.as_array() {
@@ -209,12 +327,14 @@ impl WebSocketService {
             }
         }
 
-        messages.push(ProtoMessage {
-            role: 1,
-            content: user_content.to_string(),
-            tool_call: None,
-            tool_result: None,
-        });
+        if include_user_content {
+            messages.push(ProtoMessage {
+                role: 1,
+                content: user_content.to_string(),
+                tool_call: None,
+                tool_result: None,
+            });
+        }
 
         Ok(messages)
     }
@@ -236,12 +356,14 @@ impl WebSocketService {
         sender: &mut futures::stream::SplitSink<WebSocket, Message>,
         status: &str,
         message: &str,
+        details: Option<Value>,
     ) -> Result<(), AppError> {
         let status_msg = WsMessage {
             msg_type: "ai_status".to_string(),
             data: Some(json!({
                 "status": status,
-                "message": message
+                "message": message,
+                "details": details
             })),
             id: None,
         };
@@ -305,6 +427,100 @@ impl WebSocketService {
         Ok(Some(notification))
     }
 
+    async fn resolve_ai_runtime_config(&self, user_id: Uuid) -> Result<AiRuntimeConfig, AppError> {
+        let user = Users::find_by_id(user_id)
+            .one(self.state.db.as_ref())
+            .await
+            .map_err(AppError::Database)?
+            .ok_or_else(|| AppError::Unauthorized("Authenticated user not found".to_string()))?;
+
+        let preferences = UserPreferences::from_json_value(user.preferences.as_ref());
+        let encrypted_key = preferences
+            .ai
+            .api_key_encrypted
+            .as_ref()
+            .ok_or_else(|| AppError::BadRequest("Configura tu API key AI en preferencias".to_string()))?;
+
+        let api_key = decrypt_secret(&self.state.config.ai_prefs_encryption_key, encrypted_key)?;
+
+        let model = preferences.ai.model.trim().to_string();
+        if model.is_empty() {
+            return Err(AppError::BadRequest(
+                "Configura un modelo AI en preferencias".to_string(),
+            ));
+        }
+
+        let allowed_models = [
+            "google/gemini-2.5-flash",
+            "google/gemini-2.5-pro",
+            "anthropic/claude-3-haiku",
+            "anthropic/claude-4.5-haiku",
+            "openai/gpt-5-codex",
+        ];
+
+        if !allowed_models.contains(&model.as_str()) {
+            return Err(AppError::BadRequest(
+                "El modelo configurado no esta permitido".to_string(),
+            ));
+        }
+
+        Ok(AiRuntimeConfig { model, api_key })
+    }
+
+    fn build_ai_error_details(err: &AppError) -> AiErrorDetails {
+        let raw = err.to_string();
+        let lowered = raw.to_lowercase();
+
+        if lowered.contains("api key") || lowered.contains("auth") {
+            return AiErrorDetails {
+                message: "API key de OpenRouter invalida o no configurada".to_string(),
+                payload: json!({
+                    "code": "AI_AUTH",
+                    "error": raw,
+                }),
+            };
+        }
+
+        if lowered.contains("rate") || lowered.contains("429") {
+            return AiErrorDetails {
+                message: "OpenRouter aplico limite de tasa. Intenta nuevamente en unos segundos"
+                    .to_string(),
+                payload: json!({
+                    "code": "AI_RATE_LIMIT",
+                    "error": raw,
+                }),
+            };
+        }
+
+        if lowered.contains("model") {
+            return AiErrorDetails {
+                message: "El modelo configurado no esta disponible".to_string(),
+                payload: json!({
+                    "code": "AI_MODEL",
+                    "error": raw,
+                }),
+            };
+        }
+
+        if lowered.contains("timeout") {
+            return AiErrorDetails {
+                message: "El proveedor de IA tardo demasiado en responder".to_string(),
+                payload: json!({
+                    "code": "AI_TIMEOUT",
+                    "error": raw,
+                }),
+            };
+        }
+
+        AiErrorDetails {
+            message: "Ocurrio un error procesando la respuesta del modelo".to_string(),
+            payload: json!({
+                "code": "AI_UNKNOWN",
+                "error": raw,
+            }),
+        }
+    }
+
     async fn send_notification_event(
         &self,
         sender: &mut futures::stream::SplitSink<WebSocket, Message>,
@@ -357,6 +573,11 @@ impl WebSocketService {
 
         Ok(())
     }
+}
+
+struct AiErrorDetails {
+    message: String,
+    payload: Value,
 }
 
 fn is_notification_enabled(preference_key: &str, preferences: &UserPreferences) -> bool {

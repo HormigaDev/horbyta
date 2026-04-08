@@ -165,16 +165,16 @@ pub fn tool_specs() -> Vec<AiToolSpec> {
               "additionalProperties": false,
               "required": ["title"],
               "properties": {
-                "project_id": { "type": ["string", "null"], "format": "uuid" },
-                "parent_id": { "type": ["string", "null"], "format": "uuid" },
-                "milestone_id": { "type": ["string", "null"], "format": "uuid" },
+                "project_id": { "type": "string", "format": "uuid", "description": "UUID opcional del proyecto" },
+                "parent_id": { "type": "string", "format": "uuid", "description": "UUID opcional de la tarea padre" },
+                "milestone_id": { "type": "string", "format": "uuid", "description": "UUID opcional del milestone" },
                 "title": { "type": "string", "minLength": 1, "maxLength": 255 },
-                "description": { "type": ["string", "null"], "maxLength": 15000 },
+                "description": { "type": "string", "maxLength": 15000, "description": "Descripcion opcional" },
                 "status": { "type": "string", "enum": ["todo", "in_progress", "review", "done"], "default": "todo" },
                 "priority": { "type": "integer", "minimum": 1, "maximum": 4, "default": 1 },
                 "complexity": { "type": "integer", "minimum": 1, "maximum": 4, "default": 1 },
                 "block_parent": { "type": "boolean", "default": true },
-                "due_date": { "type": ["string", "null"], "format": "date-time" },
+                "due_date": { "type": "string", "format": "date-time", "description": "Fecha opcional RFC3339" },
                 "tag_ids": { "type": "array", "items": { "type": "string", "format": "uuid" }, "default": [] }
               }
             }),
