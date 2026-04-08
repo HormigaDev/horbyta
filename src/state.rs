@@ -11,7 +11,7 @@ pub struct AppState {
     pub db: Arc<DatabaseConnection>,
     pub user_cache: Cache<Uuid, UserDto>,
     pub config: Config,
-    pub ai_service: Arc<tokio::sync::Mutex<AiService>>,
+    pub ai_service: Arc<tokio::sync::Mutex<Option<AiService>>>,
 }
 
 impl AppState {
@@ -23,7 +23,17 @@ impl AppState {
             .max_capacity(10_000)
             .build();
 
-        let ai_service = AiService::connect(&config.ai_service_url, db.clone()).await?;
+        let ai_service = match AiService::connect(&config.ai_service_url, db.clone()).await {
+            Ok(service) => Some(service),
+            Err(error) => {
+                tracing::warn!(
+                    ai_service_url = %config.ai_service_url,
+                    error = %error,
+                    "AI service unavailable at startup, continuing in degraded mode"
+                );
+                None
+            }
+        };
 
         Ok(Self {
             db,

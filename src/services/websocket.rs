@@ -17,7 +17,7 @@ use crate::{
     entities::{conversation_history::Entity as ConversationHistory, notifications, prelude::Users, prelude::*},
     error::AppError,
     middlewares::auth::Claims,
-    services::ai::Message as ProtoMessage,
+    services::ai::{AiService, Message as ProtoMessage},
     state::AppState,
     utils::crypto::decrypt_secret,
 };
@@ -185,17 +185,51 @@ impl WebSocketService {
         let chat_id_for_notification = effective_chat_id.to_string();
         let ai_session_id = chat.session_id.to_string();
 
-        let mut ai_service = self.state.ai_service.lock().await;
-        let ai_result = ai_service
-            .stream_chat_response(
-                user_id,
-            ai_session_id.as_str(),
-                &ai_runtime.model,
-                &ai_runtime.api_key,
-                messages,
-                sender,
-            )
-            .await;
+        let mut ai_service_guard = self.state.ai_service.lock().await;
+
+        if ai_service_guard.is_none() {
+            match AiService::connect(&self.state.config.ai_service_url, self.state.db.clone()).await {
+                Ok(service) => {
+                    tracing::info!("ai_service_connected_on_demand");
+                    *ai_service_guard = Some(service);
+                }
+                Err(error) => {
+                    let unavailable = AppError::Unavailable(format!("Servicio de IA no disponible: {}", error));
+                    let details = Self::build_ai_error_details(&unavailable);
+                    let _ = self
+                        .send_ai_runtime_status(sender, "error", details.message.as_str(), Some(details.payload))
+                        .await;
+                    tracing::warn!("ai_service_unavailable_on_demand: {}", error);
+                    return Ok(());
+                }
+            }
+        }
+
+        let ai_result = match ai_service_guard.as_mut() {
+            Some(ai_service) => {
+                ai_service
+                    .stream_chat_response(
+                        user_id,
+                        ai_session_id.as_str(),
+                        &ai_runtime.model,
+                        &ai_runtime.api_key,
+                        messages,
+                        sender,
+                    )
+                    .await
+            }
+            None => Err(AppError::Unavailable(
+                "Servicio de IA no disponible en este momento".to_string(),
+            )),
+        };
+
+        if let Err(error) = &ai_result {
+            if Self::is_ai_service_unavailable_error(error) {
+                *ai_service_guard = None;
+            }
+        }
+
+        drop(ai_service_guard);
 
         match ai_result {
             Ok(()) => {
@@ -453,8 +487,14 @@ impl WebSocketService {
         let allowed_models = [
             "google/gemini-2.5-flash",
             "google/gemini-2.5-pro",
+            "google/gemini-3-flash-preview",
+            "google/gemini-3.1-pro-preview",
             "anthropic/claude-3-haiku",
-            "anthropic/claude-4.5-haiku",
+            "anthropic/claude-haiku-4.5",
+            "anthropic/claude-sonnet-4.5",
+            "anthropic/claude-sonnet-4.6",
+            "anthropic/claude-opus-4.5",
+            "anthropic/claude-opus-4.6",
             "openai/gpt-5-codex",
         ];
 
@@ -471,6 +511,17 @@ impl WebSocketService {
         let raw = err.to_string();
         let lowered = raw.to_lowercase();
 
+        if Self::is_ai_error_message_unavailable(&lowered) {
+            return AiErrorDetails {
+                message: "Servicio de IA no disponible en este momento. Intenta nuevamente en unos segundos"
+                    .to_string(),
+                payload: json!({
+                    "code": "AI_UNAVAILABLE",
+                    "error": raw,
+                }),
+            };
+        }
+
         if lowered.contains("api key") || lowered.contains("auth") {
             return AiErrorDetails {
                 message: "API key de OpenRouter invalida o no configurada".to_string(),
@@ -483,8 +534,7 @@ impl WebSocketService {
 
         if lowered.contains("rate") || lowered.contains("429") {
             return AiErrorDetails {
-                message: "OpenRouter aplico limite de tasa. Intenta nuevamente en unos segundos"
-                    .to_string(),
+                message: "OpenRouter aplico limite de tasa. Intenta nuevamente en unos segundos".to_string(),
                 payload: json!({
                     "code": "AI_RATE_LIMIT",
                     "error": raw,
@@ -519,6 +569,22 @@ impl WebSocketService {
                 "error": raw,
             }),
         }
+    }
+
+    fn is_ai_service_unavailable_error(err: &AppError) -> bool {
+        let lowered = err.to_string().to_lowercase();
+        Self::is_ai_error_message_unavailable(&lowered)
+    }
+
+    fn is_ai_error_message_unavailable(lowered: &str) -> bool {
+        lowered.contains("servicio de ia no disponible")
+            || lowered.contains("failed to connect to ai service")
+            || lowered.contains("connection refused")
+            || lowered.contains("transport error")
+            || lowered.contains("tcp connect error")
+            || lowered.contains("dns error")
+            || lowered.contains("channel closed")
+            || lowered.contains("unavailable")
     }
 
     async fn send_notification_event(

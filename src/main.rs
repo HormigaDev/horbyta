@@ -34,7 +34,7 @@ async fn main() {
 
     let state = AppState::new(db, config.clone())
         .await
-        .expect("CRÍTICO: No se pudo inicializar AppState. Verifica AI_SERVICE_URL.");
+        .expect("CRÍTICO: No se pudo inicializar AppState.");
 
     let api_routes = Router::new()
         .route(
