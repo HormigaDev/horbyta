@@ -67,7 +67,31 @@ class OpenRouterClient:
         self._base_url = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
         self._site_url = os.environ.get("OPENROUTER_SITE_URL", "")
         self._app_title = os.environ.get("OPENROUTER_APP_NAME", "HormigaPM")
+        self._enable_cache_control = os.environ.get("OPENROUTER_ENABLE_CACHE_CONTROL", "true").lower() not in {
+            "0",
+            "false",
+            "no",
+        }
+        raw_cache_ttl = os.environ.get("OPENROUTER_CACHE_TTL", "").strip().lower()
+        self._cache_ttl = "1h" if raw_cache_ttl == "1h" else ""
+        if raw_cache_ttl and raw_cache_ttl != "1h":
+            logger.warning(
+                "openrouter_cache_ttl_ignored",
+                value=raw_cache_ttl,
+                allowed=["1h"],
+            )
         self._system_prompt = _load_system_prompt(_PROMPT_EN_PATH)
+
+    def _build_cache_control(self, model: str) -> dict[str, str] | None:
+        # OpenRouter documents top-level cache_control automatic mode for Anthropic models.
+        if not self._enable_cache_control or not model.startswith("anthropic/"):
+            return None
+
+        cache_control: dict[str, str] = {"type": "ephemeral"}
+        if self._cache_ttl == "1h":
+            cache_control["ttl"] = "1h"
+
+        return cache_control
 
     async def stream_turn(
         self,
@@ -226,6 +250,10 @@ class OpenRouterClient:
             "stream": True,
             "parallel_tool_calls": False,
         }
+        cache_control = self._build_cache_control(model)
+        if cache_control is not None:
+            request_payload["cache_control"] = cache_control
+
         if tools:
             request_payload["tools"] = tools
             request_payload["tool_choice"] = "auto"
@@ -241,6 +269,31 @@ class OpenRouterClient:
             chunk = cast(Any, raw_chunk)
             choices = getattr(chunk, "choices", None) or []
             if not choices:
+                usage = getattr(chunk, "usage", None)
+                if usage is not None:
+                    prompt_tokens_details = getattr(usage, "prompt_tokens_details", None)
+                    cached_tokens: int | None = None
+                    cache_write_tokens: int | None = None
+
+                    if isinstance(prompt_tokens_details, dict):
+                        cached_tokens = cast(int | None, prompt_tokens_details.get("cached_tokens"))
+                        cache_write_tokens = cast(int | None, prompt_tokens_details.get("cache_write_tokens"))
+                    elif prompt_tokens_details is not None:
+                        cached_tokens = cast(int | None, getattr(prompt_tokens_details, "cached_tokens", None))
+                        cache_write_tokens = cast(
+                            int | None,
+                            getattr(prompt_tokens_details, "cache_write_tokens", None),
+                        )
+
+                    logger.info(
+                        "llm_usage",
+                        model=model,
+                        prompt_tokens=getattr(usage, "prompt_tokens", None),
+                        completion_tokens=getattr(usage, "completion_tokens", None),
+                        total_tokens=getattr(usage, "total_tokens", None),
+                        cached_tokens=cached_tokens,
+                        cache_write_tokens=cache_write_tokens,
+                    )
                 continue
 
             delta = choices[0].delta
