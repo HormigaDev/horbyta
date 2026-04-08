@@ -251,14 +251,29 @@ class OpenRouterClient:
             "parallel_tool_calls": False,
         }
         cache_control = self._build_cache_control(model)
-        if cache_control is not None:
-            request_payload["cache_control"] = cache_control
 
         if tools:
             request_payload["tools"] = tools
             request_payload["tool_choice"] = "auto"
 
-        stream = await asyncio.to_thread(client.chat.completions.create, **request_payload)
+        create_kwargs = dict(request_payload)
+        if cache_control is not None:
+            # Official openai-python way to pass provider-specific / non-typed params.
+            create_kwargs["extra_body"] = {"cache_control": cache_control}
+
+        try:
+            stream = await asyncio.to_thread(client.chat.completions.create, **create_kwargs)
+        except TypeError as exc:
+            # Defensive fallback for environments with unexpected SDK signatures.
+            if "extra_body" in str(exc):
+                logger.warning(
+                    "openai_sdk_extra_body_not_supported",
+                    error=str(exc),
+                    model=model,
+                )
+                stream = await asyncio.to_thread(client.chat.completions.create, **request_payload)
+            else:
+                raise
         tool_calls_by_index: dict[int, dict[str, str]] = {}
 
         while True:
