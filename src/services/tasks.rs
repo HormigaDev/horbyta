@@ -11,7 +11,7 @@ use crate::{
         query::{FilterOperator, QueryPayload},
         task::{
             CreateTaskDto, LookupOptionDto, MilestoneLookupDto, TaskDetailDto, TaskSummaryDto, TaskViewDto,
-            UpdateTaskDto,
+            UpdateTaskDto, UpdateTaskStatusDto,
         },
     },
     entities::{
@@ -316,6 +316,19 @@ impl TaskService {
         txn.commit().await.map_err(AppError::Database)?;
 
         self.get_by_id(user_id, updated_task.id).await
+    }
+
+    pub async fn change_status(&self, user_id: Uuid, id: Uuid, dto: UpdateTaskStatusDto) -> Result<(), AppError> {
+        let txn = self.db.begin().await.map_err(AppError::Database)?;
+
+        let task = self.get_task_model(user_id, id).await?;
+        let mut active_task: tasks::ActiveModel = task.into();
+        active_task.status = Set(dto.status);
+        let _ = active_task.update(&txn).await.map_err(AppError::Database)?;
+
+        txn.commit().await.map_err(AppError::Database)?;
+
+        Ok(())
     }
 
     pub async fn delete(&self, user_id: Uuid, id: Uuid) -> Result<(), AppError> {

@@ -1,6 +1,12 @@
 import { apiFetch } from 'src/boot/fetch';
 import type { PaginatedResponse, QueryPayload } from 'src/types';
-import type { TaskDetail, TaskDto, TaskSummary, TasksViewResponse } from 'src/types/task';
+import type {
+  TaskDetail,
+  TaskDto,
+  TaskStatus,
+  TaskSummary,
+  TasksViewResponse,
+} from 'src/types/task';
 
 export const TasksService = {
   view: (): Promise<TasksViewResponse> =>
@@ -30,6 +36,12 @@ export const TasksService = {
     apiFetch(`/tasks/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+    }),
+
+  changeStatus: (id: string, status: TaskStatus): Promise<void> =>
+    apiFetch(`/tasks/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
     }),
 
   delete: (id: string): Promise<{ message: string }> =>

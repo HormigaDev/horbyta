@@ -1,6 +1,7 @@
 use axum::{
     Json, Router,
     extract::Path,
+    http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
 };
@@ -10,7 +11,7 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         query::QueryPayload,
-        task::{CreateTaskDto, UpdateTaskDto, task_filter_schema},
+        task::{CreateTaskDto, UpdateTaskDto, UpdateTaskStatusDto, task_filter_schema},
         user::UserDto,
     },
     error::AppError,
@@ -40,11 +41,7 @@ async fn search_tasks(
     })))
 }
 
-async fn get_task(
-    user: UserDto,
-    service: TaskService,
-    Path(id): Path<Uuid>,
-) -> Result<impl IntoResponse, AppError> {
+async fn get_task(user: UserDto, service: TaskService, Path(id): Path<Uuid>) -> Result<impl IntoResponse, AppError> {
     let task = service.get_by_id(user.id, id).await?;
     Ok(Json(task))
 }
@@ -68,11 +65,20 @@ async fn update_task(
     Ok(Json(task))
 }
 
-async fn delete_task(
+async fn update_task_status(
     user: UserDto,
     service: TaskService,
     Path(id): Path<Uuid>,
+    ValidatedJson(payload): ValidatedJson<UpdateTaskStatusDto>,
 ) -> Result<impl IntoResponse, AppError> {
+    service.change_status(user.id, id, payload).await?;
+    Ok((
+        StatusCode::OK,
+        Json(json!({"message": "Tarea actualizada correctamente"})),
+    ))
+}
+
+async fn delete_task(user: UserDto, service: TaskService, Path(id): Path<Uuid>) -> Result<impl IntoResponse, AppError> {
     service.delete(user.id, id).await?;
     Ok(Json(json!({ "message": "Tarea eliminada" })))
 }
@@ -82,5 +88,11 @@ pub fn tasks_controller() -> Router<AppState> {
         .route("/view", get(view_tasks))
         .route("/search", get(search_tasks))
         .route("/", post(create_task))
-        .route("/{id}", get(get_task).put(update_task).delete(delete_task))
+        .route(
+            "/{id}",
+            get(get_task)
+                .put(update_task)
+                .patch(update_task_status)
+                .delete(delete_task),
+        )
 }

@@ -160,6 +160,35 @@
             }}</q-item-section>
           </q-item>
 
+          <q-item
+            clickable
+            v-ripple
+            class="q-pa-md"
+            v-if="task && task.status === 'todo'"
+            @click="() => updateTaskStatus()"
+          >
+            <q-item-section avatar>
+              <q-icon name="start" style="color: var(--text-color)" />
+            </q-item-section>
+            <q-item-section style="color: var(--text-color)">
+              {{ $t('tasks.detail.action.startTask') }}
+            </q-item-section>
+          </q-item>
+          <q-item
+            clickable
+            v-ripple
+            class="q-pa-md"
+            v-if="task && task.status !== 'todo'"
+            @click="openChangeStatusDialog"
+          >
+            <q-item-section avatar>
+              <q-icon name="sync" style="color: var(--text-color)" />
+            </q-item-section>
+            <q-item-section style="color: var(--text-color)">
+              {{ $t('tasks.detail.action.changeStatus') }}
+            </q-item-section>
+          </q-item>
+
           <q-item clickable v-ripple class="text-primary q-pa-md" @click="goToEdit" v-if="task">
             <q-item-section avatar>
               <q-icon name="edit" color="primary" />
@@ -186,8 +215,11 @@ import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useUI } from 'src/composables/useUI';
 import { TasksService } from 'src/services/tasks';
+import { useQuasar } from 'quasar';
+import TaskChangeStatusDialog from 'src/components/TaskChangeStatusDialog.vue';
 import type { TaskDetail, TaskStatus } from 'src/types/task';
 
+const $q = useQuasar();
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
@@ -209,6 +241,30 @@ const statusLabel = (status: TaskStatus) => {
     default:
       return status;
   }
+};
+
+const updateTaskStatus = async (taskStatus: TaskStatus = 'in_progress') => {
+  if (!task.value) return;
+  showLoading(t('tasks.detail.updatingTask'));
+
+  try {
+    await TasksService.changeStatus(task.value.id, taskStatus);
+    task.value.status = taskStatus;
+    notify(t('tasks.detail.taskStartedSuccess'), 'positive');
+  } catch (err: unknown) {
+    notifyError(t('tasks.detail.changeStatusError'), err);
+  } finally {
+    hideLoading();
+  }
+};
+
+const openChangeStatusDialog = () => {
+  $q.dialog({
+    component: TaskChangeStatusDialog,
+  }).onOk((selectedValue: TaskStatus) => {
+    if (!task.value) return;
+    updateTaskStatus(selectedValue);
+  });
 };
 
 const loadTask = async () => {

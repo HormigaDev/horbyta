@@ -107,6 +107,12 @@ pub struct UpdateTaskDto {
     pub tag_ids: Vec<Uuid>,
 }
 
+#[derive(Debug, Deserialize, Validate)]
+pub struct UpdateTaskStatusDto {
+    #[validate(custom(function = "validate_status", message = "Estado inválido"))]
+    pub status: String,
+}
+
 #[derive(Debug, Serialize, FromQueryResult)]
 pub struct TaskSummaryDto {
     pub id: Uuid,
