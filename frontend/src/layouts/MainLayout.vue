@@ -107,6 +107,7 @@
       </q-toolbar>
     </q-header>
 
+    <!-- PC -->
     <q-drawer v-model="drawer" show-if-above :mini="!$q.screen.lt.md" :mini-width="60" bordered>
       <template v-if="!$q.screen.lt.md">
         <div class="column flex-center q-pt-md q-gutter-y-md">
@@ -126,6 +127,12 @@
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">{{
               t('layout.drawer.tasks')
             }}</q-tooltip>
+          </q-btn>
+
+          <q-btn flat round dense icon="people" to="/clients">
+            <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
+              {{ $t('layout.drawer.clients') }}
+            </q-tooltip>
           </q-btn>
 
           <q-btn flat round dense icon="settings" to="/settings">
@@ -156,10 +163,10 @@
         </div>
       </template>
 
+      <!-- Mobile -->
       <template v-else>
         <div class="column justify-between full-height">
           <div>
-            <!-- Perfil del usuario -->
             <q-item class="q-py-md bg-transparent">
               <q-item-section avatar>
                 <q-avatar size="48px" color="primary" text-color="white">
@@ -198,6 +205,13 @@
                   <q-icon name="task" />
                 </q-item-section>
                 <q-item-section>{{ t('layout.drawer.tasks') }}</q-item-section>
+              </q-item>
+
+              <q-item clickable v-ripple to="/clients">
+                <q-item-section avatar>
+                  <q-icon name="people" />
+                </q-item-section>
+                <q-item-section>{{ $t('layout.drawer.clients') }}</q-item-section>
               </q-item>
             </q-list>
           </div>

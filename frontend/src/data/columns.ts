@@ -17,6 +17,13 @@ export const getProjectColumns = (t: ComposerTranslation) => {
       align: 'left' as const,
     },
     {
+      name: 'client_name',
+      label: t('columns.project.client'),
+      field: 'client_name',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
       name: 'created_at',
       label: t('columns.project.created_at'),
       field: 'created_at',
@@ -31,6 +38,20 @@ export const getProjectColumns = (t: ComposerTranslation) => {
       sortable: true,
       align: 'center' as const,
       format: (val: string) => new Date(val).toLocaleDateString(),
+    },
+    {
+      name: 'category_id',
+      label: '',
+      field: 'category_id',
+      sortable: false,
+      hidden: true,
+    },
+    {
+      name: 'client_id',
+      label: '',
+      field: 'client_id',
+      sortable: false,
+      hidden: true,
     },
   ];
 };
@@ -141,6 +162,42 @@ export const getTaskColumns = (t: ComposerTranslation) => {
       sortable: true,
       align: 'center' as const,
       format: (val: string | null) => (val ? new Date(val).toLocaleDateString() : 'N/A'),
+    },
+  ];
+};
+
+export const getClientColumns = (t: ComposerTranslation) => {
+  return [
+    {
+      name: 'name',
+      label: t('columns.client.name'),
+      field: 'name',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'status',
+      label: t('columns.client.status'),
+      field: 'status',
+      sortable: true,
+      align: 'left' as const,
+      format: (val: string | null) => (val ? t(`clients.list.status.${val}`) : '-'),
+    },
+    {
+      name: 'created_at',
+      label: t('columns.client.created_at'),
+      field: 'created_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => new Date(val).toLocaleDateString(),
+    },
+    {
+      name: 'updated_at',
+      label: t('columns.client.updated_at'),
+      field: 'updated_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => new Date(val).toLocaleDateString(),
     },
   ];
 };

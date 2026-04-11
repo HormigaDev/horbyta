@@ -23,9 +23,26 @@ create table categories (
     unique(user_id, name)
 );
 
+create table clients (
+    id uuid primary key default uuidv7(),
+    user_id uuid not null references users (id),
+    name varchar(255) not null,
+    status varchar (50) not null default 'active',
+    email varchar(255),
+    phone varchar(20),
+    address_line varchar(512),
+    company varchar(255),
+    notes text,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint chk_clients_status check (status in ('active', 'inactive', 'blocked'))
+);
+
 create table projects (
     id uuid primary key default uuidv7(),
     user_id uuid not null references users (id) on delete cascade,
+    client_id uuid references clients (id) on delete set null,
     category_id uuid references categories (id) on delete set null,
     name varchar(255) not null,
     description text,
@@ -134,6 +151,7 @@ create table notifications (
 create index idx_categories_user_id on categories(user_id);
 create index idx_projects_user_id on projects(user_id);
 create index idx_projects_category_id on projects(category_id);
+create index idx_projects_client_id on projects(client_id);
 create index idx_milestones_project_id on milestones(project_id);
 create index idx_tags_user_id on tags(user_id);
 create index idx_tasks_user_id on tasks(user_id);
@@ -148,6 +166,9 @@ create index idx_conversation_history_user on conversation_history(user_id);
 create index idx_notifications_user_read_created on notifications(user_id, is_read, created_at desc);
 create index idx_notifications_user_preference on notifications(user_id, preference_key);
 create index idx_notifications_created_at on notifications(created_at desc);
+create index idx_clients_user_id on clients(user_id);
+create index idx_clients_status on clients(status);
+create index idx_clients_name on clients(name);
 
 -- ---------------------------------
 -- FUNCIONES Y TRIGGERS (UPDATED_AT AUTOMÁTICO)
@@ -172,7 +193,8 @@ begin
         'tags',
         'tasks',
         'conversation_history',
-        'notifications'
+        'notifications',
+        'clients'
     ]
     loop
         execute format(
@@ -200,6 +222,7 @@ comment on table tasks is 'Núcleo del PM. Soporta jerarquía infinita (parent_i
 comment on table task_tags is 'Tabla pivote para relación muchos a muchos entre tareas y etiquetas.';
 comment on table conversation_history is 'Tabla para guardar los mensajes de chat con la IA';
 comment on table notifications is 'Notificaciones asíncronas persistentes para el usuario, respetando sus preferencias.';
+comment on table clients is 'Clientes del usuario.';
 
 comment on column tasks.parent_id is 'Referencia recursiva para soportar subtareas de n-niveles.';
 comment on column tasks.status is 'Estado del flujo de trabajo. Restringido a 4 valores predefinidos por CHECK.';

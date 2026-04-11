@@ -66,6 +66,30 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: '/clients',
+        name: 'clients',
+        component: () => import('pages/ClientsPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/clients/new',
+        name: 'client-create',
+        component: () => import('pages/ClientFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/clients/:id/edit',
+        name: 'client-edit',
+        component: () => import('pages/ClientFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/clients/:id',
+        name: 'client-detail',
+        component: () => import('pages/ClientDetailPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: '/tags',
         name: 'tags',
         component: () => import('pages/TagsPage.vue'),

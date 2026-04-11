@@ -1,12 +1,12 @@
 import { ref } from 'vue';
 import { executeRules } from 'src/utils/executeRules';
 import type { Rule } from 'src/types';
-
-const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+import { EMAIL_REGEX } from 'src/data/constants';
 
 const EMAIL_RULES: Rule<string>[] = [
   (prop: string) => (!prop || prop.length < 1) && 'El correo electrónico es obligatorio.',
-  (prop: string) => (prop.length > 255 || !emailRegex.test(prop)) && 'Correo electrónico inválido.',
+  (prop: string) =>
+    (prop.length > 255 || !EMAIL_REGEX.test(prop)) && 'Correo electrónico inválido.',
 ];
 
 const PASSWORD_RULES: Rule<string>[] = [

@@ -1,5 +1,5 @@
 use chrono::{DateTime, FixedOffset};
-use sea_orm::FromQueryResult;
+use sea_orm::{FromQueryResult, prelude::DateTimeWithTimeZone};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
@@ -10,8 +10,8 @@ pub fn project_filter_schema() -> FilterSchema {
     FilterSchema::new()
         .add_column("id", ColumnType::Text)
         .add_column("name", ColumnType::Text)
-        .add_column("description", ColumnType::Text)
         .add_column("category_id", ColumnType::Text)
+        .add_column("client_id", ColumnType::Text)
         .add_column("created_at", ColumnType::Date)
         .add_column("updated_at", ColumnType::Date)
 }
@@ -36,6 +36,7 @@ pub struct CreateProjectDto {
     pub description: Option<String>,
 
     pub category_id: Option<Uuid>,
+    pub client_id: Option<Uuid>,
 
     #[validate(nested)]
     pub milestones: Option<Vec<CreateMilestoneSubDto>>,
@@ -50,6 +51,7 @@ pub struct UpdateProjectDto {
     pub description: Option<String>,
 
     pub category_id: Option<Uuid>,
+    pub client_id: Option<Uuid>,
 
     #[validate(nested)]
     pub new_milestones: Option<Vec<CreateMilestoneSubDto>>,
@@ -65,6 +67,20 @@ pub struct ProjectSummaryDto {
     pub id: Uuid,
     pub name: String,
     pub category_name: Option<String>,
+    pub client_name: Option<String>,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
+}
+
+#[derive(Debug, Serialize, FromQueryResult)]
+pub struct ProjectDetailDto {
+    pub id: Uuid,
+    pub name: String,
+    pub category_id: Option<String>,
+    pub category_name: Option<String>,
+    pub client_id: Option<String>,
+    pub client_name: Option<String>,
+    pub description: Option<String>,
+    pub created_at: DateTimeWithTimeZone,
+    pub updated_at: DateTimeWithTimeZone,
 }

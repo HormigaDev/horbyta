@@ -12,7 +12,7 @@
         </q-card-section>
 
         <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 col-md-8">
+          <div class="col-12 col-md-4">
             <q-input
               v-model="project.name"
               :label="t('projects.form.nameLabel')"
@@ -30,6 +30,15 @@
               :options="categoryOptions"
               :loading="isCategoriesLoading"
               @search="onCategorySearch"
+            />
+          </div>
+          <div class="col-12 col-md-4">
+            <SelectByTerm
+              v-model="project.client_id"
+              :label="$t('projects.form.clientLabel')"
+              :options="clientOptions"
+              :loading="isClientsLoading"
+              @search="onClientSearch"
             />
           </div>
         </q-card-section>
@@ -164,6 +173,8 @@ import type {
   CreateMilestoneSubDto,
 } from 'src/types/project';
 import type { Category } from 'src/types/category';
+import type { Client } from 'src/types/clients';
+import { ClientsService } from 'src/services/clients';
 
 const route = useRoute();
 const router = useRouter();
@@ -188,6 +199,19 @@ const {
     value: category.id,
   }),
 });
+const {
+  options: clientOptions,
+  isLoading: isClientsLoading,
+  load: loadClientsByTerm,
+} = useSelectByTerm<Client>(ClientsService.search, {
+  termColumn: 'name',
+  orderBy: 'name',
+  orderAsc: true,
+  toOption: (client) => ({
+    label: client.name,
+    value: client.id,
+  }),
+});
 
 const milestones = ref<CreateMilestoneSubDto[]>([]);
 const newMilestoneName = ref('');
@@ -209,6 +233,10 @@ const toIsoDateFromDisplay = (value: string): string | null => {
 const onCategorySearch = (term: string) => {
   if (term.trim().length === 0 && categoryOptions.value.length > 0) return;
   void loadCategoriesByTerm(term);
+};
+const onClientSearch = (term: string) => {
+  if (term.trim().length === 0 && clientOptions.value.length > 0) return;
+  loadClientsByTerm(term);
 };
 
 const addMilestone = () => {
@@ -232,6 +260,7 @@ const project = ref<Project>({
   name: '',
   description: '',
   category_id: null,
+  client_id: null,
   created_at: '',
   updated_at: '',
 });

@@ -75,7 +75,7 @@
               :display-value="$q.screen.gt.xs ? t('datatable.columnsButton') : ''"
               emit-value
               map-options
-              :options="columns"
+              :options="columns.filter((c) => c.label !== '')"
               option-value="name"
               style="min-width: 130px; max-width: 200px"
               class="dt-column-select"

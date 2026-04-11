@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        project::{CreateProjectDto, UpdateProjectCategoryDto, UpdateProjectDto},
+        project::{CreateProjectDto, ProjectDetailDto, ProjectSummaryDto, UpdateProjectCategoryDto, UpdateProjectDto},
         query::{FilterOperator, QueryPayload},
     },
     entities::{
@@ -38,6 +38,7 @@ impl ProjectService {
             name: Set(dto.name),
             description: Set(dto.description),
             category_id: Set(dto.category_id),
+            client_id: Set(dto.client_id),
             ..Default::default()
         };
 
@@ -67,10 +68,21 @@ impl ProjectService {
         Ok(created_project)
     }
 
-    pub async fn get_by_id(&self, user_id: Uuid, id: Uuid) -> Result<ProjectModel, AppError> {
+    pub async fn get_by_id(&self, user_id: Uuid, id: Uuid) -> Result<ProjectDetailDto, AppError> {
         let project = Projects::find()
             .filter(projects::Column::Id.eq(id))
             .filter(projects::Column::UserId.eq(user_id))
+            .left_join(crate::entities::categories::Entity)
+            .left_join(crate::entities::clients::Entity)
+            .select_only()
+            .column(projects::Column::Id)
+            .column(projects::Column::Name)
+            .column(projects::Column::Description)
+            .column(projects::Column::CreatedAt)
+            .column(projects::Column::UpdatedAt)
+            .column_as(crate::entities::categories::Column::Name, "category_name")
+            .column_as(crate::entities::clients::Column::Name, "client_name")
+            .into_model::<ProjectDetailDto>()
             .one(self.db.as_ref())
             .await?
             .ok_or_else(|| AppError::NotFound("Proyecto no encontrado".to_string()))?;
@@ -79,7 +91,7 @@ impl ProjectService {
     }
 
     pub async fn update(&self, user_id: Uuid, id: Uuid, dto: UpdateProjectDto) -> Result<ProjectModel, AppError> {
-        let project = self.get_by_id(user_id, id).await?;
+        let project = self.find_by_id(user_id, id).await?;
         let txn = self.db.begin().await.map_err(AppError::Database)?;
 
         let mut active_project: projects::ActiveModel = project.into();
@@ -119,7 +131,7 @@ impl ProjectService {
         id: Uuid,
         dto: UpdateProjectCategoryDto,
     ) -> Result<ProjectModel, AppError> {
-        let project = self.get_by_id(user_id, id).await?;
+        let project = self.find_by_id(user_id, id).await?;
         let mut active_project: projects::ActiveModel = project.into();
 
         active_project.category_id = Set(dto.category_id);
@@ -147,7 +159,7 @@ impl ProjectService {
         &self,
         user_id: Uuid,
         payload: QueryPayload,
-    ) -> Result<(Vec<crate::dtos::project::ProjectSummaryDto>, u64), AppError> {
+    ) -> Result<(Vec<ProjectSummaryDto>, u64), AppError> {
         let mut condition = Condition::all().add(projects::Column::UserId.eq(user_id));
 
         for filter in payload.filters {
@@ -300,19 +312,34 @@ impl ProjectService {
 
         let models = query
             .left_join(crate::entities::categories::Entity)
+            .left_join(crate::entities::clients::Entity)
             .select_only()
             .column(projects::Column::Id)
             .column(projects::Column::Name)
+            .column_as(crate::entities::categories::Column::Id, "category_id")
             .column_as(crate::entities::categories::Column::Name, "category_name")
+            .column_as(crate::entities::clients::Column::Id, "client_id")
+            .column_as(crate::entities::clients::Column::Name, "client_name")
             .column(projects::Column::CreatedAt)
             .column(projects::Column::UpdatedAt)
             .limit(payload.limit)
             .offset(offset)
-            .into_model::<crate::dtos::project::ProjectSummaryDto>()
+            .into_model::<ProjectSummaryDto>()
             .all(self.db.as_ref())
             .await?;
 
         Ok((models, total_items))
+    }
+
+    async fn find_by_id(&self, user_id: Uuid, id: Uuid) -> Result<ProjectModel, AppError> {
+        let project = Projects::find()
+            .filter(projects::Column::Id.eq(id))
+            .filter(projects::Column::UserId.eq(user_id))
+            .one(self.db.as_ref())
+            .await?
+            .ok_or_else(|| AppError::NotFound("Proyecto no encontrado".to_string()))?;
+
+        Ok(project)
     }
 }
 

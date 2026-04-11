@@ -55,6 +55,7 @@ async fn main() {
         .nest("/tasks", controllers::tasks::tasks_controller())
         .nest("/tags", controllers::tags::tags_controller())
         .nest("/users", controllers::users::users_controller())
+        .nest("/clients", controllers::clients::clients_controller())
         .with_state(state.clone());
 
     let ws_routes = Router::new()

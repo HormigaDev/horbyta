@@ -16,7 +16,33 @@
       @edit="editSelected"
       @delete="confirmDestruction"
       @refresh="fetch"
-    />
+    >
+      <template #filter-value-select-by-term="slotProps">
+        <SelectByTerm
+          v-if="slotProps.columnKey === 'category_id'"
+          :model-value="typeof slotProps.filter.value === 'string' ? slotProps.filter.value : null"
+          :label="t('projects.list.categoryLabel')"
+          :options="categoryFilterOptions"
+          :loading="isCategoryFilterLoading"
+          @update:model-value="
+            (value) => slotProps.setValue(typeof value === 'string' ? value : '')
+          "
+          @search="onCategoryFilterSearch"
+        />
+
+        <SelectByTerm
+          v-else-if="slotProps.columnKey === 'client_id'"
+          :model-value="typeof slotProps.filter.value === 'string' ? slotProps.filter.value : null"
+          :label="t('projects.list.clientLabel')"
+          :options="clientFilterOptions"
+          :loading="isClientFilterLoading"
+          @update:model-value="
+            (value) => slotProps.setValue(typeof value === 'string' ? value : '')
+          "
+          @search="onClientFilterSearch"
+        />
+      </template>
+    </DataTable>
   </q-page>
 </template>
 
@@ -30,19 +56,54 @@ import { useCrudListHandlers } from 'src/composables/useCrudListHandlers';
 import { useQuery } from 'src/composables/useQuery';
 import { useUI } from 'src/composables/useUI';
 import { ProjectsService } from 'src/services/projects';
+import { useSelectByTerm } from 'src/composables/useSelectByTerm';
+import { CategoriesService } from 'src/services/categories';
+import { ClientsService } from 'src/services/clients';
 import type { FilterSchema } from 'src/types/query';
+import type { Category } from 'src/types/category';
+import type { Client } from 'src/types/clients';
+import SelectByTerm from 'src/components/SelectByTerm.vue';
+import { onMounted } from 'vue';
 
 const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmDelete } = useUI();
 
+const {
+  options: categoryFilterOptions,
+  isLoading: isCategoryFilterLoading,
+  load: loadCategoryFilterByTerm,
+} = useSelectByTerm<Category>(CategoriesService.search, {
+  termColumn: 'name',
+  orderBy: 'name',
+  orderAsc: true,
+  toOption: (category) => ({
+    label: category.name,
+    value: category.id,
+  }),
+});
+
+const {
+  options: clientFilterOptions,
+  isLoading: isClientFilterLoading,
+  load: loadClientFilterByTerm,
+} = useSelectByTerm<Client>(ClientsService.search, {
+  termColumn: 'name',
+  orderBy: 'name',
+  orderAsc: true,
+  toOption: (client) => ({
+    label: client.name,
+    value: client.id,
+  }),
+});
+
 const projectFilterSchema: FilterSchema = {
-  id: 'Text',
-  name: 'Text',
-  description: 'Text',
-  category_id: 'Text',
-  created_at: 'Date',
-  updated_at: 'Date',
+  id: { type: 'Text', label: t('projects.list.filter.id') },
+  name: { type: 'Text', label: t('projects.list.filter.name') },
+  category_id: { type: 'Text', label: t('projects.list.filter.category'), useSelectByTerm: true },
+  client_id: { type: 'Text', label: t('projects.list.filter.client'), useSelectByTerm: true },
+  created_at: { type: 'Date', label: t('projects.list.filter.created') },
+  updated_at: { type: 'Date', label: t('projects.list.filter.updated') },
 };
 
 const { items, total, isLoading, query, fetch } = useQuery(
@@ -66,6 +127,15 @@ const editSelected = (selectedIds: string[]) => {
   }
 };
 
+const onCategoryFilterSearch = (term: string) => {
+  if (!term.trim()) return;
+  loadCategoryFilterByTerm(term);
+};
+const onClientFilterSearch = (term: string) => {
+  if (!term.trim()) return;
+  loadClientFilterByTerm(term);
+};
+
 const { deleteSelected: confirmDestruction } = useCrudDelete({
   deleteById: (id) => ProjectsService.delete(id),
   confirmDelete,
@@ -76,4 +146,6 @@ const { deleteSelected: confirmDestruction } = useCrudDelete({
   buildDeleteError: () => t('projects.list.deleteError'),
   afterDelete: fetch,
 });
+
+onMounted(() => loadCategoryFilterByTerm('').then(() => loadClientFilterByTerm('')));
 </script>

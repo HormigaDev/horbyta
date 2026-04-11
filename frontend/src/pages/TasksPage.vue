@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import DataTable from 'src/components/DataTable.vue';
@@ -232,5 +232,9 @@ const { deleteSelected: confirmDestruction } = useCrudDelete({
   buildDeleteSuccess: () => t('tasks.list.deleteSuccess'),
   buildDeleteError: () => t('tasks.list.deleteError'),
   afterDelete: fetchTasks,
+});
+
+onMounted(() => {
+  loadProjectFilterByTerm('').then(() => loadMilestoneFilterByTerm(''));
 });
 </script>

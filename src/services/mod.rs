@@ -2,6 +2,7 @@ pub mod ai;
 pub mod ai_tools;
 pub mod categories;
 pub mod chats;
+pub mod clients;
 pub mod milestones;
 pub mod projects;
 pub mod tags;

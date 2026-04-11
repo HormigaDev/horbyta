@@ -9,6 +9,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     pub user_id: Uuid,
+    pub client_id: Option<Uuid>,
     pub category_id: Option<Uuid>,
     pub name: String,
     #[sea_orm(column_type = "Text", nullable)]
@@ -27,6 +28,14 @@ pub enum Relation {
         on_delete = "SetNull"
     )]
     Categories,
+    #[sea_orm(
+        belongs_to = "super::clients::Entity",
+        from = "Column::ClientId",
+        to = "super::clients::Column::Id",
+        on_update = "NoAction",
+        on_delete = "SetNull"
+    )]
+    Clients,
     #[sea_orm(has_many = "super::milestones::Entity")]
     Milestones,
     #[sea_orm(has_many = "super::tasks::Entity")]
@@ -44,6 +53,12 @@ pub enum Relation {
 impl Related<super::categories::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Categories.def()
+    }
+}
+
+impl Related<super::clients::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Clients.def()
     }
 }
 
