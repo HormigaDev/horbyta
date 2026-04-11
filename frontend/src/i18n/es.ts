@@ -65,6 +65,7 @@ export const messages = {
   'projects.form.editingPrefix': 'Editando proyecto: {id}',
   'projects.form.nameLabel': 'Nombre del proyecto *',
   'projects.form.categoryLabel': 'Categoría',
+  'projects.form.clientLabel': 'Cliente',
   'projects.form.milestonesTitle': 'Añadir hitos (opcional)',
   'projects.form.milestoneNameLabel': 'Nombre del hito',
   'projects.form.milestoneDateLabel': 'Fecha estimada (DD/MM/YYYY)',
