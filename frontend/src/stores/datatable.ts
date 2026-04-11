@@ -16,7 +16,6 @@ export interface TableState {
 export const useDataTableStore = defineStore('datatable', () => {
   const tables = ref<Record<string, TableState>>({});
 
-  // Cargar estado inicial desde localStorage
   const loadState = () => {
     const raw = localStorage.getItem('datatable_states');
     if (raw) {
@@ -30,7 +29,6 @@ export const useDataTableStore = defineStore('datatable', () => {
 
   loadState();
 
-  // Suscribirse a los cambios y guardar localmente (Debounce nativo de vue watch)
   watch(
     tables,
     (newState) => {

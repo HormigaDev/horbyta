@@ -7,6 +7,7 @@ type TableRequestProps = {
     sortBy: string | null;
     descending: boolean;
   };
+  filters?: Filter[];
 };
 
 interface UseCrudListHandlersOptions {
@@ -15,10 +16,18 @@ interface UseCrudListHandlersOptions {
 }
 
 export function useCrudListHandlers(options: UseCrudListHandlersOptions) {
+  let hasRequestedOnce = false;
+
+  const areFiltersEqual = (left: Filter[], right: Filter[]) => {
+    return JSON.stringify(left) === JSON.stringify(right);
+  };
+
   const onRequest = (props: Record<string, unknown>) => {
-    const pagination = (props as TableRequestProps).pagination;
+    const requestProps = props as TableRequestProps;
+    const pagination = requestProps.pagination;
 
     if (!pagination) {
+      hasRequestedOnce = true;
       void options.fetch();
       return;
     }
@@ -47,19 +56,23 @@ export function useCrudListHandlers(options: UseCrudListHandlersOptions) {
       shouldFetch = true;
     }
 
+    const incomingFilters = Array.isArray(requestProps.filters) ? requestProps.filters : [];
+    if (!areFiltersEqual(options.query.filters, incomingFilters)) {
+      options.query.filters = incomingFilters;
+      shouldFetch = true;
+    }
+
+    if (!hasRequestedOnce) {
+      shouldFetch = true;
+    }
+
     if (shouldFetch) {
+      hasRequestedOnce = true;
       void options.fetch();
     }
   };
 
-  const onFilters = (filters: Filter[]) => {
-    options.query.filters = filters;
-    options.query.page = 1;
-    void options.fetch();
-  };
-
   return {
     onRequest,
-    onFilters,
   };
 }

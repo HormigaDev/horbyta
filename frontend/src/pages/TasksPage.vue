@@ -10,7 +10,6 @@
       :loading="isLoading"
       :filter-schema="taskFilterSchema"
       @request="onRequest"
-      @filters="onFilters"
       @view="onView"
       @create="handleCreate"
       @edit="handleEdit"
@@ -58,11 +57,21 @@ import { useUI } from 'src/composables/useUI';
 import { TasksService } from 'src/services/tasks';
 import { ProjectsService } from 'src/services/projects';
 import { MilestonesService } from 'src/services/milestones';
-import type { Filter, FilterSchema, QueryPayload } from 'src/types';
+import type { FilterSchema, QueryPayload } from 'src/types';
 import type { Milestone } from 'src/types/milestone';
 import type { ProjectSummary } from 'src/types/project';
 import type { TaskSummary } from 'src/types/task';
 import { getTaskColumns } from 'src/data/columns';
+
+type TaskTableRequest = {
+  pagination: {
+    page: number;
+    rowsPerPage: number;
+    sortBy: string | null;
+    descending: boolean;
+  };
+  filters?: QueryPayload['filters'];
+};
 
 const router = useRouter();
 const { t } = useI18n();
@@ -158,13 +167,15 @@ const fetchTasks = async () => {
   }
 };
 
-const onRequest = (props: Record<string, unknown>) => {
-  const pagination = props.pagination as {
-    page: number;
-    rowsPerPage: number;
-    sortBy: string;
-    descending: boolean;
-  };
+const onRequest = (props: TaskTableRequest) => {
+  const pagination = props.pagination;
+  const incomingFilters = Array.isArray(props.filters) ? props.filters : [];
+  const filtersChanged = JSON.stringify(query.filters) !== JSON.stringify(incomingFilters);
+
+  if (filtersChanged) {
+    query.filters = incomingFilters;
+    hasLoadedInitialView.value = true;
+  }
 
   if (pagination.rowsPerPage && pagination.rowsPerPage !== query.limit) {
     query.limit = pagination.rowsPerPage;
@@ -180,19 +191,20 @@ const onRequest = (props: Record<string, unknown>) => {
     query.order_asc = !pagination.descending;
   }
 
-  if (!hasLoadedInitialView.value && query.page === 1 && query.filters.length === 0) {
+  const shouldLoadInitialView =
+    !hasLoadedInitialView.value &&
+    query.page === 1 &&
+    query.limit === 10 &&
+    query.filters.length === 0 &&
+    query.order_by === 'created_at' &&
+    query.order_asc === false;
+
+  if (shouldLoadInitialView) {
     hasLoadedInitialView.value = true;
     void loadView();
     return;
   }
 
-  void fetchTasks();
-};
-
-const onFilters = (filters: Filter[]) => {
-  query.filters = filters;
-  query.page = 1;
-  hasLoadedInitialView.value = true;
   void fetchTasks();
 };
 

@@ -10,7 +10,6 @@
       :loading="isLoading"
       :filter-schema="projectFilterSchema"
       @request="onRequest"
-      @filters="onFilters"
       @view="(id) => $router.push(`/projects/${id}`)"
       @create="() => $router.push('/projects/new')"
       @edit="editSelected"
@@ -114,7 +113,7 @@ const { items, total, isLoading, query, fetch } = useQuery(
   false,
 );
 
-const { onRequest, onFilters } = useCrudListHandlers({
+const { onRequest } = useCrudListHandlers({
   query,
   fetch,
 });

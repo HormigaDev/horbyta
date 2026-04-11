@@ -337,6 +337,7 @@ const emit = defineEmits<{
     e: 'request',
     requestProps: {
       pagination: { page: number; rowsPerPage: number; sortBy: string | null; descending: boolean };
+      filters: Filter[];
     },
   ): void;
   (e: 'create'): void;
@@ -346,7 +347,6 @@ const emit = defineEmits<{
   (e: 'refresh'): void;
   (e: 'selection-change', selected: T[]): void;
   (e: 'sort', val: { sortBy: string | null; descending: boolean }): void;
-  (e: 'filters', filters: Filter[]): void;
 }>();
 
 const store = useDataTableStore();
@@ -497,12 +497,21 @@ const clearFilters = () => {
   applyFilters();
 };
 
+const getValidFilters = (): Filter[] => {
+  return filters.value.filter((f) => f.column && f.operator && f.value !== '') as Filter[];
+};
+
 const applyFilters = () => {
-  const validFilters = filters.value.filter(
-    (f) => f.column && f.operator && f.value !== '',
-  ) as Filter[];
-  store.saveTableState(props.tableId, { filters: validFilters });
-  emit('filters', validFilters);
+  const validFilters = getValidFilters();
+  onRequest({
+    pagination: {
+      page: 1,
+      rowsPerPage: pagination.value.rowsPerPage,
+      sortBy: pagination.value.sortBy,
+      descending: pagination.value.descending,
+    },
+    filters: validFilters,
+  });
 };
 
 const onFilterColumnChange = (filter: Partial<Filter>) => {
@@ -527,6 +536,7 @@ onMounted(() => {
     pagination.value = {
       ...defaultPagination,
       ...savedState.pagination,
+      sortBy: savedState.pagination.sortBy || defaultPagination.sortBy,
       rowsNumber: props.totalItems,
     };
   }
@@ -535,10 +545,17 @@ onMounted(() => {
   }
   if (savedState.filters) {
     filters.value = [...savedState.filters] as Partial<Filter>[];
-    return emit('filters', savedState.filters);
   }
 
-  onRequest({ pagination: pagination.value });
+  onRequest({
+    pagination: {
+      page: pagination.value.page,
+      rowsPerPage: pagination.value.rowsPerPage,
+      sortBy: pagination.value.sortBy,
+      descending: pagination.value.descending,
+    },
+    filters: getValidFilters(),
+  });
 });
 
 watch(
@@ -554,8 +571,10 @@ watch(selected, (newSel) => {
 
 const onRequest = (requestProps: {
   pagination: { page: number; rowsPerPage: number; sortBy: string | null; descending: boolean };
+  filters?: Filter[];
 }) => {
   const { page, rowsPerPage, sortBy, descending } = requestProps.pagination;
+  const requestFilters = requestProps.filters ?? getValidFilters();
 
   const sortChanged =
     pagination.value.sortBy !== sortBy || pagination.value.descending !== descending;
@@ -568,9 +587,13 @@ const onRequest = (requestProps: {
   store.saveTableState(props.tableId, {
     pagination: { page, rowsPerPage, sortBy, descending },
     visibleColumns: visibleColumns.value,
+    filters: requestFilters,
   });
 
-  emit('request', requestProps);
+  emit('request', {
+    pagination: { page, rowsPerPage, sortBy, descending },
+    filters: requestFilters,
+  });
 
   if (sortChanged) {
     emit('sort', { sortBy, descending });

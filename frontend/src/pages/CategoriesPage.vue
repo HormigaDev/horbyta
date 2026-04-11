@@ -11,7 +11,6 @@
       :filter-schema="categoryFilterSchema"
       hide-view
       @request="onRequest"
-      @filters="onFilters"
       @create="handleCreate"
       @edit="handleEdit"
       @delete="confirmDestruction"
@@ -40,7 +39,7 @@
   </q-page>
 </template>
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive } from 'vue';
 import { useI18n } from 'vue-i18n';
 import DataTable from 'src/components/DataTable.vue';
 import SimpleNameDialog from 'src/components/SimpleNameDialog.vue';
@@ -78,7 +77,7 @@ const form = reactive<CategoryDto>({
   name: '',
 });
 
-const { onRequest, onFilters } = useCrudListHandlers({
+const { onRequest } = useCrudListHandlers({
   query,
   fetch,
 });
@@ -131,6 +130,4 @@ const { deleteSelected: confirmDestruction } = useCrudDelete({
   buildDeleteError: () => t('categories.messages.deleteError'),
   afterDelete: fetch,
 });
-
-onMounted(() => fetch());
 </script>

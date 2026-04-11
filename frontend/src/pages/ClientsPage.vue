@@ -10,7 +10,6 @@
       :loading="isLoading"
       :filter-schema="CLIENT_FILTER_SCHEMA"
       @request="onRequest"
-      @filters="onFilters"
       @view="(id) => $router.push(`/clients/${id}`)"
       @create="() => $router.push('/clients/new')"
       @refresh="fetch"
@@ -31,7 +30,6 @@ import { CLIENT_FILTER_SCHEMA } from 'src/types/filterSchemas';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useCrudDelete } from 'src/composables/useCrudDelete';
-import { onMounted } from 'vue';
 
 const router = useRouter();
 const { notify, notifyError, confirmDelete } = useUI();
@@ -43,7 +41,7 @@ const { items, total, isLoading, query, fetch } = useQuery(
   'created_at',
   false,
 );
-const { onRequest, onFilters } = useCrudListHandlers({
+const { onRequest } = useCrudListHandlers({
   query,
   fetch,
 });
@@ -65,9 +63,5 @@ const { deleteSelected: confirmDestruction } = useCrudDelete({
   buildDeleteSuccess: () => t('clients.list.deleteSuccess'),
   buildDeleteError: () => t('clients.list.deleteError'),
   afterDelete: fetch,
-});
-
-onMounted(() => {
-  fetch();
 });
 </script>
