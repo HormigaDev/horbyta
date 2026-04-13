@@ -7,9 +7,9 @@ begin;
 create table users (
     id uuid primary key default uuidv7(),
     name varchar(100) not null unique,
-    email varchar(255) not null unique,
+    email varchar(255) not null,
     preferences jsonb,
-    password_hash varchar(255) not null,
+    password_hash text not null,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );
@@ -37,6 +37,35 @@ create table clients (
     updated_at timestamptz not null default now(),
 
     constraint chk_clients_status check (status in ('active', 'inactive', 'blocked'))
+);
+
+create table client_auth (
+    -- identificadores
+    id uuid primary key default uuidv7(),
+    client_id uuid not null references clients (id) on delete cascade,
+    user_id uuid not null references users (id) on delete cascade,
+    
+    -- si tiene login por credenciales activadas
+    email varchar(255),
+    password_hash text,
+
+    -- si tiene login por token mágico
+    magic_link_hash text,
+    magic_link_exp timestamptz,
+
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint uq_client_auth_client unique (client_id),
+    constraint chk_magic_link_not_credentials check (
+        (
+            email is not null and password_hash is not null
+            and magic_link_hash is null and magic_link_exp is null
+        ) or (
+            email is null and password_hash is null
+            and magic_link_hash is not null and magic_link_exp is not null
+        )
+    )
 );
 
 create table projects (
@@ -148,6 +177,7 @@ create table notifications (
 -- ÍNDICES
 -- ---------------------------------
 
+create unique index uq_users_email on users (lower(email));
 create index idx_categories_user_id on categories(user_id);
 create index idx_projects_user_id on projects(user_id);
 create index idx_projects_category_id on projects(category_id);
@@ -169,6 +199,7 @@ create index idx_notifications_created_at on notifications(created_at desc);
 create index idx_clients_user_id on clients(user_id);
 create index idx_clients_status on clients(status);
 create index idx_clients_name on clients(name);
+create unique index idx_uq_client_auth_email_per_user on client_auth (user_id, lower(email)) where email is not null;
 
 -- ---------------------------------
 -- FUNCIONES Y TRIGGERS (UPDATED_AT AUTOMÁTICO)
@@ -194,7 +225,8 @@ begin
         'tasks',
         'conversation_history',
         'notifications',
-        'clients'
+        'clients',
+        'client_auth'
     ]
     loop
         execute format(

@@ -3,6 +3,7 @@
 pub mod prelude;
 
 pub mod categories;
+pub mod client_auth;
 pub mod clients;
 pub mod conversation_history;
 pub mod milestones;

@@ -12,6 +12,8 @@ use uuid::Uuid;
 
 use crate::{dtos::user::UserDto, entities::users, state::AppState};
 
+pub const AUTH_COOKIE_NAME: &str = "horbyta_auth";
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Claims {
     pub sub: Uuid,
@@ -24,7 +26,7 @@ impl FromRequestParts<AppState> for UserDto {
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
         let jar = CookieJar::from_headers(&parts.headers);
 
-        let token = jar.get("hormiga_auth").map(|c| c.value()).ok_or_else(|| {
+        let token = jar.get(AUTH_COOKIE_NAME).map(|c| c.value()).ok_or_else(|| {
             (
                 StatusCode::UNAUTHORIZED,
                 Json(json!({"error": "No session", "type": "Unauthorized"})),

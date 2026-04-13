@@ -10,10 +10,10 @@ pub struct Model {
     pub id: Uuid,
     #[sea_orm(unique)]
     pub name: String,
-    #[sea_orm(unique)]
     pub email: String,
     #[sea_orm(column_type = "JsonBinary", nullable)]
     pub preferences: Option<Json>,
+    #[sea_orm(column_type = "Text")]
     pub password_hash: String,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
@@ -23,6 +23,8 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::categories::Entity")]
     Categories,
+    #[sea_orm(has_many = "super::client_auth::Entity")]
+    ClientAuth,
     #[sea_orm(has_many = "super::clients::Entity")]
     Clients,
     #[sea_orm(has_many = "super::conversation_history::Entity")]
@@ -40,6 +42,12 @@ pub enum Relation {
 impl Related<super::categories::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Categories.def()
+    }
+}
+
+impl Related<super::client_auth::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::ClientAuth.def()
     }
 }
 
