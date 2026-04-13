@@ -40,10 +40,7 @@
             <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
               {{ t('projects.detail.descriptionTitle') }}
             </div>
-            <div
-              class="q-pa-md rounded-borders"
-              style="border: 1px solid var(--border-color); background-color: var(--bg-hover)"
-            >
+            <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
               <MarkdownRenderer
                 :model-value="project?.description || t('projects.detail.emptyDescription')"
               />
