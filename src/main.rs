@@ -1,3 +1,4 @@
+pub mod constants;
 pub mod controllers;
 pub mod dtos;
 pub mod entities;

@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::{dtos::user::UserDto, entities::users, state::AppState};
-
-pub const AUTH_COOKIE_NAME: &str = "horbyta_auth";
+use crate::{constants::USER_AUTH_COOKIE_NAME, dtos::user::UserDto, entities::users, state::AppState};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Claims {
@@ -26,7 +24,7 @@ impl FromRequestParts<AppState> for UserDto {
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
         let jar = CookieJar::from_headers(&parts.headers);
 
-        let token = jar.get(AUTH_COOKIE_NAME).map(|c| c.value()).ok_or_else(|| {
+        let token = jar.get(USER_AUTH_COOKIE_NAME).map(|c| c.value()).ok_or_else(|| {
             (
                 StatusCode::UNAUTHORIZED,
                 Json(json!({"error": "No session", "type": "Unauthorized"})),

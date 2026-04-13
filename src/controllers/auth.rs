@@ -13,6 +13,7 @@ use serde_json::json;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{
+    constants::USER_AUTH_COOKIE_NAME,
     dtos::auth::LoginPayload,
     entities::users,
     error::AppError,
@@ -52,7 +53,7 @@ async fn login(
         &EncodingKey::from_secret(state.config.jwt_secret.as_bytes()),
     )?;
 
-    let cookie = Cookie::build(("hormiga_auth", token))
+    let cookie = Cookie::build((USER_AUTH_COOKIE_NAME, token))
         .path("/")
         .http_only(true)
         .secure(state.config.is_production)

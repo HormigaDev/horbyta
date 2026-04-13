@@ -10,10 +10,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::entities::client_auth;
+use crate::{constants::CLIENT_AUTH_COOKIE_NAME, entities::client_auth};
 use crate::{dtos::client::ClientAuthDto, state::AppState};
-
-pub const CLIENT_AUTH_COOKIE_NAME: &str = "horbyta_client_auth";
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClientClaims {
