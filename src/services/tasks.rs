@@ -10,7 +10,7 @@ use crate::{
     dtos::{
         query::{FilterOperator, QueryPayload},
         task::{
-            CreateTaskDto, LookupOptionDto, MilestoneLookupDto, TaskDetailDto, TaskSummaryDto, TaskViewDto,
+            CreateTaskDto, LookupOptionDto, MilestoneLookupDto, TaskDetailDto, TaskStatus, TaskSummaryDto, TaskViewDto,
             UpdateTaskDto, UpdateTaskStatusDto,
         },
     },
@@ -107,7 +107,7 @@ impl TaskService {
             milestone_id: task.milestone_id,
             title: task.title,
             description: task.description,
-            status: task.status,
+            status: task.status.try_into().unwrap_or(TaskStatus::Todo),
             priority: task.priority,
             complexity: task.complexity,
             block_parent: task.block_parent,
@@ -225,7 +225,7 @@ impl TaskService {
             milestone_id: Set(dto.milestone_id),
             title: Set(dto.title),
             description: Set(dto.description),
-            status: Set(dto.status),
+            status: Set(dto.status.to_string()),
             priority: Set(dto.priority),
             complexity: Set(dto.complexity),
             block_parent: Set(dto.block_parent),
@@ -283,7 +283,7 @@ impl TaskService {
         active_task.milestone_id = Set(dto.milestone_id);
         active_task.title = Set(dto.title);
         active_task.description = Set(dto.description);
-        active_task.status = Set(dto.status);
+        active_task.status = Set(dto.status.to_string());
         active_task.priority = Set(dto.priority);
         active_task.complexity = Set(dto.complexity);
         active_task.block_parent = Set(dto.block_parent);
@@ -323,7 +323,7 @@ impl TaskService {
 
         let task = self.get_task_model(user_id, id).await?;
         let mut active_task: tasks::ActiveModel = task.into();
-        active_task.status = Set(dto.status);
+        active_task.status = Set(dto.status.to_string());
         let _ = active_task.update(&txn).await.map_err(AppError::Database)?;
 
         txn.commit().await.map_err(AppError::Database)?;

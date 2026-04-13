@@ -6,6 +6,7 @@ use validator::{Validate, ValidationError};
 
 use crate::dtos::query::{ColumnType, FilterSchema};
 use crate::dtos::utils::is_numeric;
+use crate::string_enum;
 
 pub fn client_filter_schema() -> FilterSchema {
     FilterSchema::new()
@@ -74,8 +75,7 @@ pub struct UpdateClientDto {
     )]
     pub email: Option<String>,
 
-    #[validate(custom(function = "is_client_status"))]
-    pub status: String,
+    pub status: ClientStatus,
 
     #[validate(
         custom(function = "is_numeric"),
@@ -96,17 +96,16 @@ pub struct UpdateClientDto {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct UpdateClientStatusDto {
-    #[validate(custom(function = "is_client_status"))]
-    pub status: String,
+    pub status: ClientStatus,
 }
 
 #[derive(Debug, Serialize, FromQueryResult)]
 pub struct ClientSummary {
     pub id: Uuid,
     pub name: String,
-    pub status: String,
+    pub status: ClientStatus,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
 }
@@ -120,3 +119,11 @@ pub struct ClientAuthDto {
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
 }
+
+string_enum!(
+    pub enum ClientStatus {
+        Active,
+        Inactive,
+        Blocked,
+    }
+);

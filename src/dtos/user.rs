@@ -4,6 +4,8 @@ use std::str::FromStr;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
+use crate::constants::ALLOWED_AI_MODELS;
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct UserDto {
     pub id: Uuid,
@@ -22,21 +24,7 @@ fn validate_timezone(timezone: &str) -> Result<(), ValidationError> {
 }
 
 fn validate_ai_model(model: &str) -> Result<(), ValidationError> {
-    const ALLOWED_MODELS: [&str; 11] = [
-        "google/gemini-2.5-flash",
-        "google/gemini-2.5-pro",
-        "google/gemini-3-flash-preview",
-        "google/gemini-3.1-pro-preview",
-        "anthropic/claude-3-haiku",
-        "anthropic/claude-haiku-4.5",
-        "anthropic/claude-sonnet-4.5",
-        "anthropic/claude-sonnet-4.6",
-        "anthropic/claude-opus-4.5",
-        "anthropic/claude-opus-4.6",
-        "openai/gpt-5-codex",
-    ];
-
-    if ALLOWED_MODELS.contains(&model) {
+    if ALLOWED_AI_MODELS.contains(&model) {
         return Ok(());
     }
 

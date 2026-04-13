@@ -4,6 +4,7 @@ pub mod dtos;
 pub mod entities;
 pub mod env;
 pub mod error;
+pub mod macros;
 pub mod middlewares;
 pub mod services;
 pub mod state;

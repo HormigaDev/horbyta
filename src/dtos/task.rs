@@ -2,9 +2,12 @@ use chrono::{DateTime, FixedOffset};
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use validator::{Validate, ValidationError};
+use validator::Validate;
 
-use crate::dtos::query::{ColumnType, FilterSchema};
+use crate::{
+    dtos::query::{ColumnType, FilterSchema},
+    string_enum,
+};
 
 pub fn task_filter_schema() -> FilterSchema {
     FilterSchema::new()
@@ -22,29 +25,6 @@ pub fn task_filter_schema() -> FilterSchema {
         .add_column("updated_at", ColumnType::Date)
 }
 
-fn validate_status(status: &str) -> Result<(), ValidationError> {
-    match status {
-        "todo" | "in_progress" | "review" | "done" => Ok(()),
-        _ => Err(ValidationError::new("invalid_status")),
-    }
-}
-
-fn default_status() -> String {
-    "todo".to_string()
-}
-
-fn default_priority() -> i16 {
-    1
-}
-
-fn default_complexity() -> i16 {
-    1
-}
-
-fn default_block_parent() -> bool {
-    true
-}
-
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct CreateTaskDto {
     pub project_id: Option<Uuid>,
@@ -57,19 +37,14 @@ pub struct CreateTaskDto {
     #[validate(length(max = 15000, message = "La descripción no puede exceder los 15000 caracteres"))]
     pub description: Option<String>,
 
-    #[serde(default = "default_status")]
-    #[validate(custom(function = "validate_status", message = "Estado inválido"))]
-    pub status: String,
+    pub status: TaskStatus,
 
-    #[serde(default = "default_priority")]
     #[validate(range(min = 1, max = 4, message = "La prioridad debe estar entre 1 y 4"))]
     pub priority: i16,
 
-    #[serde(default = "default_complexity")]
     #[validate(range(min = 1, max = 4, message = "La complejidad debe estar entre 1 y 4"))]
     pub complexity: i16,
 
-    #[serde(default = "default_block_parent")]
     pub block_parent: bool,
 
     pub due_date: Option<DateTime<FixedOffset>>,
@@ -90,8 +65,7 @@ pub struct UpdateTaskDto {
     #[validate(length(max = 15000, message = "La descripción no puede exceder los 15000 caracteres"))]
     pub description: Option<String>,
 
-    #[validate(custom(function = "validate_status", message = "Estado inválido"))]
-    pub status: String,
+    pub status: TaskStatus,
 
     #[validate(range(min = 1, max = 4, message = "La prioridad debe estar entre 1 y 4"))]
     pub priority: i16,
@@ -107,10 +81,9 @@ pub struct UpdateTaskDto {
     pub tag_ids: Vec<Uuid>,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize)]
 pub struct UpdateTaskStatusDto {
-    #[validate(custom(function = "validate_status", message = "Estado inválido"))]
-    pub status: String,
+    pub status: TaskStatus,
 }
 
 #[derive(Debug, Serialize, FromQueryResult)]
@@ -119,7 +92,7 @@ pub struct TaskSummaryDto {
     pub project_id: Option<Uuid>,
     pub milestone_id: Option<Uuid>,
     pub title: String,
-    pub status: String,
+    pub status: TaskStatus,
     pub priority: i16,
     pub complexity: i16,
     pub due_date: Option<DateTime<FixedOffset>>,
@@ -138,7 +111,7 @@ pub struct TaskDetailDto {
     pub milestone_id: Option<Uuid>,
     pub title: String,
     pub description: Option<String>,
-    pub status: String,
+    pub status: TaskStatus,
     pub priority: i16,
     pub complexity: i16,
     pub block_parent: bool,
@@ -173,3 +146,12 @@ pub struct TaskViewDto {
     pub milestones: Vec<MilestoneLookupDto>,
     pub tags: Vec<LookupOptionDto>,
 }
+
+string_enum!(
+    pub enum TaskStatus {
+        Todo,
+        InProgress,
+        Review,
+        Done,
+    }
+);

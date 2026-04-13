@@ -67,7 +67,7 @@ impl ClientService {
 
         let mut active_client: clients::ActiveModel = client.into();
         active_client.name = Set(dto.name);
-        active_client.status = Set(dto.status);
+        active_client.status = Set(dto.status.to_string());
         active_client.email = Set(dto.email);
         active_client.phone = Set(dto.phone);
         active_client.address_line = Set(dto.address_line);
@@ -89,7 +89,7 @@ impl ClientService {
     ) -> Result<ClientModel, AppError> {
         let client = self.get_by_id(user_id, id).await?;
         let mut active_client: clients::ActiveModel = client.into();
-        active_client.status = Set(dto.status);
+        active_client.status = Set(dto.status.to_string());
 
         active_client.update(self.db.as_ref()).await.map_err(AppError::Database)
     }

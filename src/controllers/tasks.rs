@@ -69,7 +69,7 @@ async fn update_task_status(
     user: UserDto,
     service: TaskService,
     Path(id): Path<Uuid>,
-    ValidatedJson(payload): ValidatedJson<UpdateTaskStatusDto>,
+    Json(payload): Json<UpdateTaskStatusDto>,
 ) -> Result<impl IntoResponse, AppError> {
     service.change_status(user.id, id, payload).await?;
     Ok((

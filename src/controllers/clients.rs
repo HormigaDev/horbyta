@@ -67,7 +67,7 @@ async fn update_client_status(
     user: UserDto,
     service: ClientService,
     Path(id): Path<Uuid>,
-    ValidatedJson(payload): ValidatedJson<UpdateClientStatusDto>,
+    Json(payload): Json<UpdateClientStatusDto>,
 ) -> Result<impl IntoResponse, AppError> {
     let client = service.update_client_status(user.id, id, payload).await?;
     Ok(Json(client))
