@@ -50,7 +50,7 @@ create table client_auth (
     password_hash text,
 
     -- si tiene login por token mágico
-    magic_link_hash text,
+    magic_link_hash bytea,
     magic_link_exp timestamptz,
 
     created_at timestamptz not null default now(),

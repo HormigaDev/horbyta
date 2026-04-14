@@ -17,3 +17,9 @@ pub struct UpdatePassword {
     #[validate(custom(function = "validate_password"))]
     pub new_password: String,
 }
+
+#[derive(Deserialize, Clone, Validate)]
+pub struct ClientMagicTokenLogin {
+    #[validate(length(min = 1, message = "Token inválido"))]
+    pub magic_token: String,
+}

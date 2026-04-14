@@ -14,8 +14,8 @@ pub struct Model {
     pub email: Option<String>,
     #[sea_orm(column_type = "Text", nullable)]
     pub password_hash: Option<String>,
-    #[sea_orm(column_type = "Text", nullable)]
-    pub magic_link_hash: Option<String>,
+    #[sea_orm(column_type = "VarBinary(StringLen::None)", nullable)]
+    pub magic_link_hash: Option<Vec<u8>>,
     pub magic_link_exp: Option<DateTimeWithTimeZone>,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,

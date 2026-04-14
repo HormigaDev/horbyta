@@ -34,7 +34,7 @@ impl FromRequestParts<AppState> for ClientAuthDto {
 
         let token_data = decode::<ClientClaims>(
             token,
-            &DecodingKey::from_secret(state.config.jwt_secret.as_bytes()),
+            &DecodingKey::from_secret(state.config.jwt_secret_client.as_bytes()),
             &Validation::default(),
         )
         .map_err(|_| {

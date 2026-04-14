@@ -1,4 +1,3 @@
-use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use axum::{
     Json, Router,
     extract::State,
@@ -7,18 +6,19 @@ use axum::{
     routing::post,
 };
 use axum_extra::extract::cookie::{Cookie, SameSite};
-use jsonwebtoken::{EncodingKey, Header, encode};
+use chrono::Utc;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde_json::json;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::{
-    constants::USER_AUTH_COOKIE_NAME,
-    dtos::auth::LoginPayload,
-    entities::users,
+    constants::{CLIENT_AUTH_COOKIE_NAME, USER_AUTH_COOKIE_NAME},
+    dtos::auth::{ClientMagicTokenLogin, LoginPayload},
+    entities::{client_auth, users},
     error::AppError,
-    middlewares::{auth::Claims, validator::ValidatedJson},
+    middlewares::{auth::Claims, client_auth::ClientClaims, validator::ValidatedJson},
     state::AppState,
+    utils::crypto::{compare_password, generate_jwt, verify_magic_link_token},
 };
 
 async fn login(
@@ -31,34 +31,15 @@ async fn login(
         .await?
         .ok_or(AppError::Unauthorized("Credenciales inválidas".to_string()))?;
 
-    let parsed_hash = PasswordHash::new(&user_model.password_hash)?;
-
-    if Argon2::default()
-        .verify_password(payload.password.as_bytes(), &parsed_hash)
-        .is_err()
-    {
-        return Err(AppError::Unauthorized("Credenciales inválidas".to_string()));
-    }
-
-    let time_now = SystemTime::now().duration_since(UNIX_EPOCH)?;
+    compare_password(payload.password, user_model.password_hash)?;
 
     let claims = Claims {
         sub: user_model.id,
-        exp: time_now.as_secs() as usize + (60 * 60 * 24 * 7),
+        exp: get_expiration_time(state.config.time_to_exp)?,
     };
 
-    let token = encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(state.config.jwt_secret.as_bytes()),
-    )?;
-
-    let cookie = Cookie::build((USER_AUTH_COOKIE_NAME, token))
-        .path("/")
-        .http_only(true)
-        .secure(state.config.is_production)
-        .same_site(SameSite::Strict)
-        .build();
+    let token = crate::utils::crypto::generate_jwt(&claims, &state.config.jwt_secret)?;
+    let cookie = build_auth_cookie(USER_AUTH_COOKIE_NAME, token, state.config.is_production);
 
     let mut headers = HeaderMap::new();
     headers.insert(SET_COOKIE, cookie.to_string().parse()?);
@@ -69,12 +50,50 @@ async fn login(
             "id": user_model.id,
             "name": user_model.name,
             "email": user_model.email,
-            "created_at": user_model.created_at,
-            "updated_at": user_model.updated_at
         }
     }));
 
     Ok((StatusCode::OK, headers, body))
+}
+
+async fn login_client(
+    State(state): State<AppState>,
+    ValidatedJson(payload): ValidatedJson<LoginPayload>,
+) -> Result<impl IntoResponse, AppError> {
+    let client_model = client_auth::Entity::find()
+        .filter(client_auth::Column::Email.eq(payload.email))
+        .one(state.db.as_ref())
+        .await?
+        .ok_or(AppError::Unauthorized("Credenciales inválidas".to_string()))?;
+
+    if let Some(password_hash) = &client_model.password_hash {
+        compare_password(payload.password, password_hash.clone())?;
+        return handle_client_login_success(client_model, &state).await;
+    }
+
+    Err(AppError::Unauthorized("Credenciales inválidas".to_string()))
+}
+
+async fn login_magic_token(
+    State(state): State<AppState>,
+    ValidatedJson(payload): ValidatedJson<ClientMagicTokenLogin>,
+) -> Result<impl IntoResponse, AppError> {
+    let hash = verify_magic_link_token(&payload.magic_token)?;
+
+    let client_model = client_auth::Entity::find()
+        .filter(client_auth::Column::MagicLinkHash.eq(hash))
+        .one(state.db.as_ref())
+        .await?
+        .ok_or(AppError::Unauthorized("Credenciales inválidas".to_string()))?;
+
+    if let Some(exp) = client_model.magic_link_exp {
+        if exp.with_timezone(&Utc) < Utc::now() {
+            return Err(AppError::Unauthorized("Token expirado".to_string()));
+        }
+        return handle_client_login_success(client_model, &state).await;
+    }
+
+    Err(AppError::Unauthorized("Credenciales inválidas".to_string()))
 }
 
 async fn register() -> Result<impl IntoResponse, AppError> {
@@ -83,9 +102,53 @@ async fn register() -> Result<impl IntoResponse, AppError> {
     ))
 }
 
+fn get_expiration_time(time_to_exp: Duration) -> Result<usize, AppError> {
+    let time_now = SystemTime::now().duration_since(UNIX_EPOCH)?;
+    Ok(time_now.as_secs() as usize + time_to_exp.as_secs() as usize)
+}
+
+fn build_auth_cookie<'a>(name: &'a str, token: String, is_production: bool) -> Cookie<'a> {
+    Cookie::build((name, token))
+        .path("/")
+        .http_only(true)
+        .secure(is_production)
+        .same_site(SameSite::Strict)
+        .build()
+}
+
+async fn handle_client_login_success(
+    client_model: client_auth::Model,
+    state: &AppState,
+) -> Result<(StatusCode, HeaderMap, Json<serde_json::Value>), AppError> {
+    let claims = ClientClaims {
+        sub: client_model.id,
+        exp: get_expiration_time(state.config.time_to_exp)?,
+    };
+
+    let token = generate_jwt(&claims, &state.config.jwt_secret_client)?;
+
+    let cookie = build_auth_cookie(CLIENT_AUTH_COOKIE_NAME, token, state.config.is_production);
+
+    let mut headers = HeaderMap::new();
+    headers.insert(SET_COOKIE, cookie.to_string().parse()?);
+
+    let body = Json(json!({
+        "message": "Autenticación exitosa",
+        "client": {
+            "id": client_model.id,
+            "client_id": client_model.client_id,
+            "user_id": client_model.user_id,
+        }
+    }));
+
+    Ok((StatusCode::OK, headers, body))
+}
+
 pub fn auth_controller() -> Router<AppState> {
     let router = Router::new()
         .route("/login", post(login))
+        .route("/login-client", post(login_client))
+        .route("/login-client-token", post(login_magic_token))
         .route("/register", post(register));
 
     router

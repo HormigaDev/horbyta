@@ -1,20 +1,19 @@
-use argon2::password_hash::{SaltString, rand_core::OsRng};
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use axum::{extract::FromRequestParts, http::request::Parts};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use std::sync::Arc;
 use uuid::Uuid;
 
+use crate::utils::crypto::{compare_password, hash_password};
 use crate::{
     dtos::user::{
         UpdateNotificationPreferencesDto, UpdateUserPasswordDto, UpdateUserPreferencesDto, UpdateUserProfileDto,
         UserPreferences, UserSettingsDto,
     },
-    env::Config,
     entities::{
         prelude::Users,
         users::{self, Model as UserModel},
     },
+    env::Config,
     error::AppError,
     state::AppState,
     utils::crypto::encrypt_secret,
@@ -87,19 +86,9 @@ impl UserService {
 
     pub async fn update_password(&self, user_id: Uuid, dto: UpdateUserPasswordDto) -> Result<(), AppError> {
         let user = self.get_user_model(user_id).await?;
-        let parsed_hash = PasswordHash::new(&user.password_hash)?;
 
-        if Argon2::default()
-            .verify_password(dto.current_password.as_bytes(), &parsed_hash)
-            .is_err()
-        {
-            return Err(AppError::Unauthorized("La contraseña actual no es válida".to_string()));
-        }
-
-        let salt = SaltString::generate(&mut OsRng);
-        let new_password_hash = Argon2::default()
-            .hash_password(dto.new_password.as_bytes(), &salt)?
-            .to_string();
+        let _ = compare_password(dto.current_password, user.password_hash.clone())?;
+        let new_password_hash = hash_password(dto.new_password)?;
 
         let mut active_user: users::ActiveModel = user.into();
         active_user.password_hash = Set(new_password_hash);
@@ -123,10 +112,7 @@ impl UserService {
                 return Err(AppError::BadRequest("La API key AI no puede estar vacia".to_string()));
             }
 
-            preferences.ai.api_key_encrypted = Some(encrypt_secret(
-                &self.config.ai_prefs_encryption_key,
-                cleaned_key,
-            )?);
+            preferences.ai.api_key_encrypted = Some(encrypt_secret(&self.config.ai_prefs_encryption_key, cleaned_key)?);
             preferences.ai.api_key_configured = true;
         }
 

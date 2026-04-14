@@ -1,4 +1,5 @@
 use axum::extract::FromRequestParts;
+use chrono::{DateTime, FixedOffset, Utc};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
     QuerySelect, Set, TransactionTrait,
@@ -8,15 +9,20 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        client::{ClientSummary, CreateClientDto, UpdateClientDto, UpdateClientStatusDto},
+        client::{
+            ClientMagicLinkDto, ClientSummary, CreateClientDto, SaveClientCredentialsDto, UpdateClientDto,
+            UpdateClientStatusDto,
+        },
         query::{FilterOperator, QueryPayload},
     },
     entities::{
+        client_auth,
         clients::{self, Model as ClientModel},
-        prelude::Clients,
+        prelude::{ClientAuth, Clients},
     },
     error::AppError,
     state::AppState,
+    utils::crypto::{generate_magic_link_token, hash_password},
 };
 
 #[derive(Clone)]
@@ -191,6 +197,103 @@ impl ClientService {
             .await?;
 
         Ok((models, total_items))
+    }
+
+    pub async fn generate_client_magic_token(
+        &self,
+        user_id: Uuid,
+        client_id: Uuid,
+    ) -> Result<ClientMagicLinkDto, AppError> {
+        let (token, hashed_token) = generate_magic_link_token();
+        let time = Utc::now();
+        let timestamp = time.timestamp();
+        if let Some(offset) = FixedOffset::east_opt(0) {
+            let fixed_time: DateTime<FixedOffset> = time.with_timezone(&offset);
+            let mut is_insertion: bool = false;
+            let mut active_client_auth: client_auth::ActiveModel =
+                match self.get_client_auth(user_id.clone(), client_id.clone()).await {
+                    Ok(active_client_auth) => active_client_auth.into(),
+                    Err(err) => match err {
+                        AppError::NotFound(_) => {
+                            is_insertion = true;
+                            client_auth::ActiveModel {
+                                client_id: Set(client_id),
+                                user_id: Set(user_id),
+                                ..Default::default()
+                            }
+                        }
+                        _ => return Err(err),
+                    },
+                };
+
+            active_client_auth.magic_link_hash = Set(Some(hashed_token));
+            active_client_auth.magic_link_exp = Set(Some(fixed_time));
+            active_client_auth.email = Set(None);
+            active_client_auth.password_hash = Set(None);
+
+            let _ = if is_insertion {
+                active_client_auth.insert(self.db.as_ref()).await?
+            } else {
+                active_client_auth.update(self.db.as_ref()).await?
+            };
+
+            Ok(ClientMagicLinkDto {
+                magic_client_token: token,
+                magic_client_token_exp: timestamp,
+            })
+        } else {
+            Err(AppError::Internal("Error del offset".to_string()))
+        }
+    }
+
+    pub async fn save_client_credentials(
+        &self,
+        user_id: Uuid,
+        client_id: Uuid,
+        dto: SaveClientCredentialsDto,
+    ) -> Result<(), AppError> {
+        let mut is_insertion: bool = false;
+        let mut client_auth: client_auth::ActiveModel =
+            match self.get_client_auth(user_id.clone(), client_id.clone()).await {
+                Ok(client_auth) => client_auth.into(),
+                Err(err) => match err {
+                    AppError::NotFound(_) => {
+                        is_insertion = true;
+                        client_auth::ActiveModel {
+                            user_id: Set(user_id),
+                            client_id: Set(client_id),
+                            ..Default::default()
+                        }
+                    }
+                    _ => return Err(err),
+                },
+            };
+
+        let client_password_hash = hash_password(dto.password)?;
+
+        client_auth.email = Set(Some(dto.email));
+        client_auth.password_hash = Set(Some(client_password_hash));
+        client_auth.magic_link_hash = Set(None);
+        client_auth.magic_link_exp = Set(None);
+
+        let _ = if is_insertion {
+            client_auth.insert(self.db.as_ref()).await?
+        } else {
+            client_auth.update(self.db.as_ref()).await?
+        };
+
+        Ok(())
+    }
+
+    async fn get_client_auth(&self, user_id: Uuid, client_id: Uuid) -> Result<client_auth::Model, AppError> {
+        let client_auth = ClientAuth::find()
+            .filter(client_auth::Column::UserId.eq(user_id))
+            .filter(client_auth::Column::ClientId.eq(client_id))
+            .one(self.db.as_ref())
+            .await?
+            .ok_or_else(|| AppError::NotFound("Datos de autenticación del cliente no encontrados".to_string()))?;
+
+        Ok(client_auth)
     }
 }
 

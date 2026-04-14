@@ -5,7 +5,7 @@ use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
 use crate::dtos::query::{ColumnType, FilterSchema};
-use crate::dtos::utils::is_numeric;
+use crate::dtos::utils::{is_numeric, validate_password};
 use crate::string_enum;
 
 pub fn client_filter_schema() -> FilterSchema {
@@ -118,6 +118,21 @@ pub struct ClientAuthDto {
     pub email: Option<String>,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
+}
+
+#[derive(Serialize)]
+pub struct ClientMagicLinkDto {
+    pub magic_client_token: String,
+    pub magic_client_token_exp: i64,
+}
+
+#[derive(Deserialize, Validate)]
+pub struct SaveClientCredentialsDto {
+    #[validate(email(message = "Email de autenticación para el cliente inválido"))]
+    pub email: String,
+
+    #[validate(custom(function = "validate_password"))]
+    pub password: String,
 }
 
 string_enum!(
