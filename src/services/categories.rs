@@ -1,15 +1,14 @@
 use axum::{extract::FromRequestParts, http::request::Parts};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-    QuerySelect, Set,
+    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, Set,
 };
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
     dtos::{
-        category::CategoryDto,
-        query::{FilterOperator, QueryPayload},
+        category::{CategoryDto, CategorySearchField},
+        query::QueryPayload,
     },
     entities::{
         categories::{self, Model as CategoryModel},
@@ -17,6 +16,7 @@ use crate::{
     },
     error::AppError,
     state::AppState,
+    utils::search::{apply_filters, apply_ordering, apply_pagination},
 };
 
 #[derive(Clone)]
@@ -76,149 +76,30 @@ impl CategoryService {
     }
 
     pub async fn search(&self, user_id: Uuid, payload: QueryPayload) -> Result<(Vec<CategoryModel>, u64), AppError> {
-        let mut condition = Condition::all().add(categories::Column::UserId.eq(user_id));
+        let base_condition = Condition::all().add(categories::Column::UserId.eq(user_id));
+        let condition = apply_filters(base_condition, &payload.filters, |column| {
+            column
+                .parse::<CategorySearchField>()
+                .ok()
+                .map(CategorySearchField::filter_field)
+        })?;
 
-        for filter in payload.filters {
-            let filter_cond = match filter.column.as_str() {
-                "name" => {
-                    let col = categories::Column::Name;
-                    let val_str = filter.value.as_str().unwrap_or("").to_string();
-                    match filter.operator {
-                        FilterOperator::Eq => col.eq(val_str),
-                        FilterOperator::Neq => col.ne(val_str),
-                        FilterOperator::Contains => col.contains(&val_str),
-                        FilterOperator::NotContains => col.not_like(&format!("%{}%", val_str)),
-                        _ => continue,
-                    }
-                }
-                "id" => {
-                    let val_str = filter.value.as_str().unwrap_or("");
-                    if let Ok(uuid_val) = uuid::Uuid::parse_str(val_str) {
-                        let col = categories::Column::Id;
-                        match filter.operator {
-                            FilterOperator::Eq => col.eq(uuid_val),
-                            FilterOperator::Neq => col.ne(uuid_val),
-                            _ => continue,
-                        }
-                    } else {
-                        continue;
-                    }
-                }
-                "created_at" | "updated_at" => {
-                    let col = match filter.column.as_str() {
-                        "created_at" => categories::Column::CreatedAt,
-                        "updated_at" => categories::Column::UpdatedAt,
-                        _ => continue,
-                    };
-                    match filter.operator {
-                        FilterOperator::Between => {
-                            if let Some(arr) = filter.value.as_array() {
-                                if arr.len() == 2 {
-                                    if let (Some(start_str), Some(end_str)) = (arr[0].as_str(), arr[1].as_str()) {
-                                        if let (Ok(start), Ok(end)) = (
-                                            chrono::DateTime::parse_from_rfc3339(start_str),
-                                            chrono::DateTime::parse_from_rfc3339(end_str),
-                                        ) {
-                                            col.between(start, end)
-                                        } else {
-                                            continue;
-                                        }
-                                    } else {
-                                        continue;
-                                    }
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Eq => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.eq(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Gt => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.gt(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Lt => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.lt(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Gte => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.gte(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Lte => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.lte(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        _ => continue,
-                    }
-                }
-                _ => continue,
-            };
-            condition = condition.add(filter_cond);
-        }
-
-        let mut query = Categories::find().filter(condition);
-
-        if let Some(order_col) = payload.order_by {
-            let col = match order_col.as_str() {
-                "name" => categories::Column::Name,
-                "created_at" => categories::Column::CreatedAt,
-                _ => categories::Column::CreatedAt,
-            };
-
-            let order = if payload.order_asc {
-                sea_orm::Order::Asc
-            } else {
-                sea_orm::Order::Desc
-            };
-            query = query.order_by(col, order);
-        } else {
-            query = query.order_by_desc(categories::Column::CreatedAt);
-        }
+        let query = Categories::find().filter(condition);
+        let query = apply_ordering(
+            query,
+            &payload,
+            CategorySearchField::CreatedAt.order_column(),
+            false,
+            |column| {
+                column
+                    .parse::<CategorySearchField>()
+                    .ok()
+                    .map(CategorySearchField::order_column)
+            },
+        )?;
 
         let total_items = query.clone().count(self.db.as_ref()).await?;
-        let offset = (payload.page - 1) * payload.limit;
-
-        let models = query.limit(payload.limit).offset(offset).all(self.db.as_ref()).await?;
+        let models = apply_pagination(query, &payload).all(self.db.as_ref()).await?;
 
         Ok((models, total_items))
     }

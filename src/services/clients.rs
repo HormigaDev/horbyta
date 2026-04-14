@@ -1,7 +1,7 @@
 use axum::extract::FromRequestParts;
 use chrono::{DateTime, FixedOffset, Utc};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
     QuerySelect, Set, TransactionTrait,
 };
 use std::sync::Arc;
@@ -10,10 +10,10 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         client::{
-            ClientMagicLinkDto, ClientSummary, CreateClientDto, SaveClientCredentialsDto, UpdateClientDto,
-            UpdateClientStatusDto,
+            ClientMagicLinkDto, ClientSearchField, ClientSummary, CreateClientDto, SaveClientCredentialsDto,
+            UpdateClientDto, UpdateClientStatusDto,
         },
-        query::{FilterOperator, QueryPayload},
+        query::QueryPayload,
     },
     entities::{
         client_auth,
@@ -22,7 +22,10 @@ use crate::{
     },
     error::AppError,
     state::AppState,
-    utils::crypto::{generate_magic_link_token, hash_password},
+    utils::{
+        crypto::{generate_magic_link_token, hash_password},
+        search::{apply_filters, apply_ordering, apply_pagination},
+    },
 };
 
 #[derive(Clone)]
@@ -114,87 +117,43 @@ impl ClientService {
     }
 
     pub async fn search(&self, user_id: Uuid, payload: QueryPayload) -> Result<(Vec<ClientSummary>, u64), AppError> {
-        let mut condition = Condition::all().add(clients::Column::UserId.eq(user_id));
+        let base_condition = Condition::all().add(clients::Column::UserId.eq(user_id));
+        let condition = apply_filters(base_condition, &payload.filters, |column| {
+            column
+                .parse::<ClientSearchField>()
+                .ok()
+                .map(ClientSearchField::filter_field)
+        })?;
 
-        for filter in payload.filters {
-            let filter_cond = match filter.column.as_str() {
-                "id" => {
-                    let value_str = filter.value.as_str().unwrap_or("");
-                    if let Ok(uuid_val) = uuid::Uuid::parse_str(value_str) {
-                        let col = clients::Column::Id;
-                        match filter.operator {
-                            FilterOperator::Eq => col.eq(uuid_val),
-                            FilterOperator::Neq => col.ne(uuid_val),
-                            _ => continue,
-                        }
-                    } else {
-                        continue;
-                    }
-                }
-                "status" => {
-                    let value_str = filter.value.as_str().unwrap_or("");
-                    let col = clients::Column::Status;
-                    match filter.operator {
-                        FilterOperator::Eq => col.eq(value_str),
-                        FilterOperator::Neq => col.ne(value_str),
-                        _ => continue,
-                    }
-                }
-                "name" => {
-                    let col = clients::Column::Name;
-                    let val_str = filter.value.as_str().unwrap_or("").to_string();
-
-                    match filter.operator {
-                        FilterOperator::Eq => col.eq(val_str),
-                        FilterOperator::Neq => col.ne(val_str),
-                        FilterOperator::Contains => col.contains(&val_str),
-                        FilterOperator::NotContains => col.not_like(&format!("%{}%", val_str)),
-                        _ => continue,
-                    }
-                }
-                _ => continue,
-            };
-
-            condition = condition.add(filter_cond);
-        }
-
-        let mut query = Clients::find().filter(condition);
-
-        if let Some(order_col) = payload.order_by {
-            let col = match order_col.as_str() {
-                "id" => clients::Column::Id,
-                "name" => clients::Column::Name,
-                "created_at" => clients::Column::CreatedAt,
-                "updated_at" => clients::Column::UpdatedAt,
-                _ => clients::Column::CreatedAt,
-            };
-
-            let order = if payload.order_asc {
-                sea_orm::Order::Asc
-            } else {
-                sea_orm::Order::Desc
-            };
-
-            query = query.order_by(col, order);
-        } else {
-            query = query.order_by_desc(clients::Column::CreatedAt);
-        }
+        let query = Clients::find().filter(condition);
+        let query = apply_ordering(
+            query,
+            &payload,
+            ClientSearchField::CreatedAt.order_column(),
+            false,
+            |column| {
+                column
+                    .parse::<ClientSearchField>()
+                    .ok()
+                    .map(ClientSearchField::order_column)
+            },
+        )?;
 
         let total_items = query.clone().count(self.db.as_ref()).await?;
-        let offset = (payload.page - 1) * payload.limit;
 
-        let models = query
-            .select_only()
-            .column(clients::Column::Id)
-            .column(clients::Column::Name)
-            .column(clients::Column::Status)
-            .column(clients::Column::CreatedAt)
-            .column(clients::Column::UpdatedAt)
-            .limit(payload.limit)
-            .offset(offset)
-            .into_model::<ClientSummary>()
-            .all(self.db.as_ref())
-            .await?;
+        let models = apply_pagination(
+            query
+                .select_only()
+                .column(clients::Column::Id)
+                .column(clients::Column::Name)
+                .column(clients::Column::Status)
+                .column(clients::Column::CreatedAt)
+                .column(clients::Column::UpdatedAt),
+            &payload,
+        )
+        .into_model::<ClientSummary>()
+        .all(self.db.as_ref())
+        .await?;
 
         Ok((models, total_items))
     }

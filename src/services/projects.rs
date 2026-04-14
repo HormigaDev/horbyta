@@ -1,6 +1,6 @@
 use axum::{extract::FromRequestParts, http::request::Parts};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
     QuerySelect, Set, TransactionTrait,
 };
 use std::sync::Arc;
@@ -9,18 +9,19 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         project::{
-            CreateProjectDto, ProjectDetailDto, ProjectSummaryDto, UpdateProjectCategoryDto, UpdateProjectDto,
-            UpdateProjectStatusDto,
+            CreateProjectDto, ProjectDetailDto, ProjectSearchField, ProjectSummaryDto, UpdateProjectCategoryDto,
+            UpdateProjectDto, UpdateProjectStatusDto,
         },
-        query::{FilterOperator, QueryPayload},
+        query::QueryPayload,
     },
     entities::{
-        milestones,
+        categories, clients, milestones,
         prelude::Projects,
         projects::{self, Model as ProjectModel},
     },
     error::AppError,
     state::AppState,
+    utils::search::{apply_filters, apply_ordering, apply_pagination},
 };
 
 #[derive(Clone)]
@@ -75,8 +76,8 @@ impl ProjectService {
         let project = Projects::find()
             .filter(projects::Column::Id.eq(id))
             .filter(projects::Column::UserId.eq(user_id))
-            .left_join(crate::entities::categories::Entity)
-            .left_join(crate::entities::clients::Entity)
+            .left_join(categories::Entity)
+            .left_join(clients::Entity)
             .select_only()
             .column(projects::Column::Id)
             .column(projects::Column::Name)
@@ -84,8 +85,8 @@ impl ProjectService {
             .column(projects::Column::Status)
             .column(projects::Column::CreatedAt)
             .column(projects::Column::UpdatedAt)
-            .column_as(crate::entities::categories::Column::Name, "category_name")
-            .column_as(crate::entities::clients::Column::Name, "client_name")
+            .column_as(categories::Column::Name, "category_name")
+            .column_as(clients::Column::Name, "client_name")
             .into_model::<ProjectDetailDto>()
             .one(self.db.as_ref())
             .await?
@@ -182,173 +183,48 @@ impl ProjectService {
         user_id: Uuid,
         payload: QueryPayload,
     ) -> Result<(Vec<ProjectSummaryDto>, u64), AppError> {
-        let mut condition = Condition::all().add(projects::Column::UserId.eq(user_id));
+        let base_condition = Condition::all().add(projects::Column::UserId.eq(user_id));
+        let condition = apply_filters(base_condition, &payload.filters, |column| {
+            column
+                .parse::<ProjectSearchField>()
+                .ok()
+                .map(ProjectSearchField::filter_field)
+        })?;
 
-        for filter in payload.filters {
-            let filter_cond = match filter.column.as_str() {
-                "name" | "description" => {
-                    let col = match filter.column.as_str() {
-                        "name" => projects::Column::Name,
-                        "description" => projects::Column::Description,
-                        _ => continue,
-                    };
-                    let val_str = filter.value.as_str().unwrap_or("").to_string();
-                    match filter.operator {
-                        FilterOperator::Eq => col.eq(val_str),
-                        FilterOperator::Neq => col.ne(val_str),
-                        FilterOperator::Contains => col.contains(&val_str),
-                        FilterOperator::NotContains => col.not_like(&format!("%{}%", val_str)),
-                        _ => continue,
-                    }
-                }
-                "id" | "category_id" => {
-                    let val_str = filter.value.as_str().unwrap_or("");
-                    if let Ok(uuid_val) = uuid::Uuid::parse_str(val_str) {
-                        let col = match filter.column.as_str() {
-                            "id" => projects::Column::Id,
-                            "category_id" => projects::Column::CategoryId,
-                            _ => continue,
-                        };
-                        match filter.operator {
-                            FilterOperator::Eq => col.eq(uuid_val),
-                            FilterOperator::Neq => col.ne(uuid_val),
-                            _ => continue,
-                        }
-                    } else {
-                        continue;
-                    }
-                }
-                "created_at" | "updated_at" => {
-                    let col = match filter.column.as_str() {
-                        "created_at" => projects::Column::CreatedAt,
-                        "updated_at" => projects::Column::UpdatedAt,
-                        _ => continue,
-                    };
-                    match filter.operator {
-                        FilterOperator::Between => {
-                            if let Some(arr) = filter.value.as_array() {
-                                if arr.len() == 2 {
-                                    if let (Some(start_str), Some(end_str)) = (arr[0].as_str(), arr[1].as_str()) {
-                                        if let (Ok(start), Ok(end)) = (
-                                            chrono::DateTime::parse_from_rfc3339(start_str),
-                                            chrono::DateTime::parse_from_rfc3339(end_str),
-                                        ) {
-                                            col.between(start, end)
-                                        } else {
-                                            continue;
-                                        }
-                                    } else {
-                                        continue;
-                                    }
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Eq => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.eq(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Gt => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.gt(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Lt => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.lt(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Gte => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.gte(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Lte => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.lte(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        _ => continue,
-                    }
-                }
-                _ => continue,
-            };
-            condition = condition.add(filter_cond);
-        }
-
-        let mut query = Projects::find().filter(condition);
-
-        if let Some(order_col) = payload.order_by {
-            let col = match order_col.as_str() {
-                "name" => projects::Column::Name,
-                "created_at" => projects::Column::CreatedAt,
-                _ => projects::Column::CreatedAt,
-            };
-
-            let order = if payload.order_asc {
-                sea_orm::Order::Asc
-            } else {
-                sea_orm::Order::Desc
-            };
-            query = query.order_by(col, order);
-        } else {
-            query = query.order_by_desc(projects::Column::CreatedAt);
-        }
+        let query = Projects::find().filter(condition);
+        let query = apply_ordering(
+            query,
+            &payload,
+            ProjectSearchField::CreatedAt.order_column(),
+            false,
+            |column| {
+                column
+                    .parse::<ProjectSearchField>()
+                    .ok()
+                    .map(ProjectSearchField::order_column)
+            },
+        )?;
 
         let total_items = query.clone().count(self.db.as_ref()).await?;
-        let offset = (payload.page - 1) * payload.limit;
 
-        let models = query
-            .left_join(crate::entities::categories::Entity)
-            .left_join(crate::entities::clients::Entity)
-            .select_only()
-            .column(projects::Column::Id)
-            .column(projects::Column::Name)
-            .column_as(crate::entities::categories::Column::Id, "category_id")
-            .column_as(crate::entities::categories::Column::Name, "category_name")
-            .column_as(crate::entities::clients::Column::Id, "client_id")
-            .column_as(crate::entities::clients::Column::Name, "client_name")
-            .column(projects::Column::CreatedAt)
-            .column(projects::Column::UpdatedAt)
-            .limit(payload.limit)
-            .offset(offset)
-            .into_model::<ProjectSummaryDto>()
-            .all(self.db.as_ref())
-            .await?;
+        let models = apply_pagination(
+            query
+                .left_join(categories::Entity)
+                .left_join(clients::Entity)
+                .select_only()
+                .column(projects::Column::Id)
+                .column(projects::Column::Name)
+                .column_as(categories::Column::Id, "category_id")
+                .column_as(categories::Column::Name, "category_name")
+                .column_as(clients::Column::Id, "client_id")
+                .column_as(clients::Column::Name, "client_name")
+                .column(projects::Column::CreatedAt)
+                .column(projects::Column::UpdatedAt),
+            &payload,
+        )
+        .into_model::<ProjectSummaryDto>()
+        .all(self.db.as_ref())
+        .await?;
 
         Ok((models, total_items))
     }

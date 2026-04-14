@@ -1,28 +1,108 @@
 use chrono::{DateTime, FixedOffset};
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
+use strum::IntoEnumIterator;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
     dtos::query::{ColumnType, FilterSchema},
+    entities::tasks,
     string_enum,
+    utils::search::FilterField,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::EnumString, strum::EnumIter)]
+#[strum(serialize_all = "snake_case")]
+pub enum TaskSearchField {
+    Id,
+    ProjectId,
+    ParentId,
+    MilestoneId,
+    Title,
+    Status,
+    Priority,
+    Complexity,
+    BlockParent,
+    DueDate,
+    CreatedAt,
+    UpdatedAt,
+}
+
+impl TaskSearchField {
+    pub const fn column_name(self) -> &'static str {
+        match self {
+            Self::Id => "id",
+            Self::ProjectId => "project_id",
+            Self::ParentId => "parent_id",
+            Self::MilestoneId => "milestone_id",
+            Self::Title => "title",
+            Self::Status => "status",
+            Self::Priority => "priority",
+            Self::Complexity => "complexity",
+            Self::BlockParent => "block_parent",
+            Self::DueDate => "due_date",
+            Self::CreatedAt => "created_at",
+            Self::UpdatedAt => "updated_at",
+        }
+    }
+
+    pub const fn column_type(self) -> ColumnType {
+        match self {
+            Self::Id => ColumnType::Text,
+            Self::ProjectId => ColumnType::Text,
+            Self::ParentId => ColumnType::Text,
+            Self::MilestoneId => ColumnType::Text,
+            Self::Title => ColumnType::Text,
+            Self::Status => ColumnType::Text,
+            Self::Priority => ColumnType::Number,
+            Self::Complexity => ColumnType::Number,
+            Self::BlockParent => ColumnType::Boolean,
+            Self::DueDate => ColumnType::Date,
+            Self::CreatedAt => ColumnType::Date,
+            Self::UpdatedAt => ColumnType::Date,
+        }
+    }
+
+    pub const fn filter_field(self) -> FilterField<tasks::Column> {
+        match self {
+            Self::Id => FilterField::Uuid(tasks::Column::Id),
+            Self::ProjectId => FilterField::Uuid(tasks::Column::ProjectId),
+            Self::ParentId => FilterField::Uuid(tasks::Column::ParentId),
+            Self::MilestoneId => FilterField::Uuid(tasks::Column::MilestoneId),
+            Self::Title => FilterField::Text(tasks::Column::Title),
+            Self::Status => FilterField::Text(tasks::Column::Status),
+            Self::Priority => FilterField::NumberI16(tasks::Column::Priority),
+            Self::Complexity => FilterField::NumberI16(tasks::Column::Complexity),
+            Self::BlockParent => FilterField::Boolean(tasks::Column::BlockParent),
+            Self::DueDate => FilterField::DateTime(tasks::Column::DueDate),
+            Self::CreatedAt => FilterField::DateTime(tasks::Column::CreatedAt),
+            Self::UpdatedAt => FilterField::DateTime(tasks::Column::UpdatedAt),
+        }
+    }
+
+    pub const fn order_column(self) -> tasks::Column {
+        match self {
+            Self::Id => tasks::Column::Id,
+            Self::ProjectId => tasks::Column::ProjectId,
+            Self::ParentId => tasks::Column::ParentId,
+            Self::MilestoneId => tasks::Column::MilestoneId,
+            Self::Title => tasks::Column::Title,
+            Self::Status => tasks::Column::Status,
+            Self::Priority => tasks::Column::Priority,
+            Self::Complexity => tasks::Column::Complexity,
+            Self::BlockParent => tasks::Column::BlockParent,
+            Self::DueDate => tasks::Column::DueDate,
+            Self::CreatedAt => tasks::Column::CreatedAt,
+            Self::UpdatedAt => tasks::Column::UpdatedAt,
+        }
+    }
+}
+
 pub fn task_filter_schema() -> FilterSchema {
-    FilterSchema::new()
-        .add_column("id", ColumnType::Text)
-        .add_column("project_id", ColumnType::Text)
-        .add_column("parent_id", ColumnType::Text)
-        .add_column("milestone_id", ColumnType::Text)
-        .add_column("title", ColumnType::Text)
-        .add_column("status", ColumnType::Text)
-        .add_column("priority", ColumnType::Number)
-        .add_column("complexity", ColumnType::Number)
-        .add_column("block_parent", ColumnType::Boolean)
-        .add_column("due_date", ColumnType::Date)
-        .add_column("created_at", ColumnType::Date)
-        .add_column("updated_at", ColumnType::Date)
+    TaskSearchField::iter().fold(FilterSchema::new(), |schema, field| {
+        schema.add_column(field.column_name(), field.column_type())
+    })
 }
 
 #[derive(Debug, Deserialize, Serialize, Validate)]

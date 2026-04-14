@@ -182,12 +182,23 @@ create table notifications (
 
 create unique index uq_users_email on users (lower(email));
 create index idx_categories_user_id on categories(user_id);
+create index idx_categories_user_created_at on categories(user_id, created_at desc);
+create index idx_categories_user_updated_at on categories(user_id, updated_at desc);
 create index idx_projects_user_id on projects(user_id);
 create index idx_projects_category_id on projects(category_id);
 create index idx_projects_client_id on projects(client_id);
 create index idx_projects_status on projects(status);
+create index idx_projects_user_name on projects(user_id, name);
+create index idx_projects_user_created_at on projects(user_id, created_at desc);
+create index idx_projects_user_updated_at on projects(user_id, updated_at desc);
 create index idx_milestones_project_id on milestones(project_id);
+create index idx_milestones_project_name on milestones(project_id, name);
+create index idx_milestones_project_due_date on milestones(project_id, due_date);
+create index idx_milestones_project_created_at on milestones(project_id, created_at desc);
+create index idx_milestones_project_updated_at on milestones(project_id, updated_at desc);
 create index idx_tags_user_id on tags(user_id);
+create index idx_tags_user_created_at on tags(user_id, created_at desc);
+create index idx_tags_user_updated_at on tags(user_id, updated_at desc);
 create index idx_tasks_user_id on tasks(user_id);
 create index idx_tasks_project_id on tasks(project_id);
 create index idx_tasks_parent_id on tasks(parent_id);
@@ -195,14 +206,24 @@ create index idx_tasks_milestone_id on tasks(milestone_id);
 create index idx_tasks_status on tasks(status);
 create index idx_tasks_priority on tasks(priority);
 create index idx_tasks_complexity on tasks(complexity);
+create index idx_tasks_user_title on tasks(user_id, title);
+create index idx_tasks_user_block_parent on tasks(user_id, block_parent);
+create index idx_tasks_user_due_date on tasks(user_id, due_date);
+create index idx_tasks_user_created_at on tasks(user_id, created_at desc);
+create index idx_tasks_user_updated_at on tasks(user_id, updated_at desc);
 create index idx_task_tags_tag_id on task_tags(tag_id);
 create index idx_conversation_history_user on conversation_history(user_id);
+create index idx_conversation_history_user_title on conversation_history(user_id, title);
+create index idx_conversation_history_user_created_at on conversation_history(user_id, created_at desc);
+create index idx_conversation_history_user_updated_at on conversation_history(user_id, updated_at desc);
 create index idx_notifications_user_read_created on notifications(user_id, is_read, created_at desc);
 create index idx_notifications_user_preference on notifications(user_id, preference_key);
 create index idx_notifications_created_at on notifications(created_at desc);
 create index idx_clients_user_id on clients(user_id);
 create index idx_clients_status on clients(status);
 create index idx_clients_name on clients(name);
+create index idx_clients_user_created_at on clients(user_id, created_at desc);
+create index idx_clients_user_updated_at on clients(user_id, updated_at desc);
 create unique index idx_uq_client_auth_email_per_user on client_auth (user_id, lower(email)) where email is not null;
 
 -- ---------------------------------

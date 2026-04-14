@@ -1,6 +1,6 @@
 use axum::{extract::FromRequestParts, http::request::Parts};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
     QuerySelect, Set,
 };
 use serde_json::{Value, json};
@@ -9,8 +9,10 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        chat::{ChatDetailDto, ChatSummaryDto, CreateChatDto, UpdateChatMessagesDto, UpdateChatTitleDto},
-        query::{FilterOperator, QueryPayload},
+        chat::{
+            ChatDetailDto, ChatSearchField, ChatSummaryDto, CreateChatDto, UpdateChatMessagesDto, UpdateChatTitleDto,
+        },
+        query::QueryPayload,
     },
     entities::{
         conversation_history::{self, Model as ConversationModel},
@@ -18,6 +20,7 @@ use crate::{
     },
     error::AppError,
     state::AppState,
+    utils::search::{apply_filters, apply_ordering, apply_pagination},
 };
 
 const DEFAULT_CHAT_TITLE: &str = "Nuevo chat";
@@ -101,171 +104,50 @@ impl ChatService {
     }
 
     pub async fn search(&self, user_id: Uuid, payload: QueryPayload) -> Result<(Vec<ChatSummaryDto>, u64), AppError> {
-        let mut condition = Condition::all()
+        let base_condition = Condition::all()
             .add(conversation_history::Column::UserId.eq(user_id))
             .add(conversation_history::Column::Messages.ne(json!([])));
+        let condition = apply_filters(base_condition, &payload.filters, |column| {
+            column
+                .parse::<ChatSearchField>()
+                .ok()
+                .map(ChatSearchField::filter_field)
+        })?;
 
-        for filter in payload.filters {
-            let filter_cond = match filter.column.as_str() {
-                "title" => {
-                    let value = filter.value.as_str().unwrap_or("").to_string();
-                    match filter.operator {
-                        FilterOperator::Eq => conversation_history::Column::Title.eq(value),
-                        FilterOperator::Neq => conversation_history::Column::Title.ne(value),
-                        FilterOperator::Contains => conversation_history::Column::Title.contains(&value),
-                        FilterOperator::NotContains => {
-                            conversation_history::Column::Title.not_like(&format!("%{}%", value))
-                        }
-                        _ => continue,
-                    }
-                }
-                "id" | "session_id" => {
-                    let value = filter.value.as_str().unwrap_or("");
-                    let uuid_value = match Uuid::parse_str(value) {
-                        Ok(parsed) => parsed,
-                        Err(_) => continue,
-                    };
-
-                    let column = if filter.column == "id" {
-                        conversation_history::Column::Id
-                    } else {
-                        conversation_history::Column::SessionId
-                    };
-
-                    match filter.operator {
-                        FilterOperator::Eq => column.eq(uuid_value),
-                        FilterOperator::Neq => column.ne(uuid_value),
-                        _ => continue,
-                    }
-                }
-                "created_at" | "updated_at" => {
-                    let column = if filter.column == "created_at" {
-                        conversation_history::Column::CreatedAt
-                    } else {
-                        conversation_history::Column::UpdatedAt
-                    };
-
-                    match filter.operator {
-                        FilterOperator::Between => {
-                            let values = match filter.value.as_array() {
-                                Some(arr) if arr.len() == 2 => arr,
-                                _ => continue,
-                            };
-
-                            let start = values[0]
-                                .as_str()
-                                .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok());
-                            let end = values[1]
-                                .as_str()
-                                .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok());
-
-                            let (start, end) = match (start, end) {
-                                (Some(start_date), Some(end_date)) => (start_date, end_date),
-                                _ => continue,
-                            };
-
-                            column.between(start, end)
-                        }
-                        FilterOperator::Eq => {
-                            let parsed = filter
-                                .value
-                                .as_str()
-                                .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok());
-                            match parsed {
-                                Some(date) => column.eq(date),
-                                None => continue,
-                            }
-                        }
-                        FilterOperator::Gt => {
-                            let parsed = filter
-                                .value
-                                .as_str()
-                                .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok());
-                            match parsed {
-                                Some(date) => column.gt(date),
-                                None => continue,
-                            }
-                        }
-                        FilterOperator::Lt => {
-                            let parsed = filter
-                                .value
-                                .as_str()
-                                .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok());
-                            match parsed {
-                                Some(date) => column.lt(date),
-                                None => continue,
-                            }
-                        }
-                        FilterOperator::Gte => {
-                            let parsed = filter
-                                .value
-                                .as_str()
-                                .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok());
-                            match parsed {
-                                Some(date) => column.gte(date),
-                                None => continue,
-                            }
-                        }
-                        FilterOperator::Lte => {
-                            let parsed = filter
-                                .value
-                                .as_str()
-                                .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok());
-                            match parsed {
-                                Some(date) => column.lte(date),
-                                None => continue,
-                            }
-                        }
-                        _ => continue,
-                    }
-                }
-                _ => continue,
-            };
-
-            condition = condition.add(filter_cond);
-        }
-
-        let mut query = ConversationHistory::find().filter(condition);
-
-        if let Some(order_column) = payload.order_by {
-            let column = match order_column.as_str() {
-                "title" => conversation_history::Column::Title,
-                "created_at" => conversation_history::Column::CreatedAt,
-                "updated_at" => conversation_history::Column::UpdatedAt,
-                _ => conversation_history::Column::UpdatedAt,
-            };
-
-            let order = if payload.order_asc {
-                sea_orm::Order::Asc
-            } else {
-                sea_orm::Order::Desc
-            };
-
-            query = query.order_by(column, order);
-        } else {
-            query = query.order_by_desc(conversation_history::Column::UpdatedAt);
-        }
+        let query = ConversationHistory::find().filter(condition);
+        let query = apply_ordering(
+            query,
+            &payload,
+            ChatSearchField::UpdatedAt.order_column(),
+            false,
+            |column| {
+                column
+                    .parse::<ChatSearchField>()
+                    .ok()
+                    .map(ChatSearchField::order_column)
+            },
+        )?;
 
         let total = query
             .clone()
             .count(self.db.as_ref())
             .await
             .map_err(AppError::Database)?;
-        let offset = (payload.page - 1) * payload.limit;
 
-        let rows = query
-            .select_only()
-            .column(conversation_history::Column::Id)
-            .column(conversation_history::Column::SessionId)
-            .column(conversation_history::Column::Title)
-            .column(conversation_history::Column::CreatedAt)
-            .column(conversation_history::Column::UpdatedAt)
-            .limit(payload.limit)
-            .offset(offset)
-            .into_model::<ChatSummaryDto>()
-            .all(self.db.as_ref())
-            .await
-            .map_err(AppError::Database)?;
+        let rows = apply_pagination(
+            query
+                .select_only()
+                .column(conversation_history::Column::Id)
+                .column(conversation_history::Column::SessionId)
+                .column(conversation_history::Column::Title)
+                .column(conversation_history::Column::CreatedAt)
+                .column(conversation_history::Column::UpdatedAt),
+            &payload,
+        )
+        .into_model::<ChatSummaryDto>()
+        .all(self.db.as_ref())
+        .await
+        .map_err(AppError::Database)?;
 
         Ok((rows, total))
     }

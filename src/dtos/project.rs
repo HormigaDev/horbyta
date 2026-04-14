@@ -1,22 +1,78 @@
 use chrono::{DateTime, FixedOffset};
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
+use strum::IntoEnumIterator;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
     dtos::query::{ColumnType, FilterSchema},
+    entities::projects,
     string_enum,
+    utils::search::FilterField,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::EnumString, strum::EnumIter)]
+#[strum(serialize_all = "snake_case")]
+pub enum ProjectSearchField {
+    Id,
+    Name,
+    CategoryId,
+    ClientId,
+    CreatedAt,
+    UpdatedAt,
+}
+
+impl ProjectSearchField {
+    pub const fn column_name(self) -> &'static str {
+        match self {
+            Self::Id => "id",
+            Self::Name => "name",
+            Self::CategoryId => "category_id",
+            Self::ClientId => "client_id",
+            Self::CreatedAt => "created_at",
+            Self::UpdatedAt => "updated_at",
+        }
+    }
+
+    pub const fn column_type(self) -> ColumnType {
+        match self {
+            Self::Id => ColumnType::Text,
+            Self::Name => ColumnType::Text,
+            Self::CategoryId => ColumnType::Text,
+            Self::ClientId => ColumnType::Text,
+            Self::CreatedAt => ColumnType::Date,
+            Self::UpdatedAt => ColumnType::Date,
+        }
+    }
+
+    pub const fn filter_field(self) -> FilterField<projects::Column> {
+        match self {
+            Self::Id => FilterField::Uuid(projects::Column::Id),
+            Self::Name => FilterField::Text(projects::Column::Name),
+            Self::CategoryId => FilterField::Uuid(projects::Column::CategoryId),
+            Self::ClientId => FilterField::Uuid(projects::Column::ClientId),
+            Self::CreatedAt => FilterField::DateTime(projects::Column::CreatedAt),
+            Self::UpdatedAt => FilterField::DateTime(projects::Column::UpdatedAt),
+        }
+    }
+
+    pub const fn order_column(self) -> projects::Column {
+        match self {
+            Self::Id => projects::Column::Id,
+            Self::Name => projects::Column::Name,
+            Self::CategoryId => projects::Column::CategoryId,
+            Self::ClientId => projects::Column::ClientId,
+            Self::CreatedAt => projects::Column::CreatedAt,
+            Self::UpdatedAt => projects::Column::UpdatedAt,
+        }
+    }
+}
+
 pub fn project_filter_schema() -> FilterSchema {
-    FilterSchema::new()
-        .add_column("id", ColumnType::Text)
-        .add_column("name", ColumnType::Text)
-        .add_column("category_id", ColumnType::Text)
-        .add_column("client_id", ColumnType::Text)
-        .add_column("created_at", ColumnType::Date)
-        .add_column("updated_at", ColumnType::Date)
+    ProjectSearchField::iter().fold(FilterSchema::new(), |schema, field| {
+        schema.add_column(field.column_name(), field.column_type())
+    })
 }
 
 #[derive(Deserialize, Validate, Clone)]

@@ -1,20 +1,76 @@
 use sea_orm::FromQueryResult;
 use sea_orm::prelude::DateTimeWithTimeZone;
 use serde::{Deserialize, Serialize};
+use strum::IntoEnumIterator;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
-use crate::dtos::query::{ColumnType, FilterSchema};
-use crate::dtos::utils::{is_numeric, validate_password};
-use crate::string_enum;
+use crate::{
+    dtos::{
+        query::{ColumnType, FilterSchema},
+        utils::{is_numeric, validate_password},
+    },
+    entities::clients,
+    string_enum,
+    utils::search::FilterField,
+};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::EnumString, strum::EnumIter)]
+#[strum(serialize_all = "snake_case")]
+pub enum ClientSearchField {
+    Id,
+    Name,
+    Status,
+    CreatedAt,
+    UpdatedAt,
+}
+
+impl ClientSearchField {
+    pub const fn column_name(self) -> &'static str {
+        match self {
+            Self::Id => "id",
+            Self::Name => "name",
+            Self::Status => "status",
+            Self::CreatedAt => "created_at",
+            Self::UpdatedAt => "updated_at",
+        }
+    }
+
+    pub const fn column_type(self) -> ColumnType {
+        match self {
+            Self::Id => ColumnType::Text,
+            Self::Name => ColumnType::Text,
+            Self::Status => ColumnType::Text,
+            Self::CreatedAt => ColumnType::Date,
+            Self::UpdatedAt => ColumnType::Date,
+        }
+    }
+
+    pub const fn filter_field(self) -> FilterField<clients::Column> {
+        match self {
+            Self::Id => FilterField::Uuid(clients::Column::Id),
+            Self::Name => FilterField::Text(clients::Column::Name),
+            Self::Status => FilterField::Keyword(clients::Column::Status),
+            Self::CreatedAt => FilterField::DateTime(clients::Column::CreatedAt),
+            Self::UpdatedAt => FilterField::DateTime(clients::Column::UpdatedAt),
+        }
+    }
+
+    pub const fn order_column(self) -> clients::Column {
+        match self {
+            Self::Id => clients::Column::Id,
+            Self::Name => clients::Column::Name,
+            Self::Status => clients::Column::Status,
+            Self::CreatedAt => clients::Column::CreatedAt,
+            Self::UpdatedAt => clients::Column::UpdatedAt,
+        }
+    }
+}
 
 pub fn client_filter_schema() -> FilterSchema {
-    FilterSchema::new()
-        .add_column("id", ColumnType::Text)
-        .add_column("name", ColumnType::Text)
-        .add_column("status", ColumnType::Text)
-        .add_column("created_at", ColumnType::Date)
-        .add_column("updated_at", ColumnType::Date)
+    ClientSearchField::iter().fold(FilterSchema::new(), |schema, field| {
+        schema.add_column(field.column_name(), field.column_type())
+    })
 }
 
 pub fn is_client_status(s: &str) -> Result<(), ValidationError> {

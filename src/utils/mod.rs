@@ -1,4 +1,5 @@
 pub mod crypto;
+pub mod search;
 
 use validator::ValidationError;
 

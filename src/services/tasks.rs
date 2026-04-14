@@ -8,10 +8,10 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        query::{FilterOperator, QueryPayload},
+        query::QueryPayload,
         task::{
-            CreateTaskDto, LookupOptionDto, MilestoneLookupDto, TaskDetailDto, TaskStatus, TaskSummaryDto, TaskViewDto,
-            UpdateTaskDto, UpdateTaskStatusDto,
+            CreateTaskDto, LookupOptionDto, MilestoneLookupDto, TaskDetailDto, TaskSearchField, TaskStatus,
+            TaskSummaryDto, TaskViewDto, UpdateTaskDto, UpdateTaskStatusDto,
         },
     },
     entities::{
@@ -23,6 +23,7 @@ use crate::{
     },
     error::AppError,
     state::AppState,
+    utils::search::{apply_filters, apply_ordering, apply_pagination},
 };
 
 #[derive(Clone)]
@@ -345,229 +346,52 @@ impl TaskService {
     }
 
     pub async fn search(&self, user_id: Uuid, payload: QueryPayload) -> Result<(Vec<TaskSummaryDto>, u64), AppError> {
-        let mut condition = Condition::all().add(tasks::Column::UserId.eq(user_id));
+        let base_condition = Condition::all().add(tasks::Column::UserId.eq(user_id));
+        let condition = apply_filters(base_condition, &payload.filters, |column| {
+            column
+                .parse::<TaskSearchField>()
+                .ok()
+                .map(TaskSearchField::filter_field)
+        })?;
 
-        for filter in payload.filters {
-            let filter_cond = match filter.column.as_str() {
-                "title" | "description" | "status" => {
-                    let col = match filter.column.as_str() {
-                        "title" => tasks::Column::Title,
-                        "description" => tasks::Column::Description,
-                        "status" => tasks::Column::Status,
-                        _ => continue,
-                    };
-                    let val_str = filter.value.as_str().unwrap_or("").to_string();
-                    match filter.operator {
-                        FilterOperator::Eq => col.eq(val_str),
-                        FilterOperator::Neq => col.ne(val_str),
-                        FilterOperator::Contains => col.contains(&val_str),
-                        FilterOperator::NotContains => col.not_like(&format!("%{}%", val_str)),
-                        _ => continue,
-                    }
-                }
-                "id" | "project_id" | "parent_id" | "milestone_id" => {
-                    let val_str = filter.value.as_str().unwrap_or("");
-                    if let Ok(uuid_val) = Uuid::parse_str(val_str) {
-                        let col = match filter.column.as_str() {
-                            "id" => tasks::Column::Id,
-                            "project_id" => tasks::Column::ProjectId,
-                            "parent_id" => tasks::Column::ParentId,
-                            "milestone_id" => tasks::Column::MilestoneId,
-                            _ => continue,
-                        };
-
-                        match filter.operator {
-                            FilterOperator::Eq => col.eq(uuid_val),
-                            FilterOperator::Neq => col.ne(uuid_val),
-                            _ => continue,
-                        }
-                    } else {
-                        continue;
-                    }
-                }
-                "priority" | "complexity" => {
-                    let maybe_num = filter
-                        .value
-                        .as_i64()
-                        .or_else(|| filter.value.as_str().and_then(|s| s.parse::<i64>().ok()));
-
-                    let num = if let Some(v) = maybe_num {
-                        v as i16
-                    } else {
-                        continue;
-                    };
-
-                    let col = match filter.column.as_str() {
-                        "priority" => tasks::Column::Priority,
-                        "complexity" => tasks::Column::Complexity,
-                        _ => continue,
-                    };
-
-                    match filter.operator {
-                        FilterOperator::Eq => col.eq(num),
-                        FilterOperator::Neq => col.ne(num),
-                        FilterOperator::Gt => col.gt(num),
-                        FilterOperator::Lt => col.lt(num),
-                        FilterOperator::Gte => col.gte(num),
-                        FilterOperator::Lte => col.lte(num),
-                        _ => continue,
-                    }
-                }
-                "block_parent" => {
-                    let bool_val = if let Some(v) = filter.value.as_bool() {
-                        v
-                    } else {
-                        continue;
-                    };
-
-                    match filter.operator {
-                        FilterOperator::Eq => tasks::Column::BlockParent.eq(bool_val),
-                        FilterOperator::Neq => tasks::Column::BlockParent.ne(bool_val),
-                        _ => continue,
-                    }
-                }
-                "due_date" | "created_at" | "updated_at" => {
-                    let col = match filter.column.as_str() {
-                        "due_date" => tasks::Column::DueDate,
-                        "created_at" => tasks::Column::CreatedAt,
-                        "updated_at" => tasks::Column::UpdatedAt,
-                        _ => continue,
-                    };
-
-                    match filter.operator {
-                        FilterOperator::Between => {
-                            if let Some(arr) = filter.value.as_array() {
-                                if arr.len() == 2 {
-                                    if let (Some(start_str), Some(end_str)) = (arr[0].as_str(), arr[1].as_str()) {
-                                        if let (Ok(start), Ok(end)) = (
-                                            chrono::DateTime::parse_from_rfc3339(start_str),
-                                            chrono::DateTime::parse_from_rfc3339(end_str),
-                                        ) {
-                                            col.between(start, end)
-                                        } else {
-                                            continue;
-                                        }
-                                    } else {
-                                        continue;
-                                    }
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Eq => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.eq(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Gt => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.gt(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Lt => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.lt(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Gte => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.gte(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        FilterOperator::Lte => {
-                            if let Some(val_str) = filter.value.as_str() {
-                                if let Ok(date) = chrono::DateTime::parse_from_rfc3339(val_str) {
-                                    col.lte(date)
-                                } else {
-                                    continue;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                        _ => continue,
-                    }
-                }
-                _ => continue,
-            };
-
-            condition = condition.add(filter_cond);
-        }
-
-        let mut query = Tasks::find().filter(condition);
-
-        if let Some(order_col) = payload.order_by {
-            let col = match order_col.as_str() {
-                "title" => tasks::Column::Title,
-                "status" => tasks::Column::Status,
-                "priority" => tasks::Column::Priority,
-                "complexity" => tasks::Column::Complexity,
-                "due_date" => tasks::Column::DueDate,
-                "created_at" => tasks::Column::CreatedAt,
-                _ => tasks::Column::CreatedAt,
-            };
-
-            let order = if payload.order_asc {
-                sea_orm::Order::Asc
-            } else {
-                sea_orm::Order::Desc
-            };
-            query = query.order_by(col, order);
-        } else {
-            query = query.order_by_desc(tasks::Column::CreatedAt);
-        }
+        let query = Tasks::find().filter(condition);
+        let query = apply_ordering(
+            query,
+            &payload,
+            TaskSearchField::CreatedAt.order_column(),
+            false,
+            |column| {
+                column
+                    .parse::<TaskSearchField>()
+                    .ok()
+                    .map(TaskSearchField::order_column)
+            },
+        )?;
 
         let total_items = query.clone().count(self.db.as_ref()).await?;
-        let offset = (payload.page - 1) * payload.limit;
 
-        let models = query
-            .left_join(projects::Entity)
-            .left_join(milestones::Entity)
-            .select_only()
-            .column(tasks::Column::Id)
-            .column(tasks::Column::ProjectId)
-            .column(tasks::Column::MilestoneId)
-            .column(tasks::Column::Title)
-            .column(tasks::Column::Status)
-            .column(tasks::Column::Priority)
-            .column(tasks::Column::Complexity)
-            .column(tasks::Column::DueDate)
-            .column_as(projects::Column::Name, "project_name")
-            .column_as(milestones::Column::Name, "milestone_name")
-            .column(tasks::Column::CreatedAt)
-            .column(tasks::Column::UpdatedAt)
-            .limit(payload.limit)
-            .offset(offset)
-            .into_model::<TaskSummaryDto>()
-            .all(self.db.as_ref())
-            .await?;
+        let models = apply_pagination(
+            query
+                .left_join(projects::Entity)
+                .left_join(milestones::Entity)
+                .select_only()
+                .column(tasks::Column::Id)
+                .column(tasks::Column::ProjectId)
+                .column(tasks::Column::MilestoneId)
+                .column(tasks::Column::Title)
+                .column(tasks::Column::Status)
+                .column(tasks::Column::Priority)
+                .column(tasks::Column::Complexity)
+                .column(tasks::Column::DueDate)
+                .column_as(projects::Column::Name, "project_name")
+                .column_as(milestones::Column::Name, "milestone_name")
+                .column(tasks::Column::CreatedAt)
+                .column(tasks::Column::UpdatedAt),
+            &payload,
+        )
+        .into_model::<TaskSummaryDto>()
+        .all(self.db.as_ref())
+        .await?;
 
         Ok((models, total_items))
     }
