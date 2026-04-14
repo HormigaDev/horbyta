@@ -186,6 +186,7 @@ impl ProjectService {
         active_project.name = Set(dto.name);
         active_project.description = Set(dto.description);
         active_project.category_id = Set(dto.category_id);
+        active_project.client_id = Set(dto.client_id);
         active_project.status = Set(dto.status.to_string());
 
         let updated_project = active_project.update(&txn).await.map_err(AppError::Database)?;
@@ -297,6 +298,7 @@ impl ProjectService {
                 .select_only()
                 .column(projects::Column::Id)
                 .column(projects::Column::Name)
+                .column(projects::Column::Status)
                 .column_as(categories::Column::Id, "category_id")
                 .column_as(categories::Column::Name, "category_name")
                 .column_as(clients::Column::Id, "client_id")

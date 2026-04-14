@@ -9,7 +9,9 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        client::{CreateClientDto, UpdateClientDto, UpdateClientStatusDto, client_filter_schema},
+        client::{
+            CreateClientDto, SaveClientCredentialsDto, UpdateClientDto, UpdateClientStatusDto, client_filter_schema,
+        },
         query::QueryPayload,
         user::UserDto,
     },
@@ -82,10 +84,42 @@ async fn delete_client(
     Ok(Json(json!({"message": "Cliente eliminado"})))
 }
 
+async fn get_client_auth_status(
+    user: UserDto,
+    service: ClientService,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let auth_status = service.get_client_auth_status(user.id, id).await?;
+    Ok(Json(auth_status))
+}
+
+async fn activate_client_credentials(
+    user: UserDto,
+    service: ClientService,
+    Path(id): Path<Uuid>,
+    ValidatedJson(payload): ValidatedJson<SaveClientCredentialsDto>,
+) -> Result<impl IntoResponse, AppError> {
+    service.save_client_credentials(user.id, id, payload).await?;
+    let auth_status = service.get_client_auth_status(user.id, id).await?;
+    Ok(Json(auth_status))
+}
+
+async fn activate_client_magic_token(
+    user: UserDto,
+    service: ClientService,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let result = service.generate_client_magic_token(user.id, id).await?;
+    Ok(Json(result))
+}
+
 pub fn clients_controller() -> Router<AppState> {
     Router::new()
         .route("/search", get(search_clients))
         .route("/", post(create_client))
+        .route("/{id}/auth", get(get_client_auth_status))
+        .route("/{id}/auth/credentials", post(activate_client_credentials))
+        .route("/{id}/auth/magic-token", post(activate_client_magic_token))
         .route(
             "/{id}",
             get(get_client)

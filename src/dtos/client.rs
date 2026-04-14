@@ -177,6 +177,13 @@ pub struct ClientAuthDto {
 }
 
 #[derive(Serialize)]
+pub struct ClientAuthStatusDto {
+    pub method: ClientAuthMethod,
+    pub email: Option<String>,
+    pub magic_client_token_exp: Option<i64>,
+}
+
+#[derive(Serialize)]
 pub struct ClientMagicLinkDto {
     pub magic_client_token: String,
     pub magic_client_token_exp: i64,
@@ -190,6 +197,14 @@ pub struct SaveClientCredentialsDto {
     #[validate(custom(function = "validate_password"))]
     pub password: String,
 }
+
+string_enum!(
+    pub enum ClientAuthMethod {
+        None,
+        Credentials,
+        MagicToken,
+    }
+);
 
 string_enum!(
     pub enum ClientStatus {

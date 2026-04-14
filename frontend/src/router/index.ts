@@ -7,6 +7,7 @@ import {
 } from 'vue-router';
 import routes from './routes';
 import { useAuthStore } from 'src/stores/auth';
+import { useClientAuthStore } from 'src/stores/clientAuth';
 
 export default route(function (/* { store, ssrContext } */) {
   const createHistory = process.env.SERVER
@@ -23,15 +24,35 @@ export default route(function (/* { store, ssrContext } */) {
 
   Router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore();
+    const clientAuthStore = useClientAuthStore();
 
-    if (!authStore.isInitialized) {
-      await authStore.checkAuth();
+    if (to.meta.requiresClientAuth) {
+      if (!clientAuthStore.isInitialized) {
+        await clientAuthStore.checkAuth();
+      }
+
+      if (!clientAuthStore.isAuthenticated) {
+        next('/client/login');
+        return;
+      }
+    }
+
+    if (to.name === 'client-login' && !clientAuthStore.isInitialized) {
+      await clientAuthStore.checkAuth();
+    }
+
+    if (to.meta.requiresAuth || to.name === 'login') {
+      if (!authStore.isInitialized) {
+        await authStore.checkAuth();
+      }
     }
 
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
       next({ name: 'login' });
     } else if (to.name === 'login' && authStore.isAuthenticated) {
       next({ name: 'dashboard' });
+    } else if (to.name === 'client-login' && clientAuthStore.isAuthenticated) {
+      next('/client');
     } else {
       next();
     }

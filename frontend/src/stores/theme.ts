@@ -3,17 +3,27 @@ import { ref } from 'vue';
 import { Dark } from 'quasar';
 
 export const useThemeStore = defineStore('theme', () => {
+  const themeStorageKey = 'isDark';
   const defaultIsDark = true;
   const isDark = ref(
-    localStorage.getItem('isDark') !== null
-      ? localStorage.getItem('isDark') === 'true'
+    localStorage.getItem(themeStorageKey) !== null
+      ? localStorage.getItem(themeStorageKey) === 'true'
       : defaultIsDark,
   );
 
+  const persistThemePreference = (value: boolean) => {
+    isDark.value = value;
+    localStorage.setItem(themeStorageKey, String(value));
+  };
+
   const toggleTheme = (val?: boolean) => {
-    isDark.value = val !== undefined ? val : !isDark.value;
-    localStorage.setItem('isDark', String(isDark.value));
+    persistThemePreference(val !== undefined ? val : !isDark.value);
     applyTheme();
+  };
+
+  const setThemePreference = (value: boolean) => {
+    persistThemePreference(value);
+    applyTheme(value);
   };
 
   const applyTheme = (forceDark?: boolean) => {
@@ -32,6 +42,7 @@ export const useThemeStore = defineStore('theme', () => {
   return {
     isDark,
     toggleTheme,
+    setThemePreference,
     applyTheme,
   };
 });

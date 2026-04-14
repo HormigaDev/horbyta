@@ -10,6 +10,14 @@ export const getProjectColumns = (t: ComposerTranslation) => {
       align: 'left' as const,
     },
     {
+      name: 'status',
+      label: t('columns.project.status'),
+      field: 'status',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => (val ? t(`projects.status.${val}`) : '-'),
+    },
+    {
       name: 'category_name',
       label: t('columns.project.category'),
       field: 'category_name',
@@ -52,6 +60,42 @@ export const getProjectColumns = (t: ComposerTranslation) => {
       field: 'client_id',
       sortable: false,
       hidden: true,
+    },
+  ];
+};
+
+export const getClientProjectColumns = (t: ComposerTranslation) => {
+  return [
+    {
+      name: 'name',
+      label: t('columns.project.name'),
+      field: 'name',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'status',
+      label: t('columns.project.status'),
+      field: 'status',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => (val ? t(`projects.status.${val}`) : '-'),
+    },
+    {
+      name: 'created_at',
+      label: t('columns.project.created_at'),
+      field: 'created_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => new Date(val).toLocaleDateString(),
+    },
+    {
+      name: 'updated_at',
+      label: t('columns.project.updated_at'),
+      field: 'updated_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => new Date(val).toLocaleDateString(),
     },
   ];
 };

@@ -259,6 +259,7 @@ const project = ref<Project>({
   user_id: '',
   name: '',
   description: '',
+  status: 'open',
   category_id: null,
   client_id: null,
   created_at: '',
@@ -322,7 +323,9 @@ const saveProject = async () => {
     const payload: CreateProjectDto = {
       name: project.value.name,
       description: project.value.description || null,
+      status: project.value.status,
       category_id: project.value.category_id || null,
+      client_id: project.value.client_id || null,
       milestones: milestones.value.length ? milestones.value : null,
     };
 
@@ -334,7 +337,9 @@ const saveProject = async () => {
       const updatePayload: UpdateProjectDto = {
         name: payload.name,
         description: payload.description || null,
+        status: project.value.status,
         category_id: payload.category_id || null,
+        client_id: payload.client_id || null,
         new_milestones: milestones.value.length ? milestones.value : null,
       };
       await ProjectsService.update(project.value.id, updatePayload);

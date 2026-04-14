@@ -1,9 +1,12 @@
 import { apiFetch } from 'src/boot/fetch';
 import type { PaginatedResponse, QueryPayload } from 'src/types';
 import type {
+  ClientAuthStatusDto,
   Client,
+  ClientMagicLinkDto,
   ClientSummary,
   CreateClientDto,
+  SaveClientCredentialsDto,
   UpdateClientDto,
   UpdateClientStatusDto,
 } from 'src/types/clients';
@@ -34,6 +37,22 @@ export const ClientsService = {
     apiFetch(`/clients/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
+    }),
+
+  getAuthStatus: (id: string): Promise<ClientAuthStatusDto> =>
+    apiFetch(`/clients/${id}/auth`, {
+      method: 'GET',
+    }),
+
+  activateCredentials: (id: string, data: SaveClientCredentialsDto): Promise<ClientAuthStatusDto> =>
+    apiFetch(`/clients/${id}/auth/credentials`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  activateMagicToken: (id: string): Promise<ClientMagicLinkDto> =>
+    apiFetch(`/clients/${id}/auth/magic-token`, {
+      method: 'POST',
     }),
 
   delete: (id: string): Promise<void> => apiFetch(`/clients/${id}`, { method: 'DELETE' }),

@@ -105,6 +105,39 @@ const routes: RouteRecordRaw[] = [
   },
 
   {
+    path: '/client/login',
+    name: 'client-login',
+    component: () => import('pages/Client/LoginPage.vue'),
+    meta: { requiresClientAuth: false },
+  },
+
+  {
+    path: '/client',
+    component: () => import('layouts/ClientLayout.vue'),
+    meta: { requiresClientAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'client-dashboard',
+        component: () => import('pages/Client/DashboardPage.vue'),
+        meta: { requiresClientAuth: true },
+      },
+      {
+        path: 'projects',
+        name: 'client-projects',
+        component: () => import('pages/Client/ProjectsPage.vue'),
+        meta: { requiresClientAuth: true },
+      },
+      {
+        path: 'projects/:id',
+        name: 'client-project-detail',
+        component: () => import('pages/Client/ProjectDetailPage.vue'),
+        meta: { requiresClientAuth: true },
+      },
+    ],
+  },
+
+  {
     path: '/login',
     name: 'login',
     component: () => import('pages/LoginPage.vue'),

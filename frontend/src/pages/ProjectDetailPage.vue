@@ -12,6 +12,12 @@
           <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
             {{ project?.name || t('common.loading') }}
           </div>
+          <div class="text-caption q-mt-xs" style="color: var(--text-muted)" v-if="project">
+            {{ t('common.status') }}:
+            <span style="color: var(--text-color)">
+              {{ projectStatusLabel(project.status) }}
+            </span>
+          </div>
           <div class="text-caption" style="color: var(--text-muted)" v-if="project">
             {{
               t('projects.detail.meta', {
@@ -178,7 +184,7 @@ import { useUI } from 'src/composables/useUI';
 import { useQuery } from 'src/composables/useQuery';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import DataTable from 'src/components/DataTable.vue';
-import type { Project } from 'src/types/project';
+import type { Project, ProjectStatus } from 'src/types/project';
 import type { FilterSchema } from 'src/types';
 import type { Milestone, MilestoneDto } from 'src/types/milestone';
 import { getMilestoneColumns } from 'src/data/columns';
@@ -365,5 +371,10 @@ const confirmMilestoneDestruction = async (selectedIds: string[]) => {
       notifyError(t('projects.detail.milestoneDeleteError'), err);
     }
   }
+};
+
+const projectStatusLabel = (status: ProjectStatus | null | undefined) => {
+  if (!status) return t('common.empty');
+  return t(`projects.status.${status}`);
 };
 </script>

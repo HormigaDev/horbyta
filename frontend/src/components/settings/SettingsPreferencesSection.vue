@@ -238,7 +238,7 @@ async function savePreferences() {
     if (updated.preferences.theme === 'system') {
       isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
-    themeStore.applyTheme(isDarkMode);
+    themeStore.setThemePreference(isDarkMode);
 
     emit('updated', updated);
     form.aiApiKey = '';

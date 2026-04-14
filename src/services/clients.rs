@@ -4,14 +4,14 @@ use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
     QuerySelect, Set, TransactionTrait,
 };
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use uuid::Uuid;
 
 use crate::{
     dtos::{
         client::{
-            ClientMagicLinkDto, ClientSearchField, ClientSummary, CreateClientDto, SaveClientCredentialsDto,
-            UpdateClientDto, UpdateClientStatusDto,
+            ClientAuthMethod, ClientAuthStatusDto, ClientMagicLinkDto, ClientSearchField, ClientSummary,
+            CreateClientDto, SaveClientCredentialsDto, UpdateClientDto, UpdateClientStatusDto,
         },
         query::QueryPayload,
     },
@@ -31,11 +31,12 @@ use crate::{
 #[derive(Clone)]
 pub struct ClientService {
     pub db: Arc<DatabaseConnection>,
+    pub magic_token_ttl: Duration,
 }
 
 impl ClientService {
-    pub fn new(db: Arc<DatabaseConnection>) -> Self {
-        Self { db }
+    pub fn new(db: Arc<DatabaseConnection>, magic_token_ttl: Duration) -> Self {
+        Self { db, magic_token_ttl }
     }
 
     pub async fn create(&self, user_id: Uuid, dto: CreateClientDto) -> Result<ClientModel, AppError> {
@@ -163,11 +164,18 @@ impl ClientService {
         user_id: Uuid,
         client_id: Uuid,
     ) -> Result<ClientMagicLinkDto, AppError> {
+        self.get_by_id(user_id, client_id).await?;
+
         let (token, hashed_token) = generate_magic_link_token();
         let time = Utc::now();
-        let timestamp = time.timestamp();
+        let ttl_seconds = i64::try_from(self.magic_token_ttl.as_secs())
+            .map_err(|_| AppError::Internal("TTL de token mágico fuera de rango".to_string()))?;
+        let expiration_time = time
+            .checked_add_signed(chrono::Duration::seconds(ttl_seconds))
+            .ok_or_else(|| AppError::Internal("No se pudo calcular la expiración del token mágico".to_string()))?;
+        let timestamp = expiration_time.timestamp();
         if let Some(offset) = FixedOffset::east_opt(0) {
-            let fixed_time: DateTime<FixedOffset> = time.with_timezone(&offset);
+            let fixed_time: DateTime<FixedOffset> = expiration_time.with_timezone(&offset);
             let mut is_insertion: bool = false;
             let mut active_client_auth: client_auth::ActiveModel =
                 match self.get_client_auth(user_id.clone(), client_id.clone()).await {
@@ -211,6 +219,8 @@ impl ClientService {
         client_id: Uuid,
         dto: SaveClientCredentialsDto,
     ) -> Result<(), AppError> {
+        self.get_by_id(user_id, client_id).await?;
+
         let mut is_insertion: bool = false;
         let mut client_auth: client_auth::ActiveModel =
             match self.get_client_auth(user_id.clone(), client_id.clone()).await {
@@ -244,6 +254,57 @@ impl ClientService {
         Ok(())
     }
 
+    pub async fn get_client_auth_status(
+        &self,
+        user_id: Uuid,
+        client_id: Uuid,
+    ) -> Result<ClientAuthStatusDto, AppError> {
+        self.get_by_id(user_id, client_id).await?;
+
+        let client_auth = match self.get_client_auth(user_id, client_id).await {
+            Ok(model) => model,
+            Err(AppError::NotFound(_)) => {
+                return Ok(ClientAuthStatusDto {
+                    method: ClientAuthMethod::None,
+                    email: None,
+                    magic_client_token_exp: None,
+                });
+            }
+            Err(err) => return Err(err),
+        };
+
+        let has_credentials = client_auth.email.is_some() && client_auth.password_hash.is_some();
+        let has_magic_token = client_auth.magic_link_hash.is_some() && client_auth.magic_link_exp.is_some();
+
+        if has_credentials && has_magic_token {
+            return Err(AppError::Internal(
+                "Estado de autenticación del cliente inválido".to_string(),
+            ));
+        }
+
+        if has_credentials {
+            return Ok(ClientAuthStatusDto {
+                method: ClientAuthMethod::Credentials,
+                email: client_auth.email,
+                magic_client_token_exp: None,
+            });
+        }
+
+        if has_magic_token {
+            return Ok(ClientAuthStatusDto {
+                method: ClientAuthMethod::MagicToken,
+                email: None,
+                magic_client_token_exp: client_auth.magic_link_exp.map(|date| date.timestamp()),
+            });
+        }
+
+        Ok(ClientAuthStatusDto {
+            method: ClientAuthMethod::None,
+            email: None,
+            magic_client_token_exp: None,
+        })
+    }
+
     async fn get_client_auth(&self, user_id: Uuid, client_id: Uuid) -> Result<client_auth::Model, AppError> {
         let client_auth = ClientAuth::find()
             .filter(client_auth::Column::UserId.eq(user_id))
@@ -263,6 +324,6 @@ impl FromRequestParts<AppState> for ClientService {
         _parts: &mut axum::http::request::Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        Ok(ClientService::new(state.db.clone()))
+        Ok(ClientService::new(state.db.clone(), state.config.time_to_exp))
     }
 }

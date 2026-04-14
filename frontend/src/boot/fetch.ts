@@ -1,7 +1,8 @@
 import { boot } from 'quasar/wrappers';
 import { useAuthStore } from 'src/stores/auth';
+import { useClientAuthStore } from 'src/stores/clientAuth';
 
-async function apiFetch(url: string, options: RequestInit = {}) {
+async function request(url: string, options: RequestInit, scope: 'user' | 'client') {
   const response = await fetch(`/api/v1${url}`, {
     ...options,
     headers: {
@@ -12,9 +13,15 @@ async function apiFetch(url: string, options: RequestInit = {}) {
   });
 
   if (response.status === 401) {
-    const authStore = useAuthStore();
-    authStore.clearAuth();
-    window.location.hash = '#/login';
+    if (scope === 'client') {
+      const clientAuthStore = useClientAuthStore();
+      clientAuthStore.clearAuth();
+      window.location.hash = '/client/login';
+    } else {
+      const authStore = useAuthStore();
+      authStore.clearAuth();
+      window.location.hash = '/login';
+    }
   }
 
   if (!response.ok) {
@@ -25,8 +32,18 @@ async function apiFetch(url: string, options: RequestInit = {}) {
   return response.json();
 }
 
+async function apiFetch(url: string, options: RequestInit = {}) {
+  return request(url, options, 'user');
+}
+
+async function apiFetchClient(url: string, options: RequestInit = {}) {
+  return request(url, options, 'client');
+}
+
 export default boot(({ app }) => {
   app.config.globalProperties.$api = apiFetch;
+  app.config.globalProperties.$apiClient = apiFetchClient;
 });
 
 export { apiFetch };
+export { apiFetchClient };

@@ -3,6 +3,14 @@ import { useNotificationsStore } from '../stores/notifications';
 import ErrorDetailsDialog from '../components/ErrorDetailsDialog.vue';
 import type { NotificationType } from '../types/ui';
 
+interface ConfirmActionOptions {
+  title: string;
+  message: string;
+  okLabel?: string;
+  cancelLabel?: string;
+  okColor?: string;
+}
+
 export function useUI() {
   const $q = useQuasar();
   const notificationsStore = useNotificationsStore();
@@ -65,25 +73,40 @@ export function useUI() {
     }
   };
 
-  const confirmDelete = (itemName: string = 'este registro') => {
+  const confirmAction = ({
+    title,
+    message,
+    okLabel = 'Confirmar',
+    cancelLabel = 'Cancelar',
+    okColor = 'primary',
+  }: ConfirmActionOptions) => {
     return new Promise<boolean>((resolve) => {
       $q.dialog({
-        title: 'Confirmar Eliminación',
-        message: `¿Estás seguro de que deseas eliminar ${itemName}? Esta acción no se puede deshacer.`,
+        title,
+        message,
         cancel: {
-          label: 'Cancelar',
+          label: cancelLabel,
           flat: true,
           color: 'grey',
         },
         ok: {
-          label: 'Eliminar',
+          label: okLabel,
           unelevated: true,
-          color: 'negative',
+          color: okColor,
         },
         persistent: true,
       })
         .onOk(() => resolve(true))
         .onCancel(() => resolve(false));
+    });
+  };
+
+  const confirmDelete = (itemName: string = 'este registro') => {
+    return confirmAction({
+      title: 'Confirmar Eliminación',
+      message: `¿Estás seguro de que deseas eliminar ${itemName}? Esta acción no se puede deshacer.`,
+      okLabel: 'Eliminar',
+      okColor: 'negative',
     });
   };
 
@@ -107,6 +130,7 @@ export function useUI() {
     notify,
     notifyAsync,
     notifyError,
+    confirmAction,
     confirmDelete,
     showLoading,
     hideLoading,
