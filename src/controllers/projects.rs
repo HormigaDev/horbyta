@@ -9,8 +9,10 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
+        client::ClientAuthDto,
         project::{
-            CreateProjectDto, UpdateProjectCategoryDto, UpdateProjectDto, UpdateProjectStatusDto, project_filter_schema,
+            CreateProjectDto, UpdateProjectCategoryDto, UpdateProjectDto, UpdateProjectStatusDto,
+            client_project_filter_schema, project_filter_schema,
         },
         query::QueryPayload,
         user::UserDto,
@@ -43,6 +45,36 @@ async fn get_project(
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     let project = service.get_by_id(user.id, id).await?;
+    Ok(Json(project))
+}
+
+async fn client_search_projects(
+    client: ClientAuthDto,
+    service: ProjectService,
+    ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
+) -> Result<impl IntoResponse, AppError> {
+    client_project_filter_schema().validate_payload(&payload)?;
+
+    let (projects, total_items) = service
+        .client_search_projects(client.user_id, client.client_id, payload.clone())
+        .await?;
+
+    Ok(Json(json!({
+        "payload": payload,
+        "items": projects,
+        "total": total_items
+    })))
+}
+
+async fn client_get_project(
+    client: ClientAuthDto,
+    service: ProjectService,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let project = service
+        .get_client_project_by_id(client.user_id, client.client_id, id)
+        .await?;
+
     Ok(Json(project))
 }
 
@@ -97,8 +129,10 @@ async fn delete_project(
 pub fn projects_controller() -> Router<AppState> {
     Router::new()
         .route("/search", get(search_projects))
+        .route("/client-search", get(client_search_projects))
         .route("/", post(create_project))
         .route("/{id}", get(get_project).put(update_project).delete(delete_project))
         .route("/{id}/category", patch(update_project_category))
         .route("/{id}/status", patch(update_project_status))
+        .route("/{id}/client", get(client_get_project))
 }

@@ -9,7 +9,8 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        milestone::{MilestoneDto, milestone_filter_schema},
+        client::ClientAuthDto,
+        milestone::{MilestoneDto, client_milestone_filter_schema, milestone_filter_schema},
         query::QueryPayload,
         user::UserDto,
     },
@@ -27,6 +28,25 @@ async fn search_milestones(
     milestone_filter_schema().validate_payload(&payload)?;
 
     let (milestones, total_items) = service.search(user.id, payload.clone()).await?;
+
+    Ok(Json(json!({
+        "payload": payload,
+        "items": milestones,
+        "total": total_items
+    })))
+}
+
+async fn client_search_milestones(
+    client: ClientAuthDto,
+    service: MilestoneService,
+    ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    client_milestone_filter_schema().validate_payload(&payload)?;
+
+    let (milestones, total_items) = service
+        .client_search_project_milestones(client.user_id, client.client_id, id, payload.clone())
+        .await?;
 
     Ok(Json(json!({
         "payload": payload,
@@ -67,5 +87,6 @@ pub fn milestones_controller() -> Router<AppState> {
     Router::new()
         .route("/search", get(search_milestones))
         .route("/", post(create_milestone))
+        .route("/client/search-by-project/{id}", get(client_search_milestones))
         .route("/{id}", axum::routing::put(update_milestone).delete(delete_milestone))
 }

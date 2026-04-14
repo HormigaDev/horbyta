@@ -1,7 +1,7 @@
 use axum::{extract::FromRequestParts, http::request::Parts};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
-    QuerySelect, Set, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, FromQueryResult, PaginatorTrait,
+    QueryFilter, QuerySelect, Set, TransactionTrait,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -9,7 +9,8 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         project::{
-            CreateProjectDto, ProjectDetailDto, ProjectSearchField, ProjectSummaryDto, UpdateProjectCategoryDto,
+            ClientProjectDetailDto, ClientProjectSearchField, ClientProjectSummaryDto, CreateProjectDto,
+            ProjectDetailDto, ProjectSearchField, ProjectStatus, ProjectSummaryDto, UpdateProjectCategoryDto,
             UpdateProjectDto, UpdateProjectStatusDto,
         },
         query::QueryPayload,
@@ -20,6 +21,7 @@ use crate::{
         projects::{self, Model as ProjectModel},
     },
     error::AppError,
+    services::milestones::MilestoneService,
     state::AppState,
     utils::search::{apply_filters, apply_ordering, apply_pagination},
 };
@@ -27,6 +29,30 @@ use crate::{
 #[derive(Clone)]
 pub struct ProjectService {
     pub db: Arc<DatabaseConnection>,
+}
+
+#[derive(FromQueryResult)]
+struct ProjectDetailRow {
+    id: Uuid,
+    name: String,
+    category_id: Option<Uuid>,
+    category_name: Option<String>,
+    client_id: Option<Uuid>,
+    client_name: Option<String>,
+    description: Option<String>,
+    status: ProjectStatus,
+    created_at: chrono::DateTime<chrono::FixedOffset>,
+    updated_at: chrono::DateTime<chrono::FixedOffset>,
+}
+
+#[derive(FromQueryResult)]
+struct ClientProjectDetailRow {
+    id: Uuid,
+    name: String,
+    description: Option<String>,
+    status: ProjectStatus,
+    created_at: chrono::DateTime<chrono::FixedOffset>,
+    updated_at: chrono::DateTime<chrono::FixedOffset>,
 }
 
 impl ProjectService {
@@ -73,7 +99,7 @@ impl ProjectService {
     }
 
     pub async fn get_by_id(&self, user_id: Uuid, id: Uuid) -> Result<ProjectDetailDto, AppError> {
-        let project = Projects::find()
+        let row = Projects::find()
             .filter(projects::Column::Id.eq(id))
             .filter(projects::Column::UserId.eq(user_id))
             .left_join(categories::Entity)
@@ -81,18 +107,75 @@ impl ProjectService {
             .select_only()
             .column(projects::Column::Id)
             .column(projects::Column::Name)
+            .column(projects::Column::CategoryId)
+            .column(projects::Column::ClientId)
             .column(projects::Column::Description)
             .column(projects::Column::Status)
             .column(projects::Column::CreatedAt)
             .column(projects::Column::UpdatedAt)
             .column_as(categories::Column::Name, "category_name")
             .column_as(clients::Column::Name, "client_name")
-            .into_model::<ProjectDetailDto>()
+            .into_model::<ProjectDetailRow>()
             .one(self.db.as_ref())
             .await?
             .ok_or_else(|| AppError::NotFound("Proyecto no encontrado".to_string()))?;
 
+        let milestones = MilestoneService::new(self.db.clone())
+            .list_project_milestones_preview(user_id, id)
+            .await?;
+
+        let project = ProjectDetailDto {
+            id: row.id,
+            name: row.name,
+            category_id: row.category_id,
+            category_name: row.category_name,
+            client_id: row.client_id,
+            client_name: row.client_name,
+            description: row.description,
+            status: row.status,
+            milestones,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        };
+
         Ok(project)
+    }
+
+    pub async fn get_client_project_by_id(
+        &self,
+        user_id: Uuid,
+        client_id: Uuid,
+        project_id: Uuid,
+    ) -> Result<ClientProjectDetailDto, AppError> {
+        let row = Projects::find()
+            .filter(projects::Column::Id.eq(project_id))
+            .filter(projects::Column::UserId.eq(user_id))
+            .filter(projects::Column::ClientId.eq(client_id))
+            .select_only()
+            .column(projects::Column::Id)
+            .column(projects::Column::Name)
+            .column(projects::Column::Description)
+            .column(projects::Column::Status)
+            .column(projects::Column::CreatedAt)
+            .column(projects::Column::UpdatedAt)
+            .into_model::<ClientProjectDetailRow>()
+            .one(self.db.as_ref())
+            .await?
+            .ok_or_else(|| AppError::NotFound("Proyecto no encontrado".to_string()))?;
+
+        let milestones = MilestoneService::new(self.db.clone())
+            .list_client_project_milestones_preview(user_id, client_id, project_id)
+            .await?;
+
+        Ok(ClientProjectDetailDto {
+            id: row.id,
+            name: row.name,
+            description: row.description,
+            status: row.status,
+            milestones,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        })
     }
 
     pub async fn update(&self, user_id: Uuid, id: Uuid, dto: UpdateProjectDto) -> Result<ProjectModel, AppError> {
@@ -166,7 +249,7 @@ impl ProjectService {
     }
 
     pub async fn delete(&self, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
-        let project = self.get_by_id(user_id, id).await?;
+        let project = self.find_by_id(user_id, id).await?;
 
         projects::ActiveModel {
             id: Set(project.id),
@@ -223,6 +306,56 @@ impl ProjectService {
             &payload,
         )
         .into_model::<ProjectSummaryDto>()
+        .all(self.db.as_ref())
+        .await?;
+
+        Ok((models, total_items))
+    }
+
+    pub async fn client_search_projects(
+        &self,
+        user_id: Uuid,
+        client_id: Uuid,
+        payload: QueryPayload,
+    ) -> Result<(Vec<ClientProjectSummaryDto>, u64), AppError> {
+        let base_condition = Condition::all()
+            .add(projects::Column::UserId.eq(user_id))
+            .add(projects::Column::ClientId.eq(client_id));
+
+        let condition = apply_filters(base_condition, &payload.filters, |column| {
+            column
+                .parse::<ClientProjectSearchField>()
+                .ok()
+                .map(ClientProjectSearchField::filter_field)
+        })?;
+
+        let query = Projects::find().filter(condition);
+        let query = apply_ordering(
+            query,
+            &payload,
+            ClientProjectSearchField::CreatedAt.order_column(),
+            false,
+            |column| {
+                column
+                    .parse::<ClientProjectSearchField>()
+                    .ok()
+                    .map(ClientProjectSearchField::order_column)
+            },
+        )?;
+
+        let total_items = query.clone().count(self.db.as_ref()).await?;
+
+        let models = apply_pagination(
+            query
+                .select_only()
+                .column(projects::Column::Id)
+                .column(projects::Column::Name)
+                .column(projects::Column::Status)
+                .column(projects::Column::CreatedAt)
+                .column(projects::Column::UpdatedAt),
+            &payload,
+        )
+        .into_model::<ClientProjectSummaryDto>()
         .all(self.db.as_ref())
         .await?;
 

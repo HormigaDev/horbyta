@@ -6,7 +6,10 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    dtos::query::{ColumnType, FilterSchema},
+    dtos::{
+        milestone::ProjectMilestoneSummaryDto,
+        query::{ColumnType, FilterSchema},
+    },
     entities::projects,
     string_enum,
     utils::search::FilterField,
@@ -71,6 +74,64 @@ impl ProjectSearchField {
 
 pub fn project_filter_schema() -> FilterSchema {
     ProjectSearchField::iter().fold(FilterSchema::new(), |schema, field| {
+        schema.add_column(field.column_name(), field.column_type())
+    })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::EnumString, strum::EnumIter)]
+#[strum(serialize_all = "snake_case")]
+pub enum ClientProjectSearchField {
+    Id,
+    Name,
+    Status,
+    CreatedAt,
+    UpdatedAt,
+}
+
+impl ClientProjectSearchField {
+    pub const fn column_name(self) -> &'static str {
+        match self {
+            Self::Id => "id",
+            Self::Name => "name",
+            Self::Status => "status",
+            Self::CreatedAt => "created_at",
+            Self::UpdatedAt => "updated_at",
+        }
+    }
+
+    pub const fn column_type(self) -> ColumnType {
+        match self {
+            Self::Id => ColumnType::Text,
+            Self::Name => ColumnType::Text,
+            Self::Status => ColumnType::Text,
+            Self::CreatedAt => ColumnType::Date,
+            Self::UpdatedAt => ColumnType::Date,
+        }
+    }
+
+    pub const fn filter_field(self) -> FilterField<projects::Column> {
+        match self {
+            Self::Id => FilterField::Uuid(projects::Column::Id),
+            Self::Name => FilterField::Text(projects::Column::Name),
+            Self::Status => FilterField::Keyword(projects::Column::Status),
+            Self::CreatedAt => FilterField::DateTime(projects::Column::CreatedAt),
+            Self::UpdatedAt => FilterField::DateTime(projects::Column::UpdatedAt),
+        }
+    }
+
+    pub const fn order_column(self) -> projects::Column {
+        match self {
+            Self::Id => projects::Column::Id,
+            Self::Name => projects::Column::Name,
+            Self::Status => projects::Column::Status,
+            Self::CreatedAt => projects::Column::CreatedAt,
+            Self::UpdatedAt => projects::Column::UpdatedAt,
+        }
+    }
+}
+
+pub fn client_project_filter_schema() -> FilterSchema {
+    ClientProjectSearchField::iter().fold(FilterSchema::new(), |schema, field| {
         schema.add_column(field.column_name(), field.column_type())
     })
 }
@@ -141,16 +202,17 @@ pub struct ProjectSummaryDto {
     pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Serialize, FromQueryResult)]
+#[derive(Serialize)]
 pub struct ProjectDetailDto {
     pub id: Uuid,
     pub name: String,
-    pub category_id: Option<String>,
+    pub category_id: Option<Uuid>,
     pub category_name: Option<String>,
-    pub client_id: Option<String>,
+    pub client_id: Option<Uuid>,
     pub client_name: Option<String>,
     pub description: Option<String>,
     pub status: ProjectStatus,
+    pub milestones: Vec<ProjectMilestoneSummaryDto>,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
 }
@@ -172,11 +234,13 @@ pub struct ClientProjectSummaryDto {
     pub updated_at: DateTime<FixedOffset>,
 }
 
+#[derive(Serialize)]
 pub struct ClientProjectDetailDto {
     pub id: Uuid,
     pub name: String,
-    pub description: String,
+    pub description: Option<String>,
     pub status: ProjectStatus,
+    pub milestones: Vec<ProjectMilestoneSummaryDto>,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
 }
