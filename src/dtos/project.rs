@@ -1,10 +1,13 @@
 use chrono::{DateTime, FixedOffset};
-use sea_orm::{FromQueryResult, prelude::DateTimeWithTimeZone};
+use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::dtos::query::{ColumnType, FilterSchema};
+use crate::{
+    dtos::query::{ColumnType, FilterSchema},
+    string_enum,
+};
 
 pub fn project_filter_schema() -> FilterSchema {
     FilterSchema::new()
@@ -16,7 +19,7 @@ pub fn project_filter_schema() -> FilterSchema {
         .add_column("updated_at", ColumnType::Date)
 }
 
-#[derive(Debug, Deserialize, Serialize, Validate, Clone)]
+#[derive(Deserialize, Validate, Clone)]
 pub struct CreateMilestoneSubDto {
     #[validate(length(
         min = 1,
@@ -27,13 +30,15 @@ pub struct CreateMilestoneSubDto {
     pub due_date: Option<DateTime<FixedOffset>>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Validate)]
+#[derive(Deserialize, Validate)]
 pub struct CreateProjectDto {
     #[validate(length(min = 1, max = 255, message = "El nombre debe tener entre 1 y 255 caracteres"))]
     pub name: String,
 
     #[validate(length(max = 15000, message = "La descripción no puede exceder los 15000 caracteres"))]
     pub description: Option<String>,
+
+    pub status: Option<ProjectStatus>,
 
     pub category_id: Option<Uuid>,
     pub client_id: Option<Uuid>,
@@ -42,13 +47,15 @@ pub struct CreateProjectDto {
     pub milestones: Option<Vec<CreateMilestoneSubDto>>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Validate)]
+#[derive(Deserialize, Validate)]
 pub struct UpdateProjectDto {
     #[validate(length(min = 1, max = 255, message = "El nombre debe tener entre 1 y 255 caracteres"))]
     pub name: String,
 
     #[validate(length(max = 15000, message = "La descripción no puede exceder los 15000 caracteres"))]
     pub description: Option<String>,
+
+    pub status: ProjectStatus,
 
     pub category_id: Option<Uuid>,
     pub client_id: Option<Uuid>,
@@ -57,22 +64,28 @@ pub struct UpdateProjectDto {
     pub new_milestones: Option<Vec<CreateMilestoneSubDto>>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Validate)]
+#[derive(Deserialize, Validate)]
 pub struct UpdateProjectCategoryDto {
     pub category_id: Option<Uuid>,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Deserialize)]
+pub struct UpdateProjectStatusDto {
+    pub status: ProjectStatus,
+}
+
+#[derive(Serialize, FromQueryResult)]
 pub struct ProjectSummaryDto {
     pub id: Uuid,
     pub name: String,
+    pub status: ProjectStatus,
     pub category_name: Option<String>,
     pub client_name: Option<String>,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Serialize, FromQueryResult)]
 pub struct ProjectDetailDto {
     pub id: Uuid,
     pub name: String,
@@ -81,6 +94,33 @@ pub struct ProjectDetailDto {
     pub client_id: Option<String>,
     pub client_name: Option<String>,
     pub description: Option<String>,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub status: ProjectStatus,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
+}
+
+string_enum!(
+    pub enum ProjectStatus {
+        Open,
+        Closed,
+        Cancelled,
+    }
+);
+
+#[derive(Serialize, FromQueryResult)]
+pub struct ClientProjectSummaryDto {
+    pub id: Uuid,
+    pub name: String,
+    pub status: ProjectStatus,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
+}
+
+pub struct ClientProjectDetailDto {
+    pub id: Uuid,
+    pub name: String,
+    pub description: String,
+    pub status: ProjectStatus,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
 }

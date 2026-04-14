@@ -75,8 +75,11 @@ create table projects (
     category_id uuid references categories (id) on delete set null,
     name varchar(255) not null,
     description text,
+    status varchar(20) not null default 'open',
     created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
+    updated_at timestamptz not null default now(),
+
+    constraint chk_projects_status check (status in ('open', 'closed', 'cancelled'))
 );
 
 create table milestones (
@@ -182,6 +185,7 @@ create index idx_categories_user_id on categories(user_id);
 create index idx_projects_user_id on projects(user_id);
 create index idx_projects_category_id on projects(category_id);
 create index idx_projects_client_id on projects(client_id);
+create index idx_projects_status on projects(status);
 create index idx_milestones_project_id on milestones(project_id);
 create index idx_tags_user_id on tags(user_id);
 create index idx_tasks_user_id on tasks(user_id);

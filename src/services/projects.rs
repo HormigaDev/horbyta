@@ -8,7 +8,10 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        project::{CreateProjectDto, ProjectDetailDto, ProjectSummaryDto, UpdateProjectCategoryDto, UpdateProjectDto},
+        project::{
+            CreateProjectDto, ProjectDetailDto, ProjectSummaryDto, UpdateProjectCategoryDto, UpdateProjectDto,
+            UpdateProjectStatusDto,
+        },
         query::{FilterOperator, QueryPayload},
     },
     entities::{
@@ -78,6 +81,7 @@ impl ProjectService {
             .column(projects::Column::Id)
             .column(projects::Column::Name)
             .column(projects::Column::Description)
+            .column(projects::Column::Status)
             .column(projects::Column::CreatedAt)
             .column(projects::Column::UpdatedAt)
             .column_as(crate::entities::categories::Column::Name, "category_name")
@@ -98,6 +102,7 @@ impl ProjectService {
         active_project.name = Set(dto.name);
         active_project.description = Set(dto.description);
         active_project.category_id = Set(dto.category_id);
+        active_project.status = Set(dto.status.to_string());
 
         let updated_project = active_project.update(&txn).await.map_err(AppError::Database)?;
 
@@ -135,6 +140,23 @@ impl ProjectService {
         let mut active_project: projects::ActiveModel = project.into();
 
         active_project.category_id = Set(dto.category_id);
+
+        active_project
+            .update(self.db.as_ref())
+            .await
+            .map_err(AppError::Database)
+    }
+
+    pub async fn update_status(
+        &self,
+        user_id: Uuid,
+        id: Uuid,
+        dto: UpdateProjectStatusDto,
+    ) -> Result<ProjectModel, AppError> {
+        let project = self.find_by_id(user_id, id).await?;
+        let mut active_project: projects::ActiveModel = project.into();
+
+        active_project.status = Set(dto.status.to_string());
 
         active_project
             .update(self.db.as_ref())

@@ -9,7 +9,9 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        project::{CreateProjectDto, UpdateProjectCategoryDto, UpdateProjectDto, project_filter_schema},
+        project::{
+            CreateProjectDto, UpdateProjectCategoryDto, UpdateProjectDto, UpdateProjectStatusDto, project_filter_schema,
+        },
         query::QueryPayload,
         user::UserDto,
     },
@@ -73,6 +75,16 @@ async fn update_project_category(
     Ok(Json(project))
 }
 
+async fn update_project_status(
+    user: UserDto,
+    service: ProjectService,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<UpdateProjectStatusDto>,
+) -> Result<impl IntoResponse, AppError> {
+    let project = service.update_status(user.id, id, payload).await?;
+    Ok(Json(project))
+}
+
 async fn delete_project(
     user: UserDto,
     service: ProjectService,
@@ -88,4 +100,5 @@ pub fn projects_controller() -> Router<AppState> {
         .route("/", post(create_project))
         .route("/{id}", get(get_project).put(update_project).delete(delete_project))
         .route("/{id}/category", patch(update_project_category))
+        .route("/{id}/status", patch(update_project_status))
 }
