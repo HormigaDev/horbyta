@@ -1,9 +1,7 @@
-use axum::{extract::FromRequestParts, http::request::Parts};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
-    QuerySelect, Set,
+    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
+    Set,
 };
-use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
@@ -16,67 +14,65 @@ use crate::{
         prelude::Categories,
     },
     error::AppError,
-    state::AppState,
     utils::search::{apply_filters, apply_ordering, apply_pagination},
 };
 
-#[derive(Clone)]
-pub struct CategoryService {
-    pub db: Arc<DatabaseConnection>,
-}
+pub struct CategoryService;
 
 impl CategoryService {
-    pub fn new(db: Arc<DatabaseConnection>) -> Self {
-        Self { db }
-    }
-
-    pub async fn create(&self, user_id: Uuid, dto: CreateCategoryDto) -> Result<CategoryDetailDto, AppError> {
+    pub async fn create(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        dto: CreateCategoryDto,
+    ) -> Result<CategoryDetailDto, AppError> {
         let category = categories::ActiveModel {
             user_id: Set(user_id),
             name: Set(dto.name),
             ..Default::default()
         };
 
-        let model = category.insert(self.db.as_ref()).await.map_err(AppError::Database)?;
+        let model = category.insert(db).await.map_err(AppError::Database)?;
 
         Ok(Self::to_detail_dto(model))
     }
 
-    pub async fn get_by_id(&self, user_id: Uuid, id: Uuid) -> Result<CategoryDetailDto, AppError> {
-        let category = self.find_by_id(user_id, id).await?;
+    pub async fn get_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<CategoryDetailDto, AppError> {
+        let category = Self::find_by_id(db, user_id, id).await?;
 
         Ok(Self::to_detail_dto(category))
     }
 
-    pub async fn update(&self, user_id: Uuid, id: Uuid, dto: UpdateCategoryDto) -> Result<CategoryDetailDto, AppError> {
-        let category = self.find_by_id(user_id, id).await?;
+    pub async fn update(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        id: Uuid,
+        dto: UpdateCategoryDto,
+    ) -> Result<CategoryDetailDto, AppError> {
+        let category = Self::find_by_id(db, user_id, id).await?;
         let mut active_category: categories::ActiveModel = category.into();
 
         active_category.name = Set(dto.name);
 
-        let model = active_category
-            .update(self.db.as_ref())
-            .await
-            .map_err(AppError::Database)?;
+        let model = active_category.update(db).await.map_err(AppError::Database)?;
 
         Ok(Self::to_detail_dto(model))
     }
 
-    pub async fn delete(&self, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
-        let category = self.find_by_id(user_id, id).await?;
+    pub async fn delete(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
+        let category = Self::find_by_id(db, user_id, id).await?;
 
         categories::ActiveModel {
             id: Set(category.id),
             ..Default::default()
         }
-        .delete(self.db.as_ref())
+        .delete(db)
         .await?;
 
         Ok(())
     }
 
     pub async fn search(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         payload: QueryPayload,
     ) -> Result<(Vec<CategorySummaryDto>, u64), AppError> {
@@ -102,7 +98,7 @@ impl CategoryService {
             },
         )?;
 
-        let total_items = query.clone().count(self.db.as_ref()).await?;
+        let total_items = query.clone().count(db).await?;
         let models = apply_pagination(
             query
                 .select_only()
@@ -111,17 +107,17 @@ impl CategoryService {
             &payload,
         )
         .into_model::<CategorySummaryDto>()
-        .all(self.db.as_ref())
+        .all(db)
         .await?;
 
         Ok((models, total_items))
     }
 
-    async fn find_by_id(&self, user_id: Uuid, id: Uuid) -> Result<CategoryModel, AppError> {
+    async fn find_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<CategoryModel, AppError> {
         let category = Categories::find()
             .filter(categories::Column::Id.eq(id))
             .filter(categories::Column::UserId.eq(user_id))
-            .one(self.db.as_ref())
+            .one(db)
             .await?
             .ok_or_else(|| AppError::NotFound("Categoría no encontrada".to_string()))?;
 
@@ -133,13 +129,5 @@ impl CategoryService {
             id: model.id,
             name: model.name,
         }
-    }
-}
-
-impl FromRequestParts<AppState> for CategoryService {
-    type Rejection = AppError;
-
-    async fn from_request_parts(_parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
-        Ok(CategoryService::new(state.db.clone()))
     }
 }

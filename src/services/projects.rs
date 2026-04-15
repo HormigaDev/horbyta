@@ -1,9 +1,7 @@
-use axum::{extract::FromRequestParts, http::request::Parts};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
-    QuerySelect, Set, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
+    Set, TransactionTrait,
 };
-use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
@@ -22,22 +20,18 @@ use crate::{
     },
     error::AppError,
     services::milestones::MilestoneService,
-    state::AppState,
     utils::search::{apply_filters, apply_ordering, apply_pagination},
 };
 
-#[derive(Clone)]
-pub struct ProjectService {
-    pub db: Arc<DatabaseConnection>,
-}
+pub struct ProjectService;
 
 impl ProjectService {
-    pub fn new(db: Arc<DatabaseConnection>) -> Self {
-        Self { db }
-    }
-
-    pub async fn create(&self, user_id: Uuid, dto: CreateProjectDto) -> Result<ProjectModel, AppError> {
-        let txn = self.db.begin().await.map_err(AppError::Database)?;
+    pub async fn create(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        user_id: Uuid,
+        dto: CreateProjectDto,
+    ) -> Result<ProjectModel, AppError> {
+        let txn = db.begin().await.map_err(AppError::Database)?;
 
         let project = projects::ActiveModel {
             user_id: Set(user_id),
@@ -74,7 +68,7 @@ impl ProjectService {
         Ok(created_project)
     }
 
-    pub async fn get_by_id(&self, user_id: Uuid, id: Uuid) -> Result<ProjectDetailDto, AppError> {
+    pub async fn get_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<ProjectDetailDto, AppError> {
         let row: ProjectDetailRow = Projects::find()
             .filter(projects::Column::Id.eq(id))
             .filter(projects::Column::UserId.eq(user_id))
@@ -93,13 +87,11 @@ impl ProjectService {
             .column_as(categories::Column::Name, "category_name")
             .column_as(clients::Column::Name, "client_name")
             .into_model::<ProjectDetailRow>()
-            .one(self.db.as_ref())
+            .one(db)
             .await?
             .ok_or_else(|| AppError::NotFound("Proyecto no encontrado".to_string()))?;
 
-        let milestones = MilestoneService::new(self.db.clone())
-            .list_project_milestones_preview(user_id, id)
-            .await?;
+        let milestones = MilestoneService::list_project_milestones_preview(db, user_id, id).await?;
 
         let project = ProjectDetailDto {
             id: row.id,
@@ -120,7 +112,7 @@ impl ProjectService {
     }
 
     pub async fn get_client_project_by_id(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         client_id: Uuid,
         project_id: Uuid,
@@ -138,12 +130,11 @@ impl ProjectService {
             .column(projects::Column::CreatedAt)
             .column(projects::Column::UpdatedAt)
             .into_model::<ClientProjectDetailRow>()
-            .one(self.db.as_ref())
+            .one(db)
             .await?
             .ok_or_else(|| AppError::NotFound("Proyecto no encontrado".to_string()))?;
 
-        let milestones = MilestoneService::new(self.db.clone())
-            .list_client_project_milestones_preview(user_id, client_id, project_id)
+        let milestones = MilestoneService::list_client_project_milestones_preview(db, user_id, client_id, project_id)
             .await?;
 
         Ok(ClientProjectDetailDto {
@@ -158,9 +149,14 @@ impl ProjectService {
         })
     }
 
-    pub async fn update(&self, user_id: Uuid, id: Uuid, dto: UpdateProjectDto) -> Result<ProjectModel, AppError> {
-        let project = self.find_by_id(user_id, id).await?;
-        let txn = self.db.begin().await.map_err(AppError::Database)?;
+    pub async fn update(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        user_id: Uuid,
+        id: Uuid,
+        dto: UpdateProjectDto,
+    ) -> Result<ProjectModel, AppError> {
+        let project = Self::find_by_id(db, user_id, id).await?;
+        let txn = db.begin().await.map_err(AppError::Database)?;
 
         let mut active_project: projects::ActiveModel = project.into();
         active_project.name = Set(dto.name);
@@ -196,54 +192,48 @@ impl ProjectService {
     }
 
     pub async fn update_category(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         id: Uuid,
         dto: UpdateProjectCategoryDto,
     ) -> Result<ProjectModel, AppError> {
-        let project = self.find_by_id(user_id, id).await?;
+        let project = Self::find_by_id(db, user_id, id).await?;
         let mut active_project: projects::ActiveModel = project.into();
 
         active_project.category_id = Set(dto.category_id);
 
-        active_project
-            .update(self.db.as_ref())
-            .await
-            .map_err(AppError::Database)
+        active_project.update(db).await.map_err(AppError::Database)
     }
 
     pub async fn update_status(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         id: Uuid,
         dto: UpdateProjectStatusDto,
     ) -> Result<ProjectModel, AppError> {
-        let project = self.find_by_id(user_id, id).await?;
+        let project = Self::find_by_id(db, user_id, id).await?;
         let mut active_project: projects::ActiveModel = project.into();
 
         active_project.status = Set(dto.status.to_string());
 
-        active_project
-            .update(self.db.as_ref())
-            .await
-            .map_err(AppError::Database)
+        active_project.update(db).await.map_err(AppError::Database)
     }
 
-    pub async fn delete(&self, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
-        let project = self.find_by_id(user_id, id).await?;
+    pub async fn delete(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
+        let project = Self::find_by_id(db, user_id, id).await?;
 
         projects::ActiveModel {
             id: Set(project.id),
             ..Default::default()
         }
-        .delete(self.db.as_ref())
+        .delete(db)
         .await?;
 
         Ok(())
     }
 
     pub async fn search(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         payload: QueryPayload,
     ) -> Result<(Vec<ProjectSummaryDto>, u64), AppError> {
@@ -269,7 +259,7 @@ impl ProjectService {
             },
         )?;
 
-        let total_items = query.clone().count(self.db.as_ref()).await?;
+        let total_items = query.clone().count(db).await?;
 
         let models = apply_pagination(
             query
@@ -289,14 +279,14 @@ impl ProjectService {
             &payload,
         )
         .into_model::<ProjectSummaryDto>()
-        .all(self.db.as_ref())
+        .all(db)
         .await?;
 
         Ok((models, total_items))
     }
 
     pub async fn client_search_projects(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         client_id: Uuid,
         payload: QueryPayload,
@@ -326,7 +316,7 @@ impl ProjectService {
             },
         )?;
 
-        let total_items = query.clone().count(self.db.as_ref()).await?;
+        let total_items = query.clone().count(db).await?;
 
         let models = apply_pagination(
             query
@@ -340,28 +330,20 @@ impl ProjectService {
             &payload,
         )
         .into_model::<ClientProjectSummaryDto>()
-        .all(self.db.as_ref())
+        .all(db)
         .await?;
 
         Ok((models, total_items))
     }
 
-    async fn find_by_id(&self, user_id: Uuid, id: Uuid) -> Result<ProjectModel, AppError> {
+    async fn find_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<ProjectModel, AppError> {
         let project = Projects::find()
             .filter(projects::Column::Id.eq(id))
             .filter(projects::Column::UserId.eq(user_id))
-            .one(self.db.as_ref())
+            .one(db)
             .await?
             .ok_or_else(|| AppError::NotFound("Proyecto no encontrado".to_string()))?;
 
         Ok(project)
-    }
-}
-
-impl FromRequestParts<AppState> for ProjectService {
-    type Rejection = AppError;
-
-    async fn from_request_parts(_parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
-        Ok(ProjectService::new(state.db.clone()))
     }
 }

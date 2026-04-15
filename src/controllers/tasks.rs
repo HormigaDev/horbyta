@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::Path,
+    extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -20,19 +20,19 @@ use crate::{
     state::AppState,
 };
 
-async fn view_tasks(user: UserDto, service: TaskService) -> Result<impl IntoResponse, AppError> {
-    let view_payload = service.view(user.id).await?;
+async fn view_tasks(State(state): State<AppState>, user: UserDto) -> Result<impl IntoResponse, AppError> {
+    let view_payload = TaskService::view(state.db.as_ref(), user.id).await?;
     Ok(Json(view_payload))
 }
 
 async fn search_tasks(
+    State(state): State<AppState>,
     user: UserDto,
-    service: TaskService,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
 ) -> Result<impl IntoResponse, AppError> {
     task_filter_schema().validate_payload(&payload)?;
 
-    let (tasks, total_items) = service.search(user.id, payload.clone()).await?;
+    let (tasks, total_items) = TaskService::search(state.db.as_ref(), user.id, payload.clone()).await?;
 
     Ok(Json(json!({
         "payload": payload,
@@ -41,45 +41,53 @@ async fn search_tasks(
     })))
 }
 
-async fn get_task(user: UserDto, service: TaskService, Path(id): Path<Uuid>) -> Result<impl IntoResponse, AppError> {
-    let task = service.get_by_id(user.id, id).await?;
+async fn get_task(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let task = TaskService::get_by_id(state.db.as_ref(), user.id, id).await?;
     Ok(Json(task))
 }
 
 async fn create_task(
+    State(state): State<AppState>,
     user: UserDto,
-    service: TaskService,
     ValidatedJson(payload): ValidatedJson<CreateTaskDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let task = service.create(user.id, payload).await?;
+    let task = TaskService::create(state.db.as_ref(), user.id, payload).await?;
     Ok(Json(task))
 }
 
 async fn update_task(
+    State(state): State<AppState>,
     user: UserDto,
-    service: TaskService,
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateTaskDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let task = service.update(user.id, id, payload).await?;
+    let task = TaskService::update(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(task))
 }
 
 async fn update_task_status(
+    State(state): State<AppState>,
     user: UserDto,
-    service: TaskService,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateTaskStatusDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    service.change_status(user.id, id, payload).await?;
+    TaskService::change_status(state.db.as_ref(), user.id, id, payload).await?;
     Ok((
         StatusCode::OK,
         Json(json!({"message": "Tarea actualizada correctamente"})),
     ))
 }
 
-async fn delete_task(user: UserDto, service: TaskService, Path(id): Path<Uuid>) -> Result<impl IntoResponse, AppError> {
-    service.delete(user.id, id).await?;
+async fn delete_task(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    TaskService::delete(state.db.as_ref(), user.id, id).await?;
     Ok(Json(json!({ "message": "Tarea eliminada" })))
 }
 

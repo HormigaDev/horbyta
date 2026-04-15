@@ -193,8 +193,7 @@ pub async fn execute_tool(
             let parsed: IdArgs = serde_json::from_value(args)
                 .map_err(|e| AppError::BadRequest(format!("Argumentos invalidos para project_read: {}", e)))?;
 
-            let service = ProjectService::new(db);
-            let project = service.get_by_id(user_id, parsed.id).await?;
+          let project = ProjectService::get_by_id(db.as_ref(), user_id, parsed.id).await?;
             Ok(json!({ "project": project }))
         }
         "projects_list" => {
@@ -203,7 +202,6 @@ pub async fn execute_tool(
 
             ensure_valid_pagination(parsed.page, parsed.limit)?;
 
-            let service = ProjectService::new(db);
             let payload = QueryPayload {
                 page: parsed.page,
                 limit: parsed.limit,
@@ -212,7 +210,7 @@ pub async fn execute_tool(
                 filters: vec![],
             };
 
-            let (items, total) = service.search(user_id, payload).await?;
+            let (items, total) = ProjectService::search(db.as_ref(), user_id, payload).await?;
             let projects = items
                 .into_iter()
                 .map(|p| {
@@ -235,8 +233,7 @@ pub async fn execute_tool(
             let parsed: IdArgs = serde_json::from_value(args)
                 .map_err(|e| AppError::BadRequest(format!("Argumentos invalidos para task_read: {}", e)))?;
 
-            let service = TaskService::new(db);
-            let task = service.get_by_id(user_id, parsed.id).await?;
+          let task = TaskService::get_by_id(db.as_ref(), user_id, parsed.id).await?;
             Ok(json!({ "task": task }))
         }
         "tasks_list" => {
@@ -258,8 +255,7 @@ pub async fn execute_tool(
                 .map_err(|e| AppError::BadRequest(format!("Payload invalido en tasks_list: {}", e)))?;
             task_filter_schema().validate_payload(&payload)?;
 
-            let service = TaskService::new(db);
-            let (items, total) = service.search(user_id, payload.clone()).await?;
+            let (items, total) = TaskService::search(db.as_ref(), user_id, payload.clone()).await?;
 
             let tasks = items
                 .into_iter()
@@ -290,8 +286,7 @@ pub async fn execute_tool(
             dto.validate()
                 .map_err(|e| AppError::BadRequest(format!("Payload invalido en task_create: {}", e)))?;
 
-            let service = TaskService::new(db);
-            let created = service.create(user_id, dto).await?;
+            let created = TaskService::create(db.as_ref(), user_id, dto).await?;
             Ok(json!({ "task": created }))
         }
         _ => Err(AppError::BadRequest(format!("Tool no soportada: {}", tool_name))),

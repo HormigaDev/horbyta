@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::Path,
+    extract::{Path, State},
     response::IntoResponse,
     routing::{get, patch, post},
 };
@@ -24,13 +24,13 @@ use crate::{
 };
 
 async fn search_projects(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ProjectService,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
 ) -> Result<impl IntoResponse, AppError> {
     project_filter_schema().validate_payload(&payload)?;
 
-    let (projects, total_items) = service.search(user.id, payload.clone()).await?;
+    let (projects, total_items) = ProjectService::search(state.db.as_ref(), user.id, payload.clone()).await?;
 
     Ok(Json(json!({
         "payload": payload,
@@ -40,24 +40,24 @@ async fn search_projects(
 }
 
 async fn get_project(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ProjectService,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let project = service.get_by_id(user.id, id).await?;
+    let project = ProjectService::get_by_id(state.db.as_ref(), user.id, id).await?;
     Ok(Json(project))
 }
 
 async fn client_search_projects(
+    State(state): State<AppState>,
     client: ClientAuthDto,
-    service: ProjectService,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
 ) -> Result<impl IntoResponse, AppError> {
     client_project_filter_schema().validate_payload(&payload)?;
 
-    let (projects, total_items) = service
-        .client_search_projects(client.user_id, client.client_id, payload.clone())
-        .await?;
+    let (projects, total_items) =
+        ProjectService::client_search_projects(state.db.as_ref(), client.user_id, client.client_id, payload.clone())
+            .await?;
 
     Ok(Json(json!({
         "payload": payload,
@@ -67,62 +67,61 @@ async fn client_search_projects(
 }
 
 async fn client_get_project(
+    State(state): State<AppState>,
     client: ClientAuthDto,
-    service: ProjectService,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let project = service
-        .get_client_project_by_id(client.user_id, client.client_id, id)
+    let project = ProjectService::get_client_project_by_id(state.db.as_ref(), client.user_id, client.client_id, id)
         .await?;
 
     Ok(Json(project))
 }
 
 async fn create_project(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ProjectService,
     ValidatedJson(payload): ValidatedJson<CreateProjectDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let project = service.create(user.id, payload).await?;
+    let project = ProjectService::create(state.db.as_ref(), user.id, payload).await?;
     Ok(Json(project))
 }
 
 async fn update_project(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ProjectService,
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateProjectDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let project = service.update(user.id, id, payload).await?;
+    let project = ProjectService::update(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(project))
 }
 
 async fn update_project_category(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ProjectService,
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateProjectCategoryDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let project = service.update_category(user.id, id, payload).await?;
+    let project = ProjectService::update_category(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(project))
 }
 
 async fn update_project_status(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ProjectService,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateProjectStatusDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let project = service.update_status(user.id, id, payload).await?;
+    let project = ProjectService::update_status(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(project))
 }
 
 async fn delete_project(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ProjectService,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    service.delete(user.id, id).await?;
+    ProjectService::delete(state.db.as_ref(), user.id, id).await?;
     Ok(Json(json!({ "message": "Proyecto eliminado" })))
 }
 

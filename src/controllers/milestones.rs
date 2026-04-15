@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::Path,
+    extract::{Path, State},
     response::IntoResponse,
     routing::{get, post},
 };
@@ -21,13 +21,13 @@ use crate::{
 };
 
 async fn search_milestones(
+    State(state): State<AppState>,
     user: UserDto,
-    service: MilestoneService,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
 ) -> Result<impl IntoResponse, AppError> {
     milestone_filter_schema().validate_payload(&payload)?;
 
-    let (milestones, total_items) = service.search(user.id, payload.clone()).await?;
+    let (milestones, total_items) = MilestoneService::search(state.db.as_ref(), user.id, payload.clone()).await?;
 
     Ok(Json(json!({
         "payload": payload,
@@ -37,16 +37,16 @@ async fn search_milestones(
 }
 
 async fn client_search_milestones(
+    State(state): State<AppState>,
     client: ClientAuthDto,
-    service: MilestoneService,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     client_milestone_filter_schema().validate_payload(&payload)?;
 
-    let (milestones, total_items) = service
-        .client_search_project_milestones(client.user_id, client.client_id, id, payload.clone())
-        .await?;
+    let (milestones, total_items) =
+        MilestoneService::client_search_project_milestones(state.db.as_ref(), client.user_id, client.client_id, id, payload.clone())
+            .await?;
 
     Ok(Json(json!({
         "payload": payload,
@@ -56,30 +56,30 @@ async fn client_search_milestones(
 }
 
 async fn create_milestone(
+    State(state): State<AppState>,
     user: UserDto,
-    service: MilestoneService,
     ValidatedJson(payload): ValidatedJson<CreateMilestoneDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let milestone = service.create(user.id, payload).await?;
+    let milestone = MilestoneService::create(state.db.as_ref(), user.id, payload).await?;
     Ok(Json(milestone))
 }
 
 async fn update_milestone(
+    State(state): State<AppState>,
     user: UserDto,
-    service: MilestoneService,
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateMilestoneDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let milestone = service.update(user.id, id, payload).await?;
+    let milestone = MilestoneService::update(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(milestone))
 }
 
 async fn delete_milestone(
+    State(state): State<AppState>,
     user: UserDto,
-    service: MilestoneService,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    service.delete(user.id, id).await?;
+    MilestoneService::delete(state.db.as_ref(), user.id, id).await?;
     Ok(Json(json!({ "message": "Hito eliminado" })))
 }
 

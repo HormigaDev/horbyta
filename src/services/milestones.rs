@@ -1,9 +1,7 @@
-use axum::{extract::FromRequestParts, http::request::Parts};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
     QuerySelect, Set,
 };
-use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
@@ -19,27 +17,19 @@ use crate::{
         projects,
     },
     error::AppError,
-    state::AppState,
     utils::search::{apply_filters, apply_ordering, apply_pagination},
 };
 
-#[derive(Clone)]
-pub struct MilestoneService {
-    pub db: Arc<DatabaseConnection>,
-}
+pub struct MilestoneService;
 
 const PROJECT_MILESTONES_PREVIEW_LIMIT: u64 = 10;
 
 impl MilestoneService {
-    pub fn new(db: Arc<DatabaseConnection>) -> Self {
-        Self { db }
-    }
-
-    async fn check_project_ownership(&self, user_id: Uuid, project_id: Uuid) -> Result<(), AppError> {
+    async fn check_project_ownership(db: &impl ConnectionTrait, user_id: Uuid, project_id: Uuid) -> Result<(), AppError> {
         let project = Projects::find()
             .filter(projects::Column::Id.eq(project_id))
             .filter(projects::Column::UserId.eq(user_id))
-            .one(self.db.as_ref())
+            .one(db)
             .await?;
 
         if project.is_none() {
@@ -51,7 +41,7 @@ impl MilestoneService {
     }
 
     async fn check_client_project_ownership(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         client_id: Uuid,
         project_id: Uuid,
@@ -60,7 +50,7 @@ impl MilestoneService {
             .filter(projects::Column::Id.eq(project_id))
             .filter(projects::Column::UserId.eq(user_id))
             .filter(projects::Column::ClientId.eq(client_id))
-            .one(self.db.as_ref())
+            .one(db)
             .await?;
 
         if project.is_none() {
@@ -72,12 +62,16 @@ impl MilestoneService {
         Ok(())
     }
 
-    async fn check_milestone_ownership(&self, user_id: Uuid, milestone_id: Uuid) -> Result<MilestoneModel, AppError> {
+    async fn check_milestone_ownership(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        milestone_id: Uuid,
+    ) -> Result<MilestoneModel, AppError> {
         // Find milestone and join project to verify user
         let milestone_opt = Milestones::find()
             .filter(milestones::Column::Id.eq(milestone_id))
             .find_also_related(Projects)
-            .one(self.db.as_ref())
+            .one(db)
             .await?;
 
         match milestone_opt {
@@ -91,8 +85,8 @@ impl MilestoneService {
         }
     }
 
-    pub async fn create(&self, user_id: Uuid, dto: CreateMilestoneDto) -> Result<MilestoneModel, AppError> {
-        self.check_project_ownership(user_id, dto.project_id).await?;
+    pub async fn create(db: &impl ConnectionTrait, user_id: Uuid, dto: CreateMilestoneDto) -> Result<MilestoneModel, AppError> {
+        Self::check_project_ownership(db, user_id, dto.project_id).await?;
 
         let status = dto.status.unwrap_or(MilestoneStatus::Open).to_string();
 
@@ -105,14 +99,19 @@ impl MilestoneService {
             ..Default::default()
         };
 
-        milestone.insert(self.db.as_ref()).await.map_err(AppError::Database)
+        milestone.insert(db).await.map_err(AppError::Database)
     }
 
-    pub async fn update(&self, user_id: Uuid, id: Uuid, dto: UpdateMilestoneDto) -> Result<MilestoneModel, AppError> {
-        let milestone = self.check_milestone_ownership(user_id, id).await?;
+    pub async fn update(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        id: Uuid,
+        dto: UpdateMilestoneDto,
+    ) -> Result<MilestoneModel, AppError> {
+        let milestone = Self::check_milestone_ownership(db, user_id, id).await?;
 
         if milestone.project_id != dto.project_id {
-            self.check_project_ownership(user_id, dto.project_id).await?;
+            Self::check_project_ownership(db, user_id, dto.project_id).await?;
         }
 
         let mut active_milestone: milestones::ActiveModel = milestone.into();
@@ -123,32 +122,36 @@ impl MilestoneService {
         active_milestone.due_date = Set(dto.due_date);
 
         active_milestone
-            .update(self.db.as_ref())
+            .update(db)
             .await
             .map_err(AppError::Database)
     }
 
-    pub async fn delete(&self, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
-        let milestone = self.check_milestone_ownership(user_id, id).await?;
+    pub async fn delete(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
+        let milestone = Self::check_milestone_ownership(db, user_id, id).await?;
 
         milestones::ActiveModel {
             id: Set(milestone.id),
             ..Default::default()
         }
-        .delete(self.db.as_ref())
+        .delete(db)
         .await?;
 
         Ok(())
     }
 
-    pub async fn search(&self, user_id: Uuid, payload: QueryPayload) -> Result<(Vec<MilestoneModel>, u64), AppError> {
+    pub async fn search(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        payload: QueryPayload,
+    ) -> Result<(Vec<MilestoneModel>, u64), AppError> {
         // We only return milestones for projects that belong to the user
         let project_ids: Vec<Uuid> = Projects::find()
             .filter(projects::Column::UserId.eq(user_id))
             .select_only()
             .column(projects::Column::Id)
             .into_tuple()
-            .all(self.db.as_ref())
+            .all(db)
             .await?;
 
         let base_condition = Condition::all().add(milestones::Column::ProjectId.is_in(project_ids));
@@ -173,19 +176,19 @@ impl MilestoneService {
             },
         )?;
 
-        let total_items = query.clone().count(self.db.as_ref()).await?;
-        let models = apply_pagination(query, &payload).all(self.db.as_ref()).await?;
+        let total_items = query.clone().count(db).await?;
+        let models = apply_pagination(query, &payload).all(db).await?;
 
         Ok((models, total_items))
     }
 
     pub async fn search_by_project(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         project_id: Uuid,
         payload: QueryPayload,
     ) -> Result<(Vec<MilestoneModel>, u64), AppError> {
-        self.check_project_ownership(user_id, project_id).await?;
+        Self::check_project_ownership(db, user_id, project_id).await?;
 
         let base_condition = Condition::all().add(milestones::Column::ProjectId.eq(project_id));
         let condition = apply_filters(base_condition, &payload.filters, |column| {
@@ -209,20 +212,20 @@ impl MilestoneService {
             },
         )?;
 
-        let total_items = query.clone().count(self.db.as_ref()).await?;
-        let models = apply_pagination(query, &payload).all(self.db.as_ref()).await?;
+        let total_items = query.clone().count(db).await?;
+        let models = apply_pagination(query, &payload).all(db).await?;
 
         Ok((models, total_items))
     }
 
     pub async fn client_search_project_milestones(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         client_id: Uuid,
         project_id: Uuid,
         payload: QueryPayload,
     ) -> Result<(Vec<ProjectMilestoneSummaryDto>, u64), AppError> {
-        self.check_client_project_ownership(user_id, client_id, project_id)
+        Self::check_client_project_ownership(db, user_id, client_id, project_id)
             .await?;
 
         let base_condition = Condition::all().add(milestones::Column::ProjectId.eq(project_id));
@@ -247,7 +250,7 @@ impl MilestoneService {
             },
         )?;
 
-        let total_items = query.clone().count(self.db.as_ref()).await?;
+        let total_items = query.clone().count(db).await?;
 
         let models = apply_pagination(
             query
@@ -262,34 +265,34 @@ impl MilestoneService {
             &payload,
         )
         .into_model::<ProjectMilestoneSummaryDto>()
-        .all(self.db.as_ref())
+        .all(db)
         .await?;
 
         Ok((models, total_items))
     }
 
     pub async fn list_project_milestones_preview(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         project_id: Uuid,
     ) -> Result<Vec<ProjectMilestoneSummaryDto>, AppError> {
-        self.check_project_ownership(user_id, project_id).await?;
-        self.fetch_project_milestones_preview(project_id).await
+        Self::check_project_ownership(db, user_id, project_id).await?;
+        Self::fetch_project_milestones_preview(db, project_id).await
     }
 
     pub async fn list_client_project_milestones_preview(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         client_id: Uuid,
         project_id: Uuid,
     ) -> Result<Vec<ProjectMilestoneSummaryDto>, AppError> {
-        self.check_client_project_ownership(user_id, client_id, project_id)
+        Self::check_client_project_ownership(db, user_id, client_id, project_id)
             .await?;
-        self.fetch_project_milestones_preview(project_id).await
+        Self::fetch_project_milestones_preview(db, project_id).await
     }
 
     async fn fetch_project_milestones_preview(
-        &self,
+        db: &impl ConnectionTrait,
         project_id: Uuid,
     ) -> Result<Vec<ProjectMilestoneSummaryDto>, AppError> {
         let milestones = Milestones::find()
@@ -306,17 +309,9 @@ impl MilestoneService {
             .order_by_asc(milestones::Column::CreatedAt)
             .limit(PROJECT_MILESTONES_PREVIEW_LIMIT)
             .into_model::<ProjectMilestoneSummaryDto>()
-            .all(self.db.as_ref())
+            .all(db)
             .await?;
 
         Ok(milestones)
-    }
-}
-
-impl FromRequestParts<AppState> for MilestoneService {
-    type Rejection = AppError;
-
-    async fn from_request_parts(_parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
-        Ok(MilestoneService::new(state.db.clone()))
     }
 }

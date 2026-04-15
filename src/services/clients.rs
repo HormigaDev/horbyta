@@ -1,10 +1,9 @@
-use axum::extract::FromRequestParts;
 use chrono::{DateTime, FixedOffset, Utc};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
-    QuerySelect, Set, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
+    Set, TransactionTrait,
 };
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 use uuid::Uuid;
 
 use crate::{
@@ -21,26 +20,21 @@ use crate::{
         prelude::{ClientAuth, Clients},
     },
     error::AppError,
-    state::AppState,
     utils::{
         crypto::{generate_magic_link_token, hash_password},
         search::{apply_filters, apply_ordering, apply_pagination},
     },
 };
 
-#[derive(Clone)]
-pub struct ClientService {
-    pub db: Arc<DatabaseConnection>,
-    pub magic_token_ttl: Duration,
-}
+pub struct ClientService;
 
 impl ClientService {
-    pub fn new(db: Arc<DatabaseConnection>, magic_token_ttl: Duration) -> Self {
-        Self { db, magic_token_ttl }
-    }
-
-    pub async fn create(&self, user_id: Uuid, dto: CreateClientDto) -> Result<ClientModel, AppError> {
-        let txn = self.db.begin().await.map_err(AppError::Database)?;
+    pub async fn create(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        user_id: Uuid,
+        dto: CreateClientDto,
+    ) -> Result<ClientModel, AppError> {
+        let txn = db.begin().await.map_err(AppError::Database)?;
 
         let client = clients::ActiveModel {
             name: Set(dto.name),
@@ -60,20 +54,25 @@ impl ClientService {
         Ok(created_client)
     }
 
-    pub async fn get_by_id(&self, user_id: Uuid, id: Uuid) -> Result<ClientModel, AppError> {
+    pub async fn get_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<ClientModel, AppError> {
         let client = Clients::find()
             .filter(clients::Column::Id.eq(id))
             .filter(clients::Column::UserId.eq(user_id))
-            .one(self.db.as_ref())
+            .one(db)
             .await?
             .ok_or_else(|| AppError::NotFound("Cliente no encontrado".to_string()))?;
 
         Ok(client)
     }
 
-    pub async fn update(&self, user_id: Uuid, id: Uuid, dto: UpdateClientDto) -> Result<ClientModel, AppError> {
-        let client = self.get_by_id(user_id, id).await?;
-        let txn = self.db.begin().await.map_err(AppError::Database)?;
+    pub async fn update(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        user_id: Uuid,
+        id: Uuid,
+        dto: UpdateClientDto,
+    ) -> Result<ClientModel, AppError> {
+        let client = Self::get_by_id(db, user_id, id).await?;
+        let txn = db.begin().await.map_err(AppError::Database)?;
 
         let mut active_client: clients::ActiveModel = client.into();
         active_client.name = Set(dto.name);
@@ -92,32 +91,36 @@ impl ClientService {
     }
 
     pub async fn update_client_status(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         id: Uuid,
         dto: UpdateClientStatusDto,
     ) -> Result<ClientModel, AppError> {
-        let client = self.get_by_id(user_id, id).await?;
+        let client = Self::get_by_id(db, user_id, id).await?;
         let mut active_client: clients::ActiveModel = client.into();
         active_client.status = Set(dto.status.to_string());
 
-        active_client.update(self.db.as_ref()).await.map_err(AppError::Database)
+        active_client.update(db).await.map_err(AppError::Database)
     }
 
-    pub async fn delete(&self, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
-        let client = self.get_by_id(user_id, id).await?;
+    pub async fn delete(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
+        let client = Self::get_by_id(db, user_id, id).await?;
 
         clients::ActiveModel {
             id: Set(client.id),
             ..Default::default()
         }
-        .delete(self.db.as_ref())
+        .delete(db)
         .await?;
 
         Ok(())
     }
 
-    pub async fn search(&self, user_id: Uuid, payload: QueryPayload) -> Result<(Vec<ClientSummary>, u64), AppError> {
+    pub async fn search(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        payload: QueryPayload,
+    ) -> Result<(Vec<ClientSummary>, u64), AppError> {
         let base_condition = Condition::all().add(clients::Column::UserId.eq(user_id));
         let condition = apply_filters(base_condition, &payload.filters, |column| {
             column
@@ -140,7 +143,7 @@ impl ClientService {
             },
         )?;
 
-        let total_items = query.clone().count(self.db.as_ref()).await?;
+        let total_items = query.clone().count(db).await?;
 
         let models = apply_pagination(
             query
@@ -153,22 +156,23 @@ impl ClientService {
             &payload,
         )
         .into_model::<ClientSummary>()
-        .all(self.db.as_ref())
+        .all(db)
         .await?;
 
         Ok((models, total_items))
     }
 
     pub async fn generate_client_magic_token(
-        &self,
+        db: &impl ConnectionTrait,
+        magic_token_ttl: Duration,
         user_id: Uuid,
         client_id: Uuid,
     ) -> Result<ClientMagicLinkDto, AppError> {
-        self.get_by_id(user_id, client_id).await?;
+        Self::get_by_id(db, user_id, client_id).await?;
 
         let (token, hashed_token) = generate_magic_link_token();
         let time = Utc::now();
-        let ttl_seconds = i64::try_from(self.magic_token_ttl.as_secs())
+        let ttl_seconds = i64::try_from(magic_token_ttl.as_secs())
             .map_err(|_| AppError::Internal("TTL de token mágico fuera de rango".to_string()))?;
         let expiration_time = time
             .checked_add_signed(chrono::Duration::seconds(ttl_seconds))
@@ -178,7 +182,7 @@ impl ClientService {
             let fixed_time: DateTime<FixedOffset> = expiration_time.with_timezone(&offset);
             let mut is_insertion: bool = false;
             let mut active_client_auth: client_auth::ActiveModel =
-                match self.get_client_auth(user_id.clone(), client_id.clone()).await {
+                match Self::get_client_auth(db, user_id, client_id).await {
                     Ok(active_client_auth) => active_client_auth.into(),
                     Err(err) => match err {
                         AppError::NotFound(_) => {
@@ -199,9 +203,9 @@ impl ClientService {
             active_client_auth.password_hash = Set(None);
 
             let _ = if is_insertion {
-                active_client_auth.insert(self.db.as_ref()).await?
+                active_client_auth.insert(db).await?
             } else {
-                active_client_auth.update(self.db.as_ref()).await?
+                active_client_auth.update(db).await?
             };
 
             Ok(ClientMagicLinkDto {
@@ -214,29 +218,28 @@ impl ClientService {
     }
 
     pub async fn save_client_credentials(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         client_id: Uuid,
         dto: SaveClientCredentialsDto,
     ) -> Result<(), AppError> {
-        self.get_by_id(user_id, client_id).await?;
+        Self::get_by_id(db, user_id, client_id).await?;
 
         let mut is_insertion: bool = false;
-        let mut client_auth: client_auth::ActiveModel =
-            match self.get_client_auth(user_id.clone(), client_id.clone()).await {
-                Ok(client_auth) => client_auth.into(),
-                Err(err) => match err {
-                    AppError::NotFound(_) => {
-                        is_insertion = true;
-                        client_auth::ActiveModel {
-                            user_id: Set(user_id),
-                            client_id: Set(client_id),
-                            ..Default::default()
-                        }
+        let mut client_auth: client_auth::ActiveModel = match Self::get_client_auth(db, user_id, client_id).await {
+            Ok(client_auth) => client_auth.into(),
+            Err(err) => match err {
+                AppError::NotFound(_) => {
+                    is_insertion = true;
+                    client_auth::ActiveModel {
+                        user_id: Set(user_id),
+                        client_id: Set(client_id),
+                        ..Default::default()
                     }
-                    _ => return Err(err),
-                },
-            };
+                }
+                _ => return Err(err),
+            },
+        };
 
         let client_password_hash = hash_password(dto.password)?;
 
@@ -246,22 +249,22 @@ impl ClientService {
         client_auth.magic_link_exp = Set(None);
 
         let _ = if is_insertion {
-            client_auth.insert(self.db.as_ref()).await?
+            client_auth.insert(db).await?
         } else {
-            client_auth.update(self.db.as_ref()).await?
+            client_auth.update(db).await?
         };
 
         Ok(())
     }
 
     pub async fn get_client_auth_status(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         client_id: Uuid,
     ) -> Result<ClientAuthStatusDto, AppError> {
-        self.get_by_id(user_id, client_id).await?;
+        Self::get_by_id(db, user_id, client_id).await?;
 
-        let client_auth = match self.get_client_auth(user_id, client_id).await {
+        let client_auth = match Self::get_client_auth(db, user_id, client_id).await {
             Ok(model) => model,
             Err(AppError::NotFound(_)) => {
                 return Ok(ClientAuthStatusDto {
@@ -305,25 +308,18 @@ impl ClientService {
         })
     }
 
-    async fn get_client_auth(&self, user_id: Uuid, client_id: Uuid) -> Result<client_auth::Model, AppError> {
+    async fn get_client_auth(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        client_id: Uuid,
+    ) -> Result<client_auth::Model, AppError> {
         let client_auth = ClientAuth::find()
             .filter(client_auth::Column::UserId.eq(user_id))
             .filter(client_auth::Column::ClientId.eq(client_id))
-            .one(self.db.as_ref())
+            .one(db)
             .await?
             .ok_or_else(|| AppError::NotFound("Datos de autenticación del cliente no encontrados".to_string()))?;
 
         Ok(client_auth)
-    }
-}
-
-impl FromRequestParts<AppState> for ClientService {
-    type Rejection = AppError;
-
-    async fn from_request_parts(
-        _parts: &mut axum::http::request::Parts,
-        state: &AppState,
-    ) -> Result<Self, Self::Rejection> {
-        Ok(ClientService::new(state.db.clone(), state.config.time_to_exp))
     }
 }

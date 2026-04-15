@@ -1,9 +1,8 @@
-use axum::{extract::FromRequestParts, http::request::Parts};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
     QuerySelect, Set, TransactionTrait,
 };
-use std::{collections::HashSet, sync::Arc};
+use std::collections::HashSet;
 use uuid::Uuid;
 
 use crate::{
@@ -23,38 +22,30 @@ use crate::{
         tasks::{self, Model as TaskModel},
     },
     error::AppError,
-    state::AppState,
     utils::search::{apply_filters, apply_ordering, apply_pagination},
 };
 
-#[derive(Clone)]
-pub struct TaskService {
-    pub db: Arc<DatabaseConnection>,
-}
+pub struct TaskService;
 
 impl TaskService {
-    pub fn new(db: Arc<DatabaseConnection>) -> Self {
-        Self { db }
-    }
-
-    async fn get_task_model(&self, user_id: Uuid, id: Uuid) -> Result<TaskModel, AppError> {
+    async fn get_task_model(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<TaskModel, AppError> {
         let task = Tasks::find()
             .filter(tasks::Column::Id.eq(id))
             .filter(tasks::Column::UserId.eq(user_id))
-            .one(self.db.as_ref())
+            .one(db)
             .await?
             .ok_or_else(|| AppError::NotFound("Tarea no encontrada".to_string()))?;
 
         Ok(task)
     }
 
-    async fn get_tag_ids_for_task(&self, task_id: Uuid) -> Result<Vec<Uuid>, AppError> {
+    async fn get_tag_ids_for_task(db: &impl ConnectionTrait, task_id: Uuid) -> Result<Vec<Uuid>, AppError> {
         let tag_ids: Vec<Uuid> = TaskTags::find()
             .filter(task_tags::Column::TaskId.eq(task_id))
             .select_only()
             .column(task_tags::Column::TagId)
             .into_tuple()
-            .all(self.db.as_ref())
+            .all(db)
             .await?;
 
         Ok(tag_ids)
@@ -65,8 +56,8 @@ impl TaskService {
             .map_err(|_| AppError::Internal(format!("La etiqueta {tag_id} tiene un color inválido almacenado")))
     }
 
-    async fn to_task_detail(&self, task: TaskModel) -> Result<TaskDetailDto, AppError> {
-        let tag_ids = self.get_tag_ids_for_task(task.id).await?;
+    async fn to_task_detail(db: &impl ConnectionTrait, task: TaskModel) -> Result<TaskDetailDto, AppError> {
+        let tag_ids = Self::get_tag_ids_for_task(db, task.id).await?;
 
         let tags = if tag_ids.is_empty() {
             Vec::new()
@@ -75,7 +66,7 @@ impl TaskService {
                 .filter(tags::Column::UserId.eq(task.user_id))
                 .filter(tags::Column::Id.is_in(tag_ids.clone()))
                 .order_by_asc(tags::Column::Name)
-                .all(self.db.as_ref())
+                .all(db)
                 .await?
                 .into_iter()
                 .map(|tag| {
@@ -93,7 +84,7 @@ impl TaskService {
             Projects::find()
                 .filter(projects::Column::Id.eq(project_id))
                 .filter(projects::Column::UserId.eq(task.user_id))
-                .one(self.db.as_ref())
+                .one(db)
                 .await?
                 .map(|project| project.name)
         } else {
@@ -103,7 +94,7 @@ impl TaskService {
         let milestone_name = if let Some(milestone_id) = task.milestone_id {
             Milestones::find()
                 .filter(milestones::Column::Id.eq(milestone_id))
-                .one(self.db.as_ref())
+                .one(db)
                 .await?
                 .map(|milestone| milestone.name)
         } else {
@@ -133,12 +124,16 @@ impl TaskService {
         })
     }
 
-    async fn ensure_project_ownership(&self, user_id: Uuid, project_id: Option<Uuid>) -> Result<(), AppError> {
+    async fn ensure_project_ownership(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        project_id: Option<Uuid>,
+    ) -> Result<(), AppError> {
         if let Some(pid) = project_id {
             let project = Projects::find()
                 .filter(projects::Column::Id.eq(pid))
                 .filter(projects::Column::UserId.eq(user_id))
-                .one(self.db.as_ref())
+                .one(db)
                 .await?;
 
             if project.is_none() {
@@ -149,12 +144,16 @@ impl TaskService {
         Ok(())
     }
 
-    async fn ensure_parent_ownership(&self, user_id: Uuid, parent_id: Option<Uuid>) -> Result<(), AppError> {
+    async fn ensure_parent_ownership(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        parent_id: Option<Uuid>,
+    ) -> Result<(), AppError> {
         if let Some(pid) = parent_id {
             let parent = Tasks::find()
                 .filter(tasks::Column::Id.eq(pid))
                 .filter(tasks::Column::UserId.eq(user_id))
-                .one(self.db.as_ref())
+                .one(db)
                 .await?;
 
             if parent.is_none() {
@@ -166,7 +165,7 @@ impl TaskService {
     }
 
     async fn ensure_milestone_ownership(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         milestone_id: Option<Uuid>,
         project_id: Option<Uuid>,
@@ -175,7 +174,7 @@ impl TaskService {
             let milestone_join = Milestones::find()
                 .filter(milestones::Column::Id.eq(mid))
                 .find_also_related(Projects)
-                .one(self.db.as_ref())
+                .one(db)
                 .await?;
 
             match milestone_join {
@@ -201,7 +200,11 @@ impl TaskService {
         Ok(())
     }
 
-    async fn validate_and_dedup_tags(&self, user_id: Uuid, tag_ids: &[Uuid]) -> Result<Vec<Uuid>, AppError> {
+    async fn validate_and_dedup_tags(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        tag_ids: &[Uuid],
+    ) -> Result<Vec<Uuid>, AppError> {
         if tag_ids.is_empty() {
             return Ok(Vec::new());
         }
@@ -211,7 +214,7 @@ impl TaskService {
         let found_count = Tags::find()
             .filter(tags::Column::UserId.eq(user_id))
             .filter(tags::Column::Id.is_in(deduped_ids.clone()))
-            .count(self.db.as_ref())
+            .count(db)
             .await?;
 
         if found_count != deduped_ids.len() as u64 {
@@ -221,14 +224,18 @@ impl TaskService {
         Ok(deduped_ids)
     }
 
-    pub async fn create(&self, user_id: Uuid, dto: CreateTaskDto) -> Result<TaskDetailDto, AppError> {
-        self.ensure_project_ownership(user_id, dto.project_id).await?;
-        self.ensure_parent_ownership(user_id, dto.parent_id).await?;
-        self.ensure_milestone_ownership(user_id, dto.milestone_id, dto.project_id)
+    pub async fn create(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        user_id: Uuid,
+        dto: CreateTaskDto,
+    ) -> Result<TaskDetailDto, AppError> {
+        Self::ensure_project_ownership(db, user_id, dto.project_id).await?;
+        Self::ensure_parent_ownership(db, user_id, dto.parent_id).await?;
+        Self::ensure_milestone_ownership(db, user_id, dto.milestone_id, dto.project_id)
             .await?;
-        let safe_tag_ids = self.validate_and_dedup_tags(user_id, &dto.tag_ids).await?;
+        let safe_tag_ids = Self::validate_and_dedup_tags(db, user_id, &dto.tag_ids).await?;
 
-        let txn = self.db.begin().await.map_err(AppError::Database)?;
+        let txn = db.begin().await.map_err(AppError::Database)?;
 
         let task = tasks::ActiveModel {
             user_id: Set(user_id),
@@ -265,29 +272,34 @@ impl TaskService {
 
         txn.commit().await.map_err(AppError::Database)?;
 
-        self.get_by_id(user_id, created_task.id).await
+        Self::get_by_id(db, user_id, created_task.id).await
     }
 
-    pub async fn get_by_id(&self, user_id: Uuid, id: Uuid) -> Result<TaskDetailDto, AppError> {
-        let task = self.get_task_model(user_id, id).await?;
-        self.to_task_detail(task).await
+    pub async fn get_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<TaskDetailDto, AppError> {
+        let task = Self::get_task_model(db, user_id, id).await?;
+        Self::to_task_detail(db, task).await
     }
 
-    pub async fn update(&self, user_id: Uuid, id: Uuid, dto: UpdateTaskDto) -> Result<TaskDetailDto, AppError> {
+    pub async fn update(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        user_id: Uuid,
+        id: Uuid,
+        dto: UpdateTaskDto,
+    ) -> Result<TaskDetailDto, AppError> {
         if dto.parent_id == Some(id) {
             return Err(AppError::BadRequest(
                 "Una tarea no puede ser padre de sí misma".to_string(),
             ));
         }
 
-        let task = self.get_task_model(user_id, id).await?;
-        self.ensure_project_ownership(user_id, dto.project_id).await?;
-        self.ensure_parent_ownership(user_id, dto.parent_id).await?;
-        self.ensure_milestone_ownership(user_id, dto.milestone_id, dto.project_id)
+        let task = Self::get_task_model(db, user_id, id).await?;
+        Self::ensure_project_ownership(db, user_id, dto.project_id).await?;
+        Self::ensure_parent_ownership(db, user_id, dto.parent_id).await?;
+        Self::ensure_milestone_ownership(db, user_id, dto.milestone_id, dto.project_id)
             .await?;
-        let safe_tag_ids = self.validate_and_dedup_tags(user_id, &dto.tag_ids).await?;
+        let safe_tag_ids = Self::validate_and_dedup_tags(db, user_id, &dto.tag_ids).await?;
 
-        let txn = self.db.begin().await.map_err(AppError::Database)?;
+        let txn = db.begin().await.map_err(AppError::Database)?;
 
         let mut active_task: tasks::ActiveModel = task.into();
         active_task.project_id = Set(dto.project_id);
@@ -327,13 +339,18 @@ impl TaskService {
 
         txn.commit().await.map_err(AppError::Database)?;
 
-        self.get_by_id(user_id, updated_task.id).await
+        Self::get_by_id(db, user_id, updated_task.id).await
     }
 
-    pub async fn change_status(&self, user_id: Uuid, id: Uuid, dto: UpdateTaskStatusDto) -> Result<(), AppError> {
-        let txn = self.db.begin().await.map_err(AppError::Database)?;
+    pub async fn change_status(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        user_id: Uuid,
+        id: Uuid,
+        dto: UpdateTaskStatusDto,
+    ) -> Result<(), AppError> {
+        let txn = db.begin().await.map_err(AppError::Database)?;
 
-        let task = self.get_task_model(user_id, id).await?;
+        let task = Self::get_task_model(db, user_id, id).await?;
         let mut active_task: tasks::ActiveModel = task.into();
         active_task.status = Set(dto.status.to_string());
         let _ = active_task.update(&txn).await.map_err(AppError::Database)?;
@@ -343,20 +360,24 @@ impl TaskService {
         Ok(())
     }
 
-    pub async fn delete(&self, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
-        let task = self.get_task_model(user_id, id).await?;
+    pub async fn delete(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
+        let task = Self::get_task_model(db, user_id, id).await?;
 
         tasks::ActiveModel {
             id: Set(task.id),
             ..Default::default()
         }
-        .delete(self.db.as_ref())
+        .delete(db)
         .await?;
 
         Ok(())
     }
 
-    pub async fn search(&self, user_id: Uuid, payload: QueryPayload) -> Result<(Vec<TaskSummaryDto>, u64), AppError> {
+    pub async fn search(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        payload: QueryPayload,
+    ) -> Result<(Vec<TaskSummaryDto>, u64), AppError> {
         let base_condition = Condition::all().add(tasks::Column::UserId.eq(user_id));
         let condition = apply_filters(base_condition, &payload.filters, |column| {
             column
@@ -379,7 +400,7 @@ impl TaskService {
             },
         )?;
 
-        let total_items = query.clone().count(self.db.as_ref()).await?;
+        let total_items = query.clone().count(db).await?;
 
         let models = apply_pagination(
             query
@@ -402,31 +423,31 @@ impl TaskService {
             &payload,
         )
         .into_model::<TaskSummaryDto>()
-        .all(self.db.as_ref())
+        .all(db)
         .await?;
 
         Ok((models, total_items))
     }
 
-    pub async fn view(&self, user_id: Uuid) -> Result<TaskViewDto, AppError> {
-        let (items, total) = self
-            .search(
-                user_id,
-                QueryPayload {
-                    page: 1,
-                    limit: 10,
-                    order_by: Some("created_at".to_string()),
-                    order_asc: false,
-                    filters: vec![],
-                },
-            )
-            .await?;
+    pub async fn view(db: &impl ConnectionTrait, user_id: Uuid) -> Result<TaskViewDto, AppError> {
+        let (items, total) = Self::search(
+            db,
+            user_id,
+            QueryPayload {
+                page: 1,
+                limit: 10,
+                order_by: Some("created_at".to_string()),
+                order_asc: false,
+                filters: vec![],
+            },
+        )
+        .await?;
 
         let projects = Projects::find()
             .filter(projects::Column::UserId.eq(user_id))
             .order_by_desc(projects::Column::CreatedAt)
             .limit(10)
-            .all(self.db.as_ref())
+            .all(db)
             .await?
             .into_iter()
             .map(|project| TaskProjectDto {
@@ -444,7 +465,7 @@ impl TaskService {
                 .filter(milestones::Column::ProjectId.is_in(project_ids))
                 .order_by_desc(milestones::Column::CreatedAt)
                 .limit(10)
-                .all(self.db.as_ref())
+                .all(db)
                 .await?
                 .into_iter()
                 .map(|milestone| MilestoneLookupDto {
@@ -460,7 +481,7 @@ impl TaskService {
             .filter(tags::Column::UserId.eq(user_id))
             .order_by_asc(tags::Column::Name)
             .limit(100)
-            .all(self.db.as_ref())
+            .all(db)
             .await?
             .into_iter()
             .map(|tag| {
@@ -480,13 +501,5 @@ impl TaskService {
             milestones,
             tags,
         })
-    }
-}
-
-impl FromRequestParts<AppState> for TaskService {
-    type Rejection = AppError;
-
-    async fn from_request_parts(_parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
-        Ok(TaskService::new(state.db.clone()))
     }
 }

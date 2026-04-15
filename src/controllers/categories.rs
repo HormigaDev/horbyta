@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::Path,
+    extract::{Path, State},
     response::IntoResponse,
     routing::{get, post},
 };
@@ -20,13 +20,13 @@ use crate::{
 };
 
 async fn search_categories(
+    State(state): State<AppState>,
     user: UserDto,
-    service: CategoryService,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
 ) -> Result<impl IntoResponse, AppError> {
     category_filter_schema().validate_payload(&payload)?;
 
-    let (categories, total_items) = service.search(user.id, payload.clone()).await?;
+    let (categories, total_items) = CategoryService::search(state.db.as_ref(), user.id, payload.clone()).await?;
 
     Ok(Json(json!({
         "payload": payload,
@@ -36,39 +36,39 @@ async fn search_categories(
 }
 
 async fn get_category(
+    State(state): State<AppState>,
     user: UserDto,
-    service: CategoryService,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let category = service.get_by_id(user.id, id).await?;
+    let category = CategoryService::get_by_id(state.db.as_ref(), user.id, id).await?;
     Ok(Json(category))
 }
 
 async fn create_category(
+    State(state): State<AppState>,
     user: UserDto,
-    service: CategoryService,
     ValidatedJson(payload): ValidatedJson<CreateCategoryDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let category = service.create(user.id, payload).await?;
+    let category = CategoryService::create(state.db.as_ref(), user.id, payload).await?;
     Ok(Json(category))
 }
 
 async fn update_category(
+    State(state): State<AppState>,
     user: UserDto,
-    service: CategoryService,
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateCategoryDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let category = service.update(user.id, id, payload).await?;
+    let category = CategoryService::update(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(category))
 }
 
 async fn delete_category(
+    State(state): State<AppState>,
     user: UserDto,
-    service: CategoryService,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    service.delete(user.id, id).await?;
+    CategoryService::delete(state.db.as_ref(), user.id, id).await?;
     Ok(Json(json!({ "message": "Categoría eliminada" })))
 }
 

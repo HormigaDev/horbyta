@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::Path,
+    extract::{Path, State},
     response::IntoResponse,
     routing::{get, post},
 };
@@ -20,13 +20,13 @@ use crate::{
 };
 
 async fn search_chats(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ChatService,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
 ) -> Result<impl IntoResponse, AppError> {
     chat_filter_schema().validate_payload(&payload)?;
 
-    let (items, total) = service.search(user.id, payload.clone()).await?;
+    let (items, total) = ChatService::search(state.db.as_ref(), user.id, payload.clone()).await?;
 
     Ok(Json(json!({
         "payload": payload,
@@ -35,42 +35,50 @@ async fn search_chats(
     })))
 }
 
-async fn get_chat(user: UserDto, service: ChatService, Path(id): Path<Uuid>) -> Result<impl IntoResponse, AppError> {
-    let chat = service.get_by_id(user.id, id).await?;
+async fn get_chat(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let chat = ChatService::get_by_id(state.db.as_ref(), user.id, id).await?;
     Ok(Json(chat))
 }
 
 async fn create_chat(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ChatService,
     ValidatedJson(payload): ValidatedJson<CreateChatDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let chat = service.create(user.id, payload).await?;
+    let chat = ChatService::create(state.db.as_ref(), user.id, payload).await?;
     Ok(Json(chat))
 }
 
 async fn update_chat_title(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ChatService,
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateChatTitleDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let chat = service.update_title(user.id, id, payload).await?;
+    let chat = ChatService::update_title(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(chat))
 }
 
 async fn update_chat_messages(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ChatService,
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateChatMessagesDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let chat = service.update_messages(user.id, id, payload).await?;
+    let chat = ChatService::update_messages(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(chat))
 }
 
-async fn delete_chat(user: UserDto, service: ChatService, Path(id): Path<Uuid>) -> Result<impl IntoResponse, AppError> {
-    service.delete(user.id, id).await?;
+async fn delete_chat(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    ChatService::delete(state.db.as_ref(), user.id, id).await?;
     Ok(Json(json!({ "message": "Chat eliminado" })))
 }
 

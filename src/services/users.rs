@@ -1,6 +1,4 @@
-use axum::{extract::FromRequestParts, http::request::Parts};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
-use std::sync::Arc;
+use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Set};
 use uuid::Uuid;
 
 use crate::utils::crypto::{compare_password, hash_password};
@@ -15,24 +13,15 @@ use crate::{
     },
     env::Config,
     error::AppError,
-    state::AppState,
     utils::crypto::encrypt_secret,
 };
 
-#[derive(Clone)]
-pub struct UserService {
-    pub db: Arc<DatabaseConnection>,
-    pub config: Config,
-}
+pub struct UserService;
 
 impl UserService {
-    pub fn new(db: Arc<DatabaseConnection>, config: Config) -> Self {
-        Self { db, config }
-    }
-
-    async fn get_user_model(&self, user_id: Uuid) -> Result<UserModel, AppError> {
+    async fn get_user_model(db: &impl ConnectionTrait, user_id: Uuid) -> Result<UserModel, AppError> {
         Users::find_by_id(user_id)
-            .one(self.db.as_ref())
+            .one(db)
             .await?
             .ok_or_else(|| AppError::Unauthorized("Usuario no autenticado".to_string()))
     }
@@ -42,12 +31,16 @@ impl UserService {
             .map_err(|_| AppError::Internal("No se pudieron serializar las preferencias".to_string()))
     }
 
-    pub async fn get_me(&self, user_id: Uuid) -> Result<UserSettingsDto, AppError> {
-        let user = self.get_user_model(user_id).await?;
+    pub async fn get_me(db: &impl ConnectionTrait, user_id: Uuid) -> Result<UserSettingsDto, AppError> {
+        let user = Self::get_user_model(db, user_id).await?;
         Ok(user.into())
     }
 
-    pub async fn update_profile(&self, user_id: Uuid, dto: UpdateUserProfileDto) -> Result<UserSettingsDto, AppError> {
+    pub async fn update_profile(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        dto: UpdateUserProfileDto,
+    ) -> Result<UserSettingsDto, AppError> {
         let normalized_name = dto.name.trim().to_string();
         let normalized_email = dto.email.trim().to_lowercase();
 
@@ -58,7 +51,7 @@ impl UserService {
         let email_exists = Users::find()
             .filter(users::Column::Email.eq(normalized_email.clone()))
             .filter(users::Column::Id.ne(user_id))
-            .one(self.db.as_ref())
+            .one(db)
             .await?;
 
         if email_exists.is_some() {
@@ -68,41 +61,46 @@ impl UserService {
         let name_exists = Users::find()
             .filter(users::Column::Name.eq(normalized_name.clone()))
             .filter(users::Column::Id.ne(user_id))
-            .one(self.db.as_ref())
+            .one(db)
             .await?;
 
         if name_exists.is_some() {
             return Err(AppError::Conflict("Ese nombre ya está en uso".to_string()));
         }
 
-        let user = self.get_user_model(user_id).await?;
+        let user = Self::get_user_model(db, user_id).await?;
         let mut active_user: users::ActiveModel = user.into();
         active_user.name = Set(normalized_name);
         active_user.email = Set(normalized_email);
 
-        let updated = active_user.update(self.db.as_ref()).await?;
+        let updated = active_user.update(db).await?;
         Ok(updated.into())
     }
 
-    pub async fn update_password(&self, user_id: Uuid, dto: UpdateUserPasswordDto) -> Result<(), AppError> {
-        let user = self.get_user_model(user_id).await?;
+    pub async fn update_password(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        dto: UpdateUserPasswordDto,
+    ) -> Result<(), AppError> {
+        let user = Self::get_user_model(db, user_id).await?;
 
         let _ = compare_password(dto.current_password, user.password_hash.clone())?;
         let new_password_hash = hash_password(dto.new_password)?;
 
         let mut active_user: users::ActiveModel = user.into();
         active_user.password_hash = Set(new_password_hash);
-        active_user.update(self.db.as_ref()).await?;
+        active_user.update(db).await?;
 
         Ok(())
     }
 
     pub async fn update_preferences(
-        &self,
+        db: &impl ConnectionTrait,
+        config: &Config,
         user_id: Uuid,
         dto: UpdateUserPreferencesDto,
     ) -> Result<UserSettingsDto, AppError> {
-        let user = self.get_user_model(user_id).await?;
+        let user = Self::get_user_model(db, user_id).await?;
         let mut preferences = UserPreferences::from_json_value(user.preferences.as_ref());
         preferences.apply_general_patch(&dto);
 
@@ -112,7 +110,7 @@ impl UserService {
                 return Err(AppError::BadRequest("La API key AI no puede estar vacia".to_string()));
             }
 
-            preferences.ai.api_key_encrypted = Some(encrypt_secret(&self.config.ai_prefs_encryption_key, cleaned_key)?);
+            preferences.ai.api_key_encrypted = Some(encrypt_secret(&config.ai_prefs_encryption_key, cleaned_key)?);
             preferences.ai.api_key_configured = true;
         }
 
@@ -121,16 +119,16 @@ impl UserService {
         let mut active_user: users::ActiveModel = user.into();
         active_user.preferences = Set(Some(preferences_json));
 
-        let updated = active_user.update(self.db.as_ref()).await?;
+        let updated = active_user.update(db).await?;
         Ok(updated.into())
     }
 
     pub async fn update_notifications(
-        &self,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         dto: UpdateNotificationPreferencesDto,
     ) -> Result<UserSettingsDto, AppError> {
-        let user = self.get_user_model(user_id).await?;
+        let user = Self::get_user_model(db, user_id).await?;
         let mut preferences = UserPreferences::from_json_value(user.preferences.as_ref());
         preferences.apply_notifications_patch(dto);
 
@@ -139,15 +137,7 @@ impl UserService {
         let mut active_user: users::ActiveModel = user.into();
         active_user.preferences = Set(Some(preferences_json));
 
-        let updated = active_user.update(self.db.as_ref()).await?;
+        let updated = active_user.update(db).await?;
         Ok(updated.into())
-    }
-}
-
-impl FromRequestParts<AppState> for UserService {
-    type Rejection = AppError;
-
-    async fn from_request_parts(_parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
-        Ok(UserService::new(state.db.clone(), state.config.clone()))
     }
 }

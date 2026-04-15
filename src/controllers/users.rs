@@ -17,18 +17,17 @@ use crate::{
     state::AppState,
 };
 
-async fn get_me(user: UserDto, service: UserService) -> Result<impl IntoResponse, AppError> {
-    let me = service.get_me(user.id).await?;
+async fn get_me(State(state): State<AppState>, user: UserDto) -> Result<impl IntoResponse, AppError> {
+    let me = UserService::get_me(state.db.as_ref(), user.id).await?;
     Ok(Json(me))
 }
 
 async fn update_profile(
     State(state): State<AppState>,
     user: UserDto,
-    service: UserService,
     ValidatedJson(payload): ValidatedJson<UpdateUserProfileDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let updated = service.update_profile(user.id, payload).await?;
+    let updated = UserService::update_profile(state.db.as_ref(), user.id, payload).await?;
 
     state
         .user_cache
@@ -48,11 +47,11 @@ async fn update_profile(
 }
 
 async fn update_password(
+    State(state): State<AppState>,
     user: UserDto,
-    service: UserService,
     ValidatedJson(payload): ValidatedJson<UpdateUserPasswordDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    service.update_password(user.id, payload).await?;
+    UserService::update_password(state.db.as_ref(), user.id, payload).await?;
 
     Ok(Json(json!({
         "message": "Contraseña actualizada correctamente"
@@ -60,20 +59,20 @@ async fn update_password(
 }
 
 async fn update_preferences(
+    State(state): State<AppState>,
     user: UserDto,
-    service: UserService,
     ValidatedJson(payload): ValidatedJson<UpdateUserPreferencesDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let updated = service.update_preferences(user.id, payload).await?;
+    let updated = UserService::update_preferences(state.db.as_ref(), &state.config, user.id, payload).await?;
     Ok(Json(updated))
 }
 
 async fn update_notifications(
+    State(state): State<AppState>,
     user: UserDto,
-    service: UserService,
     ValidatedJson(payload): ValidatedJson<UpdateNotificationPreferencesDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let updated = service.update_notifications(user.id, payload).await?;
+    let updated = UserService::update_notifications(state.db.as_ref(), user.id, payload).await?;
     Ok(Json(updated))
 }
 

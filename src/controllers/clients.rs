@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::Path,
+    extract::{Path, State},
     response::IntoResponse,
     routing::{get, post},
 };
@@ -22,13 +22,13 @@ use crate::{
 };
 
 async fn search_clients(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ClientService,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
 ) -> Result<impl IntoResponse, AppError> {
     client_filter_schema().validate_payload(&payload)?;
 
-    let (clients, total_items) = service.search(user.id, payload.clone()).await?;
+    let (clients, total_items) = ClientService::search(state.db.as_ref(), user.id, payload.clone()).await?;
 
     Ok(Json(json!({
         "payload": payload,
@@ -38,78 +38,79 @@ async fn search_clients(
 }
 
 async fn get_client(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ClientService,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let client = service.get_by_id(user.id, id).await?;
+    let client = ClientService::get_by_id(state.db.as_ref(), user.id, id).await?;
     Ok(Json(client))
 }
 
 async fn create_client(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ClientService,
     ValidatedJson(payload): ValidatedJson<CreateClientDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let client = service.create(user.id, payload).await?;
+    let client = ClientService::create(state.db.as_ref(), user.id, payload).await?;
     Ok(Json(client))
 }
 
 async fn update_client(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ClientService,
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateClientDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let client = service.update(user.id, id, payload).await?;
+    let client = ClientService::update(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(client))
 }
 
 async fn update_client_status(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ClientService,
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateClientStatusDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let client = service.update_client_status(user.id, id, payload).await?;
+    let client = ClientService::update_client_status(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(client))
 }
 
 async fn delete_client(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ClientService,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    service.delete(user.id, id).await?;
+    ClientService::delete(state.db.as_ref(), user.id, id).await?;
     Ok(Json(json!({"message": "Cliente eliminado"})))
 }
 
 async fn get_client_auth_status(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ClientService,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let auth_status = service.get_client_auth_status(user.id, id).await?;
+    let auth_status = ClientService::get_client_auth_status(state.db.as_ref(), user.id, id).await?;
     Ok(Json(auth_status))
 }
 
 async fn activate_client_credentials(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ClientService,
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<SaveClientCredentialsDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    service.save_client_credentials(user.id, id, payload).await?;
-    let auth_status = service.get_client_auth_status(user.id, id).await?;
+    ClientService::save_client_credentials(state.db.as_ref(), user.id, id, payload).await?;
+    let auth_status = ClientService::get_client_auth_status(state.db.as_ref(), user.id, id).await?;
     Ok(Json(auth_status))
 }
 
 async fn activate_client_magic_token(
+    State(state): State<AppState>,
     user: UserDto,
-    service: ClientService,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let result = service.generate_client_magic_token(user.id, id).await?;
+    let result = ClientService::generate_client_magic_token(state.db.as_ref(), state.config.time_to_exp, user.id, id)
+        .await?;
     Ok(Json(result))
 }
 
