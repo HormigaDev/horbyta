@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::Path,
+    extract::{Path, State},
     response::IntoResponse,
     routing::{get, post},
 };
@@ -20,13 +20,13 @@ use crate::{
 };
 
 async fn search_tags(
+    State(state): State<AppState>,
     user: UserDto,
-    service: TagService,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
 ) -> Result<impl IntoResponse, AppError> {
     tag_filter_schema().validate_payload(&payload)?;
 
-    let (tags, total_items) = service.search(user.id, payload.clone()).await?;
+    let (tags, total_items) = TagService::search(state.db.as_ref(), user.id, payload.clone()).await?;
 
     Ok(Json(json!({
         "payload": payload,
@@ -35,32 +35,40 @@ async fn search_tags(
     })))
 }
 
-async fn get_tag(user: UserDto, service: TagService, Path(id): Path<Uuid>) -> Result<impl IntoResponse, AppError> {
-    let tag = service.get_by_id(user.id, id).await?;
+async fn get_tag(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let tag = TagService::get_by_id(state.db.as_ref(), user.id, id).await?;
     Ok(Json(tag))
 }
 
 async fn create_tag(
+    State(state): State<AppState>,
     user: UserDto,
-    service: TagService,
     ValidatedJson(payload): ValidatedJson<CreateTagDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let tag = service.create(user.id, payload).await?;
+    let tag = TagService::create(state.db.as_ref(), user.id, payload).await?;
     Ok(Json(tag))
 }
 
 async fn update_tag(
+    State(state): State<AppState>,
     user: UserDto,
-    service: TagService,
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateTagDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let tag = service.update(user.id, id, payload).await?;
+    let tag = TagService::update(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(tag))
 }
 
-async fn delete_tag(user: UserDto, service: TagService, Path(id): Path<Uuid>) -> Result<impl IntoResponse, AppError> {
-    service.delete(user.id, id).await?;
+async fn delete_tag(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    TagService::delete(state.db.as_ref(), user.id, id).await?;
     Ok(Json(json!({ "message": "Etiqueta eliminada" })))
 }
 
