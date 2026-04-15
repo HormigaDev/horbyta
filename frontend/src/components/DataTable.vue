@@ -1,6 +1,7 @@
 <template>
   <q-card class="data-table-wrapper" flat bordered>
     <q-table
+      separator="cell"
       :title="title"
       :rows="rows"
       :columns="columns"

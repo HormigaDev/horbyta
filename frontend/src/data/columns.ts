@@ -1,6 +1,7 @@
 import type { ComposerTranslation } from 'vue-i18n';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
+import { normalizeId } from 'src/utils/normalizeId';
 
 const useDateFormatter = () => {
   const userPreferencesStore = useUserPreferencesStore();
@@ -23,6 +24,7 @@ export const getProjectColumns = (t: ComposerTranslation) => {
       field: 'record_number',
       sortable: true,
       align: 'center' as const,
+      format: (val: bigint | null) => (val ? normalizeId(val) : val),
     },
     {
       name: 'name',
@@ -40,14 +42,14 @@ export const getProjectColumns = (t: ComposerTranslation) => {
       format: (val: string | null) => (val ? t(`projects.status.${val}`) : '-'),
     },
     {
-      name: 'category_name',
+      name: 'category_id',
       label: t('columns.project.category'),
       field: 'category_name',
       sortable: true,
       align: 'left' as const,
     },
     {
-      name: 'client_name',
+      name: 'client_id',
       label: t('columns.project.client'),
       field: 'client_name',
       sortable: true,
@@ -69,20 +71,6 @@ export const getProjectColumns = (t: ComposerTranslation) => {
       align: 'center' as const,
       format: (val: string) => formatDate(val),
     },
-    {
-      name: 'category_id',
-      label: '',
-      field: 'category_id',
-      sortable: false,
-      hidden: true,
-    },
-    {
-      name: 'client_id',
-      label: '',
-      field: 'client_id',
-      sortable: false,
-      hidden: true,
-    },
   ];
 };
 
@@ -96,6 +84,7 @@ export const getClientProjectColumns = (t: ComposerTranslation) => {
       field: 'record_number',
       sortable: true,
       align: 'center' as const,
+      format: (val: bigint | null) => (val ? normalizeId(val) : val),
     },
     {
       name: 'name',
@@ -219,6 +208,7 @@ export const getTaskColumns = (t: ComposerTranslation) => {
       field: 'record_number',
       sortable: true,
       align: 'center' as const,
+      format: (val: bigint | null) => (val ? normalizeId(val) : val),
     },
     {
       name: 'title',
