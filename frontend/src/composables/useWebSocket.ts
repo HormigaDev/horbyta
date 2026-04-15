@@ -1,6 +1,5 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import type { WebSocketMessage, WebSocketConnectionState } from 'src/types/websocket';
-import { useUI } from './useUI';
 
 export interface UseWebSocketOptions {
   path?: string;
@@ -11,7 +10,6 @@ export interface UseWebSocketOptions {
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const { path = '/ws', autoConnect = true, autoReconnect = true } = options;
 
-  const { notify } = useUI();
   const ws = ref<WebSocket | null>(null);
   const isConnected = ref(false);
   const isConnecting = ref(false);
@@ -137,7 +135,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     isConnected.value = false;
     state.value = 'CLOSED';
     error.value = lastError?.message ?? 'Failed to connect after retries';
-    notify(`WebSocket connection failed: ${error.value}`, 'negative');
+    console.log(`WebSocket connection failed: ${error.value}`);
 
     if (lastError) {
       throw lastError;
