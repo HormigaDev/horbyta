@@ -8,7 +8,9 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        milestone::{MilestoneDto, MilestoneSearchField, ProjectMilestoneSummaryDto},
+        milestone::{
+            CreateMilestoneDto, MilestoneSearchField, MilestoneStatus, ProjectMilestoneSummaryDto, UpdateMilestoneDto,
+        },
         query::QueryPayload,
     },
     entities::{
@@ -89,12 +91,16 @@ impl MilestoneService {
         }
     }
 
-    pub async fn create(&self, user_id: Uuid, dto: MilestoneDto) -> Result<MilestoneModel, AppError> {
+    pub async fn create(&self, user_id: Uuid, dto: CreateMilestoneDto) -> Result<MilestoneModel, AppError> {
         self.check_project_ownership(user_id, dto.project_id).await?;
+
+        let status = dto.status.unwrap_or(MilestoneStatus::Open).to_string();
 
         let milestone = milestones::ActiveModel {
             project_id: Set(dto.project_id),
             name: Set(dto.name),
+            description: Set(dto.description),
+            status: Set(status),
             due_date: Set(dto.due_date),
             ..Default::default()
         };
@@ -102,7 +108,7 @@ impl MilestoneService {
         milestone.insert(self.db.as_ref()).await.map_err(AppError::Database)
     }
 
-    pub async fn update(&self, user_id: Uuid, id: Uuid, dto: MilestoneDto) -> Result<MilestoneModel, AppError> {
+    pub async fn update(&self, user_id: Uuid, id: Uuid, dto: UpdateMilestoneDto) -> Result<MilestoneModel, AppError> {
         let milestone = self.check_milestone_ownership(user_id, id).await?;
 
         if milestone.project_id != dto.project_id {
@@ -112,6 +118,8 @@ impl MilestoneService {
         let mut active_milestone: milestones::ActiveModel = milestone.into();
         active_milestone.project_id = Set(dto.project_id);
         active_milestone.name = Set(dto.name);
+        active_milestone.description = Set(dto.description);
+        active_milestone.status = Set(dto.status.to_string());
         active_milestone.due_date = Set(dto.due_date);
 
         active_milestone
@@ -246,6 +254,8 @@ impl MilestoneService {
                 .select_only()
                 .column(milestones::Column::Id)
                 .column(milestones::Column::Name)
+                .column(milestones::Column::Description)
+                .column(milestones::Column::Status)
                 .column(milestones::Column::DueDate)
                 .column(milestones::Column::CreatedAt)
                 .column(milestones::Column::UpdatedAt),
@@ -287,6 +297,8 @@ impl MilestoneService {
             .select_only()
             .column(milestones::Column::Id)
             .column(milestones::Column::Name)
+            .column(milestones::Column::Description)
+            .column(milestones::Column::Status)
             .column(milestones::Column::DueDate)
             .column(milestones::Column::CreatedAt)
             .column(milestones::Column::UpdatedAt)

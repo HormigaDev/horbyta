@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         client::ClientAuthDto,
-        milestone::{MilestoneDto, client_milestone_filter_schema, milestone_filter_schema},
+        milestone::{CreateMilestoneDto, UpdateMilestoneDto, client_milestone_filter_schema, milestone_filter_schema},
         query::QueryPayload,
         user::UserDto,
     },
@@ -58,7 +58,7 @@ async fn client_search_milestones(
 async fn create_milestone(
     user: UserDto,
     service: MilestoneService,
-    ValidatedJson(payload): ValidatedJson<MilestoneDto>,
+    ValidatedJson(payload): ValidatedJson<CreateMilestoneDto>,
 ) -> Result<impl IntoResponse, AppError> {
     let milestone = service.create(user.id, payload).await?;
     Ok(Json(milestone))
@@ -68,7 +68,7 @@ async fn update_milestone(
     user: UserDto,
     service: MilestoneService,
     Path(id): Path<Uuid>,
-    ValidatedJson(payload): ValidatedJson<MilestoneDto>,
+    ValidatedJson(payload): ValidatedJson<UpdateMilestoneDto>,
 ) -> Result<impl IntoResponse, AppError> {
     let milestone = service.update(user.id, id, payload).await?;
     Ok(Json(milestone))

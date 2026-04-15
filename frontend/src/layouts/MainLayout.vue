@@ -123,6 +123,12 @@
             </q-tooltip>
           </q-btn>
 
+          <q-btn flat round dense icon="flag" to="/milestones">
+            <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
+              {{ t('layout.drawer.milestones') }}
+            </q-tooltip>
+          </q-btn>
+
           <q-btn flat round dense icon="task" to="/tasks">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">{{
               t('layout.drawer.tasks')
@@ -152,6 +158,12 @@
           <q-btn flat round dense icon="create_new_folder" color="primary" to="/projects/new">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.newProject') }}
+            </q-tooltip>
+          </q-btn>
+
+          <q-btn flat round dense icon="flag_circle" color="primary" to="/milestones/new">
+            <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
+              {{ t('layout.drawer.newMilestone') }}
             </q-tooltip>
           </q-btn>
 
@@ -198,6 +210,13 @@
                   <q-icon name="folder" />
                 </q-item-section>
                 <q-item-section>{{ t('layout.drawer.projects') }}</q-item-section>
+              </q-item>
+
+              <q-item clickable v-ripple to="/milestones">
+                <q-item-section avatar>
+                  <q-icon name="flag" />
+                </q-item-section>
+                <q-item-section>{{ t('layout.drawer.milestones') }}</q-item-section>
               </q-item>
 
               <q-item clickable v-ripple to="/tasks">
@@ -255,6 +274,13 @@
                 <q-icon name="create_new_folder" />
               </q-item-section>
               <q-item-section>{{ t('layout.drawer.newProject') }}</q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple class="text-primary" to="/milestones/new">
+              <q-item-section avatar>
+                <q-icon name="flag_circle" />
+              </q-item-section>
+              <q-item-section>{{ t('layout.drawer.newMilestone') }}</q-item-section>
             </q-item>
 
             <q-item clickable v-ripple @click="logout" class="text-negative q-mt-md">

@@ -6,6 +6,7 @@ use strum::IntoEnumIterator;
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::string_enum;
 use crate::{
     dtos::query::{ColumnType, FilterSchema},
     entities::milestones,
@@ -18,6 +19,7 @@ pub enum MilestoneSearchField {
     Id,
     ProjectId,
     Name,
+    Status,
     DueDate,
     CreatedAt,
     UpdatedAt,
@@ -29,6 +31,7 @@ impl MilestoneSearchField {
             Self::Id => "id",
             Self::ProjectId => "project_id",
             Self::Name => "name",
+            Self::Status => "status",
             Self::DueDate => "due_date",
             Self::CreatedAt => "created_at",
             Self::UpdatedAt => "updated_at",
@@ -40,6 +43,7 @@ impl MilestoneSearchField {
             Self::Id => ColumnType::Text,
             Self::ProjectId => ColumnType::Text,
             Self::Name => ColumnType::Text,
+            Self::Status => ColumnType::Text,
             Self::DueDate => ColumnType::Date,
             Self::CreatedAt => ColumnType::Date,
             Self::UpdatedAt => ColumnType::Date,
@@ -51,6 +55,7 @@ impl MilestoneSearchField {
             Self::Id => FilterField::Uuid(milestones::Column::Id),
             Self::ProjectId => FilterField::Uuid(milestones::Column::ProjectId),
             Self::Name => FilterField::Text(milestones::Column::Name),
+            Self::Status => FilterField::Text(milestones::Column::Status),
             Self::DueDate => FilterField::DateTime(milestones::Column::DueDate),
             Self::CreatedAt => FilterField::DateTime(milestones::Column::CreatedAt),
             Self::UpdatedAt => FilterField::DateTime(milestones::Column::UpdatedAt),
@@ -62,6 +67,7 @@ impl MilestoneSearchField {
             Self::Id => milestones::Column::Id,
             Self::ProjectId => milestones::Column::ProjectId,
             Self::Name => milestones::Column::Name,
+            Self::Status => milestones::Column::Status,
             Self::DueDate => milestones::Column::DueDate,
             Self::CreatedAt => milestones::Column::CreatedAt,
             Self::UpdatedAt => milestones::Column::UpdatedAt,
@@ -80,6 +86,7 @@ pub fn milestone_filter_schema() -> FilterSchema {
 pub enum ClientMilestoneSearchField {
     Id,
     Name,
+    Status,
     DueDate,
     CreatedAt,
     UpdatedAt,
@@ -90,6 +97,7 @@ impl ClientMilestoneSearchField {
         match self {
             Self::Id => "id",
             Self::Name => "name",
+            Self::Status => "status",
             Self::DueDate => "due_date",
             Self::CreatedAt => "created_at",
             Self::UpdatedAt => "updated_at",
@@ -100,6 +108,7 @@ impl ClientMilestoneSearchField {
         match self {
             Self::Id => ColumnType::Text,
             Self::Name => ColumnType::Text,
+            Self::Status => ColumnType::Text,
             Self::DueDate => ColumnType::Date,
             Self::CreatedAt => ColumnType::Date,
             Self::UpdatedAt => ColumnType::Date,
@@ -110,6 +119,7 @@ impl ClientMilestoneSearchField {
         match self {
             Self::Id => FilterField::Uuid(milestones::Column::Id),
             Self::Name => FilterField::Text(milestones::Column::Name),
+            Self::Status => FilterField::Text(milestones::Column::Status),
             Self::DueDate => FilterField::DateTime(milestones::Column::DueDate),
             Self::CreatedAt => FilterField::DateTime(milestones::Column::CreatedAt),
             Self::UpdatedAt => FilterField::DateTime(milestones::Column::UpdatedAt),
@@ -120,6 +130,7 @@ impl ClientMilestoneSearchField {
         match self {
             Self::Id => milestones::Column::Id,
             Self::Name => milestones::Column::Name,
+            Self::Status => milestones::Column::Status,
             Self::DueDate => milestones::Column::DueDate,
             Self::CreatedAt => milestones::Column::CreatedAt,
             Self::UpdatedAt => milestones::Column::UpdatedAt,
@@ -133,8 +144,8 @@ pub fn client_milestone_filter_schema() -> FilterSchema {
     })
 }
 
-#[derive(Validate, Serialize, Deserialize, Debug)]
-pub struct MilestoneDto {
+#[derive(Validate, Deserialize)]
+pub struct CreateMilestoneDto {
     pub project_id: Uuid,
     #[validate(length(
         min = 1,
@@ -142,14 +153,50 @@ pub struct MilestoneDto {
         message = "El nombre del hito debe tener entre 1 y 100 caracteres."
     ))]
     pub name: String,
+    #[validate(length(
+        max = 10000,
+        message = "La descripción del hito no puede superar los 10.000 caracteres."
+    ))]
+    pub description: Option<String>,
+    pub status: Option<MilestoneStatus>,
     pub due_date: Option<DateTime<FixedOffset>>,
 }
 
-#[derive(Debug, Clone, Serialize, FromQueryResult)]
+#[derive(Validate, Deserialize)]
+pub struct UpdateMilestoneDto {
+    pub project_id: Uuid,
+    #[validate(length(
+        min = 1,
+        max = 100,
+        message = "El nombre del hito debe tener entre 1 y 100 caracteres."
+    ))]
+    pub name: String,
+    #[validate(length(
+        max = 10000,
+        message = "La descripción del hito no puede superar los 10.000 caracteres."
+    ))]
+    pub description: Option<String>,
+    pub status: MilestoneStatus,
+    pub due_date: Option<DateTime<FixedOffset>>,
+}
+
+#[derive(Serialize, FromQueryResult)]
 pub struct ProjectMilestoneSummaryDto {
     pub id: Uuid,
     pub name: String,
+    pub description: Option<String>,
+    pub status: MilestoneStatus,
     pub due_date: Option<DateTime<FixedOffset>>,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
 }
+
+string_enum!(
+    pub enum MilestoneStatus {
+        Open,
+        Review,
+        Approved,
+        Released,
+        Cancelled,
+    }
+);

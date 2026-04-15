@@ -70,6 +70,12 @@
               {{ t('layout.drawer.projects') }}
             </q-tooltip>
           </q-btn>
+
+          <q-btn flat round dense icon="flag" to="/client/milestones">
+            <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
+              {{ t('layout.drawer.milestones') }}
+            </q-tooltip>
+          </q-btn>
         </div>
 
         <div class="absolute-bottom column flex-center q-pb-md q-gutter-y-sm w-100">
@@ -121,6 +127,13 @@
                   <q-icon name="folder" />
                 </q-item-section>
                 <q-item-section>{{ t('layout.drawer.projects') }}</q-item-section>
+              </q-item>
+
+              <q-item clickable v-ripple to="/client/milestones">
+                <q-item-section avatar>
+                  <q-icon name="flag" />
+                </q-item-section>
+                <q-item-section>{{ t('layout.drawer.milestones') }}</q-item-section>
               </q-item>
             </q-list>
           </div>

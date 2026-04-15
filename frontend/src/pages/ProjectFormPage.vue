@@ -46,66 +46,6 @@
 
       <q-card flat bordered class="q-mb-md">
         <q-card-section>
-          <div class="text-subtitle1 q-mb-sm">{{ t('projects.form.milestonesTitle') }}</div>
-          <div class="row q-col-gutter-sm items-center q-mb-md">
-            <div class="col-12 col-md-5">
-              <q-input
-                v-model="newMilestoneName"
-                :label="t('projects.form.milestoneNameLabel')"
-                outlined
-                dense
-                @keyup.enter="addMilestone"
-              />
-            </div>
-            <div class="col-12 col-md-4">
-              <q-input
-                v-model="newMilestoneDate"
-                mask="##/##/####"
-                :label="t('projects.form.milestoneDateLabel')"
-                outlined
-                dense
-              >
-                <template v-slot:append>
-                  <q-icon name="event" class="cursor-pointer">
-                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                      <q-date v-model="newMilestoneDate" mask="DD/MM/YYYY">
-                        <div class="row items-center justify-end">
-                          <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
-                        </div>
-                      </q-date>
-                    </q-popup-proxy>
-                  </q-icon>
-                </template>
-              </q-input>
-            </div>
-            <div class="col-12 col-md-3">
-              <q-btn
-                color="secondary"
-                :label="t('common.add')"
-                @click="addMilestone"
-                unelevated
-                :disable="!newMilestoneName"
-              />
-            </div>
-          </div>
-          <q-list bordered separator v-if="milestones.length > 0">
-            <q-item v-for="(m, i) in milestones" :key="i">
-              <q-item-section>
-                <q-item-label>{{ m.name }}</q-item-label>
-                <q-item-label caption v-if="m.due_date">{{
-                  new Date(m.due_date).toLocaleDateString()
-                }}</q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-btn flat round color="negative" icon="delete" @click="removeMilestone(i)" />
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat bordered class="q-mb-md">
-        <q-card-section>
           <div class="text-subtitle1 q-mb-sm">{{ t('projects.form.descriptionTitle') }}</div>
           <div class="row q-col-gutter-md" style="min-height: 50vh">
             <div class="col-12 col-md-6" style="display: flex; flex-direction: column">
@@ -166,12 +106,7 @@ import { useProjectsRules } from 'src/composables/rules/projects.rules';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
-import type {
-  Project,
-  CreateProjectDto,
-  UpdateProjectDto,
-  CreateMilestoneSubDto,
-} from 'src/types/project';
+import type { Project, CreateProjectDto, UpdateProjectDto } from 'src/types/project';
 import type { Category } from 'src/types/category';
 import type { Client } from 'src/types/clients';
 import { ClientsService } from 'src/services/clients';
@@ -213,23 +148,6 @@ const {
   }),
 });
 
-const milestones = ref<CreateMilestoneSubDto[]>([]);
-const newMilestoneName = ref('');
-const newMilestoneDate = ref('');
-
-const toIsoDateFromDisplay = (value: string): string | null => {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  const parts = trimmed.split('/');
-  if (parts.length !== 3) return null;
-
-  const [day, month, year] = parts;
-  if (!day || !month || !year) return null;
-
-  return `${year}-${month}-${day}T12:00:00.000Z`;
-};
-
 const onCategorySearch = (term: string) => {
   if (term.trim().length === 0 && categoryOptions.value.length > 0) return;
   void loadCategoriesByTerm(term);
@@ -237,21 +155,6 @@ const onCategorySearch = (term: string) => {
 const onClientSearch = (term: string) => {
   if (term.trim().length === 0 && clientOptions.value.length > 0) return;
   loadClientsByTerm(term);
-};
-
-const addMilestone = () => {
-  if (!newMilestoneName.value.trim()) return;
-
-  milestones.value.push({
-    name: newMilestoneName.value.trim(),
-    due_date: toIsoDateFromDisplay(newMilestoneDate.value),
-  });
-  newMilestoneName.value = '';
-  newMilestoneDate.value = '';
-};
-
-const removeMilestone = (index: number) => {
-  milestones.value.splice(index, 1);
 };
 
 const project = ref<Project>({
@@ -326,7 +229,6 @@ const saveProject = async () => {
       status: project.value.status,
       category_id: project.value.category_id || null,
       client_id: project.value.client_id || null,
-      milestones: milestones.value.length ? milestones.value : null,
     };
 
     if (isNew.value) {
@@ -340,7 +242,6 @@ const saveProject = async () => {
         status: project.value.status,
         category_id: payload.category_id || null,
         client_id: payload.client_id || null,
-        new_milestones: milestones.value.length ? milestones.value : null,
       };
       await ProjectsService.update(project.value.id, updatePayload);
       notify(t('projects.form.updateSuccess'), 'positive');
@@ -356,6 +257,7 @@ const saveProject = async () => {
 
 onMounted(() => {
   void loadCategoriesByTerm('');
+  void loadClientsByTerm('');
   void loadProject();
 });
 </script>

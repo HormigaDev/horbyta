@@ -86,9 +86,13 @@ create table milestones (
     id uuid primary key default uuidv7(),
     project_id uuid not null references projects(id) on delete cascade,
     name varchar(255) not null,
+    description text,
+    status varchar(20) not null default 'open',
     due_date timestamptz,
     created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
+    updated_at timestamptz not null default now(),
+
+    constraint chk_milestones_status check (status in ('open', 'review', 'approved', 'released', 'cancelled'))
 );
 
 create table tags (
@@ -193,6 +197,7 @@ create index idx_projects_user_created_at on projects(user_id, created_at desc);
 create index idx_projects_user_updated_at on projects(user_id, updated_at desc);
 create index idx_milestones_project_id on milestones(project_id);
 create index idx_milestones_project_name on milestones(project_id, name);
+create index idx_milestones_status on milestones(status);
 create index idx_milestones_project_due_date on milestones(project_id, due_date);
 create index idx_milestones_project_created_at on milestones(project_id, created_at desc);
 create index idx_milestones_project_updated_at on milestones(project_id, updated_at desc);
