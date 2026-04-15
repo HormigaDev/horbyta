@@ -1,7 +1,7 @@
 use axum::{extract::FromRequestParts, http::request::Parts};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, FromQueryResult, PaginatorTrait,
-    QueryFilter, QuerySelect, Set, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
+    QuerySelect, Set, TransactionTrait,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -9,9 +9,9 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         project::{
-            ClientProjectDetailDto, ClientProjectSearchField, ClientProjectSummaryDto, CreateProjectDto,
-            ProjectDetailDto, ProjectSearchField, ProjectStatus, ProjectSummaryDto, UpdateProjectCategoryDto,
-            UpdateProjectDto, UpdateProjectStatusDto,
+            ClientProjectDetailDto, ClientProjectDetailRow, ClientProjectSearchField, ClientProjectSummaryDto,
+            CreateProjectDto, ProjectDetailDto, ProjectDetailRow, ProjectSearchField, ProjectSummaryDto,
+            UpdateProjectCategoryDto, UpdateProjectDto, UpdateProjectStatusDto,
         },
         query::QueryPayload,
     },
@@ -29,30 +29,6 @@ use crate::{
 #[derive(Clone)]
 pub struct ProjectService {
     pub db: Arc<DatabaseConnection>,
-}
-
-#[derive(FromQueryResult)]
-struct ProjectDetailRow {
-    id: Uuid,
-    name: String,
-    category_id: Option<Uuid>,
-    category_name: Option<String>,
-    client_id: Option<Uuid>,
-    client_name: Option<String>,
-    description: Option<String>,
-    status: ProjectStatus,
-    created_at: chrono::DateTime<chrono::FixedOffset>,
-    updated_at: chrono::DateTime<chrono::FixedOffset>,
-}
-
-#[derive(FromQueryResult)]
-struct ClientProjectDetailRow {
-    id: Uuid,
-    name: String,
-    description: Option<String>,
-    status: ProjectStatus,
-    created_at: chrono::DateTime<chrono::FixedOffset>,
-    updated_at: chrono::DateTime<chrono::FixedOffset>,
 }
 
 impl ProjectService {
@@ -99,13 +75,14 @@ impl ProjectService {
     }
 
     pub async fn get_by_id(&self, user_id: Uuid, id: Uuid) -> Result<ProjectDetailDto, AppError> {
-        let row = Projects::find()
+        let row: ProjectDetailRow = Projects::find()
             .filter(projects::Column::Id.eq(id))
             .filter(projects::Column::UserId.eq(user_id))
             .left_join(categories::Entity)
             .left_join(clients::Entity)
             .select_only()
             .column(projects::Column::Id)
+            .column(projects::Column::ProjectNumber)
             .column(projects::Column::Name)
             .column(projects::Column::CategoryId)
             .column(projects::Column::ClientId)
@@ -126,6 +103,7 @@ impl ProjectService {
 
         let project = ProjectDetailDto {
             id: row.id,
+            project_number: row.project_number,
             name: row.name,
             category_id: row.category_id,
             category_name: row.category_name,
@@ -147,12 +125,13 @@ impl ProjectService {
         client_id: Uuid,
         project_id: Uuid,
     ) -> Result<ClientProjectDetailDto, AppError> {
-        let row = Projects::find()
+        let row: ClientProjectDetailRow = Projects::find()
             .filter(projects::Column::Id.eq(project_id))
             .filter(projects::Column::UserId.eq(user_id))
             .filter(projects::Column::ClientId.eq(client_id))
             .select_only()
             .column(projects::Column::Id)
+            .column(projects::Column::ProjectNumber)
             .column(projects::Column::Name)
             .column(projects::Column::Description)
             .column(projects::Column::Status)
@@ -169,6 +148,7 @@ impl ProjectService {
 
         Ok(ClientProjectDetailDto {
             id: row.id,
+            project_number: row.project_number,
             name: row.name,
             description: row.description,
             status: row.status,

@@ -112,6 +112,7 @@ impl TaskService {
 
         Ok(TaskDetailDto {
             id: task.id,
+            task_number: task.task_number,
             user_id: task.user_id,
             project_id: task.project_id,
             parent_id: task.parent_id,
@@ -386,6 +387,7 @@ impl TaskService {
                 .left_join(milestones::Entity)
                 .select_only()
                 .column(tasks::Column::Id)
+                .column(tasks::Column::TaskNumber)
                 .column(tasks::Column::ProjectId)
                 .column(tasks::Column::MilestoneId)
                 .column(tasks::Column::Title)

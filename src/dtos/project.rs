@@ -19,6 +19,7 @@ use crate::{
 #[strum(serialize_all = "snake_case")]
 pub enum ProjectSearchField {
     Id,
+    ProjectNumber,
     Name,
     CategoryId,
     ClientId,
@@ -30,6 +31,7 @@ impl ProjectSearchField {
     pub const fn column_name(self) -> &'static str {
         match self {
             Self::Id => "id",
+            Self::ProjectNumber => "project_number",
             Self::Name => "name",
             Self::CategoryId => "category_id",
             Self::ClientId => "client_id",
@@ -41,6 +43,7 @@ impl ProjectSearchField {
     pub const fn column_type(self) -> ColumnType {
         match self {
             Self::Id => ColumnType::Text,
+            Self::ProjectNumber => ColumnType::Number,
             Self::Name => ColumnType::Text,
             Self::CategoryId => ColumnType::Text,
             Self::ClientId => ColumnType::Text,
@@ -52,6 +55,7 @@ impl ProjectSearchField {
     pub const fn filter_field(self) -> FilterField<projects::Column> {
         match self {
             Self::Id => FilterField::Uuid(projects::Column::Id),
+            Self::ProjectNumber => FilterField::NumberI64(projects::Column::ProjectNumber),
             Self::Name => FilterField::Text(projects::Column::Name),
             Self::CategoryId => FilterField::Uuid(projects::Column::CategoryId),
             Self::ClientId => FilterField::Uuid(projects::Column::ClientId),
@@ -63,6 +67,7 @@ impl ProjectSearchField {
     pub const fn order_column(self) -> projects::Column {
         match self {
             Self::Id => projects::Column::Id,
+            Self::ProjectNumber => projects::Column::ProjectNumber,
             Self::Name => projects::Column::Name,
             Self::CategoryId => projects::Column::CategoryId,
             Self::ClientId => projects::Column::ClientId,
@@ -82,6 +87,7 @@ pub fn project_filter_schema() -> FilterSchema {
 #[strum(serialize_all = "snake_case")]
 pub enum ClientProjectSearchField {
     Id,
+    ProjectNumber,
     Name,
     Status,
     CreatedAt,
@@ -92,6 +98,7 @@ impl ClientProjectSearchField {
     pub const fn column_name(self) -> &'static str {
         match self {
             Self::Id => "id",
+            Self::ProjectNumber => "project_number",
             Self::Name => "name",
             Self::Status => "status",
             Self::CreatedAt => "created_at",
@@ -102,6 +109,7 @@ impl ClientProjectSearchField {
     pub const fn column_type(self) -> ColumnType {
         match self {
             Self::Id => ColumnType::Text,
+            Self::ProjectNumber => ColumnType::Number,
             Self::Name => ColumnType::Text,
             Self::Status => ColumnType::Text,
             Self::CreatedAt => ColumnType::Date,
@@ -112,6 +120,7 @@ impl ClientProjectSearchField {
     pub const fn filter_field(self) -> FilterField<projects::Column> {
         match self {
             Self::Id => FilterField::Uuid(projects::Column::Id),
+            Self::ProjectNumber => FilterField::NumberI64(projects::Column::ProjectNumber),
             Self::Name => FilterField::Text(projects::Column::Name),
             Self::Status => FilterField::Keyword(projects::Column::Status),
             Self::CreatedAt => FilterField::DateTime(projects::Column::CreatedAt),
@@ -122,6 +131,7 @@ impl ClientProjectSearchField {
     pub const fn order_column(self) -> projects::Column {
         match self {
             Self::Id => projects::Column::Id,
+            Self::ProjectNumber => projects::Column::ProjectNumber,
             Self::Name => projects::Column::Name,
             Self::Status => projects::Column::Status,
             Self::CreatedAt => projects::Column::CreatedAt,
@@ -194,6 +204,7 @@ pub struct UpdateProjectStatusDto {
 #[derive(Serialize, FromQueryResult)]
 pub struct ProjectSummaryDto {
     pub id: Uuid,
+    pub project_number: i64,
     pub name: String,
     pub status: ProjectStatus,
     pub category_name: Option<String>,
@@ -205,6 +216,7 @@ pub struct ProjectSummaryDto {
 #[derive(Serialize)]
 pub struct ProjectDetailDto {
     pub id: Uuid,
+    pub project_number: i64,
     pub name: String,
     pub category_id: Option<Uuid>,
     pub category_name: Option<String>,
@@ -228,6 +240,7 @@ string_enum!(
 #[derive(Serialize, FromQueryResult)]
 pub struct ClientProjectSummaryDto {
     pub id: Uuid,
+    pub project_number: i64,
     pub name: String,
     pub status: ProjectStatus,
     pub created_at: DateTime<FixedOffset>,
@@ -237,10 +250,37 @@ pub struct ClientProjectSummaryDto {
 #[derive(Serialize)]
 pub struct ClientProjectDetailDto {
     pub id: Uuid,
+    pub project_number: i64,
     pub name: String,
     pub description: Option<String>,
     pub status: ProjectStatus,
     pub milestones: Vec<ProjectMilestoneSummaryDto>,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
+}
+
+#[derive(FromQueryResult)]
+pub struct ProjectDetailRow {
+    pub id: Uuid,
+    pub project_number: i64,
+    pub name: String,
+    pub category_id: Option<Uuid>,
+    pub category_name: Option<String>,
+    pub client_id: Option<Uuid>,
+    pub client_name: Option<String>,
+    pub description: Option<String>,
+    pub status: ProjectStatus,
+    pub created_at: chrono::DateTime<chrono::FixedOffset>,
+    pub updated_at: chrono::DateTime<chrono::FixedOffset>,
+}
+
+#[derive(FromQueryResult)]
+pub struct ClientProjectDetailRow {
+    pub id: Uuid,
+    pub project_number: i64,
+    pub name: String,
+    pub description: Option<String>,
+    pub status: ProjectStatus,
+    pub created_at: chrono::DateTime<chrono::FixedOffset>,
+    pub updated_at: chrono::DateTime<chrono::FixedOffset>,
 }

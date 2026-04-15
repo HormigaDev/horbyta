@@ -14,6 +14,13 @@ create table users (
     updated_at timestamptz not null default now()
 );
 
+create table seq_by_user (
+    user_id uuid not null references users (id) on delete cascade,
+    entity varchar(50) not null,
+    last_value bigint not null default 0,
+    primary key (user_id, entity)
+);
+
 create table categories (
     id uuid primary key default uuidv7(),
     user_id uuid not null references users (id) on delete cascade,
@@ -70,6 +77,7 @@ create table client_auth (
 
 create table projects (
     id uuid primary key default uuidv7(),
+    project_number bigint not null,
     user_id uuid not null references users (id) on delete cascade,
     client_id uuid references clients (id) on delete set null,
     category_id uuid references categories (id) on delete set null,
@@ -107,6 +115,7 @@ create table tags (
 
 create table tasks (
     id uuid primary key default uuidv7(),
+    task_number bigint not null,
     user_id uuid not null references users (id) on delete cascade,
     project_id uuid references projects (id) on delete cascade,
     parent_id uuid references tasks (id) on delete cascade,
@@ -189,6 +198,7 @@ create unique index uq_users_email on users (lower(email));
 create index idx_categories_user_id on categories(user_id);
 create index idx_categories_user_created_at on categories(user_id, created_at desc);
 create index idx_categories_user_updated_at on categories(user_id, updated_at desc);
+create unique index idx_uq_projects_number_per_user on projects(user_id, project_number);
 create index idx_projects_user_id on projects(user_id);
 create index idx_projects_category_id on projects(category_id);
 create index idx_projects_client_id on projects(client_id);
@@ -206,6 +216,7 @@ create index idx_tags_user_id on tags(user_id);
 create index idx_tags_user_created_at on tags(user_id, created_at desc);
 create index idx_tags_user_updated_at on tags(user_id, updated_at desc);
 create index idx_tasks_user_id on tasks(user_id);
+create unique index idx_uq_tasks_number_per_user on tasks (user_id, task_number);
 create index idx_tasks_project_id on tasks(project_id);
 create index idx_tasks_parent_id on tasks(parent_id);
 create index idx_tasks_milestone_id on tasks(milestone_id);
@@ -272,6 +283,47 @@ begin
 end;
 $$;
 
+create or replace function next_seq_for_user(p_user_id uuid, p_entity varchar)
+returns bigint
+language sql
+as $$
+    insert into seq_by_user (user_id, entity, last_value)
+    values (p_user_id, p_entity, 1)
+    on conflict (user_id, entity) do update
+        set last_value = seq_by_user.last_value + 1
+    returning last_value;
+$$;
+
+create or replace function trg_set_seq_number()
+returns trigger
+language plpgsql
+as $$
+begin
+    new.task_number := next_seq_for_user(new.user_id, TG_TABLE_NAME);
+    return new;
+end;
+$$;
+
+do $$
+declare t text;
+begin
+    foreach t in array array[
+        'tasks',
+        'projects'
+    ]
+    loop
+        execute format(
+            'create trigger trg_%I_seq_number
+            before insert on %I
+            for each row
+            execute function trg_set_seq_number()',
+            t,
+            t
+        );
+    end loop;
+end;
+$$;
+
 -- ---------------------------------
 -- COMENTARIOS
 -- ---------------------------------
@@ -286,6 +338,8 @@ comment on table task_tags is 'Tabla pivote para relación muchos a muchos entre
 comment on table conversation_history is 'Tabla para guardar los mensajes de chat con la IA';
 comment on table notifications is 'Notificaciones asíncronas persistentes para el usuario, respetando sus preferencias.';
 comment on table clients is 'Clientes del usuario.';
+comment on table client_auth is 'Tabla que contiene los datos de autenticación del cliente en el portal';
+comment on table seq_by_user is 'Secuencias de tablas con cambos numéricos incrementales';
 
 comment on column tasks.parent_id is 'Referencia recursiva para soportar subtareas de n-niveles.';
 comment on column tasks.status is 'Estado del flujo de trabajo. Restringido a 4 valores predefinidos por CHECK.';

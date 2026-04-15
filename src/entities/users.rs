@@ -33,6 +33,8 @@ pub enum Relation {
     Notifications,
     #[sea_orm(has_many = "super::projects::Entity")]
     Projects,
+    #[sea_orm(has_many = "super::seq_by_user::Entity")]
+    SeqByUser,
     #[sea_orm(has_many = "super::tags::Entity")]
     Tags,
     #[sea_orm(has_many = "super::tasks::Entity")]
@@ -72,6 +74,12 @@ impl Related<super::notifications::Entity> for Entity {
 impl Related<super::projects::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Projects.def()
+    }
+}
+
+impl Related<super::seq_by_user::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::SeqByUser.def()
     }
 }
 

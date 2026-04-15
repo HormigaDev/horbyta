@@ -7,6 +7,7 @@ pub use super::conversation_history::Entity as ConversationHistory;
 pub use super::milestones::Entity as Milestones;
 pub use super::notifications::Entity as Notifications;
 pub use super::projects::Entity as Projects;
+pub use super::seq_by_user::Entity as SeqByUser;
 pub use super::tags::Entity as Tags;
 pub use super::task_tags::Entity as TaskTags;
 pub use super::tasks::Entity as Tasks;

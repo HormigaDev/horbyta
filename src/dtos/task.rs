@@ -19,6 +19,7 @@ use crate::{
 #[strum(serialize_all = "snake_case")]
 pub enum TaskSearchField {
     Id,
+    TaskNumber,
     ProjectId,
     ParentId,
     MilestoneId,
@@ -36,6 +37,7 @@ impl TaskSearchField {
     pub const fn column_name(self) -> &'static str {
         match self {
             Self::Id => "id",
+            Self::TaskNumber => "task_number",
             Self::ProjectId => "project_id",
             Self::ParentId => "parent_id",
             Self::MilestoneId => "milestone_id",
@@ -53,6 +55,7 @@ impl TaskSearchField {
     pub const fn column_type(self) -> ColumnType {
         match self {
             Self::Id => ColumnType::Text,
+            Self::TaskNumber => ColumnType::Number,
             Self::ProjectId => ColumnType::Text,
             Self::ParentId => ColumnType::Text,
             Self::MilestoneId => ColumnType::Text,
@@ -70,6 +73,7 @@ impl TaskSearchField {
     pub const fn filter_field(self) -> FilterField<tasks::Column> {
         match self {
             Self::Id => FilterField::Uuid(tasks::Column::Id),
+            Self::TaskNumber => FilterField::NumberI64(tasks::Column::TaskNumber),
             Self::ProjectId => FilterField::Uuid(tasks::Column::ProjectId),
             Self::ParentId => FilterField::Uuid(tasks::Column::ParentId),
             Self::MilestoneId => FilterField::Uuid(tasks::Column::MilestoneId),
@@ -87,6 +91,7 @@ impl TaskSearchField {
     pub const fn order_column(self) -> tasks::Column {
         match self {
             Self::Id => tasks::Column::Id,
+            Self::TaskNumber => tasks::Column::TaskNumber,
             Self::ProjectId => tasks::Column::ProjectId,
             Self::ParentId => tasks::Column::ParentId,
             Self::MilestoneId => tasks::Column::MilestoneId,
@@ -172,6 +177,7 @@ pub struct UpdateTaskStatusDto {
 #[derive(Debug, Serialize, FromQueryResult)]
 pub struct TaskSummaryDto {
     pub id: Uuid,
+    pub task_number: i64,
     pub project_id: Option<Uuid>,
     pub milestone_id: Option<Uuid>,
     pub title: String,
@@ -188,6 +194,7 @@ pub struct TaskSummaryDto {
 #[derive(Debug, Serialize)]
 pub struct TaskDetailDto {
     pub id: Uuid,
+    pub task_number: i64,
     pub user_id: Uuid,
     pub project_id: Option<Uuid>,
     pub parent_id: Option<Uuid>,

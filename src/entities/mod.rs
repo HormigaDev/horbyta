@@ -9,6 +9,7 @@ pub mod conversation_history;
 pub mod milestones;
 pub mod notifications;
 pub mod projects;
+pub mod seq_by_user;
 pub mod tags;
 pub mod task_tags;
 pub mod tasks;
