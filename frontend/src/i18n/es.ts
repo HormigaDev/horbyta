@@ -25,6 +25,8 @@ export const messages = {
   'common.no': 'No',
   'common.empty': 'Sin datos',
   'common.goback': 'Volver',
+  'common.copyToClipboard': 'Copiar al portapapeles',
+  'common.copied': 'Copiado',
 
   'auth.login.brand': 'HormigaPM',
   'auth.login.subtitle': 'Ingreso al sistema',
@@ -520,7 +522,7 @@ export const messages = {
   'layout.profile.defaultUser': 'Usuario',
   'layout.profile.defaultEmail': 'email@example.com',
 
-  'columns.project.project_number': 'Número',
+  'columns.project.record_number': 'Número',
   'columns.project.name': 'Nombre',
   'columns.project.status': 'Estado',
   'columns.project.category': 'Categoría',
@@ -535,7 +537,7 @@ export const messages = {
   'columns.milestone.due_date': 'Fecha límite',
   'columns.milestone.created_at': 'Creado',
   'columns.milestone.updated_at': 'Actualizado',
-  'columns.task.task_number': 'Número',
+  'columns.task.record_number': 'Número',
   'columns.task.title': 'Título',
   'columns.task.status': 'Estado',
   'columns.task.priority': 'Prioridad',

@@ -4,7 +4,7 @@ export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done';
 
 export interface TaskSummaryDto {
   id: string;
-  task_number: bigint;
+  record_number: bigint;
   project_id: string | null;
   milestone_id: string | null;
   title: string;
@@ -20,7 +20,7 @@ export interface TaskSummaryDto {
 
 export interface TaskDetailDto {
   id: string;
-  task_number: bigint;
+  record_number: bigint;
   user_id: string;
   project_id: string | null;
   parent_id: string | null;

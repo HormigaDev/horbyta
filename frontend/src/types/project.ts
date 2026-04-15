@@ -3,7 +3,7 @@ export type ProjectMilestoneStatus = 'open' | 'review' | 'approved' | 'released'
 
 export interface ProjectSummaryDto {
   id: string;
-  project_number: bigint;
+  record_number: bigint;
   name: string;
   status: ProjectStatus;
   category_id?: string | null;
@@ -26,7 +26,7 @@ export interface ProjectDetailMilestoneDto {
 
 export interface ProjectDetailDto {
   id: string;
-  project_number: bigint;
+  record_number: bigint;
   name: string;
   description: string | null;
   status: ProjectStatus;
@@ -68,7 +68,7 @@ export interface UpdateProjectCategoryDto {
 
 export interface ProjectMutationResultDto {
   id: string;
-  project_number: bigint;
+  record_number: bigint;
   user_id: string;
   name: string;
   description: string | null;
@@ -90,7 +90,7 @@ export interface ProjectFormStateDto {
 
 export interface ClientProjectSummaryDto {
   id: string;
-  project_number: bigint;
+  record_number: bigint;
   name: string;
   status: ProjectStatus;
   created_at: string;
@@ -99,7 +99,7 @@ export interface ClientProjectSummaryDto {
 
 export interface ClientProjectDetailDto {
   id: string;
-  project_number: bigint;
+  record_number: bigint;
   name: string;
   description: string | null;
   status: ProjectStatus;

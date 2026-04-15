@@ -9,10 +9,24 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
-            {{
-              task?.title ? `${task.title} - ${normalizeId(task.task_number)}` : t('common.loading')
-            }}
+          <div class="flex justify-between">
+            <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
+              {{ task?.title ? `${task.title}` : t('common.loading') }}
+            </div>
+            <div class="text-h6 flex items-center" style="color: var(--text-muted)">
+              <q-icon
+                :name="idCopied ? 'check' : 'content_copy'"
+                size="xs"
+                class="q-mr-sm cursor-pointer"
+                style="color: var(--text-color)"
+                @click="copyToClipboard(task?.record_number.toString() || '')"
+              >
+                <q-tooltip>{{
+                  idCopied ? $t('common.copied') : $t('common.copyToClipboard')
+                }}</q-tooltip>
+              </q-icon>
+              {{ task ? normalizeId(task.record_number) : '' }}
+            </div>
           </div>
           <div class="text-caption" style="color: var(--text-muted)" v-if="task">
             {{
@@ -219,6 +233,7 @@ import TaskChangeStatusDialog from 'src/components/TaskChangeStatusDialog.vue';
 import type { TaskDetailDto, TaskStatus } from 'src/types/task';
 import { getTagTextContrastColor } from 'src/utils/tagColorContrast';
 import { normalizeId } from 'src/utils/normalizeId';
+import { useCopyClipboard } from 'src/composables/useCopyClipboard';
 
 const $q = useQuasar();
 const route = useRoute();
@@ -227,6 +242,7 @@ const { t } = useI18n();
 const { notify, notifyError, confirmDelete, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
 
+const { isCopied: idCopied, copyToClipboard } = useCopyClipboard();
 const task = ref<TaskDetailDto | null>(null);
 const taskId = String(route.params.id || '');
 

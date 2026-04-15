@@ -82,7 +82,7 @@ impl ProjectService {
             .left_join(clients::Entity)
             .select_only()
             .column(projects::Column::Id)
-            .column(projects::Column::ProjectNumber)
+            .column(projects::Column::RecordNumber)
             .column(projects::Column::Name)
             .column(projects::Column::CategoryId)
             .column(projects::Column::ClientId)
@@ -103,7 +103,7 @@ impl ProjectService {
 
         let project = ProjectDetailDto {
             id: row.id,
-            project_number: row.project_number,
+            record_number: row.record_number,
             name: row.name,
             category_id: row.category_id,
             category_name: row.category_name,
@@ -131,7 +131,7 @@ impl ProjectService {
             .filter(projects::Column::ClientId.eq(client_id))
             .select_only()
             .column(projects::Column::Id)
-            .column(projects::Column::ProjectNumber)
+            .column(projects::Column::RecordNumber)
             .column(projects::Column::Name)
             .column(projects::Column::Description)
             .column(projects::Column::Status)
@@ -148,7 +148,7 @@ impl ProjectService {
 
         Ok(ClientProjectDetailDto {
             id: row.id,
-            project_number: row.project_number,
+            record_number: row.record_number,
             name: row.name,
             description: row.description,
             status: row.status,

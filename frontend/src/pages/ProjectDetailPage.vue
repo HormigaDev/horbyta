@@ -9,12 +9,24 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
-            {{
-              project?.name
-                ? `${project.name} - ${normalizeId(project.project_number)}`
-                : t('common.loading')
-            }}
+          <div class="flex justify-between">
+            <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
+              {{ project?.name ? `${project.name}` : t('common.loading') }}
+            </div>
+            <div class="text-h6 flex items-center" style="color: var(--text-muted)">
+              <q-icon
+                :name="idCopied ? 'check' : 'content_copy'"
+                size="xs"
+                class="q-mr-sm cursor-pointer"
+                style="color: var(--text-color)"
+                @click="copyToClipboard(project?.record_number.toString() || '')"
+              >
+                <q-tooltip>{{
+                  idCopied ? $t('common.copied') : $t('common.copyToClipboard')
+                }}</q-tooltip>
+              </q-icon>
+              {{ project ? normalizeId(project.record_number) : '' }}
+            </div>
           </div>
           <div class="text-caption q-mt-xs" style="color: var(--text-muted)" v-if="project">
             {{ t('common.status') }}:
@@ -113,6 +125,7 @@ import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { ProjectDetailDto, ProjectStatus } from 'src/types/project';
 import { normalizeId } from 'src/utils/normalizeId';
+import { useCopyClipboard } from 'src/composables/useCopyClipboard';
 
 const route = useRoute();
 const router = useRouter();
@@ -120,6 +133,7 @@ const { t } = useI18n();
 const { notify, notifyError, confirmDelete, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
 
+const { isCopied: idCopied, copyToClipboard } = useCopyClipboard();
 const project = ref<ProjectDetailDto | null>(null);
 const projectId = String(route.params.id || '');
 

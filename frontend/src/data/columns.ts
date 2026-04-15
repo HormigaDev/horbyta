@@ -18,9 +18,9 @@ export const getProjectColumns = (t: ComposerTranslation) => {
 
   return [
     {
-      name: 'project_number',
-      label: t('columns.project.project_number'),
-      field: 'project_number',
+      name: 'record_number',
+      label: t('columns.project.record_number'),
+      field: 'record_number',
       sortable: true,
       align: 'center' as const,
     },
@@ -91,9 +91,9 @@ export const getClientProjectColumns = (t: ComposerTranslation) => {
 
   return [
     {
-      name: 'project_number',
-      label: t('columns.project.project_number'),
-      field: 'project_number',
+      name: 'record_number',
+      label: t('columns.project.record_number'),
+      field: 'record_number',
       sortable: true,
       align: 'center' as const,
     },
@@ -214,9 +214,9 @@ export const getTaskColumns = (t: ComposerTranslation) => {
 
   return [
     {
-      name: 'task_number',
-      label: t('columns.task.task_number'),
-      field: 'task_number',
+      name: 'record_number',
+      label: t('columns.task.record_number'),
+      field: 'record_number',
       sortable: true,
       align: 'center' as const,
     },
