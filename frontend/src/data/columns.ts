@@ -121,6 +121,13 @@ export const getTagColumns = (t: ComposerTranslation) => {
       sortable: true,
       align: 'left' as const,
     },
+    {
+      name: 'color',
+      label: t('columns.tag.color'),
+      field: 'color',
+      sortable: false,
+      align: 'center' as const,
+    },
   ];
 };
 

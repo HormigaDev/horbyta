@@ -10,6 +10,7 @@ pub struct Model {
     pub id: Uuid,
     pub user_id: Uuid,
     pub name: String,
+    pub color: String,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
 }

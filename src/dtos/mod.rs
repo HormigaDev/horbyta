@@ -2,6 +2,7 @@ pub mod auth;
 pub mod category;
 pub mod chat;
 pub mod client;
+pub mod hex_color;
 pub mod milestone;
 pub mod project;
 pub mod query;

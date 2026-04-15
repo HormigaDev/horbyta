@@ -1,3 +1,5 @@
+import type { Tag } from './tag';
+
 export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done';
 
 export interface TaskSummary {
@@ -33,7 +35,7 @@ export interface TaskDetail {
   created_at: string;
   updated_at: string;
   tag_ids: string[];
-  tags: LookupOption[];
+  tags: Tag[];
 }
 
 export interface TaskDto {
@@ -67,5 +69,5 @@ export interface TasksViewResponse {
   total: number;
   projects: LookupOption[];
   milestones: MilestoneLookup[];
-  tags: LookupOption[];
+  tags: Tag[];
 }

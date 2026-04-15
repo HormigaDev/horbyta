@@ -99,6 +99,7 @@ create table tags (
     id uuid primary key default uuidv7(),
     user_id uuid not null references users (id) on delete cascade,
     name varchar(50) not null,
+    color varchar(7) not null,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
     unique(user_id, name)

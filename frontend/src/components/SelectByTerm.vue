@@ -20,20 +20,32 @@
     @filter="onFilter"
     @popup-show="onPopupShow"
   >
+    <template #option="scope">
+      <slot name="option" v-bind="scope">
+        <q-item v-bind="scope.itemProps">
+          <q-item-section>
+            <q-item-label>{{ scope.opt.label }}</q-item-label>
+          </q-item-section>
+        </q-item>
+      </slot>
+    </template>
+
     <template #selected-item="scope" v-if="chips && multiple">
-      <q-chip
-        dense
-        removable
-        class="q-mr-xs q-my-xs"
-        style="
-          background-color: var(--bg-hover);
-          border: 1px solid var(--border-color);
-          color: var(--text-color);
-        "
-        @remove="scope.removeAtIndex(scope.index)"
-      >
-        {{ scope.opt.label }}
-      </q-chip>
+      <slot name="selected-item" v-bind="scope">
+        <q-chip
+          dense
+          removable
+          class="q-mr-xs q-my-xs"
+          style="
+            background-color: var(--bg-hover);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+          "
+          @remove="scope.removeAtIndex(scope.index)"
+        >
+          {{ scope.opt.label }}
+        </q-chip>
+      </slot>
     </template>
 
     <template #append>

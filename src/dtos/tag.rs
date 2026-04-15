@@ -3,7 +3,10 @@ use strum::IntoEnumIterator;
 use validator::Validate;
 
 use crate::{
-    dtos::query::{ColumnType, FilterSchema},
+    dtos::{
+        hex_color::HexColor,
+        query::{ColumnType, FilterSchema},
+    },
     entities::tags,
     utils::search::FilterField,
 };
@@ -69,4 +72,5 @@ pub struct TagDto {
         message = "El nombre de la etiqueta debe tener entre 1 y 50 caracteres."
     ))]
     pub name: String,
+    pub color: HexColor,
 }

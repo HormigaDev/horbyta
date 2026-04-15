@@ -19,44 +19,37 @@
       <template #top-actions>
         <q-btn dense flat :label="$t('common.goback')" @click="$router.back()" icon="arrow_back" />
       </template>
+
+      <template #body-cell-color="props">
+        <q-td :props="props">
+          <q-chip dense square :style="getTagColorChipStyle(props.value)">
+            {{ getTagColorChipLabel(props.value) }}
+          </q-chip>
+        </q-td>
+      </template>
     </DataTable>
 
-    <SimpleNameDialog
-      v-model="isDialogOpen"
-      :value="form.name"
-      :editing="Boolean(editingId)"
-      :create-title="t('tags.dialog.newTitle')"
-      :edit-title="t('tags.dialog.editTitle')"
-      :name-label="t('tags.dialog.nameLabel')"
-      :cancel-label="t('common.cancel')"
-      :save-label="t('common.save')"
-      :saving="isSaving"
-      :error="nameRuleState.error"
-      :error-message="nameRuleState.message"
-      @update:value="(value) => (form.name = value)"
-      @submit="onSubmit"
-    />
+    <TagDialogForm v-model="isDialogOpen" :tag-id="editingId" @saved="onTagSaved" />
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import DataTable from 'src/components/DataTable.vue';
-import SimpleNameDialog from 'src/components/SimpleNameDialog.vue';
+import TagDialogForm from 'src/components/TagDialogForm.vue';
 import { useCrudDelete } from 'src/composables/useCrudDelete';
 import { useCrudListHandlers } from 'src/composables/useCrudListHandlers';
 import { useQuery } from 'src/composables/useQuery';
 import { useUI } from 'src/composables/useUI';
 import type { FilterSchema } from 'src/types';
 import { TagsService } from 'src/services/tags';
-import type { TagDto } from 'src/types/tag';
-import { useTagRules } from 'src/composables/rules/tags.rules';
 import { getTagColumns } from 'src/data/columns';
+import { getTagTextContrastColor } from 'src/utils/tagColorContrast';
 
 const { notify, notifyError, confirmDelete } = useUI();
 const { t } = useI18n();
-const { nameRuleState, validateName } = useTagRules();
+const HEX_COLOR_REGEX = /^#(?:[0-9A-F]{3}|[0-9A-F]{6})$/i;
 
 const tagFilterSchema: FilterSchema = {
   id: 'Text',
@@ -73,10 +66,6 @@ const { items, total, isLoading, query, fetch } = useQuery(
 
 const isDialogOpen = ref(false);
 const editingId = ref<string | null>(null);
-const isSaving = ref(false);
-const form = reactive<TagDto>({
-  name: '',
-});
 
 const { onRequest } = useCrudListHandlers({
   query,
@@ -85,40 +74,54 @@ const { onRequest } = useCrudListHandlers({
 
 const handleCreate = () => {
   editingId.value = null;
-  form.name = '';
   isDialogOpen.value = true;
 };
 
-const handleEdit = async (ids: string[]) => {
+const handleEdit = (ids: string[]) => {
   if (!ids[0]) return;
-  try {
-    const data = await TagsService.getById(ids[0]);
-    form.name = data.name;
-    editingId.value = ids[0];
-    isDialogOpen.value = true;
-  } catch (err: unknown) {
-    notifyError(t('tags.messages.getError'), err);
-  }
+  editingId.value = ids[0];
+  isDialogOpen.value = true;
 };
 
-const onSubmit = async () => {
-  isSaving.value = true;
-  try {
-    if (validateName(form.name)) return;
-    if (editingId.value) {
-      await TagsService.update(editingId.value, form);
-      notify(t('tags.messages.updateSuccess'), 'positive');
-    } else {
-      await TagsService.create(form);
-      notify(t('tags.messages.createSuccess'), 'positive');
-    }
-    isDialogOpen.value = false;
-    void fetch();
-  } catch (err: unknown) {
-    notifyError(t('tags.messages.saveError'), err);
-  } finally {
-    isSaving.value = false;
+const normalizeTagColor = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toUpperCase();
+  return HEX_COLOR_REGEX.test(normalized) ? normalized : null;
+};
+
+const getTagColorChipStyle = (value: unknown): Record<string, string> => {
+  const resolvedColor = normalizeTagColor(value);
+  if (!resolvedColor) {
+    return {
+      backgroundColor: 'var(--bg-hover)',
+      color: 'var(--text-color)',
+      border: 'none',
+    };
   }
+
+  return {
+    backgroundColor: resolvedColor,
+    color: getTagTextContrastColor(resolvedColor),
+    border: 'none',
+  };
+};
+
+const getTagColorChipLabel = (value: unknown): string => {
+  const resolvedColor = normalizeTagColor(value);
+  if (resolvedColor) {
+    return resolvedColor;
+  }
+
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value;
+  }
+
+  return t('common.empty');
+};
+
+const onTagSaved = () => {
+  editingId.value = null;
+  void fetch();
 };
 
 const { deleteSelected: confirmDestruction } = useCrudDelete({

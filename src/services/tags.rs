@@ -33,6 +33,7 @@ impl TagService {
         let tag = tags::ActiveModel {
             user_id: Set(user_id),
             name: Set(dto.name),
+            color: Set(dto.color.to_string()),
             ..Default::default()
         };
 
@@ -55,6 +56,7 @@ impl TagService {
         let mut active_tag: tags::ActiveModel = tag.into();
 
         active_tag.name = Set(dto.name);
+        active_tag.color = Set(dto.color.to_string());
 
         active_tag.update(self.db.as_ref()).await.map_err(AppError::Database)
     }

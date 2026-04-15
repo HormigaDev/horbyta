@@ -8,10 +8,11 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
+        hex_color::HexColor,
         query::QueryPayload,
         task::{
-            CreateTaskDto, LookupOptionDto, MilestoneLookupDto, TaskDetailDto, TaskSearchField, TaskStatus,
-            TaskSummaryDto, TaskViewDto, UpdateTaskDto, UpdateTaskStatusDto,
+            CreateTaskDto, MilestoneLookupDto, TaskDetailDto, TaskProjectDto, TaskSearchField, TaskStatus,
+            TaskSummaryDto, TaskTagDto, TaskViewDto, UpdateTaskDto, UpdateTaskStatusDto,
         },
     },
     entities::{
@@ -59,6 +60,11 @@ impl TaskService {
         Ok(tag_ids)
     }
 
+    fn parse_tag_color_or_internal(color: &str, tag_id: Uuid) -> Result<HexColor, AppError> {
+        HexColor::new(color)
+            .map_err(|_| AppError::Internal(format!("La etiqueta {tag_id} tiene un color inválido almacenado")))
+    }
+
     async fn to_task_detail(&self, task: TaskModel) -> Result<TaskDetailDto, AppError> {
         let tag_ids = self.get_tag_ids_for_task(task.id).await?;
 
@@ -72,11 +78,15 @@ impl TaskService {
                 .all(self.db.as_ref())
                 .await?
                 .into_iter()
-                .map(|tag| LookupOptionDto {
-                    id: tag.id,
-                    name: tag.name,
+                .map(|tag| {
+                    let color = Self::parse_tag_color_or_internal(&tag.color, tag.id)?;
+                    Ok(TaskTagDto {
+                        id: tag.id,
+                        name: tag.name,
+                        color,
+                    })
                 })
-                .collect::<Vec<LookupOptionDto>>()
+                .collect::<Result<Vec<TaskTagDto>, AppError>>()?
         };
 
         let project_name = if let Some(project_id) = task.project_id {
@@ -417,11 +427,11 @@ impl TaskService {
             .all(self.db.as_ref())
             .await?
             .into_iter()
-            .map(|project| LookupOptionDto {
+            .map(|project| TaskProjectDto {
                 id: project.id,
                 name: project.name,
             })
-            .collect::<Vec<LookupOptionDto>>();
+            .collect::<Vec<TaskProjectDto>>();
 
         let project_ids = projects.iter().map(|p| p.id).collect::<Vec<Uuid>>();
 
@@ -451,11 +461,15 @@ impl TaskService {
             .all(self.db.as_ref())
             .await?
             .into_iter()
-            .map(|tag| LookupOptionDto {
-                id: tag.id,
-                name: tag.name,
+            .map(|tag| {
+                let color = Self::parse_tag_color_or_internal(&tag.color, tag.id)?;
+                Ok(TaskTagDto {
+                    id: tag.id,
+                    name: tag.name,
+                    color,
+                })
             })
-            .collect::<Vec<LookupOptionDto>>();
+            .collect::<Result<Vec<TaskTagDto>, AppError>>()?;
 
         Ok(TaskViewDto {
             items,

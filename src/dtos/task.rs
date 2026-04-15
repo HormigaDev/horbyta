@@ -6,7 +6,10 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    dtos::query::{ColumnType, FilterSchema},
+    dtos::{
+        hex_color::HexColor,
+        query::{ColumnType, FilterSchema},
+    },
     entities::tasks,
     string_enum,
     utils::search::FilterField,
@@ -201,13 +204,20 @@ pub struct TaskDetailDto {
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
     pub tag_ids: Vec<Uuid>,
-    pub tags: Vec<LookupOptionDto>,
+    pub tags: Vec<TaskTagDto>,
 }
 
 #[derive(Debug, Serialize)]
-pub struct LookupOptionDto {
+pub struct TaskProjectDto {
     pub id: Uuid,
     pub name: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TaskTagDto {
+    pub id: Uuid,
+    pub name: String,
+    pub color: HexColor,
 }
 
 #[derive(Debug, Serialize)]
@@ -222,9 +232,9 @@ pub struct MilestoneLookupDto {
 pub struct TaskViewDto {
     pub items: Vec<TaskSummaryDto>,
     pub total: u64,
-    pub projects: Vec<LookupOptionDto>,
+    pub projects: Vec<TaskProjectDto>,
     pub milestones: Vec<MilestoneLookupDto>,
-    pub tags: Vec<LookupOptionDto>,
+    pub tags: Vec<TaskTagDto>,
 }
 
 string_enum!(

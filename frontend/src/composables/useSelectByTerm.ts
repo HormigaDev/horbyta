@@ -4,6 +4,8 @@ import type { Filter, PaginatedResponse, QueryPayload } from 'src/types';
 export interface SelectByTermOption {
   label: string;
   value: string;
+  color?: string;
+  [key: string]: unknown;
 }
 
 interface UseSelectByTermConfig<T> {

@@ -107,11 +107,9 @@
                 v-for="tag in task.tags"
                 :key="tag.id"
                 dense
-                style="
-                  background-color: var(--bg-hover);
-                  border: 1px solid var(--border-color);
-                  color: var(--text-color);
-                "
+                :style="`background-color: ${tag.color};
+                  border: none;
+                  color: ${getTagTextContrastColor(tag.color)};`"
               >
                 {{ tag.name }}
               </q-chip>
@@ -215,6 +213,7 @@ import { TasksService } from 'src/services/tasks';
 import { useQuasar } from 'quasar';
 import TaskChangeStatusDialog from 'src/components/TaskChangeStatusDialog.vue';
 import type { TaskDetail, TaskStatus } from 'src/types/task';
+import { getTagTextContrastColor } from 'src/utils/tagColorContrast';
 
 const $q = useQuasar();
 const route = useRoute();

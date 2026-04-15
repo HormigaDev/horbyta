@@ -108,7 +108,37 @@
               multiple
               chips
               @search="onTagSearch"
-            />
+            >
+              <template #option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section class="items-start">
+                    <q-chip
+                      dense
+                      square
+                      class="q-my-xs tag-option-chip"
+                      :style="getTagChipStyle(scope.opt)"
+                    >
+                      {{ scope.opt.label }}
+                    </q-chip>
+                  </q-item-section>
+                  <q-item-section side v-if="scope.selected">
+                    <q-icon name="check" color="primary" />
+                  </q-item-section>
+                </q-item>
+              </template>
+
+              <template #selected-item="scope">
+                <q-chip
+                  dense
+                  removable
+                  class="q-mr-xs q-my-xs"
+                  :style="getTagChipStyle(scope.opt)"
+                  @remove="scope.removeAtIndex(scope.index)"
+                >
+                  {{ scope.opt.label }}
+                </q-chip>
+              </template>
+            </SelectByTerm>
           </div>
 
           <div class="col-12">
@@ -186,6 +216,7 @@ import type { Milestone } from 'src/types/milestone';
 import type { ProjectSummary } from 'src/types/project';
 import type { Tag } from 'src/types/tag';
 import type { TaskDto, TaskStatus } from 'src/types/task';
+import { getTagTextContrastColor } from 'src/utils/tagColorContrast';
 
 const route = useRoute();
 const router = useRouter();
@@ -197,6 +228,7 @@ const isNew = computed(() => route.name === 'task-create');
 const taskId = computed(() => String(route.params.id || ''));
 const isSubmitting = ref(false);
 const isHydratingTask = ref(false);
+const HEX_COLOR_REGEX = /^#(?:[0-9A-F]{3}|[0-9A-F]{6})$/i;
 
 const statusOptions: Array<{ label: string; value: TaskStatus }> = [
   { label: t('tasks.form.status.todo'), value: 'todo' },
@@ -282,8 +314,36 @@ const {
   toOption: (tag) => ({
     label: tag.name,
     value: tag.id,
+    color: tag.color,
   }),
 });
+
+const resolveTagColor = (option: unknown): string | null => {
+  if (typeof option !== 'object' || option === null) return null;
+
+  const rawColor = (option as { color?: unknown }).color;
+  if (typeof rawColor !== 'string') return null;
+
+  const normalizedColor = rawColor.trim().toUpperCase();
+  return HEX_COLOR_REGEX.test(normalizedColor) ? normalizedColor : null;
+};
+
+const getTagChipStyle = (option: unknown): Record<string, string> => {
+  const resolvedColor = resolveTagColor(option);
+  if (!resolvedColor) {
+    return {
+      backgroundColor: 'var(--bg-hover)',
+      color: 'var(--text-color)',
+      border: 'none',
+    };
+  }
+
+  return {
+    backgroundColor: resolvedColor,
+    color: getTagTextContrastColor(resolvedColor),
+    border: 'none',
+  };
+};
 
 const toIsoDateFromDisplay = (value: string): string | null => {
   const trimmed = value.trim();
@@ -381,15 +441,15 @@ const ensureTagOptions = async (tagIds: string[]) => {
     missingIds.map(async (id) => {
       try {
         const tag = await TagsService.getById(id);
-        return { value: tag.id, label: tag.name };
+        return { value: tag.id, label: tag.name, color: tag.color };
       } catch {
         return null;
       }
     }),
   );
 
-  const validResolved = resolved.filter((item): item is { value: string; label: string } =>
-    Boolean(item),
+  const validResolved = resolved.filter(
+    (item): item is { value: string; label: string; color: string } => Boolean(item),
   );
   if (validResolved.length > 0) {
     tagOptions.value = [...validResolved, ...tagOptions.value];
@@ -402,7 +462,9 @@ const loadReferenceData = async () => {
     viewPayload.projects.map((project) => ({ value: project.id, label: project.name })),
   );
   setMilestoneOptions([]);
-  setTagOptions(viewPayload.tags.map((tag) => ({ value: tag.id, label: tag.name })));
+  setTagOptions(
+    viewPayload.tags.map((tag) => ({ value: tag.id, label: tag.name, color: tag.color })),
+  );
 };
 
 const loadTask = async () => {
@@ -519,5 +581,11 @@ onMounted(async () => {
 .fit-textarea :deep(.q-field__native) {
   height: 100%;
   min-height: 30vh;
+}
+
+.tag-option-chip {
+  align-self: flex-start;
+  width: auto;
+  max-width: 100%;
 }
 </style>
