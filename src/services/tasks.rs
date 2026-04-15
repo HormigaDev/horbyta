@@ -224,18 +224,15 @@ impl TaskService {
         Ok(deduped_ids)
     }
 
-    pub async fn create(
-        db: &(impl ConnectionTrait + TransactionTrait),
+    async fn create_with_connection(
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         dto: CreateTaskDto,
-    ) -> Result<TaskDetailDto, AppError> {
+    ) -> Result<TaskModel, AppError> {
         Self::ensure_project_ownership(db, user_id, dto.project_id).await?;
         Self::ensure_parent_ownership(db, user_id, dto.parent_id).await?;
-        Self::ensure_milestone_ownership(db, user_id, dto.milestone_id, dto.project_id)
-            .await?;
+        Self::ensure_milestone_ownership(db, user_id, dto.milestone_id, dto.project_id).await?;
         let safe_tag_ids = Self::validate_and_dedup_tags(db, user_id, &dto.tag_ids).await?;
-
-        let txn = db.begin().await.map_err(AppError::Database)?;
 
         let task = tasks::ActiveModel {
             user_id: Set(user_id),
@@ -252,7 +249,7 @@ impl TaskService {
             ..Default::default()
         };
 
-        let created_task = task.insert(&txn).await.map_err(AppError::Database)?;
+        let created_task = task.insert(db).await.map_err(AppError::Database)?;
 
         if !safe_tag_ids.is_empty() {
             let links: Vec<task_tags::ActiveModel> = safe_tag_ids
@@ -265,10 +262,30 @@ impl TaskService {
                 .collect();
 
             TaskTags::insert_many(links)
-                .exec(&txn)
+                .exec(db)
                 .await
                 .map_err(AppError::Database)?;
         }
+
+        Ok(created_task)
+    }
+
+    pub async fn create_in_tx(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        dto: CreateTaskDto,
+    ) -> Result<TaskDetailDto, AppError> {
+        let created_task = Self::create_with_connection(db, user_id, dto).await?;
+        Self::get_by_id(db, user_id, created_task.id).await
+    }
+
+    pub async fn create(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        user_id: Uuid,
+        dto: CreateTaskDto,
+    ) -> Result<TaskDetailDto, AppError> {
+        let txn = db.begin().await.map_err(AppError::Database)?;
+        let created_task = Self::create_with_connection(&txn, user_id, dto).await?;
 
         txn.commit().await.map_err(AppError::Database)?;
 
@@ -295,8 +312,7 @@ impl TaskService {
         let task = Self::get_task_model(db, user_id, id).await?;
         Self::ensure_project_ownership(db, user_id, dto.project_id).await?;
         Self::ensure_parent_ownership(db, user_id, dto.parent_id).await?;
-        Self::ensure_milestone_ownership(db, user_id, dto.milestone_id, dto.project_id)
-            .await?;
+        Self::ensure_milestone_ownership(db, user_id, dto.milestone_id, dto.project_id).await?;
         let safe_tag_ids = Self::validate_and_dedup_tags(db, user_id, &dto.tag_ids).await?;
 
         let txn = db.begin().await.map_err(AppError::Database)?;

@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod attachments;
 pub mod categories;
 pub mod chats;
 pub mod clients;

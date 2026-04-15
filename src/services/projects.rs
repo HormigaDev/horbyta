@@ -26,13 +26,11 @@ use crate::{
 pub struct ProjectService;
 
 impl ProjectService {
-    pub async fn create(
-        db: &(impl ConnectionTrait + TransactionTrait),
+    async fn create_with_connection(
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         dto: CreateProjectDto,
     ) -> Result<ProjectModel, AppError> {
-        let txn = db.begin().await.map_err(AppError::Database)?;
-
         let project = projects::ActiveModel {
             user_id: Set(user_id),
             name: Set(dto.name),
@@ -42,7 +40,7 @@ impl ProjectService {
             ..Default::default()
         };
 
-        let created_project = project.insert(&txn).await.map_err(AppError::Database)?;
+        let created_project = project.insert(db).await.map_err(AppError::Database)?;
 
         if let Some(milestones_dto) = dto.milestones {
             if !milestones_dto.is_empty() {
@@ -57,11 +55,30 @@ impl ProjectService {
                     .collect();
 
                 crate::entities::prelude::Milestones::insert_many(new_milestones)
-                    .exec(&txn)
+                    .exec(db)
                     .await
                     .map_err(AppError::Database)?;
             }
         }
+
+        Ok(created_project)
+    }
+
+    pub async fn create_in_tx(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        dto: CreateProjectDto,
+    ) -> Result<ProjectModel, AppError> {
+        Self::create_with_connection(db, user_id, dto).await
+    }
+
+    pub async fn create(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        user_id: Uuid,
+        dto: CreateProjectDto,
+    ) -> Result<ProjectModel, AppError> {
+        let txn = db.begin().await.map_err(AppError::Database)?;
+        let created_project = Self::create_with_connection(&txn, user_id, dto).await?;
 
         txn.commit().await.map_err(AppError::Database)?;
 
@@ -134,8 +151,8 @@ impl ProjectService {
             .await?
             .ok_or_else(|| AppError::NotFound("Proyecto no encontrado".to_string()))?;
 
-        let milestones = MilestoneService::list_client_project_milestones_preview(db, user_id, client_id, project_id)
-            .await?;
+        let milestones =
+            MilestoneService::list_client_project_milestones_preview(db, user_id, client_id, project_id).await?;
 
         Ok(ClientProjectDetailDto {
             id: row.id,

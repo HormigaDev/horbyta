@@ -1,24 +1,159 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
-    http::StatusCode,
+    body::to_bytes,
+    extract::{FromRequest, Multipart, Path, Request, State},
+    http::{StatusCode, header::CONTENT_TYPE},
     response::IntoResponse,
     routing::{get, post},
 };
+use sea_orm::TransactionTrait;
 use serde_json::json;
 use uuid::Uuid;
+use validator::{Validate, ValidationErrors};
 
 use crate::{
     dtos::{
+        attachment::{CreateAttachmentDto, UploadedFile},
         query::QueryPayload,
         task::{CreateTaskDto, UpdateTaskDto, UpdateTaskStatusDto, task_filter_schema},
         user::UserDto,
     },
     error::AppError,
     middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
-    services::tasks::TaskService,
+    services::{attachments::AttachmentService, tasks::TaskService},
     state::AppState,
 };
+
+const MAX_TOTAL_UPLOAD_BYTES: usize = 50 * 1024 * 1024;
+const MAX_JSON_BODY_BYTES: usize = 2 * 1024 * 1024;
+const PAYLOAD_FIELD_NAME: &str = "payload";
+const FILES_FIELD_NAME: &str = "files";
+
+fn first_validation_error_message(err: ValidationErrors, fallback: &str) -> String {
+    err.field_errors()
+        .into_values()
+        .flatten()
+        .filter_map(|field| field.message.as_ref())
+        .next()
+        .map(|message| message.to_string())
+        .unwrap_or_else(|| fallback.to_string())
+}
+
+fn is_multipart_request(request: &Request) -> bool {
+    request
+        .headers()
+        .get(CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(|content_type| content_type.starts_with("multipart/form-data"))
+        .unwrap_or(false)
+}
+
+async fn parse_task_payload_from_json(request: Request) -> Result<(CreateTaskDto, Vec<UploadedFile>), AppError> {
+    let bytes = to_bytes(request.into_body(), MAX_JSON_BODY_BYTES)
+        .await
+        .map_err(|_| AppError::Unprocessable("Formato JSON inválido o malformado.".to_string()))?;
+
+    let payload: CreateTaskDto = serde_json::from_slice(&bytes)
+        .map_err(|_| AppError::Unprocessable("Formato JSON inválido o malformado.".to_string()))?;
+
+    payload.validate().map_err(|error| {
+        AppError::BadRequest(first_validation_error_message(
+            error,
+            "Error de validación en los campos enviados.",
+        ))
+    })?;
+
+    Ok((payload, Vec::new()))
+}
+
+async fn parse_task_payload_from_multipart(
+    state: &AppState,
+    request: Request,
+) -> Result<(CreateTaskDto, Vec<UploadedFile>), AppError> {
+    let mut multipart = Multipart::from_request(request, state)
+        .await
+        .map_err(|_| AppError::Unprocessable("Formato multipart inválido o malformado.".to_string()))?;
+
+    let mut payload: Option<CreateTaskDto> = None;
+    let mut files = Vec::new();
+    let mut total_upload_bytes: usize = 0;
+
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|_| AppError::BadRequest("Error al procesar el formulario multipart.".to_string()))?
+    {
+        let field_name = field.name().unwrap_or_default().to_string();
+
+        if field_name == PAYLOAD_FIELD_NAME {
+            if payload.is_some() {
+                return Err(AppError::BadRequest(
+                    "Solo se permite un campo payload en la petición multipart".to_string(),
+                ));
+            }
+
+            let raw_payload = field
+                .text()
+                .await
+                .map_err(|_| AppError::BadRequest("No se pudo leer el campo payload".to_string()))?;
+
+            let parsed_payload: CreateTaskDto = serde_json::from_str(&raw_payload)
+                .map_err(|_| AppError::BadRequest("El campo payload debe ser un JSON válido".to_string()))?;
+
+            parsed_payload.validate().map_err(|error| {
+                AppError::BadRequest(first_validation_error_message(
+                    error,
+                    "Error de validación en los campos enviados.",
+                ))
+            })?;
+
+            payload = Some(parsed_payload);
+            continue;
+        }
+
+        if field_name == FILES_FIELD_NAME {
+            let original_name = field.file_name().unwrap_or("archivo").to_string();
+            let mime_type = field.content_type().map(|value| value.to_string());
+            let bytes = field
+                .bytes()
+                .await
+                .map_err(|_| AppError::BadRequest("No se pudo leer uno de los archivos".to_string()))?;
+
+            total_upload_bytes = total_upload_bytes.checked_add(bytes.len()).ok_or_else(|| {
+                AppError::BadRequest("El tamaño total de archivos excede el límite permitido".to_string())
+            })?;
+
+            if total_upload_bytes > MAX_TOTAL_UPLOAD_BYTES {
+                return Err(AppError::BadRequest(
+                    "El tamaño total de archivos no puede exceder 50MB".to_string(),
+                ));
+            }
+
+            files.push(UploadedFile {
+                original_name,
+                mime_type,
+                bytes: bytes.to_vec(),
+            });
+        }
+    }
+
+    let payload = payload.ok_or_else(|| {
+        AppError::BadRequest("La petición multipart debe incluir un campo payload con el JSON de la tarea".to_string())
+    })?;
+
+    Ok((payload, files))
+}
+
+async fn parse_task_create_request(
+    state: &AppState,
+    request: Request,
+) -> Result<(CreateTaskDto, Vec<UploadedFile>), AppError> {
+    if is_multipart_request(&request) {
+        return parse_task_payload_from_multipart(state, request).await;
+    }
+
+    parse_task_payload_from_json(request).await
+}
 
 async fn view_tasks(State(state): State<AppState>, user: UserDto) -> Result<impl IntoResponse, AppError> {
     let view_payload = TaskService::view(state.db.as_ref(), user.id).await?;
@@ -53,9 +188,42 @@ async fn get_task(
 async fn create_task(
     State(state): State<AppState>,
     user: UserDto,
-    ValidatedJson(payload): ValidatedJson<CreateTaskDto>,
+    request: Request,
 ) -> Result<impl IntoResponse, AppError> {
-    let task = TaskService::create(state.db.as_ref(), user.id, payload).await?;
+    let (payload, files) = parse_task_create_request(&state, request).await?;
+
+    if files.is_empty() {
+        let task = TaskService::create(state.db.as_ref(), user.id, payload).await?;
+        return Ok(Json(task));
+    }
+
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
+    let task = match TaskService::create_in_tx(&tx, user.id, payload).await {
+        Ok(task) => task,
+        Err(error) => {
+            tx.rollback().await.map_err(AppError::Database)?;
+            return Err(error);
+        }
+    };
+
+    for file in files {
+        let attachment = CreateAttachmentDto {
+            project_id: task.project_id,
+            task_id: Some(task.id),
+            original_name: file.original_name,
+            mime_type: file.mime_type,
+        };
+
+        if let Err(error) =
+            AttachmentService::create_in_tx(&tx, state.storage.as_ref(), user.id, attachment, file.bytes).await
+        {
+            tx.rollback().await.map_err(AppError::Database)?;
+            return Err(error);
+        }
+    }
+
+    tx.commit().await.map_err(AppError::Database)?;
+
     Ok(Json(task))
 }
 
