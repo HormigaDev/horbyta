@@ -445,7 +445,9 @@ import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/auth';
 import { APP_VERSION } from 'src/data/constants';
 import { useNotificationsStore } from 'src/stores/notifications';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { useUI } from 'src/composables/useUI';
+import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { AppNotification } from 'src/types/ui';
 
 const router = useRouter();
@@ -461,6 +463,7 @@ const notificationDetailsOpen = ref(false);
 const selectedNotification = ref<AppNotification | null>(null);
 const appVersion = APP_VERSION;
 const notificationsStore = useNotificationsStore();
+const userPreferencesStore = useUserPreferencesStore();
 const { showErrorDialog } = useUI();
 const ChatbotPanel = defineAsyncComponent(() => import('src/components/ChatbotPanel.vue'));
 
@@ -502,7 +505,12 @@ function resolveNotificationColor(type: AppNotification['type']) {
 }
 
 function formatNotificationDate(rawDate: string) {
-  return new Date(rawDate).toLocaleString();
+  return formatDateByPreferences(rawDate, {
+    timezone: userPreferencesStore.timezone,
+    dateFormat: userPreferencesStore.dateFormat,
+    includeTime: true,
+    fallback: t('common.empty'),
+  });
 }
 
 function handleNotificationClick(notif: AppNotification) {

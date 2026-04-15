@@ -16,8 +16,8 @@
             {{
               t('tasks.detail.meta', {
                 id: task.id,
-                created: new Date(task.created_at).toLocaleDateString(),
-                updated: new Date(task.updated_at).toLocaleDateString(),
+                created: formatDate(task.created_at),
+                updated: formatDate(task.updated_at),
               })
             }}
           </div>
@@ -83,7 +83,7 @@
               <div style="color: var(--text-color)">
                 {{
                   task.due_date
-                    ? new Date(task.due_date).toLocaleDateString()
+                    ? formatDate(task.due_date, t('tasks.detail.noDate'))
                     : t('tasks.detail.noDate')
                 }}
               </div>
@@ -210,6 +210,8 @@ import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useUI } from 'src/composables/useUI';
 import { TasksService } from 'src/services/tasks';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import { useQuasar } from 'quasar';
 import TaskChangeStatusDialog from 'src/components/TaskChangeStatusDialog.vue';
 import type { TaskDetail, TaskStatus } from 'src/types/task';
@@ -220,9 +222,17 @@ const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmDelete, showLoading, hideLoading } = useUI();
+const userPreferencesStore = useUserPreferencesStore();
 
 const task = ref<TaskDetail | null>(null);
 const taskId = String(route.params.id || '');
+
+const formatDate = (value: string, fallback = t('common.empty')) =>
+  formatDateByPreferences(value, {
+    timezone: userPreferencesStore.timezone,
+    dateFormat: userPreferencesStore.dateFormat,
+    fallback,
+  });
 
 const statusLabel = (status: TaskStatus) => {
   switch (status) {

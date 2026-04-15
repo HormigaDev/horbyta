@@ -51,7 +51,7 @@
           <div class="col-12 col-md-4">
             <q-input
               v-model="dueDateDisplay"
-              mask="##/##/####"
+              :mask="dateInputMask"
               :label="t('milestones.form.dueDateLabel')"
               dense
               outlined
@@ -59,7 +59,7 @@
               <template #append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="dueDateDisplay" mask="DD/MM/YYYY">
+                    <q-date v-model="dueDateDisplay" :mask="qDateMask">
                       <div class="row items-center justify-end">
                         <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
                       </div>
@@ -129,8 +129,15 @@ import { useUI } from 'src/composables/useUI';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { MilestonesService } from 'src/services/milestones';
 import { ProjectsService } from 'src/services/projects';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import type { MilestoneDto, MilestoneStatus } from 'src/types/milestone';
 import type { ProjectSummary } from 'src/types/project';
+import {
+  formatIsoDateForInput,
+  getDateInputMask,
+  getQDateMask,
+  parseDisplayDateToIso,
+} from 'src/utils/dateFormatting';
 
 type MilestoneFormState = Omit<MilestoneDto, 'project_id'> & {
   project_id: string | null;
@@ -139,6 +146,7 @@ type MilestoneFormState = Omit<MilestoneDto, 'project_id'> & {
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
+const userPreferencesStore = useUserPreferencesStore();
 const { notify, notifyError, showLoading, hideLoading } = useUI();
 
 const isNew = computed(() => route.name === 'milestone-create');
@@ -146,6 +154,8 @@ const milestoneId = computed(() => String(route.params.id || ''));
 const isSubmitting = ref(false);
 const hasAttemptedSubmit = ref(false);
 const dueDateDisplay = ref('');
+const dateInputMask = computed(() => getDateInputMask(userPreferencesStore.dateFormat));
+const qDateMask = computed(() => getQDateMask(userPreferencesStore.dateFormat));
 
 const statusOptions: Array<{ label: string; value: MilestoneStatus }> = [
   { label: t('milestones.status.open'), value: 'open' },
@@ -189,31 +199,14 @@ const {
 });
 
 const toIsoDateFromDisplay = (value: string): string | null => {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  const parts = trimmed.split('/');
-  if (parts.length !== 3) return null;
-
-  const [day, month, year] = parts;
-  if (!day || !month || !year) return null;
-
-  return `${year}-${month}-${day}T12:00:00.000Z`;
+  return parseDisplayDateToIso(value, userPreferencesStore.dateFormat);
 };
 
 const toDisplayDateFromIso = (value: string | null): string => {
-  if (!value) return '';
-
-  const date = value.split('T')[0];
-  if (!date) return '';
-
-  const parts = date.split('-');
-  if (parts.length !== 3) return '';
-
-  const [year, month, day] = parts;
-  if (!year || !month || !day) return '';
-
-  return `${day}/${month}/${year}`;
+  return formatIsoDateForInput(value, {
+    timezone: userPreferencesStore.timezone,
+    dateFormat: userPreferencesStore.dateFormat,
+  });
 };
 
 const onProjectSearch = (term: string) => {

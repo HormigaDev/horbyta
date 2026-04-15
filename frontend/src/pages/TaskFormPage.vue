@@ -81,14 +81,14 @@
             <q-input
               dense
               v-model="dueDateDisplay"
-              mask="##/##/####"
+              :mask="dateInputMask"
               :label="t('tasks.form.dueDateLabel')"
               outlined
             >
               <template #append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="dueDateDisplay" mask="DD/MM/YYYY">
+                    <q-date v-model="dueDateDisplay" :mask="qDateMask">
                       <div class="row items-center justify-end">
                         <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
                       </div>
@@ -211,16 +211,24 @@ import { TasksService } from 'src/services/tasks';
 import { ProjectsService } from 'src/services/projects';
 import { MilestonesService } from 'src/services/milestones';
 import { TagsService } from 'src/services/tags';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import type { Filter, QueryPayload } from 'src/types';
 import type { Milestone } from 'src/types/milestone';
 import type { ProjectSummary } from 'src/types/project';
 import type { Tag } from 'src/types/tag';
 import type { TaskDto, TaskStatus } from 'src/types/task';
 import { getTagTextContrastColor } from 'src/utils/tagColorContrast';
+import {
+  formatIsoDateForInput,
+  getDateInputMask,
+  getQDateMask,
+  parseDisplayDateToIso,
+} from 'src/utils/dateFormatting';
 
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
+const userPreferencesStore = useUserPreferencesStore();
 const { notify, notifyError, showLoading, hideLoading } = useUI();
 const { titleRuleState, validateTitle } = useTasksRules();
 
@@ -250,6 +258,8 @@ const complexityOptions = [
 ];
 
 const dueDateDisplay = ref('');
+const dateInputMask = computed(() => getDateInputMask(userPreferencesStore.dateFormat));
+const qDateMask = computed(() => getQDateMask(userPreferencesStore.dateFormat));
 
 const form = reactive<TaskDto>({
   project_id: null,
@@ -346,31 +356,14 @@ const getTagChipStyle = (option: unknown): Record<string, string> => {
 };
 
 const toIsoDateFromDisplay = (value: string): string | null => {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  const parts = trimmed.split('/');
-  if (parts.length !== 3) return null;
-
-  const [day, month, year] = parts;
-  if (!day || !month || !year) return null;
-
-  return `${year}-${month}-${day}T12:00:00.000Z`;
+  return parseDisplayDateToIso(value, userPreferencesStore.dateFormat);
 };
 
 const toDisplayDateFromIso = (value: string | null): string => {
-  if (!value) return '';
-
-  const date = value.split('T')[0];
-  if (!date) return '';
-
-  const parts = date.split('-');
-  if (parts.length !== 3) return '';
-
-  const [year, month, day] = parts;
-  if (!year || !month || !day) return '';
-
-  return `${day}/${month}/${year}`;
+  return formatIsoDateForInput(value, {
+    timezone: userPreferencesStore.timezone,
+    dateFormat: userPreferencesStore.dateFormat,
+  });
 };
 
 const onProjectSearch = (term: string) => {

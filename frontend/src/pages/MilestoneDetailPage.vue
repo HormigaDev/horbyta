@@ -17,8 +17,8 @@
             {{
               t('milestones.detail.meta', {
                 id: milestone.id,
-                created: new Date(milestone.created_at).toLocaleDateString(),
-                updated: new Date(milestone.updated_at).toLocaleDateString(),
+                created: formatDate(milestone.created_at),
+                updated: formatDate(milestone.updated_at),
               })
             }}
           </div>
@@ -60,7 +60,7 @@
               <div style="color: var(--text-color)">
                 {{
                   milestone.due_date
-                    ? new Date(milestone.due_date).toLocaleDateString()
+                    ? formatDate(milestone.due_date, t('milestones.detail.noDate'))
                     : t('milestones.detail.noDate')
                 }}
               </div>
@@ -142,16 +142,26 @@ import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useUI } from 'src/composables/useUI';
 import { MilestonesService } from 'src/services/milestones';
 import { ProjectsService } from 'src/services/projects';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { Milestone, MilestoneStatus } from 'src/types/milestone';
 
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmDelete, showLoading, hideLoading } = useUI();
+const userPreferencesStore = useUserPreferencesStore();
 
 const milestone = ref<Milestone | null>(null);
 const projectName = ref<string | null>(null);
 const milestoneId = String(route.params.id || '');
+
+const formatDate = (value: string, fallback = t('common.empty')) =>
+  formatDateByPreferences(value, {
+    timezone: userPreferencesStore.timezone,
+    dateFormat: userPreferencesStore.dateFormat,
+    fallback,
+  });
 
 const statusLabel = (status: MilestoneStatus) => {
   return t(`milestones.status.${status}`);

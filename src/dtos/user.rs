@@ -46,6 +46,7 @@ fn validate_password_confirmation(payload: &UpdateUserPasswordDto) -> Result<(),
 fn validate_non_empty_preferences_patch(payload: &UpdateUserPreferencesDto) -> Result<(), ValidationError> {
     if payload.theme.is_none()
         && payload.timezone.is_none()
+        && payload.date_format.is_none()
         && payload.language.is_none()
         && payload.ai_model.is_none()
         && payload.ai_api_key.is_none()
@@ -83,6 +84,22 @@ pub enum UserLanguagePreference {
     En,
     Es,
     Pt,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+pub enum UserDateFormatPreference {
+    #[serde(rename = "DD/MM/YYYY")]
+    DdMmYyyy,
+    #[serde(rename = "MM/DD/YYYY")]
+    MmDdYyyy,
+    #[serde(rename = "YYYY/MM/DD")]
+    YyyyMmDd,
+}
+
+impl Default for UserDateFormatPreference {
+    fn default() -> Self {
+        Self::DdMmYyyy
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -212,6 +229,7 @@ pub struct NotificationPreferences {
 pub struct UserPreferences {
     pub theme: UserThemePreference,
     pub timezone: String,
+    pub date_format: UserDateFormatPreference,
     pub language: UserLanguagePreference,
     pub ai: UserAiPreferences,
     pub notifications: NotificationPreferences,
@@ -222,6 +240,7 @@ impl Default for UserPreferences {
         Self {
             theme: UserThemePreference::System,
             timezone: "UTC".to_string(),
+            date_format: UserDateFormatPreference::DdMmYyyy,
             language: UserLanguagePreference::Es,
             ai: UserAiPreferences::default(),
             notifications: NotificationPreferences::default(),
@@ -252,6 +271,10 @@ impl UserPreferences {
 
         if let Some(timezone) = patch.timezone.as_ref() {
             self.timezone = timezone.clone();
+        }
+
+        if let Some(date_format) = patch.date_format {
+            self.date_format = date_format;
         }
 
         if let Some(language) = patch.language {
@@ -367,6 +390,8 @@ pub struct UpdateUserPreferencesDto {
     #[validate(length(min = 1, max = 64, message = "Timezone inválida"))]
     #[validate(custom(function = "validate_timezone"))]
     pub timezone: Option<String>,
+
+    pub date_format: Option<UserDateFormatPreference>,
 
     pub language: Option<UserLanguagePreference>,
 

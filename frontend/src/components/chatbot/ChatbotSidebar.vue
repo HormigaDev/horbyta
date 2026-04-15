@@ -59,6 +59,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { ChatSummary } from 'src/types/chat';
 
 interface Props {
@@ -78,12 +80,17 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const dateFormatter = new Intl.DateTimeFormat();
+const userPreferencesStore = useUserPreferencesStore();
 
 const drawerModel = computed({
   get: () => props.drawerOpen,
   set: (value: boolean) => emit('update:drawerOpen', value),
 });
 
-const formatDate = (rawDate: string) => dateFormatter.format(new Date(rawDate));
+const formatDate = (rawDate: string) =>
+  formatDateByPreferences(rawDate, {
+    timezone: userPreferencesStore.timezone,
+    dateFormat: userPreferencesStore.dateFormat,
+    fallback: t('common.empty'),
+  });
 </script>

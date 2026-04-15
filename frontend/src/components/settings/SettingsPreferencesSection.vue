@@ -53,7 +53,7 @@
         </div>
       </div>
 
-      <div class="col-12 col-md-4">
+      <div class="col-12 col-md-3">
         <q-select
           v-model="form.theme"
           :label="t('settings.preferences.themeLabel')"
@@ -65,7 +65,7 @@
         />
       </div>
 
-      <div class="col-12 col-md-4">
+      <div class="col-12 col-md-3">
         <q-select
           v-model="form.language"
           :label="t('settings.preferences.languageLabel')"
@@ -77,7 +77,19 @@
         />
       </div>
 
-      <div class="col-12 col-md-4">
+      <div class="col-12 col-md-3">
+        <q-select
+          v-model="form.dateFormat"
+          :label="t('settings.preferences.dateFormatLabel')"
+          outlined
+          dense
+          emit-value
+          map-options
+          :options="dateFormatOptions"
+        />
+      </div>
+
+      <div class="col-12 col-md-3">
         <q-select
           v-model="form.timezone"
           :label="t('settings.preferences.timezoneLabel')"
@@ -113,6 +125,7 @@ import { useUI } from 'src/composables/useUI';
 import { COMMON_TIMEZONES } from 'src/data/constants';
 import { useThemeStore } from 'src/stores/theme';
 import type {
+  UserDateFormatPreference,
   UpdateUserPreferencesDto,
   UserLanguagePreference,
   UserPreferences,
@@ -161,6 +174,11 @@ const languageOptions = [
   { label: t('settings.preferences.language.en'), value: 'en' },
   { label: t('settings.preferences.language.pt'), value: 'pt' },
 ];
+const dateFormatOptions = [
+  { label: 'DD/MM/YYYY', value: 'DD/MM/YYYY' },
+  { label: 'MM/DD/YYYY', value: 'MM/DD/YYYY' },
+  { label: 'YYYY/MM/DD', value: 'YYYY/MM/DD' },
+];
 const themeOptions = [
   { label: t('settings.preferences.theme.system'), value: 'system' },
   { label: t('settings.preferences.theme.dark'), value: 'dark' },
@@ -171,6 +189,7 @@ const form = reactive({
   theme: 'system' as UserThemePreference,
   timezone: 'UTC',
   language: 'es' as UserLanguagePreference,
+  dateFormat: 'DD/MM/YYYY' as UserDateFormatPreference,
   aiModel: 'google/gemini-2.5-flash',
   aiApiKey: '',
 });
@@ -227,6 +246,7 @@ async function savePreferences() {
     const preferences: UpdateUserPreferencesDto = {
       theme: form.theme,
       timezone: form.timezone,
+      date_format: form.dateFormat,
       language: form.language,
       ai_model: form.aiModel,
     };
@@ -258,6 +278,7 @@ watch(
     form.theme = value.theme;
     form.language = value.language;
     form.timezone = value.timezone;
+    form.dateFormat = value.date_format ?? 'DD/MM/YYYY';
     form.aiModel = value.ai.model;
     form.aiApiKey = '';
 

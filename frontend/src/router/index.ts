@@ -8,6 +8,7 @@ import {
 import routes from './routes';
 import { useAuthStore } from 'src/stores/auth';
 import { useClientAuthStore } from 'src/stores/clientAuth';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
 
 export default route(function (/* { store, ssrContext } */) {
   const createHistory = process.env.SERVER
@@ -45,6 +46,11 @@ export default route(function (/* { store, ssrContext } */) {
       if (!authStore.isInitialized) {
         await authStore.checkAuth();
       }
+    }
+
+    if (to.meta.requiresAuth && authStore.isAuthenticated) {
+      const userPreferencesStore = useUserPreferencesStore();
+      await userPreferencesStore.ensureLoaded();
     }
 
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {

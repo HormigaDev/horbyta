@@ -57,10 +57,12 @@ import SettingsUserSection from 'src/components/settings/SettingsUserSection.vue
 import SettingsNotificationsSection from 'src/components/settings/SettingsNotificationsSection.vue';
 import { useUI } from 'src/composables/useUI';
 import { UsersService } from 'src/services/users';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import type { UserSettings } from 'src/types/user';
 
 const { t } = useI18n();
 const { notifyError } = useUI();
+const userPreferencesStore = useUserPreferencesStore();
 
 const isBootstrapping = ref(false);
 const settings = ref<UserSettings | null>(null);
@@ -69,7 +71,9 @@ async function loadSettings() {
   isBootstrapping.value = true;
 
   try {
-    settings.value = await UsersService.getMe();
+    const loadedSettings = await UsersService.getMe();
+    settings.value = loadedSettings;
+    userPreferencesStore.applySettings(loadedSettings);
   } catch (error: unknown) {
     notifyError(t('settings.page.loadError'), error);
     settings.value = null;
@@ -80,6 +84,7 @@ async function loadSettings() {
 
 function handleSettingsUpdated(updated: UserSettings) {
   settings.value = updated;
+  userPreferencesStore.applySettings(updated);
 }
 
 onMounted(() => {

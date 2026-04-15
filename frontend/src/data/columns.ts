@@ -1,6 +1,21 @@
 import type { ComposerTranslation } from 'vue-i18n';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { formatDateByPreferences } from 'src/utils/dateFormatting';
+
+const useDateFormatter = () => {
+  const userPreferencesStore = useUserPreferencesStore();
+
+  return (value: string, fallback = '-') =>
+    formatDateByPreferences(value, {
+      timezone: userPreferencesStore.timezone,
+      dateFormat: userPreferencesStore.dateFormat,
+      fallback,
+    });
+};
 
 export const getProjectColumns = (t: ComposerTranslation) => {
+  const formatDate = useDateFormatter();
+
   return [
     {
       name: 'name',
@@ -37,7 +52,7 @@ export const getProjectColumns = (t: ComposerTranslation) => {
       field: 'created_at',
       sortable: true,
       align: 'center' as const,
-      format: (val: string) => new Date(val).toLocaleDateString(),
+      format: (val: string) => formatDate(val),
     },
     {
       name: 'updated_at',
@@ -45,7 +60,7 @@ export const getProjectColumns = (t: ComposerTranslation) => {
       field: 'updated_at',
       sortable: true,
       align: 'center' as const,
-      format: (val: string) => new Date(val).toLocaleDateString(),
+      format: (val: string) => formatDate(val),
     },
     {
       name: 'category_id',
@@ -65,6 +80,8 @@ export const getProjectColumns = (t: ComposerTranslation) => {
 };
 
 export const getClientProjectColumns = (t: ComposerTranslation) => {
+  const formatDate = useDateFormatter();
+
   return [
     {
       name: 'name',
@@ -87,7 +104,7 @@ export const getClientProjectColumns = (t: ComposerTranslation) => {
       field: 'created_at',
       sortable: true,
       align: 'center' as const,
-      format: (val: string) => new Date(val).toLocaleDateString(),
+      format: (val: string) => formatDate(val),
     },
     {
       name: 'updated_at',
@@ -95,7 +112,7 @@ export const getClientProjectColumns = (t: ComposerTranslation) => {
       field: 'updated_at',
       sortable: true,
       align: 'center' as const,
-      format: (val: string) => new Date(val).toLocaleDateString(),
+      format: (val: string) => formatDate(val),
     },
   ];
 };
@@ -132,6 +149,8 @@ export const getTagColumns = (t: ComposerTranslation) => {
 };
 
 export const getMilestoneColumns = (t: ComposerTranslation) => {
+  const formatDate = useDateFormatter();
+
   return [
     {
       name: 'name',
@@ -155,7 +174,7 @@ export const getMilestoneColumns = (t: ComposerTranslation) => {
       sortable: true,
       align: 'center' as const,
       format: (val: string | null) =>
-        val ? new Date(val).toLocaleDateString() : t('common.empty'),
+        val ? formatDate(val, t('common.empty')) : t('common.empty'),
     },
     {
       name: 'created_at',
@@ -163,7 +182,7 @@ export const getMilestoneColumns = (t: ComposerTranslation) => {
       field: 'created_at',
       sortable: true,
       align: 'center' as const,
-      format: (val: string) => new Date(val).toLocaleDateString(),
+      format: (val: string) => formatDate(val),
     },
     {
       name: 'updated_at',
@@ -171,12 +190,14 @@ export const getMilestoneColumns = (t: ComposerTranslation) => {
       field: 'updated_at',
       sortable: true,
       align: 'center' as const,
-      format: (val: string) => new Date(val).toLocaleDateString(),
+      format: (val: string) => formatDate(val),
     },
   ];
 };
 
 export const getTaskColumns = (t: ComposerTranslation) => {
+  const formatDate = useDateFormatter();
+
   return [
     {
       name: 'title',
@@ -229,12 +250,14 @@ export const getTaskColumns = (t: ComposerTranslation) => {
       field: 'due_date',
       sortable: true,
       align: 'center' as const,
-      format: (val: string | null) => (val ? new Date(val).toLocaleDateString() : 'N/A'),
+      format: (val: string | null) => (val ? formatDate(val, 'N/A') : 'N/A'),
     },
   ];
 };
 
 export const getClientColumns = (t: ComposerTranslation) => {
+  const formatDate = useDateFormatter();
+
   return [
     {
       name: 'name',
@@ -257,7 +280,7 @@ export const getClientColumns = (t: ComposerTranslation) => {
       field: 'created_at',
       sortable: true,
       align: 'center' as const,
-      format: (val: string) => new Date(val).toLocaleDateString(),
+      format: (val: string) => formatDate(val),
     },
     {
       name: 'updated_at',
@@ -265,7 +288,7 @@ export const getClientColumns = (t: ComposerTranslation) => {
       field: 'updated_at',
       sortable: true,
       align: 'center' as const,
-      format: (val: string) => new Date(val).toLocaleDateString(),
+      format: (val: string) => formatDate(val),
     },
   ];
 };

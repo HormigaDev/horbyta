@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import type { User } from 'src/types';
 import { ref } from 'vue';
 import { apiFetch } from 'src/boot/fetch';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
 
 export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = ref(false);
@@ -16,8 +17,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function clearAuth() {
+    const userPreferencesStore = useUserPreferencesStore();
+
     isAuthenticated.value = false;
     user.value = null;
+    userPreferencesStore.resetToDefaults();
   }
 
   async function checkAuth() {

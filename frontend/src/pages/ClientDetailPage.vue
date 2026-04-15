@@ -18,8 +18,8 @@
             {{
               $t('clients.detail.meta', {
                 id: client.id,
-                created: new Date(client.created_at).toLocaleDateString(),
-                updated: new Date(client.updated_at).toLocaleDateString(),
+                created: formatDate(client.created_at),
+                updated: formatDate(client.updated_at),
               })
             }}
           </div>
@@ -301,6 +301,8 @@ import { useI18n } from 'vue-i18n';
 import { ClientsService } from 'src/services/clients';
 import type { Client, ClientAuthMethod, ClientAuthStatusDto } from 'src/types/clients';
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { formatDateByPreferences } from 'src/utils/dateFormatting';
 
 interface GeneratedMagicToken {
   magic_client_token: string;
@@ -311,6 +313,7 @@ const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmAction, confirmDelete, showLoading, hideLoading } = useUI();
+const userPreferencesStore = useUserPreferencesStore();
 
 const client = ref<Client | null>(null);
 const authStatus = ref<ClientAuthStatusDto>({
@@ -327,6 +330,13 @@ const credentialsForm = reactive({
   password: '',
   confirmPassword: '',
 });
+
+const formatDate = (value: string, fallback = t('common.empty')) =>
+  formatDateByPreferences(value, {
+    timezone: userPreferencesStore.timezone,
+    dateFormat: userPreferencesStore.dateFormat,
+    fallback,
+  });
 
 const clientFrontendLoginEndpoint = computed(
   () => `${window.location.origin}${router.resolve({ name: 'client-login' }).href}`,
@@ -399,7 +409,13 @@ const clientStatusLabel = (status: Client['status']) => {
 
 const formatTokenExpiration = (exp: number | null | undefined) => {
   if (!exp) return t('common.empty');
-  return new Date(exp * 1000).toLocaleString();
+
+  return formatDateByPreferences(exp * 1000, {
+    timezone: userPreferencesStore.timezone,
+    dateFormat: userPreferencesStore.dateFormat,
+    includeTime: true,
+    fallback: t('common.empty'),
+  });
 };
 
 const shouldSwitchMethod = (nextMethod: 'credentials' | 'magic_token'): Promise<boolean> => {

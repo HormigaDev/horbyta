@@ -23,8 +23,8 @@
             {{
               t('projects.detail.meta', {
                 id: project.id,
-                created: new Date(project.created_at).toLocaleDateString(),
-                updated: new Date(project.updated_at).toLocaleDateString(),
+                created: formatDate(project.created_at),
+                updated: formatDate(project.updated_at),
               })
             }}
           </div>
@@ -86,15 +86,25 @@ import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useUI } from 'src/composables/useUI';
 import { ClientProjectsService } from 'src/services/clientProjects';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { ClientProjectDetail, ProjectStatus } from 'src/types/project';
 
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const { notifyError, showLoading, hideLoading } = useUI();
+const userPreferencesStore = useUserPreferencesStore();
 
 const project = ref<ClientProjectDetail | null>(null);
 const projectId = String(route.params.id || '');
+
+const formatDate = (value: string, fallback = t('common.empty')) =>
+  formatDateByPreferences(value, {
+    timezone: userPreferencesStore.timezone,
+    dateFormat: userPreferencesStore.dateFormat,
+    fallback,
+  });
 
 const projectStatusLabel = (status: ProjectStatus | null | undefined) => {
   if (!status) return t('common.empty');

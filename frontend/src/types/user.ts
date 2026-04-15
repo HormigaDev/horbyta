@@ -1,5 +1,6 @@
 export type UserThemePreference = 'system' | 'light' | 'dark';
 export type UserLanguagePreference = 'en' | 'es' | 'pt';
+export type UserDateFormatPreference = 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD';
 
 export interface ClientsProjectsNotifications {
   proposal_decision: boolean;
@@ -43,6 +44,7 @@ export interface NotificationPreferences {
 export interface UserPreferences {
   theme: UserThemePreference;
   timezone: string;
+  date_format: UserDateFormatPreference;
   language: UserLanguagePreference;
   ai: {
     model: string;
@@ -77,6 +79,7 @@ export interface UpdateUserPasswordDto {
 export interface UpdateUserPreferencesDto {
   theme?: UserThemePreference;
   timezone?: string;
+  date_format?: UserDateFormatPreference;
   language?: UserLanguagePreference;
   ai_model?: string;
   ai_api_key?: string;
