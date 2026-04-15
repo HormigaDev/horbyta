@@ -277,6 +277,7 @@ impl ProjectService {
                 .left_join(clients::Entity)
                 .select_only()
                 .column(projects::Column::Id)
+                .column(projects::Column::RecordNumber)
                 .column(projects::Column::Name)
                 .column(projects::Column::Status)
                 .column_as(categories::Column::Id, "category_id")
@@ -331,6 +332,7 @@ impl ProjectService {
             query
                 .select_only()
                 .column(projects::Column::Id)
+                .column(projects::Column::RecordNumber)
                 .column(projects::Column::Name)
                 .column(projects::Column::Status)
                 .column(projects::Column::CreatedAt)
