@@ -142,6 +142,25 @@ create table task_tags (
     primary key(task_id, tag_id)
 );
 
+create table attachments (
+    id uuid primary key default uuidv7(),
+    user_id uuid not null references users (id) on delete cascade,
+    project_id uuid references projects (id) on delete cascade,
+    task_id uuid references tasks (id) on delete cascade,
+
+    original_name varchar(255) not null,
+    storage_key varchar(512) not null unique,
+    mime_type varchar(100) not null default 'application/octet-stream',
+    size_bytes bigint not null default 0,
+
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint chk_attachments_linked check (
+        project_id is not null or task_id is not null
+    )
+);
+
 create table conversation_history (
     id uuid primary key default uuidv7(),
     user_id uuid not null references users (id) on delete cascade,
@@ -194,6 +213,10 @@ create table notifications (
 -- ÍNDICES
 -- ---------------------------------
 
+create index idx_attachments_user_id on attachments(user_id);
+create index idx_attachments_project_id on attachments(project_id);
+create index idx_attachments_task_id on attachments(task_id);
+create index idx_attachments_user_created_at on attachments(user_id, created_at desc);
 create unique index uq_users_email on users (lower(email));
 create index idx_categories_user_id on categories(user_id);
 create index idx_categories_user_created_at on categories(user_id, created_at desc);
@@ -268,7 +291,8 @@ begin
         'conversation_history',
         'notifications',
         'clients',
-        'client_auth'
+        'client_auth',
+        'attachments'
     ]
     loop
         execute format(
@@ -340,6 +364,7 @@ comment on table notifications is 'Notificaciones asíncronas persistentes para 
 comment on table clients is 'Clientes del usuario.';
 comment on table client_auth is 'Tabla que contiene los datos de autenticación del cliente en el portal';
 comment on table seq_by_user is 'Secuencias de tablas con cambos numéricos incrementales';
+comment on table attachments is 'Archivos adjuntos subidos por los usuarios. Pueden estar ligados a tareas o directamente a proyectos. Almacena metadatos y la ruta (storage_key) para el ObjectStore.';
 
 comment on column tasks.parent_id is 'Referencia recursiva para soportar subtareas de n-niveles.';
 comment on column tasks.status is 'Estado del flujo de trabajo. Restringido a 4 valores predefinidos por CHECK.';

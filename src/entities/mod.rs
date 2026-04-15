@@ -2,6 +2,7 @@
 
 pub mod prelude;
 
+pub mod attachments;
 pub mod categories;
 pub mod client_auth;
 pub mod clients;
