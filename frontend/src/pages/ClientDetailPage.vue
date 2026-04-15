@@ -299,7 +299,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useUI } from 'src/composables/useUI';
 import { useI18n } from 'vue-i18n';
 import { ClientsService } from 'src/services/clients';
-import type { Client, ClientAuthMethod, ClientAuthStatusDto } from 'src/types/clients';
+import type { ClientAuthMethod, ClientAuthStatusDto } from 'src/types/clients';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
@@ -314,8 +314,9 @@ const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmAction, confirmDelete, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
+type ClientDetailViewDto = Awaited<ReturnType<typeof ClientsService.getById>>;
 
-const client = ref<Client | null>(null);
+const client = ref<ClientDetailViewDto | null>(null);
 const authStatus = ref<ClientAuthStatusDto>({
   method: 'none',
   email: null,
@@ -403,7 +404,7 @@ const authMethodLabel = (method: ClientAuthMethod) => {
   return t(`clients.detail.auth.method.${method}`);
 };
 
-const clientStatusLabel = (status: Client['status']) => {
+const clientStatusLabel = (status: ClientDetailViewDto['status']) => {
   return t(`clients.detail.status.${status}`);
 };
 

@@ -59,8 +59,8 @@ import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { CategoriesService } from 'src/services/categories';
 import { ClientsService } from 'src/services/clients';
 import type { FilterSchema } from 'src/types/query';
-import type { Category } from 'src/types/category';
-import type { Client } from 'src/types/clients';
+import type { CategorySummaryDto } from 'src/types/category';
+import type { ClientSummaryDto } from 'src/types/clients';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
 import { onMounted } from 'vue';
 
@@ -72,7 +72,7 @@ const {
   options: categoryFilterOptions,
   isLoading: isCategoryFilterLoading,
   load: loadCategoryFilterByTerm,
-} = useSelectByTerm<Category>(CategoriesService.search, {
+} = useSelectByTerm<CategorySummaryDto>(CategoriesService.search, {
   termColumn: 'name',
   orderBy: 'name',
   orderAsc: true,
@@ -86,7 +86,7 @@ const {
   options: clientFilterOptions,
   isLoading: isClientFilterLoading,
   load: loadClientFilterByTerm,
-} = useSelectByTerm<Client>(ClientsService.search, {
+} = useSelectByTerm<ClientSummaryDto>(ClientsService.search, {
   termColumn: 'name',
   orderBy: 'name',
   orderAsc: true,

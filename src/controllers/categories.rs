@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        category::{CategoryDto, category_filter_schema},
+        category::{CreateCategoryDto, UpdateCategoryDto, category_filter_schema},
         query::QueryPayload,
         user::UserDto,
     },
@@ -47,7 +47,7 @@ async fn get_category(
 async fn create_category(
     user: UserDto,
     service: CategoryService,
-    ValidatedJson(payload): ValidatedJson<CategoryDto>,
+    ValidatedJson(payload): ValidatedJson<CreateCategoryDto>,
 ) -> Result<impl IntoResponse, AppError> {
     let category = service.create(user.id, payload).await?;
     Ok(Json(category))
@@ -57,7 +57,7 @@ async fn update_category(
     user: UserDto,
     service: CategoryService,
     Path(id): Path<Uuid>,
-    ValidatedJson(payload): ValidatedJson<CategoryDto>,
+    ValidatedJson(payload): ValidatedJson<UpdateCategoryDto>,
 ) -> Result<impl IntoResponse, AppError> {
     let category = service.update(user.id, id, payload).await?;
     Ok(Json(category))

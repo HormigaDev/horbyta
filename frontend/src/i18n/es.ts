@@ -520,6 +520,7 @@ export const messages = {
   'layout.profile.defaultUser': 'Usuario',
   'layout.profile.defaultEmail': 'email@example.com',
 
+  'columns.project.project_number': 'Número',
   'columns.project.name': 'Nombre',
   'columns.project.status': 'Estado',
   'columns.project.category': 'Categoría',
@@ -534,6 +535,7 @@ export const messages = {
   'columns.milestone.due_date': 'Fecha límite',
   'columns.milestone.created_at': 'Creado',
   'columns.milestone.updated_at': 'Actualizado',
+  'columns.task.task_number': 'Número',
   'columns.task.title': 'Título',
   'columns.task.status': 'Estado',
   'columns.task.priority': 'Prioridad',

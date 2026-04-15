@@ -131,7 +131,7 @@ import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useClientRules } from 'src/composables/rules/client.rules';
 import { useUI } from 'src/composables/useUI';
 import { ClientsService } from 'src/services/clients';
-import type { Client, CreateClientDto, UpdateClientDto } from 'src/types/clients';
+import type { ClientDetailDto, CreateClientDto, UpdateClientDto } from 'src/types/clients';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
@@ -145,7 +145,7 @@ const { notify, notifyError, showLoading, hideLoading } = useUI();
 const isNew = computed(() => route.name === 'client-create');
 const isSubmitting = ref(false);
 
-const client = ref<Client>({
+const client = ref<ClientDetailDto>({
   id: '',
   name: '',
   status: 'active',

@@ -1,10 +1,21 @@
-export interface Tag {
+export interface TagSummaryDto {
   id: string;
   name: string;
   color: string;
 }
 
-export interface TagDto {
+export interface TagDetailDto {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface CreateTagDto {
+  name: string;
+  color: string;
+}
+
+export interface UpdateTagDto {
   name: string;
   color: string;
 }

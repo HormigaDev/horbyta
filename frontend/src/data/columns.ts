@@ -18,6 +18,13 @@ export const getProjectColumns = (t: ComposerTranslation) => {
 
   return [
     {
+      name: 'project_number',
+      label: t('columns.project.project_number'),
+      field: 'project_number',
+      sortable: true,
+      align: 'center' as const,
+    },
+    {
       name: 'name',
       label: t('columns.project.name'),
       field: 'name',
@@ -83,6 +90,13 @@ export const getClientProjectColumns = (t: ComposerTranslation) => {
   const formatDate = useDateFormatter();
 
   return [
+    {
+      name: 'project_number',
+      label: t('columns.project.project_number'),
+      field: 'project_number',
+      sortable: true,
+      align: 'center' as const,
+    },
     {
       name: 'name',
       label: t('columns.project.name'),
@@ -199,6 +213,13 @@ export const getTaskColumns = (t: ComposerTranslation) => {
   const formatDate = useDateFormatter();
 
   return [
+    {
+      name: 'task_number',
+      label: t('columns.task.task_number'),
+      field: 'task_number',
+      sortable: true,
+      align: 'center' as const,
+    },
     {
       name: 'title',
       label: t('columns.task.title'),

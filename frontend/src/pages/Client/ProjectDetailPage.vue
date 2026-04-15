@@ -88,7 +88,7 @@ import { useUI } from 'src/composables/useUI';
 import { ClientProjectsService } from 'src/services/clientProjects';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
-import type { ClientProjectDetail, ProjectStatus } from 'src/types/project';
+import type { ClientProjectDetailDto, ProjectStatus } from 'src/types/project';
 
 const route = useRoute();
 const router = useRouter();
@@ -96,7 +96,7 @@ const { t } = useI18n();
 const { notifyError, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
 
-const project = ref<ClientProjectDetail | null>(null);
+const project = ref<ClientProjectDetailDto | null>(null);
 const projectId = String(route.params.id || '');
 
 const formatDate = (value: string, fallback = t('common.empty')) =>

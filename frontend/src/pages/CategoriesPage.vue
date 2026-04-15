@@ -49,7 +49,7 @@ import { useQuery } from 'src/composables/useQuery';
 import { useUI } from 'src/composables/useUI';
 import type { FilterSchema } from 'src/types';
 import { CategoriesService } from 'src/services/categories';
-import type { CategoryDto } from 'src/types/category';
+import type { CreateCategoryDto, UpdateCategoryDto } from 'src/types/category';
 import { useCategoryRules } from 'src/composables/rules/categories.rules';
 import { getCategoryColumns } from 'src/data/columns';
 
@@ -73,7 +73,7 @@ const { items, total, isLoading, query, fetch } = useQuery(
 const isDialogOpen = ref(false);
 const editingId = ref<string | null>(null);
 const isSaving = ref(false);
-const form = reactive<CategoryDto>({
+const form = reactive<CreateCategoryDto>({
   name: '',
 });
 
@@ -105,7 +105,8 @@ const onSubmit = async () => {
   try {
     if (validateName(form.name)) return;
     if (editingId.value) {
-      await CategoriesService.update(editingId.value, form);
+      const payload: UpdateCategoryDto = { name: form.name };
+      await CategoriesService.update(editingId.value, payload);
       notify(t('categories.messages.updateSuccess'), 'positive');
     } else {
       await CategoriesService.create(form);

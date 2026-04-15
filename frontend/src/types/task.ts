@@ -1,9 +1,10 @@
-import type { Tag } from './tag';
+import type { TagSummaryDto } from './tag';
 
 export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done';
 
-export interface TaskSummary {
+export interface TaskSummaryDto {
   id: string;
+  task_number: bigint;
   project_id: string | null;
   milestone_id: string | null;
   title: string;
@@ -17,8 +18,9 @@ export interface TaskSummary {
   updated_at: string;
 }
 
-export interface TaskDetail {
+export interface TaskDetailDto {
   id: string;
+  task_number: bigint;
   user_id: string;
   project_id: string | null;
   parent_id: string | null;
@@ -35,10 +37,10 @@ export interface TaskDetail {
   created_at: string;
   updated_at: string;
   tag_ids: string[];
-  tags: Tag[];
+  tags: TagSummaryDto[];
 }
 
-export interface TaskDto {
+export interface CreateTaskDto {
   project_id: string | null;
   parent_id: string | null;
   milestone_id: string | null;
@@ -52,12 +54,26 @@ export interface TaskDto {
   tag_ids: string[];
 }
 
-export interface LookupOption {
+export interface UpdateTaskDto {
+  project_id: string | null;
+  parent_id: string | null;
+  milestone_id: string | null;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  priority: number;
+  complexity: number;
+  block_parent: boolean;
+  due_date: string | null;
+  tag_ids: string[];
+}
+
+export interface LookupOptionDto {
   id: string;
   name: string;
 }
 
-export interface MilestoneLookup {
+export interface MilestoneLookupDto {
   id: string;
   project_id: string;
   name: string;
@@ -65,9 +81,9 @@ export interface MilestoneLookup {
 }
 
 export interface TasksViewResponse {
-  items: TaskSummary[];
+  items: TaskSummaryDto[];
   total: number;
-  projects: LookupOption[];
-  milestones: MilestoneLookup[];
-  tags: Tag[];
+  projects: LookupOptionDto[];
+  milestones: MilestoneLookupDto[];
+  tags: TagSummaryDto[];
 }

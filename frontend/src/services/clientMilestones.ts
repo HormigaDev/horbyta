@@ -1,12 +1,12 @@
 import { apiFetchClient } from 'src/boot/fetch';
 import type { PaginatedResponse, QueryPayload } from 'src/types';
-import type { ClientMilestone } from 'src/types/milestone';
+import type { ClientMilestoneDetailDto, ClientMilestoneSummaryDto } from 'src/types/milestone';
 
 export const ClientMilestonesService = {
   searchByProject: (
     projectId: string,
     payload: QueryPayload,
-  ): Promise<PaginatedResponse<ClientMilestone>> => {
+  ): Promise<PaginatedResponse<ClientMilestoneSummaryDto>> => {
     const params = new URLSearchParams({ q: JSON.stringify(payload) });
     return apiFetchClient(
       `/milestones/client/search-by-project/${projectId}?${params.toString()}`,
@@ -16,7 +16,7 @@ export const ClientMilestonesService = {
     );
   },
 
-  getByIdFromProject: async (projectId: string, id: string): Promise<ClientMilestone> => {
+  getByIdFromProject: async (projectId: string, id: string): Promise<ClientMilestoneDetailDto> => {
     const payload: QueryPayload = {
       page: 1,
       limit: 1,

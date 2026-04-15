@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         query::QueryPayload,
-        tag::{TagDto, tag_filter_schema},
+        tag::{CreateTagDto, UpdateTagDto, tag_filter_schema},
         user::UserDto,
     },
     error::AppError,
@@ -43,7 +43,7 @@ async fn get_tag(user: UserDto, service: TagService, Path(id): Path<Uuid>) -> Re
 async fn create_tag(
     user: UserDto,
     service: TagService,
-    ValidatedJson(payload): ValidatedJson<TagDto>,
+    ValidatedJson(payload): ValidatedJson<CreateTagDto>,
 ) -> Result<impl IntoResponse, AppError> {
     let tag = service.create(user.id, payload).await?;
     Ok(Json(tag))
@@ -53,7 +53,7 @@ async fn update_tag(
     user: UserDto,
     service: TagService,
     Path(id): Path<Uuid>,
-    ValidatedJson(payload): ValidatedJson<TagDto>,
+    ValidatedJson(payload): ValidatedJson<UpdateTagDto>,
 ) -> Result<impl IntoResponse, AppError> {
     let tag = service.update(user.id, id, payload).await?;
     Ok(Json(tag))

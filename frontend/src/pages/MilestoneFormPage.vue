@@ -130,8 +130,8 @@ import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { MilestonesService } from 'src/services/milestones';
 import { ProjectsService } from 'src/services/projects';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
-import type { MilestoneDto, MilestoneStatus } from 'src/types/milestone';
-import type { ProjectSummary } from 'src/types/project';
+import type { CreateMilestoneDto, MilestoneStatus, UpdateMilestoneDto } from 'src/types/milestone';
+import type { ProjectSummaryDto } from 'src/types/project';
 import {
   formatIsoDateForInput,
   getDateInputMask,
@@ -139,7 +139,7 @@ import {
   parseDisplayDateToIso,
 } from 'src/utils/dateFormatting';
 
-type MilestoneFormState = Omit<MilestoneDto, 'project_id'> & {
+type MilestoneFormState = Omit<UpdateMilestoneDto, 'project_id'> & {
   project_id: string | null;
 };
 
@@ -188,7 +188,7 @@ const {
   options: projectOptions,
   isLoading: isProjectsLoading,
   load: loadProjectsByTerm,
-} = useSelectByTerm<ProjectSummary>(ProjectsService.search, {
+} = useSelectByTerm<ProjectSummaryDto>(ProjectsService.search, {
   termColumn: 'name',
   orderBy: 'name',
   orderAsc: true,
@@ -264,7 +264,7 @@ const saveMilestone = async () => {
   isSubmitting.value = true;
   showLoading(t('milestones.form.saving'));
 
-  const payload: MilestoneDto = {
+  const payload: CreateMilestoneDto = {
     project_id: form.project_id,
     name: form.name.trim(),
     description: form.description,
@@ -278,7 +278,14 @@ const saveMilestone = async () => {
       notify(t('milestones.form.createSuccess'), 'positive');
       void router.push(`/milestones/${created.id}`);
     } else {
-      await MilestonesService.update(milestoneId.value, payload);
+      const updatePayload: UpdateMilestoneDto = {
+        project_id: payload.project_id,
+        name: payload.name,
+        description: payload.description,
+        status: payload.status,
+        due_date: payload.due_date,
+      };
+      await MilestonesService.update(milestoneId.value, updatePayload);
       notify(t('milestones.form.updateSuccess'), 'positive');
       void router.push(`/milestones/${milestoneId.value}`);
     }

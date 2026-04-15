@@ -127,7 +127,7 @@ import { ClientMilestonesService } from 'src/services/clientMilestones';
 import { ClientProjectsService } from 'src/services/clientProjects';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
-import type { ClientMilestone, MilestoneStatus } from 'src/types/milestone';
+import type { ClientMilestoneDetailDto, MilestoneStatus } from 'src/types/milestone';
 
 const route = useRoute();
 const router = useRouter();
@@ -135,7 +135,7 @@ const { t } = useI18n();
 const { notifyError, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
 
-const milestone = ref<ClientMilestone | null>(null);
+const milestone = ref<ClientMilestoneDetailDto | null>(null);
 const projectName = ref<string | null>(null);
 const milestoneId = String(route.params.id || '');
 const projectId = computed(() =>

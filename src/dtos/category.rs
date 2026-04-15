@@ -1,5 +1,7 @@
+use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
@@ -62,11 +64,33 @@ pub fn category_filter_schema() -> FilterSchema {
 }
 
 #[derive(Validate, Serialize, Deserialize, Debug)]
-pub struct CategoryDto {
+pub struct CreateCategoryDto {
     #[validate(length(
         min = 1,
         max = 100,
         message = "El nombre de la categoría debe tener entre 1 y 100 caracteres."
     ))]
+    pub name: String,
+}
+
+#[derive(Validate, Serialize, Deserialize, Debug)]
+pub struct UpdateCategoryDto {
+    #[validate(length(
+        min = 1,
+        max = 100,
+        message = "El nombre de la categoría debe tener entre 1 y 100 caracteres."
+    ))]
+    pub name: String,
+}
+
+#[derive(Serialize, FromQueryResult)]
+pub struct CategorySummaryDto {
+    pub id: Uuid,
+    pub name: String,
+}
+
+#[derive(Serialize)]
+pub struct CategoryDetailDto {
+    pub id: Uuid,
     pub name: String,
 }

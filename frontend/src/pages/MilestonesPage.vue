@@ -47,8 +47,8 @@ import { useUI } from 'src/composables/useUI';
 import { getMilestoneColumns } from 'src/data/columns';
 import { MilestonesService } from 'src/services/milestones';
 import { ProjectsService } from 'src/services/projects';
-import type { Milestone } from 'src/types/milestone';
-import type { ProjectSummary } from 'src/types/project';
+import type { MilestoneSummaryDto } from 'src/types/milestone';
+import type { ProjectSummaryDto } from 'src/types/project';
 import type { FilterSchema } from 'src/types/query';
 
 const router = useRouter();
@@ -73,7 +73,7 @@ const {
   options: projectFilterOptions,
   isLoading: isProjectFilterLoading,
   load: loadProjectFilterByTerm,
-} = useSelectByTerm<ProjectSummary>(ProjectsService.search, {
+} = useSelectByTerm<ProjectSummaryDto>(ProjectsService.search, {
   termColumn: 'name',
   orderBy: 'name',
   orderAsc: true,
@@ -83,7 +83,7 @@ const {
   }),
 });
 
-const { items, total, isLoading, query, fetch } = useQuery<Milestone>(
+const { items, total, isLoading, query, fetch } = useQuery<MilestoneSummaryDto>(
   MilestonesService.search,
   milestoneFilterSchema,
   10,

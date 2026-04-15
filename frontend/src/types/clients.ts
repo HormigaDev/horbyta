@@ -1,7 +1,7 @@
 export type ClientStatus = 'active' | 'inactive' | 'blocked';
 export type ClientAuthMethod = 'none' | 'credentials' | 'magic_token';
 
-export interface ClientSummary {
+export interface ClientSummaryDto {
   id: string;
   name: string;
   status: ClientStatus;
@@ -48,7 +48,7 @@ export interface ClientAuthStatusDto {
   magic_client_token_exp?: number | null;
 }
 
-export interface Client {
+export interface ClientDetailDto {
   id: string;
   name: string;
   status: ClientStatus;

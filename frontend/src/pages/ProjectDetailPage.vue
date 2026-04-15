@@ -10,7 +10,11 @@
       >
         <q-card-section>
           <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
-            {{ project?.name || t('common.loading') }}
+            {{
+              project?.name
+                ? `${project.name} - ${normalizeId(project.project_number)}`
+                : t('common.loading')
+            }}
           </div>
           <div class="text-caption q-mt-xs" style="color: var(--text-muted)" v-if="project">
             {{ t('common.status') }}:
@@ -107,7 +111,8 @@ import { useUI } from 'src/composables/useUI';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
-import type { Project, ProjectStatus } from 'src/types/project';
+import type { ProjectDetailDto, ProjectStatus } from 'src/types/project';
+import { normalizeId } from 'src/utils/normalizeId';
 
 const route = useRoute();
 const router = useRouter();
@@ -115,7 +120,7 @@ const { t } = useI18n();
 const { notify, notifyError, confirmDelete, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
 
-const project = ref<Project | null>(null);
+const project = ref<ProjectDetailDto | null>(null);
 const projectId = String(route.params.id || '');
 
 const formatDate = (value: string, fallback = t('common.empty')) =>

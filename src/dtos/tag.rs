@@ -1,5 +1,7 @@
+use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
@@ -65,7 +67,7 @@ pub fn tag_filter_schema() -> FilterSchema {
 }
 
 #[derive(Validate, Serialize, Deserialize, Debug)]
-pub struct TagDto {
+pub struct CreateTagDto {
     #[validate(length(
         min = 1,
         max = 50,
@@ -73,4 +75,29 @@ pub struct TagDto {
     ))]
     pub name: String,
     pub color: HexColor,
+}
+
+#[derive(Validate, Serialize, Deserialize, Debug)]
+pub struct UpdateTagDto {
+    #[validate(length(
+        min = 1,
+        max = 50,
+        message = "El nombre de la etiqueta debe tener entre 1 y 50 caracteres."
+    ))]
+    pub name: String,
+    pub color: HexColor,
+}
+
+#[derive(Serialize, FromQueryResult)]
+pub struct TagSummaryDto {
+    pub id: Uuid,
+    pub name: String,
+    pub color: String,
+}
+
+#[derive(Serialize)]
+pub struct TagDetailDto {
+    pub id: Uuid,
+    pub name: String,
+    pub color: String,
 }

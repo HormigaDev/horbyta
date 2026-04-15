@@ -213,10 +213,10 @@ import { MilestonesService } from 'src/services/milestones';
 import { TagsService } from 'src/services/tags';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import type { Filter, QueryPayload } from 'src/types';
-import type { Milestone } from 'src/types/milestone';
-import type { ProjectSummary } from 'src/types/project';
-import type { Tag } from 'src/types/tag';
-import type { TaskDto, TaskStatus } from 'src/types/task';
+import type { MilestoneSummaryDto } from 'src/types/milestone';
+import type { ProjectSummaryDto } from 'src/types/project';
+import type { TagSummaryDto } from 'src/types/tag';
+import type { CreateTaskDto, TaskStatus, UpdateTaskDto } from 'src/types/task';
 import { getTagTextContrastColor } from 'src/utils/tagColorContrast';
 import {
   formatIsoDateForInput,
@@ -261,7 +261,7 @@ const dueDateDisplay = ref('');
 const dateInputMask = computed(() => getDateInputMask(userPreferencesStore.dateFormat));
 const qDateMask = computed(() => getQDateMask(userPreferencesStore.dateFormat));
 
-const form = reactive<TaskDto>({
+const form = reactive<CreateTaskDto>({
   project_id: null,
   parent_id: null,
   milestone_id: null,
@@ -287,7 +287,7 @@ const {
   isLoading: isProjectsLoading,
   load: loadProjectsByTerm,
   setOptions: setProjectOptions,
-} = useSelectByTerm<ProjectSummary>(ProjectsService.search, {
+} = useSelectByTerm<ProjectSummaryDto>(ProjectsService.search, {
   termColumn: 'name',
   orderBy: 'created_at',
   orderAsc: false,
@@ -302,7 +302,7 @@ const {
   isLoading: isMilestonesLoading,
   load: loadMilestonesByTerm,
   setOptions: setMilestoneOptions,
-} = useSelectByTerm<Milestone>(MilestonesService.search, {
+} = useSelectByTerm<MilestoneSummaryDto>(MilestonesService.search, {
   termColumn: 'name',
   orderBy: 'created_at',
   orderAsc: false,
@@ -317,7 +317,7 @@ const {
   isLoading: isTagsLoading,
   load: loadTagsByTerm,
   setOptions: setTagOptions,
-} = useSelectByTerm<Tag>(TagsService.search, {
+} = useSelectByTerm<TagSummaryDto>(TagsService.search, {
   termColumn: 'name',
   orderBy: 'created_at',
   orderAsc: false,
@@ -519,7 +519,7 @@ const saveTask = async () => {
   showLoading(t('tasks.form.saving'));
 
   try {
-    const payload: TaskDto = {
+    const payload: CreateTaskDto = {
       project_id: form.project_id,
       parent_id: form.parent_id,
       milestone_id: form.milestone_id,
@@ -538,7 +538,20 @@ const saveTask = async () => {
       notify(t('tasks.form.createSuccess'), 'positive');
       void router.push(`/tasks/${created.id}`);
     } else {
-      await TasksService.update(taskId.value, payload);
+      const updatePayload: UpdateTaskDto = {
+        project_id: payload.project_id,
+        parent_id: payload.parent_id,
+        milestone_id: payload.milestone_id,
+        title: payload.title,
+        description: payload.description,
+        status: payload.status,
+        priority: payload.priority,
+        complexity: payload.complexity,
+        block_parent: payload.block_parent,
+        due_date: payload.due_date,
+        tag_ids: payload.tag_ids,
+      };
+      await TasksService.update(taskId.value, updatePayload);
       notify(t('tasks.form.updateSuccess'), 'positive');
       void router.push(`/tasks/${taskId.value}`);
     }

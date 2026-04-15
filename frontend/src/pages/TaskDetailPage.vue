@@ -10,7 +10,9 @@
       >
         <q-card-section>
           <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
-            {{ task?.title || t('common.loading') }}
+            {{
+              task?.title ? `${task.title} - ${normalizeId(task.task_number)}` : t('common.loading')
+            }}
           </div>
           <div class="text-caption" style="color: var(--text-muted)" v-if="task">
             {{
@@ -214,8 +216,9 @@ import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import { useQuasar } from 'quasar';
 import TaskChangeStatusDialog from 'src/components/TaskChangeStatusDialog.vue';
-import type { TaskDetail, TaskStatus } from 'src/types/task';
+import type { TaskDetailDto, TaskStatus } from 'src/types/task';
 import { getTagTextContrastColor } from 'src/utils/tagColorContrast';
+import { normalizeId } from 'src/utils/normalizeId';
 
 const $q = useQuasar();
 const route = useRoute();
@@ -224,7 +227,7 @@ const { t } = useI18n();
 const { notify, notifyError, confirmDelete, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
 
-const task = ref<TaskDetail | null>(null);
+const task = ref<TaskDetailDto | null>(null);
 const taskId = String(route.params.id || '');
 
 const formatDate = (value: string, fallback = t('common.empty')) =>

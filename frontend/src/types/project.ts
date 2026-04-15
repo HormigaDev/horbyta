@@ -1,37 +1,40 @@
 export type ProjectStatus = 'open' | 'closed' | 'cancelled';
+export type ProjectMilestoneStatus = 'open' | 'review' | 'approved' | 'released' | 'cancelled';
 
-export interface ProjectSummary {
+export interface ProjectSummaryDto {
   id: string;
+  project_number: bigint;
   name: string;
   status: ProjectStatus;
+  category_id?: string | null;
   category_name: string | null;
+  client_id?: string | null;
   client_name: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface Project {
+export interface ProjectDetailMilestoneDto {
   id: string;
-  user_id: string;
   name: string;
   description: string | null;
-  status: ProjectStatus;
-  category_id: string | null;
-  client_id: string | null;
-  category_name?: string | null;
-  client_name?: string | null;
+  status: ProjectMilestoneStatus;
+  due_date: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface ProjectDetailDto {
   id: string;
-  user_id: string;
+  project_number: bigint;
   name: string;
   description: string | null;
   status: ProjectStatus;
+  category_id: string | null;
+  client_id: string | null;
   category_name: string | null;
   client_name: string | null;
+  milestones: ProjectDetailMilestoneDto[];
   created_at: string;
   updated_at: string;
 }
@@ -53,7 +56,7 @@ export interface CreateProjectDto {
 export interface UpdateProjectDto {
   name: string;
   description?: string | null;
-  status?: ProjectStatus;
+  status: ProjectStatus;
   category_id?: string | null;
   client_id?: string | null;
   new_milestones?: CreateMilestoneSubDto[] | null;
@@ -63,19 +66,44 @@ export interface UpdateProjectCategoryDto {
   category_id: string | null;
 }
 
-export interface ClientProjectSummary {
+export interface ProjectMutationResultDto {
   id: string;
+  project_number: bigint;
+  user_id: string;
+  name: string;
+  description: string | null;
+  status: ProjectStatus;
+  category_id: string | null;
+  client_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectFormStateDto {
+  id: string;
+  name: string;
+  description: string | null;
+  status: ProjectStatus;
+  category_id: string | null;
+  client_id: string | null;
+}
+
+export interface ClientProjectSummaryDto {
+  id: string;
+  project_number: bigint;
   name: string;
   status: ProjectStatus;
   created_at: string;
   updated_at: string;
 }
 
-export interface ClientProjectDetail {
+export interface ClientProjectDetailDto {
   id: string;
+  project_number: bigint;
   name: string;
   description: string | null;
   status: ProjectStatus;
+  milestones: ProjectDetailMilestoneDto[];
   created_at: string;
   updated_at: string;
 }

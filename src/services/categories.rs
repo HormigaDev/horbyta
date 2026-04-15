@@ -1,13 +1,14 @@
 use axum::{extract::FromRequestParts, http::request::Parts};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, Set,
+    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
+    QuerySelect, Set,
 };
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
     dtos::{
-        category::{CategoryDto, CategorySearchField},
+        category::{CategoryDetailDto, CategorySearchField, CategorySummaryDto, CreateCategoryDto, UpdateCategoryDto},
         query::QueryPayload,
     },
     entities::{
@@ -29,41 +30,40 @@ impl CategoryService {
         Self { db }
     }
 
-    pub async fn create(&self, user_id: Uuid, dto: CategoryDto) -> Result<CategoryModel, AppError> {
+    pub async fn create(&self, user_id: Uuid, dto: CreateCategoryDto) -> Result<CategoryDetailDto, AppError> {
         let category = categories::ActiveModel {
             user_id: Set(user_id),
             name: Set(dto.name),
             ..Default::default()
         };
 
-        category.insert(self.db.as_ref()).await.map_err(AppError::Database)
+        let model = category.insert(self.db.as_ref()).await.map_err(AppError::Database)?;
+
+        Ok(Self::to_detail_dto(model))
     }
 
-    pub async fn get_by_id(&self, user_id: Uuid, id: Uuid) -> Result<CategoryModel, AppError> {
-        let category = Categories::find()
-            .filter(categories::Column::Id.eq(id))
-            .filter(categories::Column::UserId.eq(user_id))
-            .one(self.db.as_ref())
-            .await?
-            .ok_or_else(|| AppError::NotFound("Categoría no encontrada".to_string()))?;
+    pub async fn get_by_id(&self, user_id: Uuid, id: Uuid) -> Result<CategoryDetailDto, AppError> {
+        let category = self.find_by_id(user_id, id).await?;
 
-        Ok(category)
+        Ok(Self::to_detail_dto(category))
     }
 
-    pub async fn update(&self, user_id: Uuid, id: Uuid, dto: CategoryDto) -> Result<CategoryModel, AppError> {
-        let category = self.get_by_id(user_id, id).await?;
+    pub async fn update(&self, user_id: Uuid, id: Uuid, dto: UpdateCategoryDto) -> Result<CategoryDetailDto, AppError> {
+        let category = self.find_by_id(user_id, id).await?;
         let mut active_category: categories::ActiveModel = category.into();
 
         active_category.name = Set(dto.name);
 
-        active_category
+        let model = active_category
             .update(self.db.as_ref())
             .await
-            .map_err(AppError::Database)
+            .map_err(AppError::Database)?;
+
+        Ok(Self::to_detail_dto(model))
     }
 
     pub async fn delete(&self, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
-        let category = self.get_by_id(user_id, id).await?;
+        let category = self.find_by_id(user_id, id).await?;
 
         categories::ActiveModel {
             id: Set(category.id),
@@ -75,7 +75,11 @@ impl CategoryService {
         Ok(())
     }
 
-    pub async fn search(&self, user_id: Uuid, payload: QueryPayload) -> Result<(Vec<CategoryModel>, u64), AppError> {
+    pub async fn search(
+        &self,
+        user_id: Uuid,
+        payload: QueryPayload,
+    ) -> Result<(Vec<CategorySummaryDto>, u64), AppError> {
         let base_condition = Condition::all().add(categories::Column::UserId.eq(user_id));
         let condition = apply_filters(base_condition, &payload.filters, |column| {
             column
@@ -99,9 +103,36 @@ impl CategoryService {
         )?;
 
         let total_items = query.clone().count(self.db.as_ref()).await?;
-        let models = apply_pagination(query, &payload).all(self.db.as_ref()).await?;
+        let models = apply_pagination(
+            query
+                .select_only()
+                .column(categories::Column::Id)
+                .column(categories::Column::Name),
+            &payload,
+        )
+        .into_model::<CategorySummaryDto>()
+        .all(self.db.as_ref())
+        .await?;
 
         Ok((models, total_items))
+    }
+
+    async fn find_by_id(&self, user_id: Uuid, id: Uuid) -> Result<CategoryModel, AppError> {
+        let category = Categories::find()
+            .filter(categories::Column::Id.eq(id))
+            .filter(categories::Column::UserId.eq(user_id))
+            .one(self.db.as_ref())
+            .await?
+            .ok_or_else(|| AppError::NotFound("Categoría no encontrada".to_string()))?;
+
+        Ok(category)
+    }
+
+    fn to_detail_dto(model: CategoryModel) -> CategoryDetailDto {
+        CategoryDetailDto {
+            id: model.id,
+            name: model.name,
+        }
     }
 }
 

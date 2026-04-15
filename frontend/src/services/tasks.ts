@@ -1,11 +1,12 @@
 import { apiFetch } from 'src/boot/fetch';
 import type { PaginatedResponse, QueryPayload } from 'src/types';
 import type {
-  TaskDetail,
-  TaskDto,
+  CreateTaskDto,
+  TaskDetailDto,
   TaskStatus,
-  TaskSummary,
+  TaskSummaryDto,
   TasksViewResponse,
+  UpdateTaskDto,
 } from 'src/types/task';
 
 export const TasksService = {
@@ -14,25 +15,25 @@ export const TasksService = {
       method: 'GET',
     }),
 
-  search: (payload: QueryPayload): Promise<PaginatedResponse<TaskSummary>> => {
+  search: (payload: QueryPayload): Promise<PaginatedResponse<TaskSummaryDto>> => {
     const params = new URLSearchParams({ q: JSON.stringify(payload) });
     return apiFetch(`/tasks/search?${params.toString()}`, {
       method: 'GET',
     });
   },
 
-  create: (data: TaskDto): Promise<TaskDetail> =>
+  create: (data: CreateTaskDto): Promise<TaskDetailDto> =>
     apiFetch('/tasks', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  getById: (id: string): Promise<TaskDetail> =>
+  getById: (id: string): Promise<TaskDetailDto> =>
     apiFetch(`/tasks/${id}`, {
       method: 'GET',
     }),
 
-  update: (id: string, data: TaskDto): Promise<TaskDetail> =>
+  update: (id: string, data: UpdateTaskDto): Promise<TaskDetailDto> =>
     apiFetch(`/tasks/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

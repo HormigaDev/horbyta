@@ -15,6 +15,7 @@ where
     Keyword(C),
     Uuid(C),
     NumberI16(C),
+    NumberI64(C),
     Boolean(C),
     DateTime(C),
 }
@@ -29,6 +30,7 @@ where
             FilterField::Keyword(column) => text_expression(column, filter, false),
             FilterField::Uuid(column) => uuid_expression(column, filter),
             FilterField::NumberI16(column) => number_i16_expression(column, filter),
+            FilterField::NumberI64(column) => number_i64_expression(column, filter),
             FilterField::Boolean(column) => boolean_expression(column, filter),
             FilterField::DateTime(column) => datetime_expression(column, filter),
         }
@@ -192,6 +194,16 @@ fn parse_i16_value(filter: &Filter) -> Result<i16, AppError> {
         .map_err(|_| AppError::BadRequest(format!("El campo '{}' esta fuera del rango permitido", filter.column)))
 }
 
+fn parse_i64_value(filter: &Filter) -> Result<i64, AppError> {
+    let parsed = filter
+        .value
+        .as_i64()
+        .or_else(|| filter.value.as_str().and_then(|value| value.parse::<i64>().ok()))
+        .ok_or_else(|| AppError::BadRequest(format!("El campo '{}' requiere un numero valido", filter.column)))?;
+
+    Ok(parsed)
+}
+
 fn parse_bool_value(filter: &Filter) -> Result<bool, AppError> {
     filter
         .value
@@ -275,6 +287,23 @@ where
     C: ColumnTrait + Copy,
 {
     let value = parse_i16_value(filter)?;
+
+    match filter.operator {
+        FilterOperator::Eq => Ok(column.eq(value).into()),
+        FilterOperator::Neq => Ok(column.ne(value).into()),
+        FilterOperator::Gt => Ok(column.gt(value).into()),
+        FilterOperator::Lt => Ok(column.lt(value).into()),
+        FilterOperator::Gte => Ok(column.gte(value).into()),
+        FilterOperator::Lte => Ok(column.lte(value).into()),
+        _ => Err(unsupported_operator_error(filter)),
+    }
+}
+
+fn number_i64_expression<C>(column: C, filter: &Filter) -> Result<SimpleExpr, AppError>
+where
+    C: ColumnTrait + Copy,
+{
+    let value = parse_i64_value(filter)?;
 
     match filter.operator {
         FilterOperator::Eq => Ok(column.eq(value).into()),

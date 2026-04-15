@@ -2,9 +2,9 @@ import { apiFetch } from 'src/boot/fetch';
 import type { PaginatedResponse, QueryPayload } from 'src/types';
 import type {
   ClientAuthStatusDto,
-  Client,
+  ClientDetailDto,
   ClientMagicLinkDto,
-  ClientSummary,
+  ClientSummaryDto,
   CreateClientDto,
   SaveClientCredentialsDto,
   UpdateClientDto,
@@ -12,28 +12,28 @@ import type {
 } from 'src/types/clients';
 
 export const ClientsService = {
-  search: (payload: QueryPayload): Promise<PaginatedResponse<ClientSummary>> => {
+  search: (payload: QueryPayload): Promise<PaginatedResponse<ClientSummaryDto>> => {
     const params = new URLSearchParams({ q: JSON.stringify(payload) });
     return apiFetch(`/clients/search?${params.toString()}`, {
       method: 'GET',
     });
   },
 
-  create: (data: CreateClientDto): Promise<Client> =>
+  create: (data: CreateClientDto): Promise<ClientDetailDto> =>
     apiFetch('/clients', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  getById: (id: string): Promise<Client> => apiFetch(`/clients/${id}`, { method: 'GET' }),
+  getById: (id: string): Promise<ClientDetailDto> => apiFetch(`/clients/${id}`, { method: 'GET' }),
 
-  update: (id: string, data: UpdateClientDto): Promise<Client> =>
+  update: (id: string, data: UpdateClientDto): Promise<ClientDetailDto> =>
     apiFetch(`/clients/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  updateStatus: (id: string, data: UpdateClientStatusDto): Promise<Client> =>
+  updateStatus: (id: string, data: UpdateClientStatusDto): Promise<ClientDetailDto> =>
     apiFetch(`/clients/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),

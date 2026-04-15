@@ -52,8 +52,8 @@ import { useUI } from 'src/composables/useUI';
 import { getMilestoneColumns } from 'src/data/columns';
 import { ClientMilestonesService } from 'src/services/clientMilestones';
 import { ClientProjectsService } from 'src/services/clientProjects';
-import type { ClientMilestone } from 'src/types/milestone';
-import type { ClientProjectSummary } from 'src/types/project';
+import type { ClientMilestoneSummaryDto } from 'src/types/milestone';
+import type { ClientProjectSummaryDto } from 'src/types/project';
 import type { FilterSchema, QueryPayload } from 'src/types/query';
 
 const route = useRoute();
@@ -76,7 +76,7 @@ const {
   options: projectOptions,
   isLoading: isProjectsLoading,
   load: loadProjectsByTerm,
-} = useSelectByTerm<ClientProjectSummary>(ClientProjectsService.search, {
+} = useSelectByTerm<ClientProjectSummaryDto>(ClientProjectsService.search, {
   termColumn: 'name',
   orderBy: 'name',
   orderAsc: true,
@@ -94,7 +94,7 @@ const query = reactive<QueryPayload>({
   filters: [],
 });
 
-const items = ref<ClientMilestone[]>([]);
+const items = ref<ClientMilestoneSummaryDto[]>([]);
 const total = ref(0);
 const isLoading = ref(false);
 

@@ -106,9 +106,9 @@ import { useProjectsRules } from 'src/composables/rules/projects.rules';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
-import type { Project, CreateProjectDto, UpdateProjectDto } from 'src/types/project';
-import type { Category } from 'src/types/category';
-import type { Client } from 'src/types/clients';
+import type { CreateProjectDto, ProjectFormStateDto, UpdateProjectDto } from 'src/types/project';
+import type { CategorySummaryDto } from 'src/types/category';
+import type { ClientSummaryDto } from 'src/types/clients';
 import { ClientsService } from 'src/services/clients';
 
 const route = useRoute();
@@ -125,7 +125,7 @@ const {
   options: categoryOptions,
   isLoading: isCategoriesLoading,
   load: loadCategoriesByTerm,
-} = useSelectByTerm<Category>(CategoriesService.search, {
+} = useSelectByTerm<CategorySummaryDto>(CategoriesService.search, {
   termColumn: 'name',
   orderBy: 'created_at',
   orderAsc: false,
@@ -138,7 +138,7 @@ const {
   options: clientOptions,
   isLoading: isClientsLoading,
   load: loadClientsByTerm,
-} = useSelectByTerm<Client>(ClientsService.search, {
+} = useSelectByTerm<ClientSummaryDto>(ClientsService.search, {
   termColumn: 'name',
   orderBy: 'name',
   orderAsc: true,
@@ -157,16 +157,13 @@ const onClientSearch = (term: string) => {
   loadClientsByTerm(term);
 };
 
-const project = ref<Project>({
+const project = ref<ProjectFormStateDto>({
   id: '',
-  user_id: '',
   name: '',
   description: '',
   status: 'open',
   category_id: null,
   client_id: null,
-  created_at: '',
-  updated_at: '',
 });
 const projectDescription = computed({
   get: () => project.value.description || '',
@@ -181,7 +178,14 @@ const loadProject = async () => {
   showLoading(t('projects.form.loadingProject'));
   try {
     const data = await ProjectsService.getById(projectId);
-    project.value = data;
+    project.value = {
+      id: data.id,
+      name: data.name,
+      description: data.description,
+      status: data.status,
+      category_id: data.category_id,
+      client_id: data.client_id,
+    };
 
     if (data.category_id) {
       const exists = categoryOptions.value.some((option) => option.value === data.category_id);

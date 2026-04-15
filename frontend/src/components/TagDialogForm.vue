@@ -96,7 +96,7 @@ import { useI18n } from 'vue-i18n';
 import { useUI } from 'src/composables/useUI';
 import { TagsService } from 'src/services/tags';
 import type { Rule, RuleErrorState } from 'src/types';
-import type { TagDto } from 'src/types/tag';
+import type { CreateTagDto, UpdateTagDto } from 'src/types/tag';
 import { executeRules } from 'src/utils/executeRules';
 import { getTagTextContrastColor } from 'src/utils/tagColorContrast';
 
@@ -127,7 +127,7 @@ const emit = defineEmits<{
   (e: 'saved'): void;
 }>();
 
-const form = reactive<TagDto>({
+const form = reactive<CreateTagDto>({
   name: '',
   color: DEFAULT_TAG_COLOR,
 });
@@ -251,7 +251,7 @@ const onSubmit = async () => {
   if (isLoadingTag.value || isSaving.value) return;
   if (validateForm()) return;
 
-  const payload: TagDto = {
+  const createPayload: CreateTagDto = {
     name: form.name.trim(),
     color: form.color.trim().toUpperCase(),
   };
@@ -259,10 +259,14 @@ const onSubmit = async () => {
   isSaving.value = true;
   try {
     if (editingId.value) {
-      await TagsService.update(editingId.value, payload);
+      const updatePayload: UpdateTagDto = {
+        name: createPayload.name,
+        color: createPayload.color,
+      };
+      await TagsService.update(editingId.value, updatePayload);
       notify(t('tags.messages.updateSuccess'), 'positive');
     } else {
-      await TagsService.create(payload);
+      await TagsService.create(createPayload);
       notify(t('tags.messages.createSuccess'), 'positive');
     }
 

@@ -1,39 +1,40 @@
 import type { QueryPayload, PaginatedResponse } from '../types/query';
 import type {
-  Project,
-  ProjectSummary,
+  ProjectMutationResultDto,
+  ProjectSummaryDto,
   CreateProjectDto,
   UpdateProjectDto,
   UpdateProjectCategoryDto,
+  ProjectDetailDto,
 } from '../types/project';
 import { apiFetch } from '../boot/fetch';
 
 export const ProjectsService = {
-  search: (payload: QueryPayload): Promise<PaginatedResponse<ProjectSummary>> => {
+  search: (payload: QueryPayload): Promise<PaginatedResponse<ProjectSummaryDto>> => {
     const params = new URLSearchParams({ q: JSON.stringify(payload) });
     return apiFetch(`/projects/search?${params.toString()}`, {
       method: 'GET',
     });
   },
 
-  create: (data: CreateProjectDto): Promise<Project> =>
+  create: (data: CreateProjectDto): Promise<ProjectMutationResultDto> =>
     apiFetch('/projects', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  getById: (id: string): Promise<Project> =>
+  getById: (id: string): Promise<ProjectDetailDto> =>
     apiFetch(`/projects/${id}`, {
       method: 'GET',
     }),
 
-  update: (id: string, data: UpdateProjectDto): Promise<Project> =>
+  update: (id: string, data: UpdateProjectDto): Promise<ProjectMutationResultDto> =>
     apiFetch(`/projects/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  updateCategory: (id: string, data: UpdateProjectCategoryDto): Promise<Project> =>
+  updateCategory: (id: string, data: UpdateProjectCategoryDto): Promise<ProjectMutationResultDto> =>
     apiFetch(`/projects/${id}/category`, {
       method: 'PATCH',
       body: JSON.stringify(data),

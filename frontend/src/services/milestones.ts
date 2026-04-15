@@ -1,16 +1,21 @@
 import { apiFetch } from 'src/boot/fetch';
 import type { PaginatedResponse, QueryPayload } from 'src/types';
-import type { Milestone, MilestoneDto } from 'src/types/milestone';
+import type {
+  CreateMilestoneDto,
+  MilestoneDetailDto,
+  MilestoneSummaryDto,
+  UpdateMilestoneDto,
+} from 'src/types/milestone';
 
 export const MilestonesService = {
-  search: (payload: QueryPayload): Promise<PaginatedResponse<Milestone>> => {
+  search: (payload: QueryPayload): Promise<PaginatedResponse<MilestoneSummaryDto>> => {
     const params = new URLSearchParams({ q: JSON.stringify(payload) });
     return apiFetch(`/milestones/search?${params.toString()}`, {
       method: 'GET',
     });
   },
 
-  getById: async (id: string): Promise<Milestone> => {
+  getById: async (id: string): Promise<MilestoneDetailDto> => {
     const payload: QueryPayload = {
       page: 1,
       limit: 1,
@@ -29,13 +34,13 @@ export const MilestonesService = {
     return milestone;
   },
 
-  create: (data: MilestoneDto): Promise<Milestone> =>
+  create: (data: CreateMilestoneDto): Promise<MilestoneDetailDto> =>
     apiFetch('/milestones', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  update: (id: string, data: MilestoneDto): Promise<Milestone> =>
+  update: (id: string, data: UpdateMilestoneDto): Promise<MilestoneDetailDto> =>
     apiFetch(`/milestones/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

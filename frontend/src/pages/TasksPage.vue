@@ -58,9 +58,9 @@ import { TasksService } from 'src/services/tasks';
 import { ProjectsService } from 'src/services/projects';
 import { MilestonesService } from 'src/services/milestones';
 import type { FilterSchema, QueryPayload } from 'src/types';
-import type { Milestone } from 'src/types/milestone';
-import type { ProjectSummary } from 'src/types/project';
-import type { TaskSummary } from 'src/types/task';
+import type { MilestoneSummaryDto } from 'src/types/milestone';
+import type { ProjectSummaryDto } from 'src/types/project';
+import type { TaskSummaryDto } from 'src/types/task';
 import { getTaskColumns } from 'src/data/columns';
 
 type TaskTableRequest = {
@@ -96,7 +96,7 @@ const {
   options: projectFilterOptions,
   isLoading: isProjectFilterLoading,
   load: loadProjectFilterByTerm,
-} = useSelectByTerm<ProjectSummary>(ProjectsService.search, {
+} = useSelectByTerm<ProjectSummaryDto>(ProjectsService.search, {
   termColumn: 'name',
   orderBy: 'created_at',
   orderAsc: false,
@@ -110,7 +110,7 @@ const {
   options: milestoneFilterOptions,
   isLoading: isMilestoneFilterLoading,
   load: loadMilestoneFilterByTerm,
-} = useSelectByTerm<Milestone>(MilestonesService.search, {
+} = useSelectByTerm<MilestoneSummaryDto>(MilestonesService.search, {
   termColumn: 'name',
   orderBy: 'created_at',
   orderAsc: false,
@@ -128,7 +128,7 @@ const query = reactive<QueryPayload>({
   filters: [],
 });
 
-const items = ref<TaskSummary[]>([]);
+const items = ref<TaskSummaryDto[]>([]);
 const total = ref(0);
 const isLoading = ref(false);
 const hasLoadedInitialView = ref(false);
