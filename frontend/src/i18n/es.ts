@@ -381,6 +381,29 @@ export const messages = {
   'tasks.form.complexity.3': 'Alta',
   'tasks.form.complexity.4': 'Muy Alta',
 
+  'attachments.form.sectionTitle': 'Archivos adjuntos',
+  'attachments.form.inputLabel': 'Seleccionar archivos',
+  'attachments.form.inputHint': 'Máximo total permitido: 50MB',
+  'attachments.form.totalSize': 'Total: {used} / {max}',
+  'attachments.form.singleFileLimitExceeded':
+    'El archivo "{file}" supera el límite de {max} por archivo.',
+  'attachments.form.totalLimitExceeded': 'El total de archivos no puede exceder {max}.',
+  'attachments.form.removeFile': 'Quitar archivo',
+
+  'attachments.table.title': 'Archivos adjuntos',
+  'attachments.table.loadError': 'Error al cargar los adjuntos',
+  'attachments.table.filter.name': 'Nombre del archivo',
+  'attachments.table.filter.mimeType': 'Tipo MIME',
+  'attachments.table.filter.size': 'Tamaño',
+  'attachments.table.filter.createdAt': 'Fecha de subida',
+  'attachments.table.deleteTarget': 'el archivo "{name}"',
+  'attachments.table.deleteTargetFallback': 'este archivo adjunto',
+  'attachments.table.deleting': 'Eliminando adjunto...',
+  'attachments.table.deleteSuccess': 'Adjunto eliminado correctamente',
+  'attachments.table.deleteError': 'Error al eliminar el adjunto',
+  'attachments.list.empty': 'No hay archivos adjuntos',
+  'attachments.list.paginationMeta': 'Página {page} de {max} · {total} archivo(s)',
+
   'tasks.detail.meta': 'ID: {id} | Creado: {created} | Actualizado: {updated}',
   'tasks.detail.specsTitle': 'Especificaciones',
   'tasks.detail.noProject': 'Sin proyecto',
@@ -424,6 +447,14 @@ export const messages = {
   'settings.page.loadError': 'No se pudo cargar la configuración de usuario',
   'settings.page.emptyTitle': 'No se pudo cargar la configuración',
   'settings.page.emptySubtitle': 'Intenta recargar para volver a sincronizar la información.',
+
+  'settings.storage.title': 'Uso de almacenamiento',
+  'settings.storage.subtitle': 'Resumen de espacio consumido por tus adjuntos.',
+  'settings.storage.usageLabel': '{used} usados de {limit}',
+  'settings.storage.remainingLabel': '{remaining} disponibles',
+  'settings.storage.percentLabel': '{percent}% utilizado',
+  'settings.storage.unavailable': 'No se pudo obtener el uso de almacenamiento.',
+  'settings.storage.loadError': 'No se pudo cargar el uso de almacenamiento',
 
   'settings.preferences.title': 'Preferencias',
   'settings.preferences.subtitle':
@@ -549,6 +580,10 @@ export const messages = {
   'columns.client.status': 'Estado',
   'columns.client.created_at': 'Creado',
   'columns.client.updated_at': 'Actualizado',
+  'columns.attachment.original_name': 'Archivo',
+  'columns.attachment.mime_type': 'Tipo',
+  'columns.attachment.size_bytes': 'Tamaño',
+  'columns.attachment.created_at': 'Subido',
 
   'chatbot.panel.chats': 'Chats',
   'chatbot.panel.newChatDisabled': 'Envía al menos un mensaje para crear otro chat',

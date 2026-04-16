@@ -9,6 +9,21 @@ import type {
   UpdateTaskDto,
 } from 'src/types/task';
 
+const buildTaskCreateBody = (data: CreateTaskDto, files: readonly File[]): string | FormData => {
+  if (files.length === 0) {
+    return JSON.stringify(data);
+  }
+
+  const formData = new FormData();
+  formData.append('payload', JSON.stringify(data));
+
+  files.forEach((file) => {
+    formData.append('files', file);
+  });
+
+  return formData;
+};
+
 export const TasksService = {
   view: (): Promise<TasksViewResponse> =>
     apiFetch('/tasks/view', {
@@ -22,10 +37,10 @@ export const TasksService = {
     });
   },
 
-  create: (data: CreateTaskDto): Promise<TaskDetailDto> =>
+  create: (data: CreateTaskDto, files: readonly File[] = []): Promise<TaskDetailDto> =>
     apiFetch('/tasks', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: buildTaskCreateBody(data, files),
     }),
 
   getById: (id: string): Promise<TaskDetailDto> =>

@@ -78,6 +78,48 @@
               </div>
             </div>
           </div>
+
+          <div v-if="isNew" class="q-mt-lg">
+            <q-separator spaced />
+
+            <div class="row items-center justify-between q-mb-sm">
+              <div class="text-subtitle2">{{ t('attachments.form.sectionTitle') }}</div>
+              <div
+                class="text-caption"
+                :class="filesBytesExceeded ? 'text-negative' : 'text-grey-7'"
+              >
+                {{
+                  t('attachments.form.totalSize', {
+                    used: formatStorageBytes(selectedFilesTotalBytes),
+                    max: formatStorageBytes(MAX_ATTACHMENT_TOTAL_BYTES),
+                  })
+                }}
+              </div>
+            </div>
+
+            <q-file
+              :model-value="selectedFiles"
+              multiple
+              clearable
+              dense
+              outlined
+              use-chips
+              counter
+              :label="t('attachments.form.inputLabel')"
+              :hint="t('attachments.form.inputHint')"
+              @update:model-value="onFilesSelected"
+            />
+
+            <AttachmentItemsList
+              v-if="selectedFileItems.length > 0"
+              class="q-mt-sm"
+              :items="selectedFileItems"
+              :empty-text="t('attachments.list.empty')"
+              item-action-icon="close"
+              :item-action-aria-label="t('attachments.form.removeFile')"
+              @item-action="removeFileById"
+            />
+          </div>
         </q-card-section>
       </q-card>
 
@@ -99,6 +141,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import AttachmentItemsList from 'src/components/AttachmentItemsList.vue';
 import { ProjectsService } from 'src/services/projects';
 import { CategoriesService } from 'src/services/categories';
 import { useUI } from 'src/composables/useUI';
@@ -106,10 +149,20 @@ import { useProjectsRules } from 'src/composables/rules/projects.rules';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
+import type { AttachmentListItem } from 'src/types/attachment';
 import type { CreateProjectDto, ProjectFormStateDto, UpdateProjectDto } from 'src/types/project';
 import type { CategorySummaryDto } from 'src/types/category';
 import type { ClientSummaryDto } from 'src/types/clients';
 import { ClientsService } from 'src/services/clients';
+import {
+  MAX_ATTACHMENT_FILE_BYTES,
+  MAX_ATTACHMENT_TOTAL_BYTES,
+  formatStorageBytes,
+  resolveFileIcon,
+  sumFileSizes,
+  toFileArray,
+  type QFileModelValue,
+} from 'src/utils/attachments';
 
 const route = useRoute();
 const router = useRouter();
@@ -120,6 +173,24 @@ const { nameRuleState, descriptionRuleState, validateName, validateDescription }
 
 const isNew = computed(() => route.name === 'project-create');
 const isSubmitting = ref(false);
+const selectedFiles = ref<File[]>([]);
+const selectedFilesTotalBytes = computed(() => sumFileSizes(selectedFiles.value));
+const filesBytesExceeded = computed(
+  () => selectedFilesTotalBytes.value > MAX_ATTACHMENT_TOTAL_BYTES,
+);
+
+const buildSelectedFileId = (file: File, index: number): string => {
+  return `${file.name}-${file.lastModified}-${index}`;
+};
+
+const selectedFileItems = computed<AttachmentListItem[]>(() => {
+  return selectedFiles.value.map((file, index) => ({
+    id: buildSelectedFileId(file, index),
+    name: file.name,
+    sizeLabel: formatStorageBytes(file.size),
+    icon: resolveFileIcon(file),
+  }));
+});
 
 const {
   options: categoryOptions,
@@ -171,6 +242,41 @@ const projectDescription = computed({
     project.value.description = val ? val : null;
   },
 });
+
+const onFilesSelected = (modelValue: QFileModelValue) => {
+  const incomingFiles = toFileArray(modelValue);
+
+  const oversizedFile = incomingFiles.find((file) => file.size > MAX_ATTACHMENT_FILE_BYTES);
+  if (oversizedFile) {
+    notify(
+      t('attachments.form.singleFileLimitExceeded', {
+        file: oversizedFile.name,
+        max: formatStorageBytes(MAX_ATTACHMENT_FILE_BYTES),
+      }),
+      'warning',
+    );
+    return;
+  }
+
+  const nextTotal = sumFileSizes(incomingFiles);
+  if (nextTotal > MAX_ATTACHMENT_TOTAL_BYTES) {
+    notify(
+      t('attachments.form.totalLimitExceeded', {
+        max: formatStorageBytes(MAX_ATTACHMENT_TOTAL_BYTES),
+      }),
+      'warning',
+    );
+    return;
+  }
+
+  selectedFiles.value = incomingFiles;
+};
+
+const removeFileById = (itemId: string) => {
+  selectedFiles.value = selectedFiles.value.filter((file, index) => {
+    return buildSelectedFileId(file, index) !== itemId;
+  });
+};
 const loadProject = async () => {
   if (isNew.value) return;
 
@@ -236,7 +342,7 @@ const saveProject = async () => {
     };
 
     if (isNew.value) {
-      const created = await ProjectsService.create(payload);
+      const created = await ProjectsService.create(payload, selectedFiles.value);
       notify(t('projects.form.createSuccess'), 'positive');
       void router.push(`/projects/${created.id}`);
     } else {
@@ -271,5 +377,9 @@ onMounted(() => {
 .fit-textarea :deep(.q-field__native) {
   height: 100%;
   min-height: 50vh;
+}
+
+.text-grey-7 {
+  color: var(--text-muted) !important;
 }
 </style>

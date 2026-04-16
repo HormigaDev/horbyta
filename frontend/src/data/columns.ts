@@ -2,6 +2,7 @@ import type { ComposerTranslation } from 'vue-i18n';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import { normalizeId } from 'src/utils/normalizeId';
+import { formatStorageBytes } from 'src/utils/attachments';
 
 const useDateFormatter = () => {
   const userPreferencesStore = useUserPreferencesStore();
@@ -300,6 +301,43 @@ export const getClientColumns = (t: ComposerTranslation) => {
       sortable: true,
       align: 'center' as const,
       format: (val: string) => formatDate(val),
+    },
+  ];
+};
+
+export const getAttachmentColumns = (t: ComposerTranslation) => {
+  const formatDate = useDateFormatter();
+
+  return [
+    {
+      name: 'original_name',
+      label: t('columns.attachment.original_name'),
+      field: 'original_name',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'mime_type',
+      label: t('columns.attachment.mime_type'),
+      field: 'mime_type',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'size_bytes',
+      label: t('columns.attachment.size_bytes'),
+      field: 'size_bytes',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: number | null) => formatStorageBytes(Number(val || 0)),
+    },
+    {
+      name: 'created_at',
+      label: t('columns.attachment.created_at'),
+      field: 'created_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val, t('common.empty')),
     },
   ];
 };

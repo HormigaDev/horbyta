@@ -348,12 +348,11 @@ impl AttachmentService {
         let total_size = Attachments::find()
             .filter(condition)
             .select_only()
-            .column_as(Expr::col(attachments::Column::SizeBytes).sum(), "total_size")
-            .into_tuple::<Option<i64>>()
+            .column_as(Expr::cust("COALESCE(SUM(size_bytes), 0)::BIGINT"), "total_size")
+            .into_tuple::<i64>()
             .one(db)
             .await
             .map_err(AppError::Database)?
-            .flatten()
             .unwrap_or(0);
 
         Ok(total_size)

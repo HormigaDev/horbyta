@@ -9,6 +9,24 @@ import type {
 } from '../types/project';
 import { apiFetch } from '../boot/fetch';
 
+const buildProjectCreateBody = (
+  data: CreateProjectDto,
+  files: readonly File[],
+): string | FormData => {
+  if (files.length === 0) {
+    return JSON.stringify(data);
+  }
+
+  const formData = new FormData();
+  formData.append('payload', JSON.stringify(data));
+
+  files.forEach((file) => {
+    formData.append('files', file);
+  });
+
+  return formData;
+};
+
 export const ProjectsService = {
   search: (payload: QueryPayload): Promise<PaginatedResponse<ProjectSummaryDto>> => {
     const params = new URLSearchParams({ q: JSON.stringify(payload) });
@@ -17,10 +35,13 @@ export const ProjectsService = {
     });
   },
 
-  create: (data: CreateProjectDto): Promise<ProjectMutationResultDto> =>
+  create: (
+    data: CreateProjectDto,
+    files: readonly File[] = [],
+  ): Promise<ProjectMutationResultDto> =>
     apiFetch('/projects', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: buildProjectCreateBody(data, files),
     }),
 
   getById: (id: string): Promise<ProjectDetailDto> =>

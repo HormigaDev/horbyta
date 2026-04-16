@@ -62,6 +62,62 @@
           </div>
         </q-card-section>
       </q-card>
+
+      <q-card
+        class="q-mt-md"
+        flat
+        bordered
+        style="background-color: var(--card-bg); border-color: var(--border-color)"
+      >
+        <q-card-section>
+          <div class="row items-center justify-between q-mb-sm">
+            <div class="text-subtitle1 text-weight-bold" style="color: var(--q-primary)">
+              {{ t('attachments.table.title') }}
+            </div>
+
+            <q-btn flat round dense icon="refresh" @click="fetchAttachments">
+              <q-tooltip>{{ t('common.refresh') }}</q-tooltip>
+            </q-btn>
+          </div>
+
+          <AttachmentItemsList
+            :items="attachmentListItems"
+            :empty-text="t('attachments.list.empty')"
+            :loading="isLoadingAttachments"
+            clickable
+            @item-click="openAttachment"
+            item-action-icon="close"
+            :item-action-aria-label="t('attachments.form.removeFile')"
+            @item-action="removeAttachment"
+          />
+
+          <div
+            v-if="attachmentTotal > 0"
+            class="row items-center justify-between q-mt-md q-col-gutter-sm"
+          >
+            <div class="col-12 col-sm text-caption" style="color: var(--text-muted)">
+              {{
+                t('attachments.list.paginationMeta', {
+                  page: attachmentQuery.page,
+                  max: attachmentTotalPages,
+                  total: attachmentTotal,
+                })
+              }}
+            </div>
+
+            <div class="col-12 col-sm-auto row justify-end">
+              <q-pagination
+                :model-value="attachmentQuery.page"
+                :max="attachmentTotalPages"
+                :max-pages="6"
+                direction-links
+                boundary-numbers
+                @update:model-value="onAttachmentsPageChange"
+              />
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
     </div>
 
     <div class="col-12 col-md-2" style="position: sticky; top: 80px">
@@ -115,17 +171,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { computed, reactive, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import AttachmentItemsList from 'src/components/AttachmentItemsList.vue';
 import { ProjectsService } from 'src/services/projects';
+import { AttachmentsService } from 'src/services/attachments';
 import { useUI } from 'src/composables/useUI';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import type { AttachmentListItem, AttachmentSummaryDto } from 'src/types/attachment';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
+import type { QueryPayload } from 'src/types/query';
 import type { ProjectDetailDto, ProjectStatus } from 'src/types/project';
 import { normalizeId } from 'src/utils/normalizeId';
 import { useCopyClipboard } from 'src/composables/useCopyClipboard';
+import { formatStorageBytes, resolveAttachmentIcon } from 'src/utils/attachments';
 
 const route = useRoute();
 const router = useRouter();
@@ -136,6 +197,31 @@ const userPreferencesStore = useUserPreferencesStore();
 const { isCopied: idCopied, copyToClipboard } = useCopyClipboard();
 const project = ref<ProjectDetailDto | null>(null);
 const projectId = String(route.params.id || '');
+const attachmentItems = ref<AttachmentSummaryDto[]>([]);
+const attachmentTotal = ref(0);
+const isLoadingAttachments = ref(false);
+
+const attachmentQuery = reactive<QueryPayload>({
+  page: 1,
+  limit: 10,
+  order_by: 'created_at',
+  order_asc: false,
+  filters: [],
+});
+
+const attachmentListItems = computed<AttachmentListItem[]>(() => {
+  return attachmentItems.value.map((attachment) => ({
+    id: attachment.id,
+    name: attachment.original_name,
+    sizeLabel: formatStorageBytes(attachment.size_bytes),
+    icon: resolveAttachmentIcon(attachment),
+  }));
+});
+
+const attachmentTotalPages = computed(() => {
+  if (attachmentTotal.value <= 0 || attachmentQuery.limit <= 0) return 1;
+  return Math.max(1, Math.ceil(attachmentTotal.value / attachmentQuery.limit));
+});
 
 const formatDate = (value: string, fallback = t('common.empty')) =>
   formatDateByPreferences(value, {
@@ -152,6 +238,63 @@ const loadProject = async () => {
   } catch (err: unknown) {
     notifyError(t('projects.detail.loadError'), err);
     void router.push('/projects');
+  } finally {
+    hideLoading();
+  }
+};
+
+const openAttachment = (attachmentId: string) => {
+  window.open(AttachmentsService.buildRawUrl(attachmentId), '_blank', 'noopener');
+};
+
+const fetchAttachments = async () => {
+  isLoadingAttachments.value = true;
+
+  try {
+    const payload: QueryPayload = {
+      page: attachmentQuery.page,
+      limit: attachmentQuery.limit,
+      order_by: attachmentQuery.order_by,
+      order_asc: attachmentQuery.order_asc,
+      filters: [...attachmentQuery.filters],
+    };
+
+    const response = await AttachmentsService.searchByProject(projectId, payload);
+    attachmentItems.value = response.items;
+    attachmentTotal.value = response.total;
+  } catch (err: unknown) {
+    notifyError(t('attachments.table.loadError'), err);
+  } finally {
+    isLoadingAttachments.value = false;
+  }
+};
+
+const onAttachmentsPageChange = (page: number) => {
+  attachmentQuery.page = page;
+  void fetchAttachments();
+};
+
+const removeAttachment = async (attachmentId: string) => {
+  const attachment = attachmentItems.value.find((item) => item.id === attachmentId);
+  const deleteTarget = attachment
+    ? t('attachments.table.deleteTarget', { name: attachment.original_name })
+    : t('attachments.table.deleteTargetFallback');
+
+  const confirmed = await confirmDelete(deleteTarget);
+  if (!confirmed) return;
+
+  showLoading(t('attachments.table.deleting'));
+  try {
+    await AttachmentsService.delete(attachmentId);
+
+    if (attachmentItems.value.length === 1 && attachmentQuery.page > 1) {
+      attachmentQuery.page -= 1;
+    }
+
+    await fetchAttachments();
+    notify(t('attachments.table.deleteSuccess'), 'positive');
+  } catch (err: unknown) {
+    notifyError(t('attachments.table.deleteError'), err);
   } finally {
     hideLoading();
   }
@@ -195,5 +338,6 @@ const projectStatusLabel = (status: ProjectStatus | null | undefined) => {
 
 onMounted(() => {
   void loadProject();
+  void fetchAttachments();
 });
 </script>

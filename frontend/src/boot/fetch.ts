@@ -3,12 +3,16 @@ import { useAuthStore } from 'src/stores/auth';
 import { useClientAuthStore } from 'src/stores/clientAuth';
 
 async function request(url: string, options: RequestInit, scope: 'user' | 'client') {
+  const headers = new Headers(options.headers);
+  const isMultipartForm = options.body instanceof FormData;
+
+  if (!isMultipartForm && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
   const response = await fetch(`/api/v1${url}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
     credentials: 'include',
   });
 
