@@ -449,6 +449,7 @@ import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { useUI } from 'src/composables/useUI';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { AppNotification } from 'src/types/ui';
+import { apiFetch } from 'src/boot/fetch';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -472,7 +473,8 @@ onMounted(() => {
   chatbotPanelLoaded.value = true;
 });
 
-function logout() {
+async function logout() {
+  await apiFetch('/auth/logout', { method: 'POST' }).catch(() => null);
   authStore.clearAuth();
   void router.push({ name: 'login' });
 }

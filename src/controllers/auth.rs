@@ -13,7 +13,11 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::{
     constants::{CLIENT_AUTH_COOKIE_NAME, USER_AUTH_COOKIE_NAME},
-    dtos::auth::{ClientMagicTokenLogin, LoginPayload},
+    dtos::{
+        auth::{ClientMagicTokenLogin, LoginPayload},
+        client::ClientAuthDto,
+        user::UserDto,
+    },
     entities::{client_auth, users},
     error::AppError,
     middlewares::{auth::Claims, client_auth::ClientClaims, validator::ValidatedJson},
@@ -102,6 +106,38 @@ async fn register() -> Result<impl IntoResponse, AppError> {
     ))
 }
 
+async fn logout(_user: UserDto) -> Result<impl IntoResponse, AppError> {
+    let cookie = Cookie::build((USER_AUTH_COOKIE_NAME, ""))
+        .path("/")
+        .http_only(true)
+        .build();
+
+    let mut headers = HeaderMap::new();
+    headers.insert(SET_COOKIE, cookie.to_string().parse()?);
+
+    let body = Json(json!({
+        "message": "Logout exitoso"
+    }));
+
+    Ok((StatusCode::OK, headers, body))
+}
+
+async fn logout_client(_client: ClientAuthDto) -> Result<impl IntoResponse, AppError> {
+    let cookie = Cookie::build((CLIENT_AUTH_COOKIE_NAME, ""))
+        .path("/")
+        .http_only(true)
+        .build();
+
+    let mut headers = HeaderMap::new();
+    headers.insert(SET_COOKIE, cookie.to_string().parse()?);
+
+    let body = Json(json!({
+        "message": "Logout exitoso"
+    }));
+
+    Ok((StatusCode::OK, headers, body))
+}
+
 fn get_expiration_time(time_to_exp: Duration) -> Result<usize, AppError> {
     let time_now = SystemTime::now().duration_since(UNIX_EPOCH)?;
     Ok(time_now.as_secs() as usize + time_to_exp.as_secs() as usize)
@@ -149,7 +185,9 @@ pub fn auth_controller() -> Router<AppState> {
         .route("/login", post(login))
         .route("/login-client", post(login_client))
         .route("/login-client-token", post(login_magic_token))
-        .route("/register", post(register));
+        .route("/register", post(register))
+        .route("/logout", post(logout))
+        .route("/logout-client", post(logout_client));
 
     router
 }

@@ -168,6 +168,7 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useClientAuthStore } from 'src/stores/clientAuth';
 import { APP_VERSION } from 'src/data/constants';
+import { apiFetchClient } from 'src/boot/fetch';
 
 const router = useRouter();
 const clientAuthStore = useClientAuthStore();
@@ -176,7 +177,8 @@ const { t } = useI18n();
 const drawer = ref(true);
 const appVersion = APP_VERSION;
 
-function logout() {
+async function logout() {
+  await apiFetchClient('/auth/logout-client', { method: 'POST' }).catch(() => null);
   clientAuthStore.clearAuth();
   void router.push('/client/login');
 }
