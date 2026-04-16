@@ -3,7 +3,7 @@ use sea_orm::prelude::DateTimeWithTimeZone;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use uuid::Uuid;
-use validator::{Validate, ValidationError};
+use validator::Validate;
 
 use crate::{
     dtos::{
@@ -71,15 +71,6 @@ pub fn client_filter_schema() -> FilterSchema {
     ClientSearchField::iter().fold(FilterSchema::new(), |schema, field| {
         schema.add_column(field.column_name(), field.column_type())
     })
-}
-
-pub fn is_client_status(s: &str) -> Result<(), ValidationError> {
-    let allowed_client_status = ["active", "inactive", "blocked"];
-    if allowed_client_status.contains(&s) {
-        Ok(())
-    } else {
-        Err(ValidationError::new("Estado del cliente inválido"))
-    }
 }
 
 #[derive(Serialize, Deserialize, Validate, Debug, Clone)]

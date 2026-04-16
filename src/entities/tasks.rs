@@ -29,6 +29,8 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::attachments::Entity")]
     Attachments,
+    #[sea_orm(has_many = "super::change_requests::Entity")]
+    ChangeRequests,
     #[sea_orm(
         belongs_to = "super::milestones::Entity",
         from = "Column::MilestoneId",
@@ -68,6 +70,12 @@ pub enum Relation {
 impl Related<super::attachments::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Attachments.def()
+    }
+}
+
+impl Related<super::change_requests::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::ChangeRequests.def()
     }
 }
 

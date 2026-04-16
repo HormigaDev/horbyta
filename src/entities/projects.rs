@@ -32,6 +32,8 @@ pub enum Relation {
         on_delete = "SetNull"
     )]
     Categories,
+    #[sea_orm(has_many = "super::change_requests::Entity")]
+    ChangeRequests,
     #[sea_orm(
         belongs_to = "super::clients::Entity",
         from = "Column::ClientId",
@@ -63,6 +65,12 @@ impl Related<super::attachments::Entity> for Entity {
 impl Related<super::categories::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Categories.def()
+    }
+}
+
+impl Related<super::change_requests::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::ChangeRequests.def()
     }
 }
 

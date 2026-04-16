@@ -2,6 +2,7 @@
 
 pub use super::attachments::Entity as Attachments;
 pub use super::categories::Entity as Categories;
+pub use super::change_requests::Entity as ChangeRequests;
 pub use super::client_auth::Entity as ClientAuth;
 pub use super::clients::Entity as Clients;
 pub use super::conversation_history::Entity as ConversationHistory;

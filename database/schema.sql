@@ -161,6 +161,48 @@ create table attachments (
     )
 );
 
+create table change_requests (
+    id uuid primary key default uuidv7(),
+    record_number bigint not null,
+    user_id uuid not null references users (id) on delete cascade,
+    project_id uuid not null references projects (id) on delete cascade,
+    client_id uuid not null references clients (id) on delete cascade,
+    task_id uuid references tasks (id) on delete set null,
+
+    origin varchar(30) not null default 'freelancer_dashboard',
+
+    title varchar(255) not null,
+    client_request_description text not null,
+    
+    technical_assessment text,
+    impact_hours numeric(6,2) not null default 0.00,
+    impact_cost numeric(15,4) not null default 0.00,
+    schedule_impact_days integer not null default 0,
+
+    status varchar(30) not null default 'draft',
+
+    client_approved_at timestamptz,
+    client_signature_ip varchar(45),
+
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    version integer not null default 1,
+
+    constraint chk_change_requests_origin check (origin in ('client_portal', 'freelancer_dashboard')),
+    constraint chk_change_requests_status check (
+        status in (
+            'draft',
+            'submitted',
+            'assessed',
+            'approved',
+            'declined',
+            'implemented',
+            'cancelled'
+        )
+    )
+);
+
 create table conversation_history (
     id uuid primary key default uuidv7(),
     user_id uuid not null references users (id) on delete cascade,
@@ -265,6 +307,12 @@ create index idx_clients_name on clients(name);
 create index idx_clients_user_created_at on clients(user_id, created_at desc);
 create index idx_clients_user_updated_at on clients(user_id, updated_at desc);
 create unique index idx_uq_client_auth_email_per_user on client_auth (user_id, lower(email)) where email is not null;
+create unique index idx_uq_change_requests_number_per_user on change_requests (user_id, record_number);
+create index idx_change_requests_user_id on change_requests(user_id);
+create index idx_change_requests_project_id on change_requests(project_id);
+create index idx_change_requests_client_id on change_requests(client_id);
+create index idx_change_requests_status on change_requests(status);
+create index idx_change_requests_created_at on change_requests(user_id, created_at desc);
 
 -- ---------------------------------
 -- FUNCIONES Y TRIGGERS (UPDATED_AT AUTOMÁTICO)
@@ -292,7 +340,8 @@ begin
         'notifications',
         'clients',
         'client_auth',
-        'attachments'
+        'attachments',
+        'change_requests'
     ]
     loop
         execute format(
@@ -333,7 +382,8 @@ declare t text;
 begin
     foreach t in array array[
         'tasks',
-        'projects'
+        'projects',
+        'change_requests'
     ]
     loop
         execute format(
@@ -347,6 +397,28 @@ begin
     end loop;
 end;
 $$;
+
+-- ---------------------------------
+-- TRIGGER PARA INCREMENTAR LA VERSIÓN DEL CHANGE REQUESTS
+-- ---------------------------------
+
+create or replace function fn_increment_cr_version()
+returns trigger language plpgsql as $$
+begin
+    if new.client_request_description <> old.client_request_description or new.title <> old.title then
+        new.version := old.version + 1;
+        if old.status = 'assessed' then
+            new.status := 'submitted';
+        end if;
+    end if;
+    return new;
+end;
+$$;
+
+create trigger trg_increment_cr_version
+before update on change_requests
+for each row
+execute function fn_increment_cr_version();
 
 -- ---------------------------------
 -- COMENTARIOS
@@ -365,10 +437,16 @@ comment on table clients is 'Clientes del usuario.';
 comment on table client_auth is 'Tabla que contiene los datos de autenticación del cliente en el portal';
 comment on table seq_by_user is 'Secuencias de tablas con cambos numéricos incrementales';
 comment on table attachments is 'Archivos adjuntos subidos por los usuarios. Pueden estar ligados a tareas o directamente a proyectos. Almacena metadatos y la ruta (storage_key) para el ObjectStore.';
+comment on table change_requests is 'Motor Anti-Scope-Creep transaccional. Obliga al cliente a aceptar formalmente los sobrecostos y retrasos mediante una acción de estado, eliminando la negociación por chat.';
 
 comment on column tasks.parent_id is 'Referencia recursiva para soportar subtareas de n-niveles.';
 comment on column tasks.status is 'Estado del flujo de trabajo. Restringido a 4 valores predefinidos por CHECK.';
 comment on column tasks.priority is 'Nivel de prioridad (1-4). 1 es más bajo, 4 es crítico.';
 comment on column tasks.complexity is 'Estimación de esfuerzo/complejidad (1-4).';
+comment on column change_requests.client_request_description is 'La descripción inmutable de lo que el cliente pidió.';
+comment on column change_requests.technical_assessment is 'La respuesta formal del freelancer explicando qué implica el cambio para justificar el costo.';
+comment on column change_requests.schedule_impact_days is 'Días que se sumarán a la fecha de entrega (milestones) si el cliente aprueba este cambio.';
+comment on column change_requests.client_approved_at is 'Timestamp de cuando el cliente hizo click en el botón de aceptar costo/retraso.';
+comment on column change_requests.version is 'Versión del registro de cambio. Incrementa cuando el cliente edita el título o descripción';
 
 commit;

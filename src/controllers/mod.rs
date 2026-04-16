@@ -1,6 +1,7 @@
-pub mod auth;
 pub mod attachments;
+pub mod auth;
 pub mod categories;
+pub mod change_requests;
 pub mod chats;
 pub mod clients;
 pub mod milestones;

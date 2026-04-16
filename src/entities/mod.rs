@@ -4,6 +4,7 @@ pub mod prelude;
 
 pub mod attachments;
 pub mod categories;
+pub mod change_requests;
 pub mod client_auth;
 pub mod clients;
 pub mod conversation_history;

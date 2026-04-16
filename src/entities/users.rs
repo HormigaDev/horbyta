@@ -25,6 +25,8 @@ pub enum Relation {
     Attachments,
     #[sea_orm(has_many = "super::categories::Entity")]
     Categories,
+    #[sea_orm(has_many = "super::change_requests::Entity")]
+    ChangeRequests,
     #[sea_orm(has_many = "super::client_auth::Entity")]
     ClientAuth,
     #[sea_orm(has_many = "super::clients::Entity")]
@@ -52,6 +54,12 @@ impl Related<super::attachments::Entity> for Entity {
 impl Related<super::categories::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Categories.def()
+    }
+}
+
+impl Related<super::change_requests::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::ChangeRequests.def()
     }
 }
 
