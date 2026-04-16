@@ -8,11 +8,11 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         change_request::{
-            AssessChangeRequestDto, ChangeRequestDetailDto, ChangeRequestDetailRow, ChangeRequestOrigin,
-            ChangeRequestSearchField, ChangeRequestStatus, ChangeRequestSummaryDto, ClientApproveChangeRequestDto,
-            ClientChangeRequestDetailDto, ClientChangeRequestDetailRow, ClientChangeRequestSearchField,
-            ClientChangeRequestSummaryDto, ClientCreateChangeRequestDto, CreateChangeRequestDto,
-            UpdateChangeRequestDto,
+            AssessChangeRequestDto, AssignChangeRequestTaskDto, ChangeRequestDetailDto, ChangeRequestDetailRow,
+            ChangeRequestOrigin, ChangeRequestSearchField, ChangeRequestStatus, ChangeRequestSummaryDto,
+            ClientApproveChangeRequestDto, ClientCancelChangeRequestDto, ClientChangeRequestDetailDto,
+            ClientChangeRequestDetailRow, ClientChangeRequestSearchField, ClientChangeRequestSummaryDto,
+            ClientCreateChangeRequestDto, ClientUpdateChangeRequestDto, CreateChangeRequestDto, UpdateChangeRequestDto,
         },
         query::QueryPayload,
     },
@@ -106,6 +106,7 @@ impl ChangeRequestService {
             .column(change_requests::Column::ClientSignatureIp)
             .column(change_requests::Column::CreatedAt)
             .column(change_requests::Column::UpdatedAt)
+            .column(change_requests::Column::Version)
             .column_as(projects::Column::Name, "project_name")
             .column_as(clients::Column::Name, "client_name")
             .into_model::<ChangeRequestDetailRow>()
@@ -138,11 +139,13 @@ impl ChangeRequestService {
             .column(change_requests::Column::ImpactHours)
             .column(change_requests::Column::ImpactCost)
             .column(change_requests::Column::ScheduleImpactDays)
+            .column(change_requests::Column::Origin)
             .column(change_requests::Column::Status)
             .column(change_requests::Column::ClientApprovedAt)
             .column(change_requests::Column::ClientSignatureIp)
             .column(change_requests::Column::CreatedAt)
             .column(change_requests::Column::UpdatedAt)
+            .column(change_requests::Column::Version)
             .column_as(projects::Column::Name, "project_name")
             .into_model::<ClientChangeRequestDetailRow>()
             .one(db)
@@ -160,10 +163,42 @@ impl ChangeRequestService {
     ) -> Result<ChangeRequestDetailDto, AppError> {
         let model = Self::get_model_by_user(db, user_id, id).await?;
         let status = Self::parse_status(&model.status)?;
+        let origin = Self::parse_origin(&model.origin)?;
 
         if model.version != dto.version {
             return Err(AppError::Conflict(
                 "El cliente actualizó el registro de cambio".to_string(),
+            ));
+        }
+
+        if status == ChangeRequestStatus::Approved {
+            let non_task_fields_changed = dto.project_id != model.project_id
+                || dto.client_id != model.client_id
+                || dto.title != model.title
+                || dto.client_request_description != model.client_request_description
+                || dto.technical_assessment != model.technical_assessment
+                || dto.impact_hours != model.impact_hours
+                || dto.impact_cost != model.impact_cost
+                || dto.schedule_impact_days != model.schedule_impact_days;
+
+            if non_task_fields_changed {
+                return Err(AppError::Conflict(
+                    "Una solicitud aprobada solo permite actualizar la tarea relacionada".to_string(),
+                ));
+            }
+
+            Self::ensure_task_ownership(db, user_id, model.project_id, dto.task_id).await?;
+
+            let mut active_model: change_requests::ActiveModel = model.into();
+            active_model.task_id = Set(dto.task_id);
+
+            let updated = active_model.update(db).await.map_err(AppError::Database)?;
+            return Self::get_by_id(db, user_id, updated.id).await;
+        }
+
+        if origin == ChangeRequestOrigin::ClientPortal {
+            return Err(AppError::Forbidden(
+                "La solicitud fue creada por cliente y solo puede editarla el cliente".to_string(),
             ));
         }
 
@@ -189,6 +224,66 @@ impl ChangeRequestService {
         active_model.impact_hours = Set(dto.impact_hours);
         active_model.impact_cost = Set(dto.impact_cost);
         active_model.schedule_impact_days = Set(dto.schedule_impact_days);
+
+        let updated = active_model.update(db).await.map_err(AppError::Database)?;
+        Self::get_by_id(db, user_id, updated.id).await
+    }
+
+    pub async fn client_update_spec(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        client_id: Uuid,
+        id: Uuid,
+        dto: ClientUpdateChangeRequestDto,
+    ) -> Result<ClientChangeRequestDetailDto, AppError> {
+        let model = Self::get_model_by_client(db, user_id, client_id, id).await?;
+        let status = Self::parse_status(&model.status)?;
+
+        if model.version != dto.version {
+            return Err(AppError::Conflict(
+                "El freelancer actualizó el cambio. Recarga para continuar".to_string(),
+            ));
+        }
+
+        if !matches!(status, ChangeRequestStatus::Draft | ChangeRequestStatus::Submitted) {
+            return Err(AppError::Conflict(
+                "No se puede editar la solicitud en el estado actual".to_string(),
+            ));
+        }
+
+        let mut active_model: change_requests::ActiveModel = model.into();
+        active_model.title = Set(dto.title);
+        active_model.client_request_description = Set(dto.client_request_description);
+
+        let updated = active_model.update(db).await.map_err(AppError::Database)?;
+        Self::get_client_by_id(db, user_id, client_id, updated.id).await
+    }
+
+    pub async fn assign_task_for_approved(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        id: Uuid,
+        dto: AssignChangeRequestTaskDto,
+    ) -> Result<ChangeRequestDetailDto, AppError> {
+        let model = Self::get_model_by_user(db, user_id, id).await?;
+        let status = Self::parse_status(&model.status)?;
+
+        if model.version != dto.version {
+            return Err(AppError::Conflict(
+                "El cliente actualizó el registro de cambio".to_string(),
+            ));
+        }
+
+        if status != ChangeRequestStatus::Approved {
+            return Err(AppError::Conflict(
+                "Solo una solicitud aprobada permite actualizar la tarea relacionada".to_string(),
+            ));
+        }
+
+        Self::ensure_task_ownership(db, user_id, model.project_id, dto.task_id).await?;
+
+        let mut active_model: change_requests::ActiveModel = model.into();
+        active_model.task_id = Set(dto.task_id);
 
         let updated = active_model.update(db).await.map_err(AppError::Database)?;
         Self::get_by_id(db, user_id, updated.id).await
@@ -269,10 +364,20 @@ impl ChangeRequestService {
     ) -> Result<ChangeRequestDetailDto, AppError> {
         let model = Self::get_model_by_user(db, user_id, id).await?;
         let status = Self::parse_status(&model.status)?;
+        let origin = Self::parse_origin(&model.origin)?;
+
+        if origin != ChangeRequestOrigin::FreelancerDashboard {
+            return Err(AppError::Forbidden(
+                "Solo puedes cancelar solicitudes creadas por freelancer".to_string(),
+            ));
+        }
 
         if matches!(
             status,
-            ChangeRequestStatus::Implemented | ChangeRequestStatus::Cancelled
+            ChangeRequestStatus::Approved
+                | ChangeRequestStatus::Declined
+                | ChangeRequestStatus::Implemented
+                | ChangeRequestStatus::Cancelled
         ) {
             return Err(AppError::Conflict(
                 "La solicitud ya está finalizada y no puede cancelarse".to_string(),
@@ -333,6 +438,68 @@ impl ChangeRequestService {
 
         let updated = active_model.update(db).await.map_err(AppError::Database)?;
         Self::get_client_by_id(db, user_id, client_id, updated.id).await
+    }
+
+    pub async fn client_cancel(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        client_id: Uuid,
+        id: Uuid,
+        dto: ClientCancelChangeRequestDto,
+    ) -> Result<ClientChangeRequestDetailDto, AppError> {
+        let model = Self::get_model_by_client(db, user_id, client_id, id).await?;
+        let status = Self::parse_status(&model.status)?;
+        let origin = Self::parse_origin(&model.origin)?;
+
+        if model.version != dto.version {
+            return Err(AppError::Conflict(
+                "El freelancer actualizó el cambio. Recarga para continuar".to_string(),
+            ));
+        }
+
+        if origin != ChangeRequestOrigin::ClientPortal {
+            return Err(AppError::Forbidden(
+                "Solo puedes cancelar solicitudes creadas por el cliente".to_string(),
+            ));
+        }
+
+        if status == ChangeRequestStatus::Assessed {
+            return Err(AppError::Conflict(
+                "Una solicitud evaluada solo puede aprobarse o rechazarse".to_string(),
+            ));
+        }
+
+        if !matches!(status, ChangeRequestStatus::Draft | ChangeRequestStatus::Submitted) {
+            return Err(AppError::Conflict(
+                "La solicitud ya está finalizada y no puede cancelarse".to_string(),
+            ));
+        }
+
+        let mut active_model: change_requests::ActiveModel = model.into();
+        active_model.status = Set(ChangeRequestStatus::Cancelled.to_string());
+
+        let updated = active_model.update(db).await.map_err(AppError::Database)?;
+        Self::get_client_by_id(db, user_id, client_id, updated.id).await
+    }
+
+    pub async fn delete(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
+        let model = Self::get_model_by_user(db, user_id, id).await?;
+        let status = Self::parse_status(&model.status)?;
+
+        if status != ChangeRequestStatus::Cancelled {
+            return Err(AppError::Conflict(
+                "Solo se puede eliminar una solicitud cancelada".to_string(),
+            ));
+        }
+
+        change_requests::ActiveModel {
+            id: Set(model.id),
+            ..Default::default()
+        }
+        .delete(db)
+        .await?;
+
+        Ok(())
     }
 
     pub async fn search(
@@ -564,6 +731,11 @@ impl ChangeRequestService {
             .map_err(|_| AppError::Internal(format!("Estado inválido almacenado en change_requests: {}", raw)))
     }
 
+    fn parse_origin(raw: &str) -> Result<ChangeRequestOrigin, AppError> {
+        ChangeRequestOrigin::try_from(raw.to_string())
+            .map_err(|_| AppError::Internal(format!("Origen inválido almacenado en change_requests: {}", raw)))
+    }
+
     fn now_with_offset() -> DateTime<FixedOffset> {
         Utc::now().fixed_offset()
     }
@@ -607,11 +779,13 @@ impl ChangeRequestService {
             impact_hours: row.impact_hours,
             impact_cost: row.impact_cost,
             schedule_impact_days: row.schedule_impact_days,
+            origin: row.origin,
             status: row.status,
             client_approved_at: row.client_approved_at,
             client_signature_ip: row.client_signature_ip,
             created_at: row.created_at,
             updated_at: row.updated_at,
+            version: row.version,
         }
     }
 }

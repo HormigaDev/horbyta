@@ -76,6 +76,12 @@
               {{ t('layout.drawer.milestones') }}
             </q-tooltip>
           </q-btn>
+
+          <q-btn flat round dense icon="change_circle" to="/client/change-requests">
+            <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
+              {{ t('layout.drawer.changeRequests') }}
+            </q-tooltip>
+          </q-btn>
         </div>
 
         <div class="absolute-bottom column flex-center q-pb-md q-gutter-y-sm w-100">
@@ -134,6 +140,13 @@
                   <q-icon name="flag" />
                 </q-item-section>
                 <q-item-section>{{ t('layout.drawer.milestones') }}</q-item-section>
+              </q-item>
+
+              <q-item clickable v-ripple to="/client/change-requests">
+                <q-item-section avatar>
+                  <q-icon name="change_circle" />
+                </q-item-section>
+                <q-item-section>{{ t('layout.drawer.changeRequests') }}</q-item-section>
               </q-item>
             </q-list>
           </div>

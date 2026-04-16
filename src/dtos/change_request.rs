@@ -281,6 +281,16 @@ pub struct AssessChangeRequestDto {
 }
 
 #[derive(Debug, Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct AssignChangeRequestTaskDto {
+    pub task_id: Option<Uuid>,
+
+    #[validate(range(min = 1, message = "Versión inválida la versión mínima es 1"))]
+    pub version: i32,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct ClientCreateChangeRequestDto {
     pub project_id: Uuid,
 
@@ -299,7 +309,36 @@ pub struct ClientCreateChangeRequestDto {
     pub client_request_description: String,
 }
 
+#[derive(Debug, Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct ClientUpdateChangeRequestDto {
+    #[validate(length(
+        min = 1,
+        max = 255,
+        message = "El título del cambio debe tener entre 1 y 255 caracteres"
+    ))]
+    pub title: String,
+
+    #[validate(length(
+        min = 1,
+        max = 20000,
+        message = "La solicitud del cliente debe tener entre 1 y 20.000 caracteres"
+    ))]
+    pub client_request_description: String,
+
+    #[validate(range(min = 1, message = "Versión inválida la versión mínima es 1"))]
+    pub version: i32,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct ClientCancelChangeRequestDto {
+    #[validate(range(min = 1, message = "Versión inválida la versión mínima es 1"))]
+    pub version: i32,
+}
+
 #[derive(Debug, Deserialize, Validate, Default)]
+#[serde(deny_unknown_fields)]
 pub struct ClientApproveChangeRequestDto {
     #[validate(custom(function = "validate_signature_ip"))]
     pub client_signature_ip: Option<String>,
@@ -372,11 +411,13 @@ pub struct ClientChangeRequestDetailDto {
     pub impact_hours: Decimal,
     pub impact_cost: Decimal,
     pub schedule_impact_days: i32,
+    pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
     pub client_approved_at: Option<DateTimeWithTimeZone>,
     pub client_signature_ip: Option<String>,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
+    pub version: i32,
 }
 
 #[derive(Debug, FromQueryResult)]
@@ -417,11 +458,13 @@ pub struct ClientChangeRequestDetailRow {
     pub impact_hours: Decimal,
     pub impact_cost: Decimal,
     pub schedule_impact_days: i32,
+    pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
     pub client_approved_at: Option<DateTimeWithTimeZone>,
     pub client_signature_ip: Option<String>,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
+    pub version: i32,
 }
 
 string_enum!(

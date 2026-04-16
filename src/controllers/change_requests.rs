@@ -10,7 +10,8 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         change_request::{
-            AssessChangeRequestDto, ClientApproveChangeRequestDto, ClientCreateChangeRequestDto,
+            AssessChangeRequestDto, AssignChangeRequestTaskDto, ClientApproveChangeRequestDto,
+            ClientCancelChangeRequestDto, ClientCreateChangeRequestDto, ClientUpdateChangeRequestDto,
             CreateChangeRequestDto, UpdateChangeRequestDto, change_request_filter_schema,
             client_change_request_filter_schema,
         },
@@ -96,6 +97,18 @@ async fn client_create_change_request(
     Ok(Json(change_request))
 }
 
+async fn client_update_change_request(
+    State(state): State<AppState>,
+    client: ClientAuthDto,
+    Path(id): Path<Uuid>,
+    ValidatedJson(payload): ValidatedJson<ClientUpdateChangeRequestDto>,
+) -> Result<impl IntoResponse, AppError> {
+    let change_request =
+        ChangeRequestService::client_update_spec(state.db.as_ref(), client.user_id, client.client_id, id, payload)
+            .await?;
+    Ok(Json(change_request))
+}
+
 async fn update_change_request(
     State(state): State<AppState>,
     user: UserDto,
@@ -103,6 +116,17 @@ async fn update_change_request(
     ValidatedJson(payload): ValidatedJson<UpdateChangeRequestDto>,
 ) -> Result<impl IntoResponse, AppError> {
     let change_request = ChangeRequestService::update(state.db.as_ref(), user.id, id, payload).await?;
+    Ok(Json(change_request))
+}
+
+async fn assign_change_request_task(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(id): Path<Uuid>,
+    ValidatedJson(payload): ValidatedJson<AssignChangeRequestTaskDto>,
+) -> Result<impl IntoResponse, AppError> {
+    let change_request =
+        ChangeRequestService::assign_task_for_approved(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(change_request))
 }
 
@@ -143,6 +167,15 @@ async fn cancel_change_request(
     Ok(Json(change_request))
 }
 
+async fn delete_change_request(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    ChangeRequestService::delete(state.db.as_ref(), user.id, id).await?;
+    Ok(Json(json!({ "message": "Solicitud de cambio eliminada" })))
+}
+
 async fn client_approve_change_request(
     State(state): State<AppState>,
     client: ClientAuthDto,
@@ -164,13 +197,27 @@ async fn client_decline_change_request(
     Ok(Json(change_request))
 }
 
+async fn client_cancel_change_request(
+    State(state): State<AppState>,
+    client: ClientAuthDto,
+    Path(id): Path<Uuid>,
+    ValidatedJson(payload): ValidatedJson<ClientCancelChangeRequestDto>,
+) -> Result<impl IntoResponse, AppError> {
+    let change_request =
+        ChangeRequestService::client_cancel(state.db.as_ref(), client.user_id, client.client_id, id, payload).await?;
+    Ok(Json(change_request))
+}
+
 pub fn change_requests_controller() -> Router<AppState> {
     Router::new()
         .route("/search", get(search_change_requests))
         .route("/client/search", get(client_search_change_requests))
         .route("/", post(create_change_request))
         .route("/client", post(client_create_change_request))
-        .route("/client/{id}", get(client_get_change_request))
+        .route(
+            "/client/{id}",
+            get(client_get_change_request).patch(client_update_change_request),
+        )
         .route(
             "/client/{id}/approve",
             axum::routing::patch(client_approve_change_request),
@@ -179,7 +226,17 @@ pub fn change_requests_controller() -> Router<AppState> {
             "/client/{id}/decline",
             axum::routing::patch(client_decline_change_request),
         )
-        .route("/{id}", get(get_change_request).put(update_change_request))
+        .route(
+            "/client/{id}/cancel",
+            axum::routing::patch(client_cancel_change_request),
+        )
+        .route(
+            "/{id}",
+            get(get_change_request)
+                .put(update_change_request)
+                .delete(delete_change_request),
+        )
+        .route("/{id}/task", axum::routing::patch(assign_change_request_task))
         .route("/{id}/submit", axum::routing::patch(submit_change_request))
         .route("/{id}/assess", axum::routing::patch(assess_change_request))
         .route(

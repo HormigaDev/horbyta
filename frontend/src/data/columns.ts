@@ -121,6 +121,127 @@ export const getClientProjectColumns = (t: ComposerTranslation) => {
   ];
 };
 
+export const getChangeRequestColumns = (t: ComposerTranslation) => {
+  const formatDate = useDateFormatter();
+
+  return [
+    {
+      name: 'record_number',
+      label: t('columns.changeRequest.record_number'),
+      field: 'record_number',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: bigint | null) => (val ? normalizeId(val) : val),
+    },
+    {
+      name: 'title',
+      label: t('columns.changeRequest.title'),
+      field: 'title',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'origin',
+      label: t('columns.changeRequest.origin'),
+      field: 'origin',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => (val ? t(`changeRequests.origin.${val}`) : t('common.empty')),
+    },
+    {
+      name: 'status',
+      label: t('columns.changeRequest.status'),
+      field: 'status',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => (val ? t(`changeRequests.status.${val}`) : t('common.empty')),
+    },
+    {
+      name: 'project_id',
+      label: t('columns.changeRequest.project'),
+      field: 'project_name',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'client_id',
+      label: t('columns.changeRequest.client'),
+      field: 'client_name',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'created_at',
+      label: t('columns.changeRequest.created_at'),
+      field: 'created_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val),
+    },
+    {
+      name: 'updated_at',
+      label: t('columns.changeRequest.updated_at'),
+      field: 'updated_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val),
+    },
+  ];
+};
+
+export const getClientChangeRequestColumns = (t: ComposerTranslation) => {
+  const formatDate = useDateFormatter();
+
+  return [
+    {
+      name: 'record_number',
+      label: t('columns.changeRequest.record_number'),
+      field: 'record_number',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: bigint | null) => (val ? normalizeId(val) : val),
+    },
+    {
+      name: 'title',
+      label: t('columns.changeRequest.title'),
+      field: 'title',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'status',
+      label: t('columns.changeRequest.status'),
+      field: 'status',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => (val ? t(`changeRequests.status.${val}`) : t('common.empty')),
+    },
+    {
+      name: 'project_id',
+      label: t('columns.changeRequest.project'),
+      field: 'project_name',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'created_at',
+      label: t('columns.changeRequest.created_at'),
+      field: 'created_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val),
+    },
+    {
+      name: 'updated_at',
+      label: t('columns.changeRequest.updated_at'),
+      field: 'updated_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val),
+    },
+  ];
+};
+
 export const getCategoryColumns = (t: ComposerTranslation) => {
   return [
     {

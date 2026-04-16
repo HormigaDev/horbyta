@@ -1,60 +1,78 @@
 <template>
   <div class="markdown-container">
     <div class="markdown-toolbar q-pa-sm row items-center no-wrap" v-if="editMode">
+      <template v-if="!isPreviewMode">
+        <q-btn
+          flat
+          round
+          dense
+          icon="format_bold"
+          @click="applyFormat('bold')"
+          :title="t('markdown.toolbar.bold')"
+        >
+          <q-tooltip>{{ t('markdown.toolbar.bold') }}</q-tooltip>
+        </q-btn>
+        <q-btn
+          flat
+          round
+          dense
+          icon="format_italic"
+          @click="applyFormat('italic')"
+          :title="t('markdown.toolbar.italic')"
+        >
+          <q-tooltip>{{ t('markdown.toolbar.italic') }}</q-tooltip>
+        </q-btn>
+        <q-btn
+          flat
+          round
+          dense
+          icon="title"
+          @click="applyFormat('heading')"
+          :title="t('markdown.toolbar.heading')"
+        >
+          <q-tooltip>{{ t('markdown.toolbar.heading') }}</q-tooltip>
+        </q-btn>
+        <q-btn
+          flat
+          round
+          dense
+          icon="format_quote"
+          @click="applyFormat('quote')"
+          :title="t('markdown.toolbar.quote')"
+        >
+          <q-tooltip>{{ t('markdown.toolbar.quote') }}</q-tooltip>
+        </q-btn>
+        <q-btn
+          flat
+          round
+          dense
+          icon="code"
+          @click="applyFormat('code')"
+          :title="t('markdown.toolbar.code')"
+        >
+          <q-tooltip>{{ t('markdown.toolbar.code') }}</q-tooltip>
+        </q-btn>
+      </template>
+
+      <q-space />
+
       <q-btn
+        v-if="enablePreviewToggle"
         flat
         round
         dense
-        icon="format_bold"
-        @click="applyFormat('bold')"
-        :title="t('markdown.toolbar.bold')"
+        :icon="isPreviewMode ? 'edit' : 'visibility'"
+        @click="togglePreviewMode"
+        :title="isPreviewMode ? t('markdown.toolbar.edit') : t('markdown.toolbar.preview')"
       >
-        <q-tooltip>{{ t('markdown.toolbar.bold') }}</q-tooltip>
-      </q-btn>
-      <q-btn
-        flat
-        round
-        dense
-        icon="format_italic"
-        @click="applyFormat('italic')"
-        :title="t('markdown.toolbar.italic')"
-      >
-        <q-tooltip>{{ t('markdown.toolbar.italic') }}</q-tooltip>
-      </q-btn>
-      <q-btn
-        flat
-        round
-        dense
-        icon="title"
-        @click="applyFormat('heading')"
-        :title="t('markdown.toolbar.heading')"
-      >
-        <q-tooltip>{{ t('markdown.toolbar.heading') }}</q-tooltip>
-      </q-btn>
-      <q-btn
-        flat
-        round
-        dense
-        icon="format_quote"
-        @click="applyFormat('quote')"
-        :title="t('markdown.toolbar.quote')"
-      >
-        <q-tooltip>{{ t('markdown.toolbar.quote') }}</q-tooltip>
-      </q-btn>
-      <q-btn
-        flat
-        round
-        dense
-        icon="code"
-        @click="applyFormat('code')"
-        :title="t('markdown.toolbar.code')"
-      >
-        <q-tooltip>{{ t('markdown.toolbar.code') }}</q-tooltip>
+        <q-tooltip>
+          {{ isPreviewMode ? t('markdown.toolbar.edit') : t('markdown.toolbar.preview') }}
+        </q-tooltip>
       </q-btn>
     </div>
 
     <q-input
-      v-if="editMode"
+      v-if="showEditor"
       ref="editorRef"
       v-model="rawContent"
       type="textarea"
@@ -145,11 +163,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  enablePreviewToggle: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['update:modelValue']);
 const editorRef = ref<QInput | null>(null);
 const rawContent = ref(props.modelValue);
+const isPreviewMode = ref(false);
 
 watch(
   () => props.modelValue,
@@ -162,6 +185,21 @@ watch(
 
 watch(rawContent, (val) => {
   emit('update:modelValue', val);
+});
+
+watch(
+  () => props.editMode,
+  (val) => {
+    if (!val) {
+      isPreviewMode.value = false;
+    }
+  },
+);
+
+const showEditor = computed(() => {
+  if (!props.editMode) return false;
+  if (!props.enablePreviewToggle) return true;
+  return !isPreviewMode.value;
 });
 
 const renderedContent = computed(() => {
@@ -261,6 +299,11 @@ const handleKeydown = (e: KeyboardEvent) => {
         break;
     }
   }
+};
+
+const togglePreviewMode = () => {
+  if (!props.enablePreviewToggle) return;
+  isPreviewMode.value = !isPreviewMode.value;
 };
 </script>
 

@@ -12,3 +12,4 @@ export * from './attachment';
 export * from './chat';
 export * from './user';
 export * from './clientAuth';
+export * from './changeRequest';
