@@ -1,20 +1,22 @@
 import type { Rule } from 'src/types';
 import { executeRules } from 'src/utils/executeRules';
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 const NAME_RULES: Rule<string>[] = [
-  (val: string) => (!val || val.length < 1) && 'El nombre es obligatorio.',
-  (val: string) => val.length > 100 && 'El nombre debe tener entre 1 y 100 caracteres.',
+  (val: string, t) => (!val || val.length < 1) && t('rules.category.name.required'),
+  (val: string, t) => val.length > 100 && t('rules.category.name.limit'),
 ];
 
 export const useCategoryRules = () => {
+  const { t } = useI18n();
   const nameRuleState = ref({
     error: false,
     message: '',
   });
 
   function validateName(name: string) {
-    return executeRules(nameRuleState, NAME_RULES, name);
+    return executeRules(nameRuleState, NAME_RULES, name, t);
   }
 
   return {

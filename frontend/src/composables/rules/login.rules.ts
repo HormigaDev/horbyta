@@ -1,19 +1,21 @@
 import { ref } from 'vue';
 import { executeRules } from 'src/utils/executeRules';
-import type { Rule } from 'src/types';
 import { EMAIL_REGEX } from 'src/data/constants';
+import type { Rule } from 'src/types';
+import { useI18n } from 'vue-i18n';
 
 const EMAIL_RULES: Rule<string>[] = [
-  (prop: string) => (!prop || prop.length < 1) && 'El correo electrónico es obligatorio.',
-  (prop: string) =>
-    (prop.length > 255 || !EMAIL_REGEX.test(prop)) && 'Correo electrónico inválido.',
+  (prop: string, t) => (!prop || prop.length < 1) && t('rules.login.email.required'),
+  (prop: string, t) =>
+    (prop.length > 255 || !EMAIL_REGEX.test(prop)) && t('rules.login.email.invalid_email'),
 ];
 
 const PASSWORD_RULES: Rule<string>[] = [
-  (password: string) => !password && 'La contraseña es obligatoria.',
+  (password: string, t) => !password && t('rules.login.password.required'),
 ];
 
 export const useLoginRules = () => {
+  const { t } = useI18n();
   const emailRuleState = ref({
     error: false,
     message: '',
@@ -24,10 +26,10 @@ export const useLoginRules = () => {
   });
 
   function validateEmail(email: string) {
-    return executeRules(emailRuleState, EMAIL_RULES, email);
+    return executeRules(emailRuleState, EMAIL_RULES, email, t);
   }
   function validatePassword(password: string) {
-    return executeRules(passwordRuleState, PASSWORD_RULES, password);
+    return executeRules(passwordRuleState, PASSWORD_RULES, password, t);
   }
 
   return {

@@ -1,18 +1,20 @@
 import { ref } from 'vue';
 import { executeRules } from 'src/utils/executeRules';
 import type { Rule } from 'src/types';
+import { useI18n } from 'vue-i18n';
 
 const NAME_RULES: Rule<string>[] = [
-  (val: string) => (!val || val.length < 1) && 'El nombre es obligatorio.',
-  (val: string) => val.length > 255 && 'El nombre debe tener entre 1 y 255 caracteres.',
+  (val: string, t) => (!val || val.length < 1) && t('rules.project.name.required'),
+  (val: string, t) => val.length > 255 && t('rules.project.name.limit'),
 ];
 
 const DESCRIPTION_RULES: Rule<string | null>[] = [
-  (val: string | null) =>
-    val !== null && val.length > 15000 && 'La descripción no puede exceder los 15000 caracteres.',
+  (val: string | null, t) =>
+    val !== null && val.length > 15000 && t('rules.project.description.limit'),
 ];
 
 export const useProjectsRules = () => {
+  const { t } = useI18n();
   const nameRuleState = ref({
     error: false,
     message: '',
@@ -24,11 +26,11 @@ export const useProjectsRules = () => {
   });
 
   function validateName(name: string) {
-    return executeRules(nameRuleState, NAME_RULES, name);
+    return executeRules(nameRuleState, NAME_RULES, name, t);
   }
 
   function validateDescription(description: string | null) {
-    return executeRules(descriptionRuleState, DESCRIPTION_RULES, description);
+    return executeRules(descriptionRuleState, DESCRIPTION_RULES, description, t);
   }
 
   return {

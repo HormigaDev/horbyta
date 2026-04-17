@@ -1,9 +1,11 @@
+import type { ComposerTranslation } from 'vue-i18n';
+
 export interface RuleErrorState {
   error: boolean;
   message: string;
 }
 
-export type Rule<T> = (prop: T) => false | string;
+export type Rule<T> = (prop: T, t: ComposerTranslation) => false | string;
 
 export * from './query';
 export * from './project';

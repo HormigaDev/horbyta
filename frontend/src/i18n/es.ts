@@ -787,8 +787,8 @@ export const messages = {
   'error.badRequestDialog.accept': 'Entendido',
   'error.badRequestDialog.defaultMessage': 'Hay datos inválidos en la solicitud.',
 
-  'backendErrors.password must be at least 12 characters':
-    'La contraseña debe tener al menos 12 caracteres.',
+  'backendErrors.password must be at least 8 characters':
+    'La contraseña debe tener al menos 8 caracteres.',
   'backendErrors.password must include at least one lowercase letter':
     'La contraseña debe incluir al menos una letra minúscula.',
   'backendErrors.password must include at least one uppercase letter':
@@ -928,4 +928,21 @@ export const messages = {
   'datatable.operator.contains': 'Contiene (><)',
   'datatable.operator.notContains': 'No contiene (<>)',
   'datatable.operator.between': 'Entre ()',
+
+  'rules.client.email.invalid_email': 'Correo electrónico inválido',
+  'rules.clinet.phone.invalid_phone_number': 'Número de teléfono inválido',
+  'rules.category.name.required': 'El nombre es obligatorio',
+  'rules.category.name.limit': 'El nombre no puede exceder los 100 caracteres',
+  'rules.login.email.required': 'El correo electrónico es obligatorio',
+  'rules.login.email.invalid_email': 'Correo electrónico inválido',
+  'rules.login.password.required': 'La contraseña es obligatoria',
+  'rules.project.name.required': 'El nombre es obligatorio',
+  'rules.project.name.limit': 'El nombre del proyecto debe tener entre 1 y 255 caracteres',
+  'rules.project.description.limit':
+    'La descripción del proyecto no puede superar los 15000 caracteres',
+  'rules.task.title.required': 'El título es obligatorio',
+  'rules.task.title.limit': 'El título de la tarea debe tener entre 1 y 255 caracteres',
+  'rules.clientCredential.email.invalid_email': 'Correo electrónico inválido',
+  'rules.clientCredential.password.invalid_password':
+    'La contraseña debe tener al menos 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 símbolo',
 };

@@ -118,7 +118,7 @@
                 {{ t('clients.detail.auth.credentialsTitle') }}
               </div>
 
-              <q-form @submit.prevent="activateCredentials" class="q-gutter-sm">
+              <q-form @submit.prevent="activateCredentials" class="q-gutter-md">
                 <q-input
                   v-model="credentialsForm.email"
                   type="email"
@@ -126,6 +126,8 @@
                   dense
                   :label="t('clients.detail.auth.credentialsEmail')"
                   autocomplete="off"
+                  :error="emailRuleState.error"
+                  :error-message="emailRuleState.message"
                 />
                 <q-input
                   v-model="credentialsForm.password"
@@ -134,6 +136,8 @@
                   dense
                   :label="t('clients.detail.auth.credentialsPassword')"
                   autocomplete="new-password"
+                  :error="passwordRuleState.error"
+                  :error-message="passwordRuleState.message"
                 />
                 <q-input
                   v-model="credentialsForm.confirmPassword"
@@ -303,6 +307,7 @@ import type { ClientAuthMethod, ClientAuthStatusDto } from 'src/types/clients';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
+import { useClientCredentialRules } from 'src/composables/rules/clientCredentials.rules';
 
 interface GeneratedMagicToken {
   magic_client_token: string;
@@ -314,6 +319,9 @@ const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmAction, confirmDelete, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
+const { emailRuleState, passwordRuleState, validateEmail, validatePassword } =
+  useClientCredentialRules();
+
 type ClientDetailViewDto = Awaited<ReturnType<typeof ClientsService.getById>>;
 
 const client = ref<ClientDetailViewDto | null>(null);
@@ -445,11 +453,13 @@ const shouldSwitchMethod = (nextMethod: 'credentials' | 'magic_token'): Promise<
 const activateCredentials = async () => {
   if (!client.value) return;
 
+  if (validateEmail(credentialsForm.email)) return;
+  if (validatePassword(credentialsForm.password)) return;
+
   if (!credentialsForm.email.trim() || !credentialsForm.password) {
     notify(t('clients.detail.auth.credentialsRequired'), 'warning');
     return;
   }
-
   if (credentialsForm.password !== credentialsForm.confirmPassword) {
     notify(t('clients.detail.auth.passwordMismatch'), 'warning');
     return;

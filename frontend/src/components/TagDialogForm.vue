@@ -228,8 +228,8 @@ const onColorPicked = (value: string | null) => {
 
 const validateForm = (): boolean => {
   resetValidation();
-  const hasNameError = executeRules(nameRuleState, getNameRules(), form.name);
-  const hasColorError = executeRules(colorRuleState, getColorRules(), form.color);
+  const hasNameError = executeRules(nameRuleState, getNameRules(), form.name, t);
+  const hasColorError = executeRules(colorRuleState, getColorRules(), form.color, t);
   return hasNameError || hasColorError;
 };
 

@@ -96,7 +96,7 @@ fn format_range_message(field: &str, error: &ValidationError) -> String {
 fn format_custom_message(field: &str, code: &str) -> Option<String> {
     let message = match code {
         "must_be_numeric" => format!("{field} must contain only digits"),
-        "password_min_length" => "password must be at least 12 characters".to_string(),
+        "password_min_length" => "password must be at least 8 characters".to_string(),
         "password_requires_lowercase" => "password must include at least one lowercase letter".to_string(),
         "password_requires_uppercase" => "password must include at least one uppercase letter".to_string(),
         "password_requires_number" => "password must include at least one number".to_string(),
