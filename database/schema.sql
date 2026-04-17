@@ -407,8 +407,8 @@ returns trigger language plpgsql as $$
 begin
     if new.client_request_description <> old.client_request_description or new.title <> old.title then
         new.version := old.version + 1;
-        if old.status = 'assessed' then
-            new.status := 'submitted';
+        if old.status not in ('draft', 'submitted') then
+            raise exception 'No se puede editar la descripción o título de una solicitud de cambio si este ya fue evaluado.';
         end if;
     end if;
     return new;
