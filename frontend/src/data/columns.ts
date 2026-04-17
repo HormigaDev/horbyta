@@ -1,8 +1,139 @@
 import type { ComposerTranslation } from 'vue-i18n';
+import type { QTableProps } from 'quasar';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import { normalizeId } from 'src/utils/normalizeId';
 import { formatStorageBytes } from 'src/utils/attachments';
+
+type TableColumn = NonNullable<QTableProps['columns']>[number];
+type ColumnStyle = Exclude<TableColumn['style'], undefined>;
+
+type ColumnLayout = {
+  width: number;
+  ellipsis: boolean;
+};
+
+const COLUMN_WIDTHS = {
+  recordNumber: 112,
+  wideText: 260,
+  mediumText: 200,
+  compact: 132,
+  date: 164,
+  numeric: 124,
+} as const;
+
+const WIDE_TEXT_COLUMN_NAMES = new Set([
+  'name',
+  'title',
+  'project_name',
+  'milestone_name',
+  'original_name',
+  'category_id',
+  'client_id',
+  'project_id',
+]);
+
+const MEDIUM_TEXT_COLUMN_NAMES = new Set(['mime_type']);
+
+const COMPACT_COLUMN_NAMES = new Set(['status', 'origin', 'priority', 'complexity', 'color']);
+
+const DATE_COLUMN_NAMES = new Set(['created_at', 'updated_at', 'due_date']);
+
+const normalizeStyleString = (style: string): string => {
+  return style.trim().replace(/;*$/, '');
+};
+
+const appendColumnStyle = (style: TableColumn['style'], fixedStyle: string): ColumnStyle => {
+  if (!style) return fixedStyle;
+
+  if (typeof style === 'string') {
+    const normalized = normalizeStyleString(style);
+    return normalized.length > 0 ? `${normalized}; ${fixedStyle}` : fixedStyle;
+  }
+
+  return (row: unknown) => {
+    const normalized = normalizeStyleString(style(row));
+    return normalized.length > 0 ? `${normalized}; ${fixedStyle}` : fixedStyle;
+  };
+};
+
+const appendHeaderStyle = (style: TableColumn['headerStyle'], fixedStyle: string): string => {
+  if (!style) return fixedStyle;
+  const normalized = normalizeStyleString(style);
+  return normalized.length > 0 ? `${normalized}; ${fixedStyle}` : fixedStyle;
+};
+
+const buildFixedWidthStyle = (width: number, ellipsis: boolean): string => {
+  const rules = [`width: ${width}px`, `min-width: ${width}px`, `max-width: ${width}px`];
+
+  if (ellipsis) {
+    rules.push('overflow: hidden', 'white-space: nowrap', 'text-overflow: ellipsis');
+  }
+
+  return `${rules.join('; ')};`;
+};
+
+const getColumnLayout = (columnName: string): ColumnLayout => {
+  if (columnName === 'record_number') {
+    return { width: COLUMN_WIDTHS.recordNumber, ellipsis: false };
+  }
+
+  if (WIDE_TEXT_COLUMN_NAMES.has(columnName)) {
+    return { width: COLUMN_WIDTHS.wideText, ellipsis: true };
+  }
+
+  if (MEDIUM_TEXT_COLUMN_NAMES.has(columnName)) {
+    return { width: COLUMN_WIDTHS.mediumText, ellipsis: true };
+  }
+
+  if (DATE_COLUMN_NAMES.has(columnName)) {
+    return { width: COLUMN_WIDTHS.date, ellipsis: false };
+  }
+
+  if (columnName === 'size_bytes') {
+    return { width: COLUMN_WIDTHS.numeric, ellipsis: false };
+  }
+
+  if (COMPACT_COLUMN_NAMES.has(columnName)) {
+    return { width: COLUMN_WIDTHS.compact, ellipsis: false };
+  }
+
+  return { width: COLUMN_WIDTHS.compact, ellipsis: false };
+};
+
+const placeRecordNumberFirst = (columns: TableColumn[]): TableColumn[] => {
+  const recordNumberIndex = columns.findIndex((column) => column.name === 'record_number');
+
+  if (recordNumberIndex <= 0) {
+    return columns;
+  }
+
+  const reorderedColumns = [...columns];
+  const [recordNumberColumn] = reorderedColumns.splice(recordNumberIndex, 1);
+
+  if (!recordNumberColumn) {
+    return columns;
+  }
+
+  reorderedColumns.unshift(recordNumberColumn);
+  return reorderedColumns;
+};
+
+const withFixedColumnSizing = (columns: TableColumn[]): TableColumn[] => {
+  const orderedColumns = placeRecordNumberFirst(columns);
+
+  return orderedColumns.map((column) => {
+    const { width, ellipsis } = getColumnLayout(String(column.name));
+    const cellStyle = buildFixedWidthStyle(width, ellipsis);
+    const headerStyle = buildFixedWidthStyle(width, true);
+
+    return {
+      ...column,
+      style: appendColumnStyle(column.style, cellStyle),
+      headerStyle: appendHeaderStyle(column.headerStyle, headerStyle),
+    };
+  });
+};
 
 const useDateFormatter = () => {
   const userPreferencesStore = useUserPreferencesStore();
@@ -18,7 +149,7 @@ const useDateFormatter = () => {
 export const getProjectColumns = (t: ComposerTranslation) => {
   const formatDate = useDateFormatter();
 
-  return [
+  return withFixedColumnSizing([
     {
       name: 'record_number',
       label: t('columns.project.record_number'),
@@ -33,14 +164,6 @@ export const getProjectColumns = (t: ComposerTranslation) => {
       field: 'name',
       sortable: true,
       align: 'left' as const,
-    },
-    {
-      name: 'status',
-      label: t('columns.project.status'),
-      field: 'status',
-      sortable: true,
-      align: 'center' as const,
-      format: (val: string | null) => (val ? t(`projects.status.${val}`) : '-'),
     },
     {
       name: 'category_id',
@@ -57,6 +180,14 @@ export const getProjectColumns = (t: ComposerTranslation) => {
       align: 'left' as const,
     },
     {
+      name: 'status',
+      label: t('columns.project.status'),
+      field: 'status',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => (val ? t(`projects.status.${val}`) : '-'),
+    },
+    {
       name: 'created_at',
       label: t('columns.project.created_at'),
       field: 'created_at',
@@ -72,13 +203,13 @@ export const getProjectColumns = (t: ComposerTranslation) => {
       align: 'center' as const,
       format: (val: string) => formatDate(val),
     },
-  ];
+  ]);
 };
 
 export const getClientProjectColumns = (t: ComposerTranslation) => {
   const formatDate = useDateFormatter();
 
-  return [
+  return withFixedColumnSizing([
     {
       name: 'record_number',
       label: t('columns.project.record_number'),
@@ -118,13 +249,13 @@ export const getClientProjectColumns = (t: ComposerTranslation) => {
       align: 'center' as const,
       format: (val: string) => formatDate(val),
     },
-  ];
+  ]);
 };
 
 export const getChangeRequestColumns = (t: ComposerTranslation) => {
   const formatDate = useDateFormatter();
 
-  return [
+  return withFixedColumnSizing([
     {
       name: 'record_number',
       label: t('columns.changeRequest.record_number'),
@@ -137,6 +268,20 @@ export const getChangeRequestColumns = (t: ComposerTranslation) => {
       name: 'title',
       label: t('columns.changeRequest.title'),
       field: 'title',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'project_id',
+      label: t('columns.changeRequest.project'),
+      field: 'project_name',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'client_id',
+      label: t('columns.changeRequest.client'),
+      field: 'client_name',
       sortable: true,
       align: 'left' as const,
     },
@@ -156,20 +301,7 @@ export const getChangeRequestColumns = (t: ComposerTranslation) => {
       align: 'center' as const,
       format: (val: string | null) => (val ? t(`changeRequests.status.${val}`) : t('common.empty')),
     },
-    {
-      name: 'project_id',
-      label: t('columns.changeRequest.project'),
-      field: 'project_name',
-      sortable: true,
-      align: 'left' as const,
-    },
-    {
-      name: 'client_id',
-      label: t('columns.changeRequest.client'),
-      field: 'client_name',
-      sortable: true,
-      align: 'left' as const,
-    },
+
     {
       name: 'created_at',
       label: t('columns.changeRequest.created_at'),
@@ -186,13 +318,13 @@ export const getChangeRequestColumns = (t: ComposerTranslation) => {
       align: 'center' as const,
       format: (val: string) => formatDate(val),
     },
-  ];
+  ]);
 };
 
 export const getClientChangeRequestColumns = (t: ComposerTranslation) => {
   const formatDate = useDateFormatter();
 
-  return [
+  return withFixedColumnSizing([
     {
       name: 'record_number',
       label: t('columns.changeRequest.record_number'),
@@ -239,11 +371,11 @@ export const getClientChangeRequestColumns = (t: ComposerTranslation) => {
       align: 'center' as const,
       format: (val: string) => formatDate(val),
     },
-  ];
+  ]);
 };
 
 export const getCategoryColumns = (t: ComposerTranslation) => {
-  return [
+  return withFixedColumnSizing([
     {
       name: 'name',
       label: t('columns.category.name'),
@@ -251,11 +383,11 @@ export const getCategoryColumns = (t: ComposerTranslation) => {
       sortable: true,
       align: 'left' as const,
     },
-  ];
+  ]);
 };
 
 export const getTagColumns = (t: ComposerTranslation) => {
-  return [
+  return withFixedColumnSizing([
     {
       name: 'name',
       label: t('columns.tag.name'),
@@ -270,13 +402,13 @@ export const getTagColumns = (t: ComposerTranslation) => {
       sortable: false,
       align: 'center' as const,
     },
-  ];
+  ]);
 };
 
 export const getMilestoneColumns = (t: ComposerTranslation) => {
   const formatDate = useDateFormatter();
 
-  return [
+  return withFixedColumnSizing([
     {
       name: 'name',
       label: t('columns.milestone.name'),
@@ -317,13 +449,13 @@ export const getMilestoneColumns = (t: ComposerTranslation) => {
       align: 'center' as const,
       format: (val: string) => formatDate(val),
     },
-  ];
+  ]);
 };
 
 export const getTaskColumns = (t: ComposerTranslation) => {
   const formatDate = useDateFormatter();
 
-  return [
+  return withFixedColumnSizing([
     {
       name: 'record_number',
       label: t('columns.task.record_number'),
@@ -336,6 +468,20 @@ export const getTaskColumns = (t: ComposerTranslation) => {
       name: 'title',
       label: t('columns.task.title'),
       field: 'title',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'project_id',
+      label: t('columns.task.project'),
+      field: 'project_name',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'milestone_id',
+      label: t('columns.task.milestone'),
+      field: 'milestone_name',
       sortable: true,
       align: 'left' as const,
     },
@@ -363,20 +509,7 @@ export const getTaskColumns = (t: ComposerTranslation) => {
       align: 'center' as const,
       format: (val: string | null) => (val ? t(`tasks.form.complexity.${val}`) : val),
     },
-    {
-      name: 'project_name',
-      label: t('columns.task.project'),
-      field: 'project_name',
-      sortable: true,
-      align: 'left' as const,
-    },
-    {
-      name: 'milestone_name',
-      label: t('columns.task.milestone'),
-      field: 'milestone_name',
-      sortable: true,
-      align: 'left' as const,
-    },
+
     {
       name: 'due_date',
       label: t('columns.task.due_date'),
@@ -385,13 +518,13 @@ export const getTaskColumns = (t: ComposerTranslation) => {
       align: 'center' as const,
       format: (val: string | null) => (val ? formatDate(val, 'N/A') : 'N/A'),
     },
-  ];
+  ]);
 };
 
 export const getClientColumns = (t: ComposerTranslation) => {
   const formatDate = useDateFormatter();
 
-  return [
+  return withFixedColumnSizing([
     {
       name: 'name',
       label: t('columns.client.name'),
@@ -423,13 +556,13 @@ export const getClientColumns = (t: ComposerTranslation) => {
       align: 'center' as const,
       format: (val: string) => formatDate(val),
     },
-  ];
+  ]);
 };
 
 export const getAttachmentColumns = (t: ComposerTranslation) => {
   const formatDate = useDateFormatter();
 
-  return [
+  return withFixedColumnSizing([
     {
       name: 'original_name',
       label: t('columns.attachment.original_name'),
@@ -460,5 +593,5 @@ export const getAttachmentColumns = (t: ComposerTranslation) => {
       align: 'center' as const,
       format: (val: string) => formatDate(val, t('common.empty')),
     },
-  ];
+  ]);
 };

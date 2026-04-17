@@ -11,6 +11,7 @@
       :selection="selectionMode"
       :loading="loading"
       :rows-per-page-options="[5, 10, 20, 50, 100]"
+      table-class="dt-fixed-layout"
       :visible-columns="visibleColumns"
       :rows-per-page-label="t('datatable.rowsPerPage')"
       :no-results-label="t('datatable.noResults')"
@@ -259,10 +260,15 @@
 
       <template #header="props">
         <q-tr :props="props">
-          <q-th auto-width v-if="selectionMode !== 'none'">
+          <q-th auto-width class="text-center" v-if="selectionMode !== 'none'">
             <q-checkbox v-model="props.selected" />
           </q-th>
-          <q-th v-for="col in props.cols" :key="col.name" :props="props" class="text-weight-bold">
+          <q-th
+            v-for="col in props.cols"
+            :key="col.name"
+            :props="props"
+            class="text-weight-bold text-center"
+          >
             {{ translateLabel(col.label) }}
           </q-th>
         </q-tr>
@@ -667,7 +673,12 @@ const onDelete = () => {
     .q-table__middle {
       flex: 1;
       min-height: 0;
-      overflow-y: auto;
+      overflow: auto;
+    }
+
+    .dt-fixed-layout {
+      table-layout: fixed;
+      width: 100%;
     }
 
     thead tr th {
@@ -676,6 +687,7 @@ const onDelete = () => {
       background-color: var(--q-dark-page) !important;
       color: var(--text-color) !important;
       border-bottom: 1px solid var(--border-color) !important;
+      text-align: center !important;
     }
 
     thead tr:first-child th {
@@ -684,6 +696,10 @@ const onDelete = () => {
 
     tbody tr td {
       border-bottom: 1px solid var(--border-color) !important;
+    }
+
+    tbody tr td.q-table--col-auto-width {
+      text-align: center !important;
     }
 
     .q-table__bottom {
