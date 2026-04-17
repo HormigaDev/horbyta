@@ -68,22 +68,14 @@ pub fn tag_filter_schema() -> FilterSchema {
 
 #[derive(Validate, Serialize, Deserialize, Debug)]
 pub struct CreateTagDto {
-    #[validate(length(
-        min = 1,
-        max = 50,
-        message = "El nombre de la etiqueta debe tener entre 1 y 50 caracteres."
-    ))]
+    #[validate(length(min = 1, max = 50, message = "tag name must be between 1 and 50 characters"))]
     pub name: String,
     pub color: HexColor,
 }
 
 #[derive(Validate, Serialize, Deserialize, Debug)]
 pub struct UpdateTagDto {
-    #[validate(length(
-        min = 1,
-        max = 50,
-        message = "El nombre de la etiqueta debe tener entre 1 y 50 caracteres."
-    ))]
+    #[validate(length(min = 1, max = 50, message = "tag name must be between 1 and 50 characters"))]
     pub name: String,
     pub color: HexColor,
 }

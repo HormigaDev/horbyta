@@ -167,7 +167,7 @@ async function savePassword() {
     return;
   }
 
-  if (passwordForm.new_password.length < 8) {
+  if (passwordForm.new_password.length < 12) {
     notify(t('settings.user.validation.passwordMin'), 'warning');
     return;
   }

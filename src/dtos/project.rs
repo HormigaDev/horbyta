@@ -151,7 +151,7 @@ pub struct CreateMilestoneSubDto {
     #[validate(length(
         min = 1,
         max = 100,
-        message = "El nombre del hito debe tener entre 1 y 100 caracteres."
+        message = "milestone name must be between 1 and 100 characters"
     ))]
     pub name: String,
     pub due_date: Option<DateTime<FixedOffset>>,
@@ -159,10 +159,14 @@ pub struct CreateMilestoneSubDto {
 
 #[derive(Deserialize, Validate)]
 pub struct CreateProjectDto {
-    #[validate(length(min = 1, max = 255, message = "El nombre debe tener entre 1 y 255 caracteres"))]
+    #[validate(length(
+        min = 1,
+        max = 255,
+        message = "project name must be between 1 and 255 characters"
+    ))]
     pub name: String,
 
-    #[validate(length(max = 15000, message = "La descripción no puede exceder los 15000 caracteres"))]
+    #[validate(length(max = 15000, message = "project description must be at most 15000 characters"))]
     pub description: Option<String>,
 
     pub status: Option<ProjectStatus>,
@@ -176,10 +180,14 @@ pub struct CreateProjectDto {
 
 #[derive(Deserialize, Validate)]
 pub struct UpdateProjectDto {
-    #[validate(length(min = 1, max = 255, message = "El nombre debe tener entre 1 y 255 caracteres"))]
+    #[validate(length(
+        min = 1,
+        max = 255,
+        message = "project name must be between 1 and 255 characters"
+    ))]
     pub name: String,
 
-    #[validate(length(max = 15000, message = "La descripción no puede exceder los 15000 caracteres"))]
+    #[validate(length(max = 15000, message = "project description must be at most 15000 characters"))]
     pub description: Option<String>,
 
     pub status: ProjectStatus,

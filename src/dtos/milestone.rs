@@ -150,13 +150,10 @@ pub struct CreateMilestoneDto {
     #[validate(length(
         min = 1,
         max = 100,
-        message = "El nombre del hito debe tener entre 1 y 100 caracteres."
+        message = "milestone name must be between 1 and 100 characters"
     ))]
     pub name: String,
-    #[validate(length(
-        max = 10000,
-        message = "La descripción del hito no puede superar los 10.000 caracteres."
-    ))]
+    #[validate(length(max = 10000, message = "milestone description must be at most 10000 characters"))]
     pub description: Option<String>,
     pub status: Option<MilestoneStatus>,
     pub due_date: Option<DateTime<FixedOffset>>,
@@ -168,13 +165,10 @@ pub struct UpdateMilestoneDto {
     #[validate(length(
         min = 1,
         max = 100,
-        message = "El nombre del hito debe tener entre 1 y 100 caracteres."
+        message = "milestone name must be between 1 and 100 characters"
     ))]
     pub name: String,
-    #[validate(length(
-        max = 10000,
-        message = "La descripción del hito no puede superar los 10.000 caracteres."
-    ))]
+    #[validate(length(max = 10000, message = "milestone description must be at most 10000 characters"))]
     pub description: Option<String>,
     pub status: MilestoneStatus,
     pub due_date: Option<DateTime<FixedOffset>>,

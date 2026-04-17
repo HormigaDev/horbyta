@@ -7,7 +7,7 @@ pub struct HexColor(String);
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum HexColorError {
-    #[error("El color debe ser hexadecimal")]
+    #[error("color must be hexadecimal")]
     InvalidFormat,
 }
 

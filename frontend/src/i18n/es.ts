@@ -645,7 +645,7 @@ export const messages = {
   'settings.user.validation.passwordFieldsRequired': 'Completa los tres campos de contraseña',
   'settings.user.validation.passwordMismatch':
     'La confirmación no coincide con la nueva contraseña',
-  'settings.user.validation.passwordMin': 'La nueva contraseña debe tener al menos 8 caracteres',
+  'settings.user.validation.passwordMin': 'La nueva contraseña debe tener al menos 12 caracteres',
   'settings.user.profileSuccess': 'Usuario actualizado',
   'settings.user.profileError': 'No se pudo actualizar el usuario',
   'settings.user.passwordSuccess': 'Contraseña actualizada',
@@ -773,10 +773,128 @@ export const messages = {
 
   'selectByTerm.searchTooltip': 'Buscar',
 
-  'error.dialog.title': 'Detalles del error (500)',
-  'error.dialog.subtitle': 'El servidor encontró un error interno. Payload técnico:',
+  'error.dialog.title': 'Detalles del error',
+  'error.dialog.titleWithStatus': 'Detalles del error ({status})',
+  'error.dialog.subtitle': 'Payload técnico recibido:',
+  'error.dialog.clientSubtitle':
+    'La solicitud fue rechazada por validación o datos inválidos. Payload técnico:',
+  'error.dialog.serverSubtitle': 'El servidor devolvió un error interno. Payload técnico:',
   'error.dialog.reportButton': 'Reportar error',
   'error.dialog.reportSuccess': 'Reporte interno de error enviado correctamente (TODO)',
+
+  'error.badRequestDialog.title': 'Revisa los datos ingresados',
+  'error.badRequestDialog.subtitle': 'Corrige los siguientes puntos para continuar:',
+  'error.badRequestDialog.accept': 'Entendido',
+  'error.badRequestDialog.defaultMessage': 'Hay datos inválidos en la solicitud.',
+
+  'backendErrors.password must be at least 12 characters':
+    'La contraseña debe tener al menos 12 caracteres.',
+  'backendErrors.password must include at least one lowercase letter':
+    'La contraseña debe incluir al menos una letra minúscula.',
+  'backendErrors.password must include at least one uppercase letter':
+    'La contraseña debe incluir al menos una letra mayúscula.',
+  'backendErrors.password must include at least one number':
+    'La contraseña debe incluir al menos un número.',
+  'backendErrors.password must include at least one symbol':
+    'La contraseña debe incluir al menos un símbolo.',
+  'backendErrors.new password and confirm password must match':
+    'La nueva contraseña y su confirmación deben coincidir.',
+  'backendErrors.new password must be different from current password':
+    'La nueva contraseña debe ser diferente de la contraseña actual.',
+  'backendErrors.invalid json payload': 'El cuerpo JSON es inválido o está mal formado.',
+  'backendErrors.invalid multipart payload':
+    'El formulario multipart es inválido o está mal formado.',
+  'backendErrors.invalid search query parameters': 'Los parámetros de búsqueda son inválidos.',
+  'backendErrors.invalid search query payload':
+    'La consulta de búsqueda contiene un JSON inválido.',
+  'backendErrors.request must include at least one preference field':
+    'Debes enviar al menos una preferencia para actualizar.',
+  'backendErrors.request must include at least one notification preference field':
+    'Debes enviar al menos una preferencia de notificación para actualizar.',
+  'backendErrors.email must be a valid email address': 'El correo electrónico no es válido.',
+  'backendErrors.password is required': 'La contraseña es obligatoria.',
+  'backendErrors.current password is required': 'La contraseña actual es obligatoria.',
+  'backendErrors.magic token is required': 'Debes ingresar el token mágico.',
+  'backendErrors.original file name must be between 1 and 255 characters':
+    'El nombre original del archivo debe tener entre 1 y 255 caracteres.',
+  'backendErrors.mime type must be between 1 and 100 characters':
+    'El tipo MIME debe tener entre 1 y 100 caracteres.',
+  'backendErrors.category name must be between 1 and 100 characters':
+    'El nombre de la categoría debe tener entre 1 y 100 caracteres.',
+  'backendErrors.chat title must be between 1 and 255 characters':
+    'El título del chat debe tener entre 1 y 255 caracteres.',
+  'backendErrors.tag name must be between 1 and 50 characters':
+    'El nombre de la etiqueta debe tener entre 1 y 50 caracteres.',
+  'backendErrors.at most 5 filters are allowed': 'Solo se permiten hasta 5 filtros.',
+  'backendErrors.page must be at least 1': 'La página debe ser mayor o igual a 1.',
+  'backendErrors.limit must be between 1 and 100': 'El límite debe estar entre 1 y 100.',
+  'backendErrors.milestone name must be between 1 and 100 characters':
+    'El nombre del hito debe tener entre 1 y 100 caracteres.',
+  'backendErrors.milestone description must be at most 10000 characters':
+    'La descripción del hito debe tener máximo 10000 caracteres.',
+  'backendErrors.project name must be between 1 and 255 characters':
+    'El nombre del proyecto debe tener entre 1 y 255 caracteres.',
+  'backendErrors.project description must be at most 15000 characters':
+    'La descripción del proyecto debe tener máximo 15000 caracteres.',
+  'backendErrors.task title must be between 1 and 255 characters':
+    'El título de la tarea debe tener entre 1 y 255 caracteres.',
+  'backendErrors.task description must be at most 15000 characters':
+    'La descripción de la tarea debe tener máximo 15000 caracteres.',
+  'backendErrors.task priority must be between 1 and 4':
+    'La prioridad de la tarea debe estar entre 1 y 4.',
+  'backendErrors.task complexity must be between 1 and 4':
+    'La complejidad de la tarea debe estar entre 1 y 4.',
+  'backendErrors.client name must be between 1 and 255 characters':
+    'El nombre del cliente debe tener entre 1 y 255 caracteres.',
+  'backendErrors.client email must be a valid email address': 'El correo del cliente no es válido.',
+  'backendErrors.client email must be at most 255 characters':
+    'El correo del cliente debe tener máximo 255 caracteres.',
+  'backendErrors.client phone must be at most 20 characters':
+    'El teléfono del cliente debe tener máximo 20 caracteres.',
+  'backendErrors.client address must be at most 512 characters':
+    'La dirección del cliente debe tener máximo 512 caracteres.',
+  'backendErrors.client company must be at most 255 characters':
+    'La empresa del cliente debe tener máximo 255 caracteres.',
+  'backendErrors.client notes must be at most 5000 characters':
+    'Las notas del cliente deben tener máximo 5000 caracteres.',
+  'backendErrors.client auth email must be a valid email address':
+    'El correo de autenticación del cliente no es válido.',
+  'backendErrors.name must be between 2 and 100 characters':
+    'El nombre debe tener entre 2 y 100 caracteres.',
+  'backendErrors.email must be at most 255 characters':
+    'El correo electrónico debe tener máximo 255 caracteres.',
+  'backendErrors.current password must be between 1 and 128 characters':
+    'La contraseña actual debe tener entre 1 y 128 caracteres.',
+  'backendErrors.new password must be between 12 and 128 characters':
+    'La nueva contraseña debe tener entre 12 y 128 caracteres.',
+  'backendErrors.confirm password must be between 12 and 128 characters':
+    'La confirmación de contraseña debe tener entre 12 y 128 caracteres.',
+  'backendErrors.timezone must be between 1 and 64 characters':
+    'La timezone debe tener entre 1 y 64 caracteres.',
+  'backendErrors.ai model must be between 1 and 128 characters':
+    'El modelo de IA debe tener entre 1 y 128 caracteres.',
+  'backendErrors.ai api key must be between 8 and 4096 characters':
+    'La API key de IA debe tener entre 8 y 4096 caracteres.',
+  'backendErrors.change request title must be between 1 and 255 characters':
+    'El título de la solicitud de cambio debe tener entre 1 y 255 caracteres.',
+  'backendErrors.client request description must be between 1 and 20000 characters':
+    'La descripción de la solicitud del cliente debe tener entre 1 y 20000 caracteres.',
+  'backendErrors.technical assessment must be at most 20000 characters':
+    'La evaluación técnica debe tener máximo 20000 caracteres.',
+  'backendErrors.technical assessment must be between 1 and 20000 characters':
+    'La evaluación técnica debe tener entre 1 y 20000 caracteres.',
+  'backendErrors.schedule impact days must be at least 0':
+    'El impacto en días debe ser mayor o igual a 0.',
+  'backendErrors.version must be at least 1': 'La versión debe ser mayor o igual a 1.',
+  'backendErrors.phone must contain only digits': 'El teléfono debe contener solo dígitos.',
+  'backendErrors.impact hours must be greater than or equal to 0':
+    'El impacto en horas debe ser mayor o igual a 0.',
+  'backendErrors.impact cost must be greater than or equal to 0':
+    'El impacto en costo debe ser mayor o igual a 0.',
+  'backendErrors.client signature ip must be a valid ip address':
+    'La IP de firma del cliente debe ser válida.',
+  'backendErrors.timezone must be a valid timezone': 'La timezone debe ser válida.',
+  'backendErrors.ai model is not a supported model': 'El modelo de IA no está soportado.',
 
   'error.notFound.message': 'Oops. Nada por aquí...',
   'error.notFound.backHome': 'Volver al inicio',

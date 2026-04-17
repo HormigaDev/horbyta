@@ -4,7 +4,7 @@
       <q-card-section class="row items-center q-pb-none">
         <div class="text-h6 text-negative row items-center q-gutter-sm">
           <q-icon name="error_outline" size="sm" />
-          <span>{{ t('error.dialog.title') }}</span>
+          <span>{{ dialogTitle }}</span>
         </div>
         <q-space />
         <q-btn icon="close" flat round dense v-close-popup />
@@ -12,7 +12,7 @@
 
       <q-card-section class="q-mt-sm">
         <div class="text-subtitle2 q-mb-sm text-weight-medium">
-          {{ t('error.dialog.subtitle') }}
+          {{ dialogSubtitle }}
         </div>
         <q-scroll-area style="height: 250px" class="error-container rounded-borders">
           <pre class="q-px-md q-py-sm">{{ formattedPayload }}</pre>
@@ -51,6 +51,58 @@ defineEmits([...useDialogPluginComponent.emits]);
 const { dialogRef, onDialogHide, onDialogOK } = useDialogPluginComponent();
 const $q = useQuasar();
 const { t } = useI18n();
+
+const toPayloadRecord = (value: unknown): Record<string, unknown> | null => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
+};
+
+const statusCode = computed<number | null>(() => {
+  const payloadRecord = toPayloadRecord(props.payload);
+  if (!payloadRecord) {
+    return null;
+  }
+
+  const rawStatus = payloadRecord.status;
+  if (typeof rawStatus === 'number' && Number.isFinite(rawStatus)) {
+    return Math.trunc(rawStatus);
+  }
+
+  if (typeof rawStatus === 'string') {
+    const parsed = Number.parseInt(rawStatus, 10);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+});
+
+const dialogTitle = computed(() => {
+  if (statusCode.value === null) {
+    return t('error.dialog.title');
+  }
+
+  return t('error.dialog.titleWithStatus', { status: statusCode.value });
+});
+
+const dialogSubtitle = computed(() => {
+  if (statusCode.value === null) {
+    return t('error.dialog.subtitle');
+  }
+
+  if (statusCode.value >= 500) {
+    return t('error.dialog.serverSubtitle');
+  }
+
+  if (statusCode.value >= 400) {
+    return t('error.dialog.clientSubtitle');
+  }
+
+  return t('error.dialog.subtitle');
+});
 
 const formattedPayload = computed(() => {
   try {

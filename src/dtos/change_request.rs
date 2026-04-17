@@ -171,9 +171,7 @@ pub fn client_change_request_filter_schema() -> FilterSchema {
 
 fn validate_non_negative_decimal(value: &Decimal) -> Result<(), ValidationError> {
     if *value < Decimal::ZERO {
-        let mut err = ValidationError::new("invalid_decimal_range");
-        err.message = Some("El valor no puede ser negativo".into());
-        return Err(err);
+        return Err(ValidationError::new("invalid_decimal_range"));
     }
 
     Ok(())
@@ -181,21 +179,15 @@ fn validate_non_negative_decimal(value: &Decimal) -> Result<(), ValidationError>
 
 fn validate_signature_ip(ip_raw: &str) -> Result<(), ValidationError> {
     if ip_raw.is_empty() {
-        let mut err = ValidationError::new("invalid_signature_ip");
-        err.message = Some("La IP de firma no puede estar vacía".into());
-        return Err(err);
+        return Err(ValidationError::new("invalid_signature_ip"));
     }
 
     if ip_raw.len() > 45 {
-        let mut err = ValidationError::new("invalid_signature_ip");
-        err.message = Some("La IP de firma no puede superar los 45 caracteres".into());
-        return Err(err);
+        return Err(ValidationError::new("invalid_signature_ip"));
     }
 
     if ip_raw.parse::<IpAddr>().is_err() {
-        let mut err = ValidationError::new("invalid_signature_ip");
-        err.message = Some("Formato de IP inválido para la firma".into());
-        return Err(err);
+        return Err(ValidationError::new("invalid_signature_ip"));
     }
 
     Ok(())
@@ -210,14 +202,14 @@ pub struct CreateChangeRequestDto {
     #[validate(length(
         min = 1,
         max = 255,
-        message = "El título del cambio debe tener entre 1 y 255 caracteres"
+        message = "change request title must be between 1 and 255 characters"
     ))]
     pub title: String,
 
     #[validate(length(
         min = 1,
         max = 20000,
-        message = "La solicitud del cliente debe tener entre 1 y 20.000 caracteres"
+        message = "client request description must be between 1 and 20000 characters"
     ))]
     pub client_request_description: String,
 }
@@ -231,21 +223,18 @@ pub struct UpdateChangeRequestDto {
     #[validate(length(
         min = 1,
         max = 255,
-        message = "El título del cambio debe tener entre 1 y 255 caracteres"
+        message = "change request title must be between 1 and 255 characters"
     ))]
     pub title: String,
 
     #[validate(length(
         min = 1,
         max = 20000,
-        message = "La solicitud del cliente debe tener entre 1 y 20.000 caracteres"
+        message = "client request description must be between 1 and 20000 characters"
     ))]
     pub client_request_description: String,
 
-    #[validate(length(
-        max = 20000,
-        message = "La evaluación técnica no puede superar los 20.000 caracteres"
-    ))]
+    #[validate(length(max = 20000, message = "technical assessment must be at most 20000 characters"))]
     pub technical_assessment: Option<String>,
 
     #[validate(custom(function = "validate_non_negative_decimal"))]
@@ -254,10 +243,10 @@ pub struct UpdateChangeRequestDto {
     #[validate(custom(function = "validate_non_negative_decimal"))]
     pub impact_cost: Decimal,
 
-    #[validate(range(min = 0, message = "El impacto de cronograma no puede ser negativo"))]
+    #[validate(range(min = 0, message = "schedule impact days must be at least 0"))]
     pub schedule_impact_days: i32,
 
-    #[validate(range(min = 1, message = "Versión inválida la versión mínima es 1"))]
+    #[validate(range(min = 1, message = "version must be at least 1"))]
     pub version: i32,
 }
 
@@ -266,7 +255,7 @@ pub struct AssessChangeRequestDto {
     #[validate(length(
         min = 1,
         max = 20000,
-        message = "La evaluación técnica debe tener entre 1 y 20.000 caracteres"
+        message = "technical assessment must be between 1 and 20000 characters"
     ))]
     pub technical_assessment: String,
 
@@ -276,7 +265,7 @@ pub struct AssessChangeRequestDto {
     #[validate(custom(function = "validate_non_negative_decimal"))]
     pub impact_cost: Decimal,
 
-    #[validate(range(min = 0, message = "El impacto de cronograma no puede ser negativo"))]
+    #[validate(range(min = 0, message = "schedule impact days must be at least 0"))]
     pub schedule_impact_days: i32,
 }
 
@@ -285,7 +274,7 @@ pub struct AssessChangeRequestDto {
 pub struct AssignChangeRequestTaskDto {
     pub task_id: Option<Uuid>,
 
-    #[validate(range(min = 1, message = "Versión inválida la versión mínima es 1"))]
+    #[validate(range(min = 1, message = "version must be at least 1"))]
     pub version: i32,
 }
 
@@ -297,14 +286,14 @@ pub struct ClientCreateChangeRequestDto {
     #[validate(length(
         min = 1,
         max = 255,
-        message = "El título del cambio debe tener entre 1 y 255 caracteres"
+        message = "change request title must be between 1 and 255 characters"
     ))]
     pub title: String,
 
     #[validate(length(
         min = 1,
         max = 20000,
-        message = "La solicitud del cliente debe tener entre 1 y 20.000 caracteres"
+        message = "client request description must be between 1 and 20000 characters"
     ))]
     pub client_request_description: String,
 }
@@ -315,25 +304,25 @@ pub struct ClientUpdateChangeRequestDto {
     #[validate(length(
         min = 1,
         max = 255,
-        message = "El título del cambio debe tener entre 1 y 255 caracteres"
+        message = "change request title must be between 1 and 255 characters"
     ))]
     pub title: String,
 
     #[validate(length(
         min = 1,
         max = 20000,
-        message = "La solicitud del cliente debe tener entre 1 y 20.000 caracteres"
+        message = "client request description must be between 1 and 20000 characters"
     ))]
     pub client_request_description: String,
 
-    #[validate(range(min = 1, message = "Versión inválida la versión mínima es 1"))]
+    #[validate(range(min = 1, message = "version must be at least 1"))]
     pub version: i32,
 }
 
 #[derive(Debug, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct ClientCancelChangeRequestDto {
-    #[validate(range(min = 1, message = "Versión inválida la versión mínima es 1"))]
+    #[validate(range(min = 1, message = "version must be at least 1"))]
     pub version: i32,
 }
 

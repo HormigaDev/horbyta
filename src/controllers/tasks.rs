@@ -9,7 +9,7 @@ use axum::{
 use sea_orm::TransactionTrait;
 use serde_json::json;
 use uuid::Uuid;
-use validator::{Validate, ValidationErrors};
+use validator::Validate;
 
 use crate::{
     dtos::{
@@ -19,7 +19,7 @@ use crate::{
         user::UserDto,
     },
     error::AppError,
-    middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
+    middlewares::validator::{ValidatedJson, ValidatedSearchQuery, first_validation_error_message},
     services::{attachments::AttachmentService, tasks::TaskService},
     state::AppState,
 };
@@ -28,16 +28,6 @@ const MAX_TOTAL_UPLOAD_BYTES: usize = 50 * 1024 * 1024;
 const MAX_JSON_BODY_BYTES: usize = 2 * 1024 * 1024;
 const PAYLOAD_FIELD_NAME: &str = "payload";
 const FILES_FIELD_NAME: &str = "files";
-
-fn first_validation_error_message(err: ValidationErrors, fallback: &str) -> String {
-    err.field_errors()
-        .into_values()
-        .flatten()
-        .filter_map(|field| field.message.as_ref())
-        .next()
-        .map(|message| message.to_string())
-        .unwrap_or_else(|| fallback.to_string())
-}
 
 fn is_multipart_request(request: &Request) -> bool {
     request
@@ -51,17 +41,14 @@ fn is_multipart_request(request: &Request) -> bool {
 async fn parse_task_payload_from_json(request: Request) -> Result<(CreateTaskDto, Vec<UploadedFile>), AppError> {
     let bytes = to_bytes(request.into_body(), MAX_JSON_BODY_BYTES)
         .await
-        .map_err(|_| AppError::Unprocessable("Formato JSON inválido o malformado.".to_string()))?;
+        .map_err(|_| AppError::Unprocessable("invalid json payload".to_string()))?;
 
-    let payload: CreateTaskDto = serde_json::from_slice(&bytes)
-        .map_err(|_| AppError::Unprocessable("Formato JSON inválido o malformado.".to_string()))?;
+    let payload: CreateTaskDto =
+        serde_json::from_slice(&bytes).map_err(|_| AppError::Unprocessable("invalid json payload".to_string()))?;
 
-    payload.validate().map_err(|error| {
-        AppError::BadRequest(first_validation_error_message(
-            error,
-            "Error de validación en los campos enviados.",
-        ))
-    })?;
+    payload
+        .validate()
+        .map_err(|errors| AppError::BadRequest(first_validation_error_message(&errors)))?;
 
     Ok((payload, Vec::new()))
 }
@@ -72,7 +59,7 @@ async fn parse_task_payload_from_multipart(
 ) -> Result<(CreateTaskDto, Vec<UploadedFile>), AppError> {
     let mut multipart = Multipart::from_request(request, state)
         .await
-        .map_err(|_| AppError::Unprocessable("Formato multipart inválido o malformado.".to_string()))?;
+        .map_err(|_| AppError::Unprocessable("invalid multipart payload".to_string()))?;
 
     let mut payload: Option<CreateTaskDto> = None;
     let mut files = Vec::new();
@@ -81,31 +68,28 @@ async fn parse_task_payload_from_multipart(
     while let Some(field) = multipart
         .next_field()
         .await
-        .map_err(|_| AppError::BadRequest("Error al procesar el formulario multipart.".to_string()))?
+        .map_err(|_| AppError::BadRequest("failed to process multipart form data".to_string()))?
     {
         let field_name = field.name().unwrap_or_default().to_string();
 
         if field_name == PAYLOAD_FIELD_NAME {
             if payload.is_some() {
                 return Err(AppError::BadRequest(
-                    "Solo se permite un campo payload en la petición multipart".to_string(),
+                    "only one payload field is allowed in multipart request".to_string(),
                 ));
             }
 
             let raw_payload = field
                 .text()
                 .await
-                .map_err(|_| AppError::BadRequest("No se pudo leer el campo payload".to_string()))?;
+                .map_err(|_| AppError::BadRequest("failed to read payload field".to_string()))?;
 
             let parsed_payload: CreateTaskDto = serde_json::from_str(&raw_payload)
-                .map_err(|_| AppError::BadRequest("El campo payload debe ser un JSON válido".to_string()))?;
+                .map_err(|_| AppError::BadRequest("payload field must contain valid json".to_string()))?;
 
-            parsed_payload.validate().map_err(|error| {
-                AppError::BadRequest(first_validation_error_message(
-                    error,
-                    "Error de validación en los campos enviados.",
-                ))
-            })?;
+            parsed_payload
+                .validate()
+                .map_err(|errors| AppError::BadRequest(first_validation_error_message(&errors)))?;
 
             payload = Some(parsed_payload);
             continue;
@@ -117,15 +101,15 @@ async fn parse_task_payload_from_multipart(
             let bytes = field
                 .bytes()
                 .await
-                .map_err(|_| AppError::BadRequest("No se pudo leer uno de los archivos".to_string()))?;
+                .map_err(|_| AppError::BadRequest("failed to read one of the uploaded files".to_string()))?;
 
             total_upload_bytes = total_upload_bytes.checked_add(bytes.len()).ok_or_else(|| {
-                AppError::BadRequest("El tamaño total de archivos excede el límite permitido".to_string())
+                AppError::BadRequest("total uploaded file size exceeds the allowed limit".to_string())
             })?;
 
             if total_upload_bytes > MAX_TOTAL_UPLOAD_BYTES {
                 return Err(AppError::BadRequest(
-                    "El tamaño total de archivos no puede exceder 50MB".to_string(),
+                    "total uploaded file size must not exceed 50mb".to_string(),
                 ));
             }
 
@@ -138,7 +122,7 @@ async fn parse_task_payload_from_multipart(
     }
 
     let payload = payload.ok_or_else(|| {
-        AppError::BadRequest("La petición multipart debe incluir un campo payload con el JSON de la tarea".to_string())
+        AppError::BadRequest("multipart request must include a payload field with task json".to_string())
     })?;
 
     Ok((payload, files))

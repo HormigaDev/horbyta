@@ -78,32 +78,29 @@ pub struct CreateClientDto {
     #[validate(length(
         min = 1,
         max = 255,
-        message = "El nombre del cliente debe tener entre 1 y 255 caracteres"
+        message = "client name must be between 1 and 255 characters"
     ))]
     pub name: String,
 
     #[validate(
-        email(message = "Correo electrónico del cliente inválido"),
-        length(max = 255, message = "Correo electrónico del cliente inválido")
+        email(message = "client email must be a valid email address"),
+        length(max = 255, message = "client email must be at most 255 characters")
     )]
     pub email: Option<String>,
 
     #[validate(
         custom(function = "is_numeric"),
-        length(max = 20, message = "Número de teléfono del cliente inválido")
+        length(max = 20, message = "client phone must be at most 20 characters")
     )]
     pub phone: Option<String>,
 
-    #[validate(length(max = 512, message = "La dirección del cliente no puede superar los 512 caracteres"))]
+    #[validate(length(max = 512, message = "client address must be at most 512 characters"))]
     pub address_line: Option<String>,
 
-    #[validate(length(
-        max = 255,
-        message = "El nombre de la compañía del cliente no puede superar los 255 caracteres"
-    ))]
+    #[validate(length(max = 255, message = "client company must be at most 255 characters"))]
     pub company: Option<String>,
 
-    #[validate(length(max = 5000, message = "Las notas del cliente no pueden superar los 5000 caracteres"))]
+    #[validate(length(max = 5000, message = "client notes must be at most 5000 characters"))]
     pub notes: Option<String>,
 }
 
@@ -112,13 +109,13 @@ pub struct UpdateClientDto {
     #[validate(length(
         min = 1,
         max = 255,
-        message = "El nombre del cliente debe tener entre 1 y 255 caracteres"
+        message = "client name must be between 1 and 255 characters"
     ))]
     pub name: String,
 
     #[validate(
-        email(message = "Correo electrónico del cliente inválido"),
-        length(max = 255, message = "Correo electrónico del cliente inválido")
+        email(message = "client email must be a valid email address"),
+        length(max = 255, message = "client email must be at most 255 characters")
     )]
     pub email: Option<String>,
 
@@ -126,20 +123,17 @@ pub struct UpdateClientDto {
 
     #[validate(
         custom(function = "is_numeric"),
-        length(max = 20, message = "Número de teléfono del cliente inválido")
+        length(max = 20, message = "client phone must be at most 20 characters")
     )]
     pub phone: Option<String>,
 
-    #[validate(length(max = 512, message = "La dirección del cliente no puede superar los 512 caracteres"))]
+    #[validate(length(max = 512, message = "client address must be at most 512 characters"))]
     pub address_line: Option<String>,
 
-    #[validate(length(
-        max = 255,
-        message = "El nombre de la compañía del cliente no puede superar los 255 caracteres"
-    ))]
+    #[validate(length(max = 255, message = "client company must be at most 255 characters"))]
     pub company: Option<String>,
 
-    #[validate(length(max = 5000, message = "Las notas del cliente no pueden superar los 5000 caracteres"))]
+    #[validate(length(max = 5000, message = "client notes must be at most 5000 characters"))]
     pub notes: Option<String>,
 }
 
@@ -182,7 +176,7 @@ pub struct ClientMagicLinkDto {
 
 #[derive(Deserialize, Validate)]
 pub struct SaveClientCredentialsDto {
-    #[validate(email(message = "Email de autenticación para el cliente inválido"))]
+    #[validate(email(message = "client auth email must be a valid email address"))]
     pub email: String,
 
     #[validate(custom(function = "validate_password"))]

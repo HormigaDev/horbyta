@@ -355,11 +355,11 @@ impl UserPreferences {
 #[derive(Debug, Serialize, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct UpdateUserProfileDto {
-    #[validate(length(min = 2, max = 100, message = "El nombre debe tener entre 2 y 100 caracteres"))]
+    #[validate(length(min = 2, max = 100, message = "name must be between 2 and 100 characters"))]
     pub name: String,
 
-    #[validate(email(message = "Correo electrónico inválido"))]
-    #[validate(length(max = 255, message = "El correo electrónico no puede superar los 255 caracteres"))]
+    #[validate(email(message = "email must be a valid email address"))]
+    #[validate(length(max = 255, message = "email must be at most 255 characters"))]
     pub email: String,
 }
 
@@ -367,17 +367,21 @@ pub struct UpdateUserProfileDto {
 #[serde(deny_unknown_fields)]
 #[validate(schema(function = "validate_password_confirmation"))]
 pub struct UpdateUserPasswordDto {
-    #[validate(length(min = 1, max = 128, message = "La contraseña actual es obligatoria"))]
+    #[validate(length(
+        min = 1,
+        max = 128,
+        message = "current password must be between 1 and 128 characters"
+    ))]
     pub current_password: String,
 
-    #[validate(length(
-        min = 8,
-        max = 128,
-        message = "La nueva contraseña debe tener entre 8 y 128 caracteres"
-    ))]
+    #[validate(length(min = 12, max = 128, message = "new password must be between 12 and 128 characters"))]
     pub new_password: String,
 
-    #[validate(length(min = 8, max = 128, message = "La confirmación debe tener entre 8 y 128 caracteres"))]
+    #[validate(length(
+        min = 12,
+        max = 128,
+        message = "confirm password must be between 12 and 128 characters"
+    ))]
     pub confirm_password: String,
 }
 
@@ -387,7 +391,7 @@ pub struct UpdateUserPasswordDto {
 pub struct UpdateUserPreferencesDto {
     pub theme: Option<UserThemePreference>,
 
-    #[validate(length(min = 1, max = 64, message = "Timezone inválida"))]
+    #[validate(length(min = 1, max = 64, message = "timezone must be between 1 and 64 characters"))]
     #[validate(custom(function = "validate_timezone"))]
     pub timezone: Option<String>,
 
@@ -395,11 +399,11 @@ pub struct UpdateUserPreferencesDto {
 
     pub language: Option<UserLanguagePreference>,
 
-    #[validate(length(min = 1, max = 128, message = "Modelo AI invalido"))]
+    #[validate(length(min = 1, max = 128, message = "ai model must be between 1 and 128 characters"))]
     #[validate(custom(function = "validate_ai_model"))]
     pub ai_model: Option<String>,
 
-    #[validate(length(min = 8, max = 4096, message = "API key AI invalida"))]
+    #[validate(length(min = 8, max = 4096, message = "ai api key must be between 8 and 4096 characters"))]
     pub ai_api_key: Option<String>,
 }
 

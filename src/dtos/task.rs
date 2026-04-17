@@ -119,18 +119,22 @@ pub struct CreateTaskDto {
     pub parent_id: Option<Uuid>,
     pub milestone_id: Option<Uuid>,
 
-    #[validate(length(min = 1, max = 255, message = "El título debe tener entre 1 y 255 caracteres"))]
+    #[validate(length(
+        min = 1,
+        max = 255,
+        message = "task title must be between 1 and 255 characters"
+    ))]
     pub title: String,
 
-    #[validate(length(max = 15000, message = "La descripción no puede exceder los 15000 caracteres"))]
+    #[validate(length(max = 15000, message = "task description must be at most 15000 characters"))]
     pub description: Option<String>,
 
     pub status: TaskStatus,
 
-    #[validate(range(min = 1, max = 4, message = "La prioridad debe estar entre 1 y 4"))]
+    #[validate(range(min = 1, max = 4, message = "task priority must be between 1 and 4"))]
     pub priority: i16,
 
-    #[validate(range(min = 1, max = 4, message = "La complejidad debe estar entre 1 y 4"))]
+    #[validate(range(min = 1, max = 4, message = "task complexity must be between 1 and 4"))]
     pub complexity: i16,
 
     pub block_parent: bool,
@@ -147,18 +151,22 @@ pub struct UpdateTaskDto {
     pub parent_id: Option<Uuid>,
     pub milestone_id: Option<Uuid>,
 
-    #[validate(length(min = 1, max = 255, message = "El título debe tener entre 1 y 255 caracteres"))]
+    #[validate(length(
+        min = 1,
+        max = 255,
+        message = "task title must be between 1 and 255 characters"
+    ))]
     pub title: String,
 
-    #[validate(length(max = 15000, message = "La descripción no puede exceder los 15000 caracteres"))]
+    #[validate(length(max = 15000, message = "task description must be at most 15000 characters"))]
     pub description: Option<String>,
 
     pub status: TaskStatus,
 
-    #[validate(range(min = 1, max = 4, message = "La prioridad debe estar entre 1 y 4"))]
+    #[validate(range(min = 1, max = 4, message = "task priority must be between 1 and 4"))]
     pub priority: i16,
 
-    #[validate(range(min = 1, max = 4, message = "La complejidad debe estar entre 1 y 4"))]
+    #[validate(range(min = 1, max = 4, message = "task complexity must be between 1 and 4"))]
     pub complexity: i16,
 
     pub block_parent: bool,

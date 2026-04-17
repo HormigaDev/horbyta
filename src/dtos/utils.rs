@@ -4,25 +4,25 @@ pub fn is_numeric(s: &str) -> Result<(), ValidationError> {
     if s.chars().all(|c| c.is_ascii_digit()) {
         Ok(())
     } else {
-        Err(ValidationError::new("El campo debe ser numérico"))
+        Err(ValidationError::new("must_be_numeric"))
     }
 }
 
 pub fn validate_password(password: &str) -> Result<(), ValidationError> {
     if password.len() < 12 {
-        return Err(ValidationError::new("Debe tener al menos 12 caracteres"));
+        return Err(ValidationError::new("password_min_length"));
     }
     if !password.chars().any(|c| c.is_lowercase()) {
-        return Err(ValidationError::new("Falta minúscula"));
+        return Err(ValidationError::new("password_requires_lowercase"));
     }
     if !password.chars().any(|c| c.is_uppercase()) {
-        return Err(ValidationError::new("Falta mayúscula"));
+        return Err(ValidationError::new("password_requires_uppercase"));
     }
     if !password.chars().any(|c| c.is_ascii_digit()) {
-        return Err(ValidationError::new("Falta número"));
+        return Err(ValidationError::new("password_requires_number"));
     }
     if !password.chars().any(|c| !c.is_alphanumeric()) {
-        return Err(ValidationError::new("Falta símbolo"));
+        return Err(ValidationError::new("password_requires_symbol"));
     }
 
     Ok(())

@@ -91,11 +91,11 @@ pub struct CreateAttachmentDto {
     #[validate(length(
         min = 1,
         max = 255,
-        message = "El nombre original del archivo debe tener entre 1 y 255 caracteres"
+        message = "original file name must be between 1 and 255 characters"
     ))]
     pub original_name: String,
 
-    #[validate(length(min = 1, max = 100, message = "El MIME type debe tener entre 1 y 100 caracteres"))]
+    #[validate(length(min = 1, max = 100, message = "mime type must be between 1 and 100 characters"))]
     pub mime_type: Option<String>,
 }
 

@@ -41,7 +41,7 @@ pub fn validate_payload_against_schema(schema: &FilterSchema, payload: &QueryPay
     if let Some(order_col) = &payload.order_by {
         if !schema.allowed_columns.contains_key(order_col.as_str()) {
             return Err(AppError::BadRequest(format!(
-                "Columna de ordenamiento no permitida: {}",
+                "sorting column is not allowed {}",
                 order_col
             )));
         }
@@ -51,19 +51,20 @@ pub fn validate_payload_against_schema(schema: &FilterSchema, payload: &QueryPay
         let col_type = schema
             .allowed_columns
             .get(filter.column.as_str())
-            .ok_or_else(|| AppError::BadRequest(format!("Campo de filtro no permitido: {}", filter.column)))?;
+            .ok_or_else(|| AppError::BadRequest(format!("filter field is not allowed {}", filter.column)))?;
 
         match filter.operator {
             FilterOperator::Contains | FilterOperator::NotContains => {
                 if !matches!(col_type, ColumnType::Text) {
                     return Err(AppError::BadRequest(format!(
-                        "El operador '{:?}' solo es valido para campos de texto ({})",
-                        filter.operator, filter.column
+                        "operator {} is only valid for text fields {}",
+                        operator_symbol(&filter.operator),
+                        filter.column
                     )));
                 }
                 if !filter.value.is_string() {
                     return Err(AppError::BadRequest(format!(
-                        "El valor para '><' o '<>' en {} debe ser un string",
+                        "value for operators >< or <> in {} must be a string",
                         filter.column
                     )));
                 }
@@ -71,7 +72,7 @@ pub fn validate_payload_against_schema(schema: &FilterSchema, payload: &QueryPay
             FilterOperator::Between => {
                 if !matches!(col_type, ColumnType::Date | ColumnType::Number) {
                     return Err(AppError::BadRequest(format!(
-                        "El operador '()' solo es valido para fechas o numeros ({})",
+                        "operator () is only valid for date or number fields {}",
                         filter.column
                     )));
                 }
@@ -80,7 +81,7 @@ pub fn validate_payload_against_schema(schema: &FilterSchema, payload: &QueryPay
                     Some(values) if values.len() == 2 => {}
                     _ => {
                         return Err(AppError::BadRequest(format!(
-                            "El operador '()' en {} requiere exactamente 2 valores en un array",
+                            "operator () in {} requires exactly 2 values in an array",
                             filter.column
                         )));
                     }
@@ -88,14 +89,18 @@ pub fn validate_payload_against_schema(schema: &FilterSchema, payload: &QueryPay
             }
             FilterOperator::Eq | FilterOperator::Neq => {
                 if matches!(col_type, ColumnType::Boolean) && !filter.value.is_boolean() {
-                    return Err(AppError::BadRequest(format!("El campo {} es booleano", filter.column)));
+                    return Err(AppError::BadRequest(format!(
+                        "field {} must be a boolean",
+                        filter.column
+                    )));
                 }
             }
             FilterOperator::Gt | FilterOperator::Lt | FilterOperator::Gte | FilterOperator::Lte => {
                 if matches!(col_type, ColumnType::Text | ColumnType::Boolean) {
                     return Err(AppError::BadRequest(format!(
-                        "El operador '{:?}' no es valido para ({})",
-                        filter.operator, filter.column
+                        "operator {} is not valid for {}",
+                        operator_symbol(&filter.operator),
+                        filter.column
                     )));
                 }
             }
@@ -114,7 +119,7 @@ where
 
     for filter in filters {
         let field = resolver(filter.column.as_str())
-            .ok_or_else(|| AppError::BadRequest(format!("Campo de filtro no soportado: {}", filter.column)))?;
+            .ok_or_else(|| AppError::BadRequest(format!("filter field is not supported {}", filter.column)))?;
 
         let expression = field.to_expression(filter)?;
         condition = condition.add(expression);
@@ -137,7 +142,7 @@ where
 {
     if let Some(order_column) = payload.order_by.as_deref() {
         let column = resolver(order_column)
-            .ok_or_else(|| AppError::BadRequest(format!("Columna de ordenamiento no soportada: {}", order_column)))?;
+            .ok_or_else(|| AppError::BadRequest(format!("sorting column is not supported {}", order_column)))?;
 
         let order = if payload.order_asc {
             sea_orm::Order::Asc
@@ -162,10 +167,25 @@ where
         .offset(payload.page.saturating_sub(1).saturating_mul(payload.limit))
 }
 
+fn operator_symbol(operator: &FilterOperator) -> &'static str {
+    match operator {
+        FilterOperator::Eq => "=",
+        FilterOperator::Neq => "!=",
+        FilterOperator::Gt => ">",
+        FilterOperator::Lt => "<",
+        FilterOperator::Gte => ">=",
+        FilterOperator::Lte => "<=",
+        FilterOperator::Contains => "><",
+        FilterOperator::NotContains => "<>",
+        FilterOperator::Between => "()",
+    }
+}
+
 fn unsupported_operator_error(filter: &Filter) -> AppError {
     AppError::BadRequest(format!(
-        "Operador no soportado para el campo '{}': {:?}",
-        filter.column, filter.operator
+        "operator {} is not supported for field {}",
+        operator_symbol(&filter.operator),
+        filter.column
     ))
 }
 
@@ -174,13 +194,13 @@ fn parse_string_value(filter: &Filter) -> Result<String, AppError> {
         .value
         .as_str()
         .map(ToString::to_string)
-        .ok_or_else(|| AppError::BadRequest(format!("El campo '{}' requiere un string", filter.column)))
+        .ok_or_else(|| AppError::BadRequest(format!("field {} requires a string", filter.column)))
 }
 
 fn parse_uuid_value(filter: &Filter) -> Result<uuid::Uuid, AppError> {
     let raw = parse_string_value(filter)?;
     uuid::Uuid::parse_str(&raw)
-        .map_err(|_| AppError::BadRequest(format!("El campo '{}' requiere un UUID valido", filter.column)))
+        .map_err(|_| AppError::BadRequest(format!("field {} requires a valid uuid", filter.column)))
 }
 
 fn parse_i16_value(filter: &Filter) -> Result<i16, AppError> {
@@ -188,10 +208,9 @@ fn parse_i16_value(filter: &Filter) -> Result<i16, AppError> {
         .value
         .as_i64()
         .or_else(|| filter.value.as_str().and_then(|value| value.parse::<i64>().ok()))
-        .ok_or_else(|| AppError::BadRequest(format!("El campo '{}' requiere un numero valido", filter.column)))?;
+        .ok_or_else(|| AppError::BadRequest(format!("field {} requires a valid number", filter.column)))?;
 
-    i16::try_from(parsed)
-        .map_err(|_| AppError::BadRequest(format!("El campo '{}' esta fuera del rango permitido", filter.column)))
+    i16::try_from(parsed).map_err(|_| AppError::BadRequest(format!("field {} is out of allowed range", filter.column)))
 }
 
 fn parse_i64_value(filter: &Filter) -> Result<i64, AppError> {
@@ -199,7 +218,7 @@ fn parse_i64_value(filter: &Filter) -> Result<i64, AppError> {
         .value
         .as_i64()
         .or_else(|| filter.value.as_str().and_then(|value| value.parse::<i64>().ok()))
-        .ok_or_else(|| AppError::BadRequest(format!("El campo '{}' requiere un numero valido", filter.column)))?;
+        .ok_or_else(|| AppError::BadRequest(format!("field {} requires a valid number", filter.column)))?;
 
     Ok(parsed)
 }
@@ -208,48 +227,40 @@ fn parse_bool_value(filter: &Filter) -> Result<bool, AppError> {
     filter
         .value
         .as_bool()
-        .ok_or_else(|| AppError::BadRequest(format!("El campo '{}' requiere un booleano", filter.column)))
+        .ok_or_else(|| AppError::BadRequest(format!("field {} requires a boolean", filter.column)))
 }
 
 fn parse_datetime_value(filter: &Filter) -> Result<DateTime<FixedOffset>, AppError> {
     let raw = parse_string_value(filter)?;
     DateTime::parse_from_rfc3339(&raw)
-        .map_err(|_| AppError::BadRequest(format!("El campo '{}' requiere fecha RFC3339", filter.column)))
+        .map_err(|_| AppError::BadRequest(format!("field {} requires an rfc3339 date", filter.column)))
 }
 
 fn parse_datetime_between(filter: &Filter) -> Result<(DateTime<FixedOffset>, DateTime<FixedOffset>), AppError> {
-    let values = filter.value.as_array().ok_or_else(|| {
-        AppError::BadRequest(format!(
-            "El operador '()' requiere un arreglo en el campo '{}'",
-            filter.column
-        ))
-    })?;
+    let values = filter
+        .value
+        .as_array()
+        .ok_or_else(|| AppError::BadRequest(format!("operator () requires an array for field {}", filter.column)))?;
 
     if values.len() != 2 {
         return Err(AppError::BadRequest(format!(
-            "El operador '()' requiere exactamente dos fechas en '{}'",
+            "operator () requires exactly two dates in {}",
             filter.column
         )));
     }
 
     let start_raw = values[0].as_str().ok_or_else(|| {
-        AppError::BadRequest(format!(
-            "La fecha inicial de '{}' debe ser un string RFC3339",
-            filter.column
-        ))
+        AppError::BadRequest(format!("the start date of {} must be an rfc3339 string", filter.column))
     })?;
 
-    let end_raw = values[1].as_str().ok_or_else(|| {
-        AppError::BadRequest(format!(
-            "La fecha final de '{}' debe ser un string RFC3339",
-            filter.column
-        ))
-    })?;
+    let end_raw = values[1]
+        .as_str()
+        .ok_or_else(|| AppError::BadRequest(format!("the end date of {} must be an rfc3339 string", filter.column)))?;
 
     let start = DateTime::parse_from_rfc3339(start_raw)
-        .map_err(|_| AppError::BadRequest(format!("La fecha inicial de '{}' es invalida", filter.column)))?;
+        .map_err(|_| AppError::BadRequest(format!("the start date of {} is invalid", filter.column)))?;
     let end = DateTime::parse_from_rfc3339(end_raw)
-        .map_err(|_| AppError::BadRequest(format!("La fecha final de '{}' es invalida", filter.column)))?;
+        .map_err(|_| AppError::BadRequest(format!("the end date of {} is invalid", filter.column)))?;
 
     Ok((start, end))
 }

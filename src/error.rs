@@ -8,19 +8,19 @@ use serde_json::json;
 
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
-    #[error("Error de base de datos")]
+    #[error("database error")]
     Database(#[from] sea_orm::DbErr),
 
-    #[error("Error de JWT")]
+    #[error("jwt error")]
     Jwt(#[from] jsonwebtoken::errors::Error),
 
-    #[error("Error de validación de Hash")]
+    #[error("hash validation error")]
     Hash(argon2::password_hash::Error),
 
-    #[error("Error del reloj del sistema")]
+    #[error("system clock error")]
     Time(#[from] std::time::SystemTimeError),
 
-    #[error("Error de parseo de cabeceras HTTP")]
+    #[error("http header parse error")]
     Header(#[from] axum::http::header::InvalidHeaderValue),
 
     #[error("{0}")]
@@ -47,7 +47,7 @@ pub enum AppError {
     #[error("{0}")]
     Unavailable(String),
 
-    #[error("Error interno")]
+    #[error("internal error")]
     InternalError,
 
     #[error("{0}")]
@@ -69,29 +69,29 @@ impl IntoResponse for AppError {
                 tracing::error!("{:?}", self);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "InternalServerError",
-                    "Error interno del servidor".to_string(),
+                    "internal_server_error",
+                    "internal server error".to_string(),
                 )
             }
             AppError::Jwt(_) => (
                 StatusCode::UNAUTHORIZED,
-                "JwtError",
-                "Token inválido o expirado".to_string(),
+                "jwt_error",
+                "invalid or expired token".to_string(),
             ),
             AppError::Hash(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "HashError",
-                "Error procesando credenciales".to_string(),
+                "hash_error",
+                "failed to process credentials".to_string(),
             ),
-            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, "BadRequest", msg),
-            AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, "Unauthorized", msg),
-            AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, "Forbidden", msg),
-            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, "NotFound", msg),
-            AppError::Conflict(msg) => (StatusCode::CONFLICT, "Conflict", msg),
-            AppError::Unprocessable(msg) => (StatusCode::UNPROCESSABLE_ENTITY, "UnprocessableEntity", msg),
-            AppError::NotImplemented(msg) => (StatusCode::NOT_IMPLEMENTED, "NotImplemented", msg),
-            AppError::Unavailable(msg) => (StatusCode::SERVICE_UNAVAILABLE, "ServiceUnavailable", msg),
-            AppError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, "InternalServerError", msg),
+            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, "bad_request", msg),
+            AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, "unauthorized", msg),
+            AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, "forbidden", msg),
+            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, "not_found", msg),
+            AppError::Conflict(msg) => (StatusCode::CONFLICT, "conflict", msg),
+            AppError::Unprocessable(msg) => (StatusCode::UNPROCESSABLE_ENTITY, "unprocessable_entity", msg),
+            AppError::NotImplemented(msg) => (StatusCode::NOT_IMPLEMENTED, "not_implemented", msg),
+            AppError::Unavailable(msg) => (StatusCode::SERVICE_UNAVAILABLE, "service_unavailable", msg),
+            AppError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_server_error", msg),
         };
 
         (status, Json(json!({ "error": error_message, "type": type_str }))).into_response()

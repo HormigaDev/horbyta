@@ -65,21 +65,13 @@ pub fn category_filter_schema() -> FilterSchema {
 
 #[derive(Validate, Serialize, Deserialize, Debug)]
 pub struct CreateCategoryDto {
-    #[validate(length(
-        min = 1,
-        max = 100,
-        message = "El nombre de la categoría debe tener entre 1 y 100 caracteres."
-    ))]
+    #[validate(length(min = 1, max = 100, message = "category name must be between 1 and 100 characters"))]
     pub name: String,
 }
 
 #[derive(Validate, Serialize, Deserialize, Debug)]
 pub struct UpdateCategoryDto {
-    #[validate(length(
-        min = 1,
-        max = 100,
-        message = "El nombre de la categoría debe tener entre 1 y 100 caracteres."
-    ))]
+    #[validate(length(min = 1, max = 100, message = "category name must be between 1 and 100 characters"))]
     pub name: String,
 }
 

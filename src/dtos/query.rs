@@ -48,7 +48,7 @@ pub struct QueryPayload {
     #[serde(default = "default_order_asc")]
     pub order_asc: bool,
 
-    #[validate(length(max = 5, message = "Límite de filtros excedido."))]
+    #[validate(length(max = 5, message = "at most 5 filters are allowed"))]
     #[serde(default)]
     pub filters: Vec<Filter>,
 }

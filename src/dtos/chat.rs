@@ -72,21 +72,13 @@ pub fn chat_filter_schema() -> FilterSchema {
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct CreateChatDto {
-    #[validate(length(
-        min = 1,
-        max = 255,
-        message = "El título del chat debe tener entre 1 y 255 caracteres."
-    ))]
+    #[validate(length(min = 1, max = 255, message = "chat title must be between 1 and 255 characters"))]
     pub title: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct UpdateChatTitleDto {
-    #[validate(length(
-        min = 1,
-        max = 255,
-        message = "El título del chat debe tener entre 1 y 255 caracteres."
-    ))]
+    #[validate(length(min = 1, max = 255, message = "chat title must be between 1 and 255 characters"))]
     pub title: String,
 }
 
