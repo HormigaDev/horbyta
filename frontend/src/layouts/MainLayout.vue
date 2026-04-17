@@ -135,7 +135,7 @@
             }}</q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="change_circle" to="/change-requests">
+          <q-btn flat round dense icon="compare_arrows" to="/change-requests">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.changeRequests') }}
             </q-tooltip>
@@ -234,7 +234,7 @@
 
               <q-item clickable v-ripple to="/change-requests">
                 <q-item-section avatar>
-                  <q-icon name="change_circle" />
+                  <q-icon name="compare_arrows" />
                 </q-item-section>
                 <q-item-section>{{ t('layout.drawer.changeRequests') }}</q-item-section>
               </q-item>

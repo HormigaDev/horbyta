@@ -9,7 +9,8 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
+          <div class="text-h5 text-weight-bold q-mb-xs" style="color: var(--text-color)">
+            <q-icon name="person" size="lg" />
             {{
               client ? `${client.name} (${clientStatusLabel(client.status)})` : t('common.loading')
             }}

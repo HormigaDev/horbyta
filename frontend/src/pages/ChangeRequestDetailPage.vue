@@ -11,7 +11,8 @@
       >
         <q-card-section>
           <div class="flex justify-between">
-            <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
+            <div class="text-h5 text-weight-bold q-mb-xs" style="color: var(--text-color)">
+              <q-icon name="compare_arrows" size="lg" />
               {{ changeRequest?.title || t('common.loading') }}
             </div>
             <div class="text-h6" style="color: var(--text-muted)">

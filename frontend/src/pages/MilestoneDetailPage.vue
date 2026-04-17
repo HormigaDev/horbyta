@@ -10,7 +10,8 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
+          <div class="text-h5 text-weight-bold q-mb-xs" style="color: var(--text-color)">
+            <q-icon name="flag" size="lg" />
             {{ milestone?.name || t('common.loading') }}
           </div>
           <div class="text-caption" style="color: var(--text-muted)" v-if="milestone">

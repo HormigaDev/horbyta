@@ -10,7 +10,8 @@
       >
         <q-card-section>
           <div class="flex justify-between">
-            <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
+            <div class="text-h5 text-weight-bold q-mb-xs" style="color: var(--text-color)">
+              <q-icon name="folder" size="lg" />
               {{ project?.name ? `${project.name}` : t('common.loading') }}
             </div>
             <div class="text-h6 flex items-center" style="color: var(--text-muted)">

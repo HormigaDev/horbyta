@@ -4,7 +4,10 @@
       <q-card flat bordered>
         <q-card-section class="row items-center justify-between q-col-gutter-md">
           <div>
-            <div class="text-h5">{{ t('settings.page.title') }}</div>
+            <div class="text-h5 q-mb-xs">
+              <q-icon name="settings" size="lg" />
+              {{ t('settings.page.title') }}
+            </div>
             <div class="text-caption" style="color: var(--text-muted)">
               {{ t('settings.page.subtitle') }}
             </div>
