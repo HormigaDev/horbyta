@@ -13,6 +13,7 @@
           class="q-mr-sm"
         />
 
+        <q-img alt="Logo" src="/logo.png" width="36px" height="36px" class="q-mr-md q-ml-md" />
         <q-toolbar-title class="text-h6 ellipsis" v-if="clientAuthStore.client?.email">
           {{ t('layout.header.welcome') }}
           <b class="text-weight-bold">{{ clientAuthStore.client.email }}</b>
