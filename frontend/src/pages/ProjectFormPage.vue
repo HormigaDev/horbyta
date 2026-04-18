@@ -42,6 +42,108 @@
             />
           </div>
         </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-separator spaced />
+
+          <div class="text-subtitle1 q-mb-sm">{{ t('projects.form.billingTitle') }}</div>
+
+          <div class="row q-col-gutter-md">
+            <div class="col-12">
+              <q-toggle
+                v-model="project.billable"
+                :label="t('projects.form.billableLabel')"
+                color="primary"
+              />
+              <div class="text-caption" style="color: var(--text-muted)">
+                {{ t('projects.form.billableHint') }}
+              </div>
+            </div>
+
+            <div class="col-12 col-md-4" v-if="project.billable">
+              <q-select
+                v-model="billingForm.currency_type"
+                :label="t('projects.form.currencyTypeLabel')"
+                :options="CURRENCY_TYPE_OPTIONS"
+                outlined
+                dense
+                emit-value
+                map-options
+                :error="hasCurrencyTypeError"
+                :error-message="t('projects.form.billingValidation.currencyType')"
+                @update:model-value="onCurrencyTypeInput"
+              />
+            </div>
+
+            <div class="col-12 col-md-4" v-if="project.billable">
+              <q-select
+                v-model="billingForm.billing_type"
+                :label="t('projects.form.billingTypeLabel')"
+                :options="billingTypeOptions"
+                emit-value
+                map-options
+                outlined
+                dense
+              />
+            </div>
+
+            <div
+              class="col-12 col-md-4"
+              v-if="project.billable && billingForm.billing_type === 'fixed'"
+            >
+              <NumericTextInput
+                v-model="billingForm.fixed_price"
+                :label="t('projects.form.fixedPriceLabel')"
+                :decimal-places="4"
+                :error="hasFixedPriceError"
+              />
+              <div v-if="hasFixedPriceError" class="text-negative text-caption q-mt-xs">
+                {{ t('projects.form.billingValidation.fixedPrice') }}
+              </div>
+            </div>
+
+            <div
+              class="col-12 col-md-4"
+              v-if="project.billable && billingForm.billing_type === 'hourly'"
+            >
+              <NumericTextInput
+                v-model="billingForm.hourly_rate"
+                :label="t('projects.form.hourlyRateLabel')"
+                :decimal-places="4"
+                :error="hasHourlyRateError"
+              />
+              <div v-if="hasHourlyRateError" class="text-negative text-caption q-mt-xs">
+                {{ t('projects.form.billingValidation.hourlyRate') }}
+              </div>
+            </div>
+
+            <template v-if="project.billable && billingForm.billing_type === 'retainer'">
+              <div class="col-12 col-md-4">
+                <NumericTextInput
+                  v-model="billingForm.retainer_amount"
+                  :label="t('projects.form.retainerAmountLabel')"
+                  :decimal-places="4"
+                  :error="hasRetainerAmountError"
+                />
+                <div v-if="hasRetainerAmountError" class="text-negative text-caption q-mt-xs">
+                  {{ t('projects.form.billingValidation.retainerAmount') }}
+                </div>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <NumericTextInput
+                  v-model="billingForm.payment_day"
+                  :label="t('projects.form.paymentDayLabel')"
+                  :only-integers="true"
+                  :error="hasPaymentDayError"
+                />
+                <div v-if="hasPaymentDayError" class="text-negative text-caption q-mt-xs">
+                  {{ t('projects.form.billingValidation.paymentDay') }}
+                </div>
+              </div>
+            </template>
+          </div>
+        </q-card-section>
       </q-card>
 
       <q-card flat bordered class="q-mb-md">
@@ -142,6 +244,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import AttachmentItemsList from 'src/components/AttachmentItemsList.vue';
+import NumericTextInput from 'src/components/NumericTextInput.vue';
 import { ProjectsService } from 'src/services/projects';
 import { CategoriesService } from 'src/services/categories';
 import { useUI } from 'src/composables/useUI';
@@ -150,7 +253,13 @@ import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
 import type { AttachmentListItem } from 'src/types/attachment';
-import type { CreateProjectDto, ProjectFormStateDto, UpdateProjectDto } from 'src/types/project';
+import type {
+  CreateProjectDto,
+  ProjectBillingType,
+  ProjectFormStateDto,
+  UpdateProjectDto,
+  UpsertProjectBillingDto,
+} from 'src/types/project';
 import type { CategorySummaryDto } from 'src/types/category';
 import type { ClientSummaryDto } from 'src/types/clients';
 import { ClientsService } from 'src/services/clients';
@@ -163,6 +272,17 @@ import {
   toFileArray,
   type QFileModelValue,
 } from 'src/utils/attachments';
+import { normalizeNumericText, parseNumericText } from 'src/utils/numericInput';
+import { CURRENCY_TYPE_OPTIONS } from 'src/data/constants';
+
+interface ProjectBillingFormState {
+  billing_type: ProjectBillingType;
+  currency_type: string;
+  hourly_rate: string;
+  fixed_price: string;
+  retainer_amount: string;
+  payment_day: string;
+}
 
 const route = useRoute();
 const router = useRouter();
@@ -173,11 +293,93 @@ const { nameRuleState, descriptionRuleState, validateName, validateDescription }
 
 const isNew = computed(() => route.name === 'project-create');
 const isSubmitting = ref(false);
+const hasAttemptedSubmit = ref(false);
 const selectedFiles = ref<File[]>([]);
 const selectedFilesTotalBytes = computed(() => sumFileSizes(selectedFiles.value));
 const filesBytesExceeded = computed(
   () => selectedFilesTotalBytes.value > MAX_ATTACHMENT_TOTAL_BYTES,
 );
+
+const billingForm = ref<ProjectBillingFormState>({
+  billing_type: 'fixed',
+  currency_type: 'USD',
+  hourly_rate: '',
+  fixed_price: '',
+  retainer_amount: '',
+  payment_day: '',
+});
+
+const billingTypeOptions = computed(() => {
+  return [
+    {
+      label: t('projects.billing.type.fixed'),
+      value: 'fixed' as ProjectBillingType,
+    },
+    {
+      label: t('projects.billing.type.hourly'),
+      value: 'hourly' as ProjectBillingType,
+    },
+    {
+      label: t('projects.billing.type.retainer'),
+      value: 'retainer' as ProjectBillingType,
+    },
+  ];
+});
+
+const normalizedCurrencyType = computed(() => {
+  return billingForm.value.currency_type.trim().toUpperCase();
+});
+
+const parsedFixedPrice = computed(() => {
+  return parseNumericText(billingForm.value.fixed_price, { decimalPlaces: 4 });
+});
+
+const parsedHourlyRate = computed(() => {
+  return parseNumericText(billingForm.value.hourly_rate, { decimalPlaces: 4 });
+});
+
+const parsedRetainerAmount = computed(() => {
+  return parseNumericText(billingForm.value.retainer_amount, { decimalPlaces: 4 });
+});
+
+const parsedPaymentDay = computed(() => {
+  return parseNumericText(billingForm.value.payment_day, { onlyIntegers: true });
+});
+
+const hasCurrencyTypeError = computed(() => {
+  if (!hasAttemptedSubmit.value || !project.value.billable) return false;
+  return normalizedCurrencyType.value.length !== 3;
+});
+
+const hasFixedPriceError = computed(() => {
+  if (!hasAttemptedSubmit.value || !project.value.billable) return false;
+  if (billingForm.value.billing_type !== 'fixed') return false;
+
+  return Number.isNaN(parsedFixedPrice.value) || parsedFixedPrice.value < 0;
+});
+
+const hasHourlyRateError = computed(() => {
+  if (!hasAttemptedSubmit.value || !project.value.billable) return false;
+  if (billingForm.value.billing_type !== 'hourly') return false;
+
+  return Number.isNaN(parsedHourlyRate.value) || parsedHourlyRate.value < 0;
+});
+
+const hasRetainerAmountError = computed(() => {
+  if (!hasAttemptedSubmit.value || !project.value.billable) return false;
+  if (billingForm.value.billing_type !== 'retainer') return false;
+
+  return Number.isNaN(parsedRetainerAmount.value) || parsedRetainerAmount.value < 0;
+});
+
+const hasPaymentDayError = computed(() => {
+  if (!hasAttemptedSubmit.value || !project.value.billable) return false;
+  if (billingForm.value.billing_type !== 'retainer') return false;
+
+  if (Number.isNaN(parsedPaymentDay.value)) return true;
+
+  return parsedPaymentDay.value < 1 || parsedPaymentDay.value > 31;
+});
 
 const buildSelectedFileId = (file: File, index: number): string => {
   return `${file.name}-${file.lastModified}-${index}`;
@@ -233,6 +435,7 @@ const project = ref<ProjectFormStateDto>({
   name: '',
   description: '',
   status: 'open',
+  billable: true,
   category_id: null,
   client_id: null,
 });
@@ -277,6 +480,88 @@ const removeFileById = (itemId: string) => {
     return buildSelectedFileId(file, index) !== itemId;
   });
 };
+
+const onCurrencyTypeInput = (value: string | number | null) => {
+  billingForm.value.currency_type = String(value || '')
+    .toUpperCase()
+    .replace(/[^A-Z]/g, '')
+    .slice(0, 3);
+};
+
+const normalizeBillingNumericValue = (value: string | null | undefined) => {
+  if (!value) return '';
+
+  return normalizeNumericText(String(value), {
+    decimalPlaces: 4,
+    keepIncompleteDecimals: false,
+  });
+};
+
+const validateProjectBilling = (): boolean => {
+  if (!project.value.billable) return true;
+
+  if (normalizedCurrencyType.value.length !== 3) {
+    return false;
+  }
+
+  if (billingForm.value.billing_type === 'fixed') {
+    return !Number.isNaN(parsedFixedPrice.value) && parsedFixedPrice.value >= 0;
+  }
+
+  if (billingForm.value.billing_type === 'hourly') {
+    return !Number.isNaN(parsedHourlyRate.value) && parsedHourlyRate.value >= 0;
+  }
+
+  if (billingForm.value.billing_type === 'retainer') {
+    return (
+      !Number.isNaN(parsedRetainerAmount.value) &&
+      parsedRetainerAmount.value >= 0 &&
+      !Number.isNaN(parsedPaymentDay.value) &&
+      parsedPaymentDay.value >= 1 &&
+      parsedPaymentDay.value <= 31
+    );
+  }
+
+  return false;
+};
+
+const buildProjectBillingPayload = (): UpsertProjectBillingDto | null => {
+  if (!project.value.billable) return null;
+
+  const basePayload: UpsertProjectBillingDto = {
+    currency_type: normalizedCurrencyType.value,
+    billing_type: billingForm.value.billing_type,
+  };
+
+  if (billingForm.value.billing_type === 'fixed') {
+    return {
+      ...basePayload,
+      fixed_price: String(parsedFixedPrice.value),
+      hourly_rate: null,
+      retainer_amount: null,
+      payment_day: null,
+    };
+  }
+
+  if (billingForm.value.billing_type === 'hourly') {
+    return {
+      ...basePayload,
+      hourly_rate: String(parsedHourlyRate.value),
+      fixed_price: null,
+      retainer_amount: null,
+      payment_day: null,
+    };
+  }
+
+  return {
+    ...basePayload,
+    retainer_amount: String(parsedRetainerAmount.value),
+    payment_day: parsedPaymentDay.value,
+    fixed_price: null,
+    hourly_rate: null,
+  };
+};
+
 const loadProject = async () => {
   if (isNew.value) return;
 
@@ -289,9 +574,25 @@ const loadProject = async () => {
       name: data.name,
       description: data.description,
       status: data.status,
+      billable: data.billable,
       category_id: data.category_id,
       client_id: data.client_id,
     };
+
+    if (data.project_billing) {
+      billingForm.value = {
+        billing_type: data.project_billing.billing_type,
+        currency_type: data.project_billing.currency_type.toUpperCase(),
+        hourly_rate: normalizeBillingNumericValue(data.project_billing.hourly_rate),
+        fixed_price: normalizeBillingNumericValue(data.project_billing.fixed_price),
+        retainer_amount: normalizeBillingNumericValue(data.project_billing.retainer_amount),
+        payment_day:
+          data.project_billing.payment_day === null ||
+          data.project_billing.payment_day === undefined
+            ? ''
+            : String(data.project_billing.payment_day),
+      };
+    }
 
     if (data.category_id) {
       const exists = categoryOptions.value.some((option) => option.value === data.category_id);
@@ -324,10 +625,15 @@ const goBack = () => {
 };
 
 const saveProject = async () => {
+  hasAttemptedSubmit.value = true;
+
   const hasNameError = validateName(project.value.name);
   const hasDescError = validateDescription(project.value.description || null);
+  const hasBillingError = !validateProjectBilling();
 
-  if (hasNameError || hasDescError) return;
+  if (hasNameError || hasDescError || hasBillingError) return;
+
+  const projectBillingPayload = buildProjectBillingPayload();
 
   isSubmitting.value = true;
   showLoading(t('projects.form.saving'));
@@ -339,6 +645,8 @@ const saveProject = async () => {
       status: project.value.status,
       category_id: project.value.category_id || null,
       client_id: project.value.client_id || null,
+      billable: project.value.billable,
+      project_billing: projectBillingPayload,
     };
 
     if (isNew.value) {
@@ -352,6 +660,8 @@ const saveProject = async () => {
         status: project.value.status,
         category_id: payload.category_id || null,
         client_id: payload.client_id || null,
+        billable: project.value.billable,
+        project_billing: projectBillingPayload,
       };
       await ProjectsService.update(project.value.id, updatePayload);
       notify(t('projects.form.updateSuccess'), 'positive');

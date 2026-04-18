@@ -7,6 +7,7 @@ pub mod client;
 pub mod hex_color;
 pub mod milestone;
 pub mod project;
+pub mod project_billing;
 pub mod query;
 pub mod tag;
 pub mod task;

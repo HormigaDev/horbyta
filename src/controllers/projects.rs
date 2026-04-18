@@ -16,9 +16,10 @@ use crate::{
         attachment::CreateAttachmentDto,
         client::ClientAuthDto,
         project::{
-            CreateProjectDto, UpdateProjectCategoryDto, UpdateProjectDto, UpdateProjectStatusDto,
-            client_project_filter_schema, project_filter_schema,
+            CreateProjectDto, UpdateProjectBillableDto, UpdateProjectCategoryDto, UpdateProjectDto,
+            UpdateProjectStatusDto, client_project_filter_schema, project_filter_schema,
         },
+        project_billing::UpdateProjectBillingDto,
         query::QueryPayload,
         user::UserDto,
     },
@@ -275,6 +276,26 @@ async fn update_project_status(
     Ok(Json(project))
 }
 
+async fn update_project_billable(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<UpdateProjectBillableDto>,
+) -> Result<impl IntoResponse, AppError> {
+    let project = ProjectService::update_billable(state.db.as_ref(), user.id, id, payload).await?;
+    Ok(Json(project))
+}
+
+async fn upsert_project_billing(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(id): Path<Uuid>,
+    ValidatedJson(payload): ValidatedJson<UpdateProjectBillingDto>,
+) -> Result<impl IntoResponse, AppError> {
+    let billing = ProjectService::upsert_billing(state.db.as_ref(), user.id, id, payload).await?;
+    Ok(Json(billing))
+}
+
 async fn delete_project(
     State(state): State<AppState>,
     user: UserDto,
@@ -292,5 +313,7 @@ pub fn projects_controller() -> Router<AppState> {
         .route("/{id}", get(get_project).put(update_project).delete(delete_project))
         .route("/{id}/category", patch(update_project_category))
         .route("/{id}/status", patch(update_project_status))
+        .route("/{id}/billable", patch(update_project_billable))
+        .route("/{id}/billing", patch(upsert_project_billing))
         .route("/{id}/client", get(client_get_project))
 }

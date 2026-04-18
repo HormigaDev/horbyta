@@ -8,9 +8,10 @@ use validator::Validate;
 use crate::{
     dtos::{
         milestone::ProjectMilestoneSummaryDto,
+        project_billing::{CreateProjectBillingDto, UpdateProjectBillingDto},
         query::{ColumnType, FilterSchema},
     },
-    entities::projects,
+    entities::{project_billing, projects},
     string_enum,
     utils::search::FilterField,
 };
@@ -148,22 +149,14 @@ pub fn client_project_filter_schema() -> FilterSchema {
 
 #[derive(Deserialize, Validate, Clone)]
 pub struct CreateMilestoneSubDto {
-    #[validate(length(
-        min = 1,
-        max = 100,
-        message = "milestone name must be between 1 and 100 characters"
-    ))]
+    #[validate(length(min = 1, max = 100, message = "milestone name must be between 1 and 100 characters"))]
     pub name: String,
     pub due_date: Option<DateTime<FixedOffset>>,
 }
 
 #[derive(Deserialize, Validate)]
 pub struct CreateProjectDto {
-    #[validate(length(
-        min = 1,
-        max = 255,
-        message = "project name must be between 1 and 255 characters"
-    ))]
+    #[validate(length(min = 1, max = 255, message = "project name must be between 1 and 255 characters"))]
     pub name: String,
 
     #[validate(length(max = 15000, message = "project description must be at most 15000 characters"))]
@@ -173,18 +166,17 @@ pub struct CreateProjectDto {
 
     pub category_id: Option<Uuid>,
     pub client_id: Option<Uuid>,
+    pub billable: bool,
 
     #[validate(nested)]
     pub milestones: Option<Vec<CreateMilestoneSubDto>>,
+    #[validate(nested)]
+    pub project_billing: Option<CreateProjectBillingDto>,
 }
 
 #[derive(Deserialize, Validate)]
 pub struct UpdateProjectDto {
-    #[validate(length(
-        min = 1,
-        max = 255,
-        message = "project name must be between 1 and 255 characters"
-    ))]
+    #[validate(length(min = 1, max = 255, message = "project name must be between 1 and 255 characters"))]
     pub name: String,
 
     #[validate(length(max = 15000, message = "project description must be at most 15000 characters"))]
@@ -194,9 +186,12 @@ pub struct UpdateProjectDto {
 
     pub category_id: Option<Uuid>,
     pub client_id: Option<Uuid>,
+    pub billable: bool,
 
     #[validate(nested)]
     pub new_milestones: Option<Vec<CreateMilestoneSubDto>>,
+    #[validate(nested)]
+    pub project_billing: Option<UpdateProjectBillingDto>,
 }
 
 #[derive(Deserialize, Validate)]
@@ -209,12 +204,18 @@ pub struct UpdateProjectStatusDto {
     pub status: ProjectStatus,
 }
 
+#[derive(Deserialize)]
+pub struct UpdateProjectBillableDto {
+    pub billable: bool,
+}
+
 #[derive(Serialize, FromQueryResult)]
 pub struct ProjectSummaryDto {
     pub id: Uuid,
     pub record_number: i64,
     pub name: String,
     pub status: ProjectStatus,
+    pub billable: bool,
     pub category_name: Option<String>,
     pub client_name: Option<String>,
     pub created_at: DateTime<FixedOffset>,
@@ -232,7 +233,9 @@ pub struct ProjectDetailDto {
     pub client_name: Option<String>,
     pub description: Option<String>,
     pub status: ProjectStatus,
+    pub billable: bool,
     pub milestones: Vec<ProjectMilestoneSummaryDto>,
+    pub project_billing: Option<project_billing::Model>,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
 }
@@ -262,6 +265,8 @@ pub struct ClientProjectDetailDto {
     pub name: String,
     pub description: Option<String>,
     pub status: ProjectStatus,
+    pub billable: bool,
+    pub project_billing: Option<project_billing::Model>,
     pub milestones: Vec<ProjectMilestoneSummaryDto>,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
@@ -278,6 +283,7 @@ pub struct ProjectDetailRow {
     pub client_name: Option<String>,
     pub description: Option<String>,
     pub status: ProjectStatus,
+    pub billable: bool,
     pub created_at: chrono::DateTime<chrono::FixedOffset>,
     pub updated_at: chrono::DateTime<chrono::FixedOffset>,
 }
@@ -289,6 +295,7 @@ pub struct ClientProjectDetailRow {
     pub name: String,
     pub description: Option<String>,
     pub status: ProjectStatus,
+    pub billable: bool,
     pub created_at: chrono::DateTime<chrono::FixedOffset>,
     pub updated_at: chrono::DateTime<chrono::FixedOffset>,
 }

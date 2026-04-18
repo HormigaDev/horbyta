@@ -8,6 +8,7 @@ pub use super::clients::Entity as Clients;
 pub use super::conversation_history::Entity as ConversationHistory;
 pub use super::milestones::Entity as Milestones;
 pub use super::notifications::Entity as Notifications;
+pub use super::project_billing::Entity as ProjectBilling;
 pub use super::projects::Entity as Projects;
 pub use super::seq_by_user::Entity as SeqByUser;
 pub use super::tags::Entity as Tags;

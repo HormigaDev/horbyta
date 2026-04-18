@@ -109,6 +109,7 @@ fn format_custom_message(field: &str, code: &str) -> Option<String> {
         "new_password_must_change" => "new password must be different from current password".to_string(),
         "empty_preferences_patch" => "request must include at least one preference field".to_string(),
         "empty_notifications_patch" => "request must include at least one notification preference field".to_string(),
+        "non_negative_decimal" => "decimal must be greater than or equal to 0".to_string(),
         _ => return None,
     };
 

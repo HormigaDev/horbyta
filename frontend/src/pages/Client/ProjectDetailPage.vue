@@ -20,6 +20,12 @@
             </span>
           </div>
           <div class="text-caption" style="color: var(--text-muted)" v-if="project">
+            {{ t('projects.detail.billableLabel') }}:
+            <span style="color: var(--text-color)">
+              {{ project.billable ? t('common.yes') : t('common.no') }}
+            </span>
+          </div>
+          <div class="text-caption" style="color: var(--text-muted)" v-if="project">
             {{
               t('projects.detail.meta', {
                 id: project.id,
@@ -27,6 +33,101 @@
                 updated: formatDate(project.updated_at),
               })
             }}
+          </div>
+        </q-card-section>
+      </q-card>
+
+      <q-card
+        class="q-mt-md"
+        flat
+        bordered
+        style="background-color: var(--card-bg); border-color: var(--border-color)"
+      >
+        <q-card-section>
+          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+            {{ t('projects.detail.billingTitle') }}
+          </div>
+
+          <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
+            <div
+              v-if="project && project.billable && project.project_billing"
+              class="row q-col-gutter-md"
+            >
+              <div class="col-12 col-md-4">
+                <div class="text-caption" style="color: var(--text-muted)">
+                  {{ t('projects.detail.currencyTypeLabel') }}
+                </div>
+                <div style="color: var(--text-color)">
+                  {{ project.project_billing.currency_type }}
+                </div>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <div class="text-caption" style="color: var(--text-muted)">
+                  {{ t('projects.detail.billingTypeLabel') }}
+                </div>
+                <div style="color: var(--text-color)">
+                  {{ projectBillingTypeLabel(project.project_billing.billing_type) }}
+                </div>
+              </div>
+
+              <div class="col-12 col-md-4" v-if="project.project_billing.billing_type === 'fixed'">
+                <div class="text-caption" style="color: var(--text-muted)">
+                  {{ t('projects.detail.fixedPriceLabel') }}
+                </div>
+                <div style="color: var(--text-color)">
+                  {{
+                    formatBillingAmount(
+                      project.project_billing.fixed_price,
+                      project.project_billing.currency_type,
+                    )
+                  }}
+                </div>
+              </div>
+
+              <div class="col-12 col-md-4" v-if="project.project_billing.billing_type === 'hourly'">
+                <div class="text-caption" style="color: var(--text-muted)">
+                  {{ t('projects.detail.hourlyRateLabel') }}
+                </div>
+                <div style="color: var(--text-color)">
+                  {{
+                    formatBillingAmount(
+                      project.project_billing.hourly_rate,
+                      project.project_billing.currency_type,
+                    )
+                  }}
+                </div>
+              </div>
+
+              <template v-if="project.project_billing.billing_type === 'retainer'">
+                <div class="col-12 col-md-4">
+                  <div class="text-caption" style="color: var(--text-muted)">
+                    {{ t('projects.detail.retainerAmountLabel') }}
+                  </div>
+                  <div style="color: var(--text-color)">
+                    {{
+                      formatBillingAmount(
+                        project.project_billing.retainer_amount,
+                        project.project_billing.currency_type,
+                      )
+                    }}
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                  <div class="text-caption" style="color: var(--text-muted)">
+                    {{ t('projects.detail.paymentDayLabel') }}
+                  </div>
+                  <div style="color: var(--text-color)">
+                    {{ paymentDayLabel(project.project_billing.payment_day) }}
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <div v-else class="text-caption" style="color: var(--text-muted)">
+              {{ t('projects.detail.billingEmpty') }}
+            </div>
           </div>
         </q-card-section>
       </q-card>
@@ -88,7 +189,7 @@ import { useUI } from 'src/composables/useUI';
 import { ClientProjectsService } from 'src/services/clientProjects';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
-import type { ClientProjectDetailDto, ProjectStatus } from 'src/types/project';
+import type { ClientProjectDetailDto, ProjectBillingType, ProjectStatus } from 'src/types/project';
 
 const route = useRoute();
 const router = useRouter();
@@ -109,6 +210,26 @@ const formatDate = (value: string, fallback = t('common.empty')) =>
 const projectStatusLabel = (status: ProjectStatus | null | undefined) => {
   if (!status) return t('common.empty');
   return t(`projects.status.${status}`);
+};
+
+const projectBillingTypeLabel = (billingType: ProjectBillingType | null | undefined) => {
+  if (!billingType) return t('common.empty');
+  return t(`projects.billing.type.${billingType}`);
+};
+
+const formatBillingAmount = (
+  amount: string | null | undefined,
+  currencyType: string | null | undefined,
+) => {
+  if (!amount) return t('common.empty');
+
+  const currency = currencyType || '';
+  return `${currency} ${amount}`.trim();
+};
+
+const paymentDayLabel = (day: number | null | undefined) => {
+  if (day === null || day === undefined) return t('common.empty');
+  return t('projects.detail.paymentDayValue', { day });
 };
 
 const loadProject = async () => {

@@ -10,6 +10,7 @@ pub mod clients;
 pub mod conversation_history;
 pub mod milestones;
 pub mod notifications;
+pub mod project_billing;
 pub mod projects;
 pub mod seq_by_user;
 pub mod tags;

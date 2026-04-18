@@ -16,6 +16,7 @@ pub struct Model {
     #[sea_orm(column_type = "Text", nullable)]
     pub description: Option<String>,
     pub status: String,
+    pub billable: bool,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
 }
@@ -44,6 +45,8 @@ pub enum Relation {
     Clients,
     #[sea_orm(has_many = "super::milestones::Entity")]
     Milestones,
+    #[sea_orm(has_many = "super::project_billing::Entity")]
+    ProjectBilling,
     #[sea_orm(has_many = "super::tasks::Entity")]
     Tasks,
     #[sea_orm(
@@ -83,6 +86,12 @@ impl Related<super::clients::Entity> for Entity {
 impl Related<super::milestones::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Milestones.def()
+    }
+}
+
+impl Related<super::project_billing::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::ProjectBilling.def()
     }
 }
 

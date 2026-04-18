@@ -1,7 +1,7 @@
 begin;
 
 -- ---------------------------------
--- TABLAS
+-- TABLES
 -- ---------------------------------
 
 create table users (
@@ -84,10 +84,52 @@ create table projects (
     name varchar(255) not null,
     description text,
     status varchar(20) not null default 'open',
+    billable boolean not null default true,
+
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
 
     constraint chk_projects_status check (status in ('open', 'closed', 'cancelled'))
+);
+
+create table project_billing (
+    id uuid primary key default uuidv7(),
+    user_id uuid not null references users (id) on delete cascade,
+    project_id uuid not null references projects (id) on delete cascade,
+    currency_type varchar(3) not null,
+    billing_type varchar(30) not null default 'fixed',
+    hourly_rate numeric(15,4),
+    fixed_price numeric(15,4),
+    retainer_amount numeric(15,4),
+    payment_day smallint,
+
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint chk_payment_day_is_in_range check (payment_day >= 0 and payment_day <= 31),
+    constraint chk_project_billing_billing_type check (billing_type in ('fixed', 'hourly', 'retainer')),
+    constraint chk_project_billing_billing check (
+        (
+            billing_type = 'fixed'
+            and fixed_price is not null
+            and hourly_rate is null
+            and retainer_amount is null
+            and payment_day is null
+        ) or (
+            billing_type = 'hourly'
+            and hourly_rate is not null
+            and fixed_price is null
+            and retainer_amount is null
+            and payment_day is null
+        ) or (
+            billing_type = 'retainer'
+            and payment_day is not null
+            and retainer_amount is not null
+            and fixed_price is null
+            and hourly_rate is null
+        )
+    ),
+    constraint uq_project_billing_project unique (user_id, project_id)
 );
 
 create table milestones (
@@ -252,7 +294,7 @@ create table notifications (
 );
 
 -- ---------------------------------
--- ÍNDICES
+-- INDEXES
 -- ---------------------------------
 
 create index idx_attachments_user_id on attachments(user_id);
@@ -315,7 +357,7 @@ create index idx_change_requests_status on change_requests(status);
 create index idx_change_requests_created_at on change_requests(user_id, created_at desc);
 
 -- ---------------------------------
--- FUNCIONES Y TRIGGERS (UPDATED_AT AUTOMÁTICO)
+-- FUNCTIONS AND TRIGGERS (AUTOMATIC UPDATED_AT)
 -- ---------------------------------
 
 create or replace function fn_set_updated_at()
@@ -399,7 +441,7 @@ end;
 $$;
 
 -- ---------------------------------
--- TRIGGER PARA INCREMENTAR LA VERSIÓN DEL CHANGE REQUESTS
+-- TRIGGER TO INCREMENT THE VERSION OF CHANGE REQUESTS
 -- ---------------------------------
 
 create or replace function fn_increment_cr_version()
@@ -421,32 +463,32 @@ for each row
 execute function fn_increment_cr_version();
 
 -- ---------------------------------
--- COMENTARIOS
+-- COMMENTS
 -- ---------------------------------
 
-comment on table users is 'Inquilinos del sistema. Entidad raíz para el aislamiento de datos (Row Level Security en el futuro si es necesario).';
-comment on table categories is 'Agrupaciones lógicas de alto nivel definidas por el usuario (ej. Personal, Trabajo).';
-comment on table projects is 'Contenedores principales de tareas. Un proyecto puede pertenecer a una categoría.';
-comment on table milestones is 'Puntos de control temporales dentro de un proyecto.';
-comment on table tags is 'Etiquetas transversales para clasificación libre. Únicas por usuario.';
-comment on table tasks is 'Núcleo del PM. Soporta jerarquía infinita (parent_id) y puede existir sin proyecto (inbox).';
-comment on table task_tags is 'Tabla pivote para relación muchos a muchos entre tareas y etiquetas.';
-comment on table conversation_history is 'Tabla para guardar los mensajes de chat con la IA';
-comment on table notifications is 'Notificaciones asíncronas persistentes para el usuario, respetando sus preferencias.';
-comment on table clients is 'Clientes del usuario.';
-comment on table client_auth is 'Tabla que contiene los datos de autenticación del cliente en el portal';
-comment on table seq_by_user is 'Secuencias de tablas con cambos numéricos incrementales';
-comment on table attachments is 'Archivos adjuntos subidos por los usuarios. Pueden estar ligados a tareas o directamente a proyectos. Almacena metadatos y la ruta (storage_key) para el ObjectStore.';
-comment on table change_requests is 'Motor Anti-Scope-Creep transaccional. Obliga al cliente a aceptar formalmente los sobrecostos y retrasos mediante una acción de estado, eliminando la negociación por chat.';
+comment on table users is 'System tenants. Root entity for data isolation (Row Level Security in the future if necessary).';
+comment on table categories is 'High-level logical groupings defined by the user (e.g. Personal, Work).';
+comment on table projects is 'Main containers for tasks. A project can belong to a category.';
+comment on table milestones is 'Temporary checkpoints within a project.';
+comment on table tags is 'Cross-cutting tags for free classification. Unique per user.';
+comment on table tasks is 'Core of the PM. Supports infinite hierarchy (parent_id) and can exist without a project (inbox).';
+comment on table task_tags is 'Pivot table for many-to-many relationship between tasks and tags.';
+comment on table conversation_history is 'Table to store chat messages with the AI';
+comment on table notifications is 'Persistent asynchronous notifications for the user, respecting their preferences.';
+comment on table clients is 'User clients.';
+comment on table client_auth is 'Table containing client authentication data for the portal';
+comment on table seq_by_user is 'Sequences of tables with incremental numeric fields';
+comment on table attachments is 'Attachments uploaded by users. Can be linked to tasks or directly to projects. Stores metadata and the path (storage_key) for the ObjectStore.';
+comment on table change_requests is 'Transactional Anti-Scope-Creep engine. Forces the client to formally accept cost overruns and delays through a state action, eliminating negotiation by chat.';
 
-comment on column tasks.parent_id is 'Referencia recursiva para soportar subtareas de n-niveles.';
-comment on column tasks.status is 'Estado del flujo de trabajo. Restringido a 4 valores predefinidos por CHECK.';
-comment on column tasks.priority is 'Nivel de prioridad (1-4). 1 es más bajo, 4 es crítico.';
-comment on column tasks.complexity is 'Estimación de esfuerzo/complejidad (1-4).';
-comment on column change_requests.client_request_description is 'La descripción inmutable de lo que el cliente pidió.';
-comment on column change_requests.technical_assessment is 'La respuesta formal del freelancer explicando qué implica el cambio para justificar el costo.';
-comment on column change_requests.schedule_impact_days is 'Días que se sumarán a la fecha de entrega (milestones) si el cliente aprueba este cambio.';
-comment on column change_requests.client_approved_at is 'Timestamp de cuando el cliente hizo click en el botón de aceptar costo/retraso.';
-comment on column change_requests.version is 'Versión del registro de cambio. Incrementa cuando el cliente edita el título o descripción';
+comment on column tasks.parent_id is 'Recursive reference to support n-level subtasks.';
+comment on column tasks.status is 'Workflow state. Restricted to 4 predefined values by CHECK.';
+comment on column tasks.priority is 'Priority level (1-4). 1 is lowest, 4 is critical.';
+comment on column tasks.complexity is 'Effort/complexity estimation (1-4).';
+comment on column change_requests.client_request_description is 'The immutable description of what the client requested.';
+comment on column change_requests.technical_assessment is 'The freelancer''s formal response explaining what the change implies to justify the cost.';
+comment on column change_requests.schedule_impact_days is 'Days to be added to the delivery date (milestones) if the client approves this change.';
+comment on column change_requests.client_approved_at is 'Timestamp when the client clicked the button to accept cost/delay.';
+comment on column change_requests.version is 'Change record version. Increments when the client edits the title or description';
 
 commit;

@@ -1,3 +1,4 @@
+use sea_orm::prelude::Decimal;
 use validator::ValidationError;
 
 pub fn is_numeric(s: &str) -> Result<(), ValidationError> {
@@ -23,6 +24,14 @@ pub fn validate_password(password: &str) -> Result<(), ValidationError> {
     }
     if !password.chars().any(|c| !c.is_alphanumeric()) {
         return Err(ValidationError::new("password_requires_symbol"));
+    }
+
+    Ok(())
+}
+
+pub fn is_non_negative_decimal(decimal: &Decimal) -> Result<(), ValidationError> {
+    if decimal < &Decimal::ZERO {
+        return Err(ValidationError::new("non_negative_decimal"));
     }
 
     Ok(())
