@@ -10,14 +10,23 @@
     <q-separator />
 
     <q-card-section class="row">
-      <q-item clickable class="col-12 col-md-6 column items-center justify-center" to="/tags">
-        <q-icon name="sell" size="lg" />
-        <span class="text-subtitle2">{{ $t('settings.app.tags') }}</span>
-      </q-item>
-      <q-item clickable class="col-12 col-md-6 column items-center justify-center" to="/categories">
-        <q-icon name="extension" size="lg" />
-        <span class="text-subtitle2">{{ $t('settings.app.categories') }}</span>
+      <q-item
+        v-for="item in items"
+        :key="item.path"
+        clickable
+        class="col-12 col-md-4 column items-center justify-center"
+        :to="`/${item.path}`"
+      >
+        <q-icon size="lg" :name="item.icon" />
+        <span class="text-subtitle2">{{ $t(`settings.app.${item.path}`) }}</span>
       </q-item>
     </q-card-section>
   </q-card>
 </template>
+<script setup lang="ts">
+const items = [
+  { icon: 'sell', path: 'tags' },
+  { icon: 'extension', path: 'categories' },
+  { icon: 'list_alt', path: 'activities' },
+];
+</script>

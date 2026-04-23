@@ -1,3 +1,4 @@
+pub mod activity;
 pub mod attachment;
 pub mod auth;
 pub mod category;
@@ -11,6 +12,7 @@ pub mod project_billing;
 pub mod query;
 pub mod tag;
 pub mod task;
+pub mod time_entries;
 pub mod user;
 pub mod utils;
 pub mod websocket;

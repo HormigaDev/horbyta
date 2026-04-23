@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use chrono::{DateTime, FixedOffset, Utc};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
@@ -8,11 +10,12 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         change_request::{
-            AssessChangeRequestDto, AssignChangeRequestTaskDto, ChangeRequestDetailDto, ChangeRequestDetailRow,
-            ChangeRequestOrigin, ChangeRequestSearchField, ChangeRequestStatus, ChangeRequestSummaryDto,
-            ClientApproveChangeRequestDto, ClientCancelChangeRequestDto, ClientChangeRequestDetailDto,
-            ClientChangeRequestDetailRow, ClientChangeRequestSearchField, ClientChangeRequestSummaryDto,
-            ClientCreateChangeRequestDto, ClientUpdateChangeRequestDto, CreateChangeRequestDto, UpdateChangeRequestDto,
+            AssessChangeRequestDto, AssignChangeRequestTaskDto, ChangeRequestDeclineReason, ChangeRequestDetailDto,
+            ChangeRequestDetailRow, ChangeRequestOrigin, ChangeRequestSearchField, ChangeRequestStatus,
+            ChangeRequestSummaryDto, ClientApproveChangeRequestDto, ClientCancelChangeRequestDto,
+            ClientChangeRequestDetailDto, ClientChangeRequestDetailRow, ClientChangeRequestSearchField,
+            ClientChangeRequestSummaryDto, ClientCreateChangeRequestDto, ClientUpdateChangeRequestDto,
+            CreateChangeRequestDto, UpdateChangeRequestDto,
         },
         query::QueryPayload,
     },
@@ -102,6 +105,7 @@ impl ChangeRequestService {
             .column(change_requests::Column::ScheduleImpactDays)
             .column(change_requests::Column::Origin)
             .column(change_requests::Column::Status)
+            .column(change_requests::Column::DeclineReason)
             .column(change_requests::Column::ClientApprovedAt)
             .column(change_requests::Column::ClientSignatureIp)
             .column(change_requests::Column::CreatedAt)
@@ -114,7 +118,7 @@ impl ChangeRequestService {
             .await?
             .ok_or_else(|| AppError::NotFound("Solicitud de cambio no encontrada".to_string()))?;
 
-        Ok(Self::map_detail_row(row))
+        Ok(Self::map_detail_row(row)?)
     }
 
     pub async fn get_client_by_id(
@@ -141,6 +145,7 @@ impl ChangeRequestService {
             .column(change_requests::Column::ScheduleImpactDays)
             .column(change_requests::Column::Origin)
             .column(change_requests::Column::Status)
+            .column(change_requests::Column::DeclineReason)
             .column(change_requests::Column::ClientApprovedAt)
             .column(change_requests::Column::ClientSignatureIp)
             .column(change_requests::Column::CreatedAt)
@@ -152,7 +157,7 @@ impl ChangeRequestService {
             .await?
             .ok_or_else(|| AppError::NotFound("Solicitud de cambio no encontrada".to_string()))?;
 
-        Ok(Self::map_client_detail_row(row))
+        Ok(Self::map_client_detail_row(row)?)
     }
 
     pub async fn update(
@@ -421,6 +426,7 @@ impl ChangeRequestService {
         user_id: Uuid,
         client_id: Uuid,
         id: Uuid,
+        decline_reason: ChangeRequestDeclineReason,
     ) -> Result<ClientChangeRequestDetailDto, AppError> {
         let model = Self::get_model_by_client(db, user_id, client_id, id).await?;
         let status = Self::parse_status(&model.status)?;
@@ -435,6 +441,7 @@ impl ChangeRequestService {
         active_model.status = Set(ChangeRequestStatus::Declined.to_string());
         active_model.client_approved_at = Set(None);
         active_model.client_signature_ip = Set(None);
+        active_model.decline_reason = Set(Some(decline_reason.to_string()));
 
         let updated = active_model.update(db).await.map_err(AppError::Database)?;
         Self::get_client_by_id(db, user_id, client_id, updated.id).await
@@ -740,8 +747,16 @@ impl ChangeRequestService {
         Utc::now().fixed_offset()
     }
 
-    fn map_detail_row(row: ChangeRequestDetailRow) -> ChangeRequestDetailDto {
-        ChangeRequestDetailDto {
+    fn map_detail_row(row: ChangeRequestDetailRow) -> Result<ChangeRequestDetailDto, AppError> {
+        let decline_reason = match row.decline_reason {
+            Some(value) => Some(
+                ChangeRequestDeclineReason::from_str(&value)
+                    .map_err(|e| AppError::Internal(format!("invalid decline reason: {}", e)))?,
+            ),
+            None => None,
+        };
+
+        Ok(ChangeRequestDetailDto {
             id: row.id,
             record_number: row.record_number,
             user_id: row.user_id,
@@ -758,16 +773,25 @@ impl ChangeRequestService {
             schedule_impact_days: row.schedule_impact_days,
             origin: row.origin,
             status: row.status,
+            decline_reason,
             client_approved_at: row.client_approved_at,
             client_signature_ip: row.client_signature_ip,
             created_at: row.created_at,
             updated_at: row.updated_at,
             version: row.version,
-        }
+        })
     }
 
-    fn map_client_detail_row(row: ClientChangeRequestDetailRow) -> ClientChangeRequestDetailDto {
-        ClientChangeRequestDetailDto {
+    fn map_client_detail_row(row: ClientChangeRequestDetailRow) -> Result<ClientChangeRequestDetailDto, AppError> {
+        let decline_reason = match row.decline_reason {
+            Some(value) => Some(
+                ChangeRequestDeclineReason::from_str(&value)
+                    .map_err(|e| AppError::Internal(format!("invalid decline reason: {}", e)))?,
+            ),
+            None => None,
+        };
+
+        Ok(ClientChangeRequestDetailDto {
             id: row.id,
             record_number: row.record_number,
             project_id: row.project_id,
@@ -781,11 +805,12 @@ impl ChangeRequestService {
             schedule_impact_days: row.schedule_impact_days,
             origin: row.origin,
             status: row.status,
+            decline_reason,
             client_approved_at: row.client_approved_at,
             client_signature_ip: row.client_signature_ip,
             created_at: row.created_at,
             updated_at: row.updated_at,
             version: row.version,
-        }
+        })
     }
 }

@@ -1,5 +1,15 @@
 {
     "[dockercompose]": {
         "editor.formatOnSave": false
+    },
+    "[typescript]": {
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": true
+    },
+    "[vue]": {
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": true
     }
 }

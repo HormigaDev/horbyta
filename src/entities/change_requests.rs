@@ -25,6 +25,7 @@ pub struct Model {
     pub impact_cost: Decimal,
     pub schedule_impact_days: i32,
     pub status: String,
+    pub decline_reason: Option<String>,
     pub client_approved_at: Option<DateTimeWithTimeZone>,
     pub client_signature_ip: Option<String>,
     pub created_at: DateTimeWithTimeZone,

@@ -57,6 +57,8 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     SelfRef,
+    #[sea_orm(has_many = "super::time_entries::Entity")]
+    TimeEntries,
     #[sea_orm(
         belongs_to = "super::users::Entity",
         from = "Column::UserId",
@@ -94,6 +96,12 @@ impl Related<super::projects::Entity> for Entity {
 impl Related<super::task_tags::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::TaskTags.def()
+    }
+}
+
+impl Related<super::time_entries::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::TimeEntries.def()
     }
 }
 

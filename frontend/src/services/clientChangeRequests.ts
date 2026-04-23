@@ -49,8 +49,9 @@ export const ClientChangeRequestsService = {
       body: JSON.stringify(data),
     }),
 
-  decline: (id: string): Promise<ClientChangeRequestDetailDto> =>
+  decline: (id: string, decline_reason: string): Promise<ClientChangeRequestDetailDto> =>
     apiFetchClient(`/change-requests/client/${id}/decline`, {
       method: 'PATCH',
+      body: JSON.stringify({ decline_reason }),
     }),
 };

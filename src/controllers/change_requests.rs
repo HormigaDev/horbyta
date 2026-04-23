@@ -11,8 +11,8 @@ use crate::{
     dtos::{
         change_request::{
             AssessChangeRequestDto, AssignChangeRequestTaskDto, ClientApproveChangeRequestDto,
-            ClientCancelChangeRequestDto, ClientCreateChangeRequestDto, ClientUpdateChangeRequestDto,
-            CreateChangeRequestDto, UpdateChangeRequestDto, change_request_filter_schema,
+            ClientCancelChangeRequestDto, ClientCreateChangeRequestDto, ClientDeclineChangeRequestDto,
+            ClientUpdateChangeRequestDto, CreateChangeRequestDto, UpdateChangeRequestDto, change_request_filter_schema,
             client_change_request_filter_schema,
         },
         client::ClientAuthDto,
@@ -191,9 +191,16 @@ async fn client_decline_change_request(
     State(state): State<AppState>,
     client: ClientAuthDto,
     Path(id): Path<Uuid>,
+    Json(payload): Json<ClientDeclineChangeRequestDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let change_request =
-        ChangeRequestService::client_decline(state.db.as_ref(), client.user_id, client.client_id, id).await?;
+    let change_request = ChangeRequestService::client_decline(
+        state.db.as_ref(),
+        client.user_id,
+        client.client_id,
+        id,
+        payload.decline_reason,
+    )
+    .await?;
     Ok(Json(change_request))
 }
 

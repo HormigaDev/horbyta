@@ -51,7 +51,6 @@
           <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
             {{ t('tasks.detail.specsTitle') }}
           </div>
-
           <div class="row q-col-gutter-md q-mb-md" v-if="task">
             <div class="col-12 col-md-4">
               <div class="text-caption" style="color: var(--text-muted)">
@@ -75,7 +74,6 @@
                 {{ $t(`tasks.form.complexity.${task.complexity}`) }}
               </div>
             </div>
-
             <div class="col-12 col-md-4">
               <div class="text-caption" style="color: var(--text-muted)">
                 {{ t('common.project') }}
@@ -92,47 +90,13 @@
                 {{ task.milestone_name || t('tasks.detail.noMilestone') }}
               </div>
             </div>
-
             <div class="col-12 col-md-4">
               <div class="text-caption" style="color: var(--text-muted)">
                 {{ t('tasks.list.filter.dueDate') }}
               </div>
               <div style="color: var(--text-color)">
-                {{
-                  task.due_date
-                    ? formatDate(task.due_date, t('tasks.detail.noDate'))
-                    : t('tasks.detail.noDate')
-                }}
+                {{ task.due_date ? formatDate(task.due_date) : t('tasks.detail.noDate') }}
               </div>
-            </div>
-            <div class="col-12 col-md-6" v-if="task.parent_id">
-              <div class="text-caption" style="color: var(--text-muted)">
-                {{ t('tasks.detail.blockParent') }}
-              </div>
-              <div style="color: var(--text-color)">
-                {{ task.block_parent ? t('common.yes') : t('common.no') }}
-              </div>
-            </div>
-          </div>
-
-          <div v-if="task">
-            <div class="text-caption q-mb-xs" style="color: var(--text-muted)">
-              {{ t('tasks.detail.tagsTitle') }}
-            </div>
-            <div class="row q-gutter-xs">
-              <q-chip
-                v-for="tag in task.tags"
-                :key="tag.id"
-                dense
-                :style="`background-color: ${tag.color};
-                  border: none;
-                  color: ${getTagTextContrastColor(tag.color)};`"
-              >
-                {{ tag.name }}
-              </q-chip>
-              <span v-if="task.tags.length === 0" style="color: var(--text-muted)">{{
-                t('tasks.detail.noTags')
-              }}</span>
             </div>
           </div>
         </q-card-section>
@@ -143,72 +107,35 @@
         bordered
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
-            {{ t('tasks.detail.descriptionTitle') }}
-          </div>
-          <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
+        <q-tabs
+          v-model="detailsTab"
+          dense
+          align="justify"
+          indicator-color="primary"
+          active-color="primary"
+        >
+          <q-tab name="description" :label="t('tasks.detail.tabs.description')" />
+          <q-tab name="attachments" :label="t('tasks.detail.tabs.attachments')" />
+          <q-tab name="time_entries" :label="t('tasks.detail.tabs.timeEntries')" />
+        </q-tabs>
+
+        <q-separator />
+
+        <q-tab-panels v-model="detailsTab" animated style="background-color: var(--card-bg)">
+          <q-tab-panel name="description">
             <MarkdownRenderer
               :model-value="task?.description || t('tasks.detail.emptyDescription')"
             />
-          </div>
-        </q-card-section>
-      </q-card>
+          </q-tab-panel>
 
-      <q-card
-        class="q-mt-md"
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="row items-center justify-between q-mb-sm">
-            <div class="text-subtitle1 text-weight-bold" style="color: var(--q-primary)">
-              {{ t('attachments.table.title') }}
-            </div>
+          <q-tab-panel name="attachments">
+            <TaskAttachmentsTab v-if="task" :task-id="task.id" />
+          </q-tab-panel>
 
-            <q-btn flat round dense icon="refresh" @click="fetchAttachments">
-              <q-tooltip>{{ t('common.refresh') }}</q-tooltip>
-            </q-btn>
-          </div>
-
-          <AttachmentItemsList
-            :items="attachmentListItems"
-            :empty-text="t('attachments.list.empty')"
-            :loading="isLoadingAttachments"
-            clickable
-            @item-click="openAttachment"
-            item-action-icon="close"
-            :item-action-aria-label="t('attachments.form.removeFile')"
-            @item-action="removeAttachment"
-          />
-
-          <div
-            v-if="attachmentTotal > 0"
-            class="row items-center justify-between q-mt-md q-col-gutter-sm"
-          >
-            <div class="col-12 col-sm text-caption" style="color: var(--text-muted)">
-              {{
-                t('attachments.list.paginationMeta', {
-                  page: attachmentQuery.page,
-                  max: attachmentTotalPages,
-                  total: attachmentTotal,
-                })
-              }}
-            </div>
-
-            <div class="col-12 col-sm-auto row justify-end">
-              <q-pagination
-                :model-value="attachmentQuery.page"
-                :max="attachmentTotalPages"
-                :max-pages="6"
-                direction-links
-                boundary-numbers
-                @update:model-value="onAttachmentsPageChange"
-              />
-            </div>
-          </div>
-        </q-card-section>
+          <q-tab-panel name="time_entries">
+            <TaskTimeEntriesTab v-if="task" :task="task" ref="timeEntriesTabRef" />
+          </q-tab-panel>
+        </q-tab-panels>
       </q-card>
     </div>
 
@@ -220,12 +147,8 @@
       >
         <q-list separator>
           <q-item clickable v-ripple @click="goBack" class="q-pa-md">
-            <q-item-section avatar>
-              <q-icon name="arrow_back" style="color: var(--text-color)" />
-            </q-item-section>
-            <q-item-section style="color: var(--text-color)">{{
-              t('tasks.detail.action.back')
-            }}</q-item-section>
+            <q-item-section avatar><q-icon name="arrow_back" /></q-item-section>
+            <q-item-section>{{ t('tasks.detail.action.back') }}</q-item-section>
           </q-item>
 
           <q-item
@@ -233,41 +156,52 @@
             v-ripple
             class="q-pa-md"
             v-if="task && task.status === 'todo'"
-            @click="() => updateTaskStatus()"
+            @click="updateTaskStatus('in_progress')"
           >
-            <q-item-section avatar>
-              <q-icon name="start" style="color: var(--text-color)" />
-            </q-item-section>
-            <q-item-section style="color: var(--text-color)">
-              {{ $t('tasks.detail.action.startTask') }}
-            </q-item-section>
+            <q-item-section avatar><q-icon name="start" /></q-item-section>
+            <q-item-section>{{ $t('tasks.detail.action.startTask') }}</q-item-section>
           </q-item>
+
           <q-item
             clickable
             v-ripple
             class="q-pa-md"
-            v-if="task && task.status !== 'todo'"
-            @click="openChangeStatusDialog"
+            v-if="task"
+            @click="timeEntriesTabRef?.openManualTimeEntryDialog()"
           >
-            <q-item-section avatar>
-              <q-icon name="sync" style="color: var(--text-color)" />
-            </q-item-section>
-            <q-item-section style="color: var(--text-color)">
-              {{ $t('tasks.detail.action.changeStatus') }}
-            </q-item-section>
+            <q-item-section avatar><q-icon name="edit_note" /></q-item-section>
+            <q-item-section>{{ $t('tasks.detail.action.logManualTime') }}</q-item-section>
+          </q-item>
+
+          <q-item
+            clickable
+            v-ripple
+            class="q-pa-md"
+            v-if="task && !timeEntriesTabRef?.activeTimerEntry"
+            @click="timeEntriesTabRef?.openStartTimerDialog()"
+          >
+            <q-item-section avatar><q-icon name="timer" /></q-item-section>
+            <q-item-section>{{ $t('tasks.detail.action.startTimer') }}</q-item-section>
+          </q-item>
+
+          <q-item
+            clickable
+            v-ripple
+            class="q-pa-md"
+            v-if="timeEntriesTabRef?.activeTimerBelongsToCurrentTask"
+            @click="timeEntriesTabRef?.stopActiveTimerForCurrentTask()"
+          >
+            <q-item-section avatar><q-icon name="stop_circle" /></q-item-section>
+            <q-item-section>{{ t('tasks.detail.action.stopTimer') }}</q-item-section>
           </q-item>
 
           <q-item clickable v-ripple class="text-primary q-pa-md" @click="goToEdit" v-if="task">
-            <q-item-section avatar>
-              <q-icon name="edit" color="primary" />
-            </q-item-section>
+            <q-item-section avatar><q-icon name="edit" color="primary" /></q-item-section>
             <q-item-section>{{ t('tasks.detail.action.edit') }}</q-item-section>
           </q-item>
 
           <q-item clickable v-ripple class="text-negative q-pa-md" @click="removeTask" v-if="task">
-            <q-item-section avatar>
-              <q-icon name="delete" color="negative" />
-            </q-item-section>
+            <q-item-section avatar><q-icon name="delete" color="negative" /></q-item-section>
             <q-item-section>{{ t('tasks.detail.action.delete') }}</q-item-section>
           </q-item>
         </q-list>
@@ -277,206 +211,89 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
-import AttachmentItemsList from 'src/components/AttachmentItemsList.vue';
+import TaskAttachmentsTab from 'src/components/TaskAttachmentsTab.vue';
+import TaskTimeEntriesTab from 'src/components/TaskTimeEntriesTab.vue';
 import { useUI } from 'src/composables/useUI';
-import { AttachmentsService } from 'src/services/attachments';
+import { useCopyClipboard } from 'src/composables/useCopyClipboard';
 import { TasksService } from 'src/services/tasks';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
-import type { AttachmentListItem, AttachmentSummaryDto } from 'src/types/attachment';
-import type { QueryPayload } from 'src/types/query';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
-import { formatStorageBytes, resolveAttachmentIcon } from 'src/utils/attachments';
-import { useQuasar } from 'quasar';
-import TaskChangeStatusDialog from 'src/components/TaskChangeStatusDialog.vue';
-import type { TaskDetailDto, TaskStatus } from 'src/types/task';
-import { getTagTextContrastColor } from 'src/utils/tagColorContrast';
 import { normalizeId } from 'src/utils/normalizeId';
-import { useCopyClipboard } from 'src/composables/useCopyClipboard';
+import type { TaskDetailDto, TaskStatus } from 'src/types/task';
 
-const $q = useQuasar();
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmDelete, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
-
 const { isCopied: idCopied, copyToClipboard } = useCopyClipboard();
+
 const task = ref<TaskDetailDto | null>(null);
 const taskId = String(route.params.id || '');
-const attachmentItems = ref<AttachmentSummaryDto[]>([]);
-const attachmentTotal = ref(0);
-const isLoadingAttachments = ref(false);
+const detailsTab = ref<'description' | 'attachments' | 'time_entries'>('description');
+const timeEntriesTabRef = ref<InstanceType<typeof TaskTimeEntriesTab> | null>(null);
 
-const attachmentQuery = reactive<QueryPayload>({
-  page: 1,
-  limit: 10,
-  order_by: 'created_at',
-  order_asc: false,
-  filters: [],
-});
-
-const attachmentListItems = computed<AttachmentListItem[]>(() => {
-  return attachmentItems.value.map((attachment) => ({
-    id: attachment.id,
-    name: attachment.original_name,
-    sizeLabel: formatStorageBytes(attachment.size_bytes),
-    icon: resolveAttachmentIcon(attachment),
-  }));
-});
-
-const attachmentTotalPages = computed(() => {
-  if (attachmentTotal.value <= 0 || attachmentQuery.limit <= 0) return 1;
-  return Math.max(1, Math.ceil(attachmentTotal.value / attachmentQuery.limit));
-});
-
-const formatDate = (value: string, fallback = t('common.empty')) =>
-  formatDateByPreferences(value, {
+const formatDate = (val: string) =>
+  formatDateByPreferences(val, {
     timezone: userPreferencesStore.timezone,
     dateFormat: userPreferencesStore.dateFormat,
-    fallback,
   });
 
 const statusLabel = (status: TaskStatus) => {
-  switch (status) {
-    case 'todo':
-      return t('tasks.detail.status.todo');
-    case 'in_progress':
-      return t('tasks.detail.status.in_progress');
-    case 'review':
-      return t('tasks.detail.status.review');
-    case 'done':
-      return t('tasks.detail.status.done');
-    default:
-      return status;
-  }
-};
-
-const openAttachment = (attachmentId: string) => {
-  window.open(AttachmentsService.buildRawUrl(attachmentId), '_blank', 'noopener');
-};
-
-const fetchAttachments = async () => {
-  isLoadingAttachments.value = true;
-
-  try {
-    const payload: QueryPayload = {
-      page: attachmentQuery.page,
-      limit: attachmentQuery.limit,
-      order_by: attachmentQuery.order_by,
-      order_asc: attachmentQuery.order_asc,
-      filters: [...attachmentQuery.filters],
-    };
-
-    const response = await AttachmentsService.searchByTask(taskId, payload);
-    attachmentItems.value = response.items;
-    attachmentTotal.value = response.total;
-  } catch (err: unknown) {
-    notifyError(t('attachments.table.loadError'), err);
-  } finally {
-    isLoadingAttachments.value = false;
-  }
-};
-
-const onAttachmentsPageChange = (page: number) => {
-  attachmentQuery.page = page;
-  void fetchAttachments();
-};
-
-const removeAttachment = async (attachmentId: string) => {
-  const attachment = attachmentItems.value.find((item) => item.id === attachmentId);
-  const deleteTarget = attachment
-    ? t('attachments.table.deleteTarget', { name: attachment.original_name })
-    : t('attachments.table.deleteTargetFallback');
-
-  const confirmed = await confirmDelete(deleteTarget);
-  if (!confirmed) return;
-
-  showLoading(t('attachments.table.deleting'));
-  try {
-    await AttachmentsService.delete(attachmentId);
-
-    if (attachmentItems.value.length === 1 && attachmentQuery.page > 1) {
-      attachmentQuery.page -= 1;
-    }
-
-    await fetchAttachments();
-    notify(t('attachments.table.deleteSuccess'), 'positive');
-  } catch (err: unknown) {
-    notifyError(t('attachments.table.deleteError'), err);
-  } finally {
-    hideLoading();
-  }
-};
-
-const updateTaskStatus = async (taskStatus: TaskStatus = 'in_progress') => {
-  if (!task.value) return;
-  showLoading(t('tasks.detail.updatingTask'));
-
-  try {
-    await TasksService.changeStatus(task.value.id, taskStatus);
-    task.value.status = taskStatus;
-    notify(t('tasks.detail.taskStartedSuccess'), 'positive');
-  } catch (err: unknown) {
-    notifyError(t('tasks.detail.changeStatusError'), err);
-  } finally {
-    hideLoading();
-  }
-};
-
-const openChangeStatusDialog = () => {
-  $q.dialog({
-    component: TaskChangeStatusDialog,
-  }).onOk((selectedValue: TaskStatus) => {
-    if (!task.value) return;
-    updateTaskStatus(selectedValue);
-  });
+  const map: Record<string, string> = {
+    todo: 'TODO',
+    in_progress: 'In Progress',
+    review: 'Review',
+    done: 'Done',
+  };
+  return map[status] || status;
 };
 
 const loadTask = async () => {
-  showLoading(t('tasks.detail.loadTask'));
+  showLoading();
   try {
     task.value = await TasksService.getById(taskId);
-  } catch (err: unknown) {
+  } catch (err) {
     notifyError(t('tasks.detail.loadError'), err);
-    void router.push('/tasks');
+    router.push('/tasks');
   } finally {
     hideLoading();
   }
 };
 
-const goBack = () => {
-  void router.push('/tasks');
-};
-
-const goToEdit = () => {
+const updateTaskStatus = async (status: TaskStatus) => {
   if (!task.value) return;
-  void router.push(`/tasks/${task.value.id}/edit`);
+  showLoading();
+  try {
+    await TasksService.changeStatus(task.value.id, status);
+    task.value.status = status;
+    notify(t('common.success'), 'positive');
+  } catch (err) {
+    notifyError(t('common.error'), err);
+  } finally {
+    hideLoading();
+  }
 };
 
 const removeTask = async () => {
-  if (!task.value) return;
-
-  const confirmed = await confirmDelete(t('tasks.detail.deleteTarget'));
-  if (!confirmed) return;
-
-  showLoading(t('tasks.detail.deleting'));
+  if (!(await confirmDelete(t('tasks.detail.deleteTarget')))) return;
+  showLoading();
   try {
-    await TasksService.delete(task.value.id);
-    notify(t('tasks.detail.deleteSuccess'), 'positive');
-    void router.push('/tasks');
-  } catch (err: unknown) {
-    notifyError(t('tasks.detail.deleteError'), err);
+    await TasksService.delete(taskId);
+    router.push('/tasks');
+  } catch (err) {
+    notifyError(t('common.error'), err);
   } finally {
     hideLoading();
   }
 };
 
-onMounted(() => {
-  void loadTask();
-  void fetchAttachments();
-});
+const goBack = () => router.push('/tasks');
+const goToEdit = () => router.push(`/tasks/${taskId}/edit`);
+
+onMounted(() => loadTask());
 </script>

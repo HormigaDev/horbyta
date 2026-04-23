@@ -2,6 +2,7 @@
 
 pub mod prelude;
 
+pub mod activities;
 pub mod attachments;
 pub mod categories;
 pub mod change_requests;
@@ -16,4 +17,5 @@ pub mod seq_by_user;
 pub mod tags;
 pub mod task_tags;
 pub mod tasks;
+pub mod time_entries;
 pub mod users;

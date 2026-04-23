@@ -25,6 +25,16 @@
               {{ statusLabel(changeRequest.status) }}
             </span>
           </div>
+          <div
+            class="text-caption q-mb-xs"
+            style="color: var(--text-muted)"
+            v-if="changeRequest && changeRequest.status === 'declined'"
+          >
+            {{ $t('changeRequests.form.declineReasonLabel') }}
+            <span style="color: var(--text-color)">
+              {{ $t(`changeRequests.decline_reason.${changeRequest.decline_reason}`) }}
+            </span>
+          </div>
           <div class="text-caption" style="color: var(--text-muted)" v-if="changeRequest">
             {{
               t('changeRequests.detail.meta', {
@@ -108,7 +118,7 @@
 
             <div class="col-12 col-md-4">
               <div class="text-caption" style="color: var(--text-muted)">
-                {{ t('changeRequests.form.versionLabel', { version: 0 }) }}
+                {{ t('changeRequests.form.versionLabel') }}
               </div>
               <div style="color: var(--text-color)">{{ changeRequest.version }}</div>
             </div>

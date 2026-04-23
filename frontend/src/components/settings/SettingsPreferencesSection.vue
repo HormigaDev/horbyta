@@ -103,6 +103,18 @@
           @filter="filterTimezoneOptions"
         />
       </div>
+
+      <div class="col-12 col-md-3">
+        <NumericTextInput
+          v-model="form.maxDailyHours"
+          :label="t('settings.preferences.maxDailyHoursLabel')"
+          :only-integers="true"
+          :decimal-places="0"
+        />
+        <div class="text-caption q-mt-xs" style="color: var(--text-muted)">
+          {{ t('settings.preferences.maxDailyHoursHint') }}
+        </div>
+      </div>
     </q-card-section>
 
     <q-card-actions align="right">
@@ -120,6 +132,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import NumericTextInput from 'src/components/NumericTextInput.vue';
 import { UsersService } from 'src/services/users';
 import { useUI } from 'src/composables/useUI';
 import { COMMON_TIMEZONES } from 'src/data/constants';
@@ -192,6 +205,7 @@ const form = reactive({
   dateFormat: 'DD/MM/YYYY' as UserDateFormatPreference,
   aiModel: 'google/gemini-2.5-flash',
   aiApiKey: '',
+  maxDailyHours: '8',
 });
 
 function toTimezoneOptions(values: string[]): SelectOption[] {
@@ -240,6 +254,16 @@ async function savePreferences() {
     return;
   }
 
+  const normalizedMaxDailyHours = Number(form.maxDailyHours);
+  if (
+    !Number.isInteger(normalizedMaxDailyHours) ||
+    normalizedMaxDailyHours < 1 ||
+    normalizedMaxDailyHours > 14
+  ) {
+    notify(t('settings.preferences.invalidMaxDailyHours'), 'warning');
+    return;
+  }
+
   isSaving.value = true;
 
   try {
@@ -248,6 +272,7 @@ async function savePreferences() {
       timezone: form.timezone,
       date_format: form.dateFormat,
       language: form.language,
+      max_daily_hours: normalizedMaxDailyHours,
       ai_model: form.aiModel,
     };
     const apiKey = form.aiApiKey.trim();
@@ -281,6 +306,7 @@ watch(
     form.dateFormat = value.date_format ?? 'DD/MM/YYYY';
     form.aiModel = value.ai.model;
     form.aiApiKey = '';
+    form.maxDailyHours = String(value.max_daily_hours ?? 8);
 
     ensureTimezoneOption(value.timezone);
   },

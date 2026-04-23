@@ -27,6 +27,8 @@ export const messages = {
   'common.goback': 'Volver',
   'common.copyToClipboard': 'Copiar al portapapeles',
   'common.copied': 'Copiado',
+  'common.minutes': 'Minutos',
+  'common.hours': 'Horas',
 
   'auth.login.brand': 'HormigaPM',
   'auth.login.subtitle': 'Ingreso al sistema',
@@ -197,7 +199,8 @@ export const messages = {
   'changeRequests.form.impactHoursLabel': 'Impacto (horas)',
   'changeRequests.form.impactCostLabel': 'Impacto (costo)',
   'changeRequests.form.scheduleImpactDaysLabel': 'Impacto (días)',
-  'changeRequests.form.versionLabel': 'Versión: {version}',
+  'changeRequests.form.versionLabel': 'Versión',
+  'changeRequests.form.declineReasonLabel': 'Motivo del rechazo:',
   'changeRequests.form.specReadonlyClientOrigin':
     'Esta solicitud fue creada por el cliente y solo el cliente puede editar su especificación.',
   'changeRequests.form.approvedTaskOnly':
@@ -245,6 +248,7 @@ export const messages = {
   'changeRequests.detail.assessDialogTitle': 'Evaluar solicitud de cambio',
   'changeRequests.detail.assessDialogSave': 'Guardar evaluación',
   'changeRequests.detail.assessDialogAssessmentLabel': 'Evaluación técnica *',
+  'changeRequests.detail.decline_reason': 'Motivo del rechazo',
 
   'changeRequests.status.draft': 'Borrador',
   'changeRequests.status.submitted': 'Enviada',
@@ -255,6 +259,20 @@ export const messages = {
   'changeRequests.status.cancelled': 'Cancelada',
   'changeRequests.origin.freelancer_dashboard': 'Freelancer',
   'changeRequests.origin.client_portal': 'Portal cliente',
+  'changeRequests.decline_reason.budget_exceeded': 'Supera el presupuesto actual',
+  'changeRequests.decline_reason.roi_not_justified': 'El costo es mayor al beneficio esperado',
+  'changeRequests.decline_reason.schedule_too_long': 'Toma demasiado tiempo implementarlo',
+  'changeRequests.decline_reason.jeopardizes_main_deadline':
+    'Pone en riesgo la fecha de lanzamiento principal',
+  'changeRequests.decline_reason.postponed_to_next_phase':
+    'Lo pospondremos para una versión/fase futura',
+  'changeRequests.decline_reason.rethinking_requirements':
+    'Necesitamos redefinir este requerimiento internamente',
+  'changeRequests.decline_reason.not_necessary_anymore': 'Ya no es necesario',
+  'changeRequests.decline_reason.will_solve_internally':
+    'Lo resolveremos con nuestro equipo/otra herramienta',
+  'changeRequests.decline_reason.thought_it_was_included':
+    'Pensé que esto estaba incluido en el alcance original',
 
   'client.changeRequests.list.title': 'Solicitudes de cambio',
   'client.changeRequests.list.loadError': 'No se pudieron cargar las solicitudes de cambio',
@@ -302,6 +320,7 @@ export const messages = {
     'Esta acción cambiará el estado a cancelado. ¿Deseas continuar?',
   'client.changeRequests.detail.onlyDecisionAfterAssessed':
     'La solicitud fue evaluada y solo puedes aprobarla o declinarla.',
+  'client.changeRequests.detail.decline.title': 'Elige el motivo del rechazo',
 
   'milestones.list.title': 'Hitos',
   'milestones.list.selectOneToEdit': 'Selecciona un solo hito para editar.',
@@ -478,6 +497,18 @@ export const messages = {
   'categories.messages.deleteSuccess': 'Categorías eliminadas correctamente',
   'categories.messages.deleteError': 'Error al eliminar las categorías',
 
+  'activities.list.title': 'Actividades',
+  'activities.dialog.newTitle': 'Nueva actividad',
+  'activities.dialog.editTitle': 'Editar actividad',
+  'activities.dialog.nameLabel': 'Nombre de la actividad *',
+  'activities.messages.getError': 'Error al obtener la actividad',
+  'activities.messages.createSuccess': 'Actividad creada correctamente',
+  'activities.messages.updateSuccess': 'Actividad actualizada correctamente',
+  'activities.messages.saveError': 'Error al guardar la actividad',
+  'activities.messages.deleteTarget': '{count} actividad(es)',
+  'activities.messages.deleteSuccess': 'Actividades eliminadas correctamente',
+  'activities.messages.deleteError': 'Error al eliminar las actividades',
+
   'tags.list.title': 'Etiquetas',
   'tags.dialog.newTitle': 'Nueva etiqueta',
   'tags.dialog.editTitle': 'Editar etiqueta',
@@ -591,9 +622,15 @@ export const messages = {
   'tasks.detail.noTags': 'Sin etiquetas',
   'tasks.detail.descriptionTitle': 'Descripción de la tarea',
   'tasks.detail.emptyDescription': '*Esta tarea no tiene descripción.*',
+  'tasks.detail.tabs.description': 'Descripción',
+  'tasks.detail.tabs.attachments': 'Adjuntos',
+  'tasks.detail.tabs.timeEntries': 'Entradas de tiempo',
   'tasks.detail.action.back': 'Volver a lista',
   'tasks.detail.action.startTask': 'Iniciar tarea',
   'tasks.detail.action.changeStatus': 'Cambiar estado',
+  'tasks.detail.action.logManualTime': 'Registrar tiempo manual',
+  'tasks.detail.action.startTimer': 'Iniciar cronómetro',
+  'tasks.detail.action.stopTimer': 'Detener cronómetro',
   'tasks.detail.action.edit': 'Editar',
   'tasks.detail.action.delete': 'Eliminar',
   'tasks.detail.loadTask': 'Cargando tarea...',
@@ -613,10 +650,59 @@ export const messages = {
   'tasks.detail.changeTaskStatus': 'Cambiar estado de la tarea',
   'tasks.detail.taskStatus': 'Estado de la tarea',
 
+  'tasks.timeEntries.title': 'Entradas de tiempo registradas',
+  'tasks.timeEntries.emptyList': 'No hay entradas de tiempo para esta tarea.',
+  'tasks.timeEntries.emptyNotes': 'Sin observaciones',
+  'tasks.timeEntries.paginationMeta': 'Página {page} de {max} · {total} registro(s)',
+  'tasks.timeEntries.fetchError': 'Error al obtener las entradas de tiempo',
+  'tasks.timeEntries.activeTimerError': 'Error al consultar el cronómetro activo',
+  'tasks.timeEntries.activeTimerMeta': '{activity} · iniciado {startedAt}',
+  'tasks.timeEntries.activeTimerBanner':
+    'Cronómetro activo en esta tarea: {activity} · iniciado {startedAt}',
+  'tasks.timeEntries.activeTimerOtherTask': 'Existe un cronómetro activo en otra tarea',
+  'tasks.timeEntries.stoppingTimer': 'Deteniendo cronómetro...',
+  'tasks.timeEntries.manualCreateSuccess': 'Entrada de tiempo registrada correctamente',
+  'tasks.timeEntries.manualCreateError': 'No se pudo registrar la entrada de tiempo',
+  'tasks.timeEntries.timerStartSuccess': 'Cronómetro iniciado correctamente',
+  'tasks.timeEntries.timerStartError': 'No se pudo iniciar el cronómetro',
+  'tasks.timeEntries.timerStopSuccess': 'Cronómetro detenido correctamente',
+  'tasks.timeEntries.timerStopError': 'No se pudo detener el cronómetro',
+  'tasks.timeEntries.dailyLimitReached':
+    'Ya alcanzaste el límite diario de {limitHours} horas para esa fecha.',
+  'tasks.timeEntries.dailyLimitWouldExceed':
+    'La entrada de tiempo excede el límite diario de {limitHours} horas para esa fecha.',
+  'tasks.timeEntries.deleteTarget': '{count} entrada(s) de tiempo',
+  'tasks.timeEntries.deleteSuccess': 'Entradas de tiempo eliminadas correctamente',
+  'tasks.timeEntries.deleteError': 'Error al eliminar las entradas de tiempo',
+  'tasks.timeEntries.updateSuccess': 'Entrada de tiempo actualizada correctamente',
+  'tasks.timeEntries.updateError': 'No se pudo actualizar la entrada de tiempo',
+  'tasks.timeEntries.loadError': 'No se pudo cargar la entrada de tiempo',
+  'tasks.timeEntries.dialog.manualTitle': 'Registrar tiempo manual',
+  'tasks.timeEntries.dialog.timerTitle': 'Iniciar cronómetro',
+  'tasks.timeEntries.dialog.editTitle': 'Editar entrada de tiempo',
+  'tasks.timeEntries.dialog.viewTitle': 'Detalles de la entrada de tiempo',
+  'tasks.timeEntries.dialog.activityLabel': 'Actividad *',
+  'tasks.timeEntries.dialog.durationLabel': 'Duración (minutos) *',
+  'tasks.timeEntries.dialog.workDateLabel': 'Fecha de trabajo *',
+  'tasks.timeEntries.dialog.notesLabel': 'Observaciones',
+  'tasks.timeEntries.dialog.notesHint':
+    'Las observaciones se guardan como texto plano. No renderizan markdown.',
+  'tasks.timeEntries.dialog.saveManualAction': 'Registrar',
+  'tasks.timeEntries.dialog.saveEditAction': 'Guardar cambios',
+  'tasks.timeEntries.dialog.startTimerAction': 'Iniciar',
+  'tasks.timeEntries.dialog.validation.activityRequired': 'Selecciona una actividad',
+  'tasks.timeEntries.dialog.validation.durationRequired':
+    'La duración debe ser un número entero mayor o igual a 1',
+  'tasks.timeEntries.dialog.validation.workDateRequired': 'La fecha de trabajo es obligatoria',
+  'tasks.timeEntries.dialog.validation.activeTimerEdit':
+    'No se puede editar un cronómetro activo. Detenlo primero.',
+  'tasks.timeEntries.saveError': 'Error al guardar la entrada de tiempo',
+
   'settings.app.title': 'Configuraciones de la aplicación',
   'settings.app.subtitle': 'Propiedades esenciales para el funcionamiento de la app',
   'settings.app.tags': 'Etiquetas',
   'settings.app.categories': 'Categorías',
+  'settings.app.activities': 'Actividades',
 
   'settings.page.title': 'Configuraciones',
   'settings.page.subtitle': 'Define tus preferencias, datos de usuario y notificaciones.',
@@ -646,8 +732,13 @@ export const messages = {
   'settings.preferences.aiApiKeyLabel': 'API key de OpenRouter',
   'settings.preferences.aiApiKeyConfigured': 'API key configurada',
   'settings.preferences.aiApiKeyMissing': 'API key no configurada',
+  'settings.preferences.maxDailyHoursLabel': 'Máximo de horas diarias',
+  'settings.preferences.maxDailyHoursHint':
+    'Se aplica tu preferencia, pero nunca puede superar el techo global de 14 horas.',
   'settings.preferences.saveButton': 'Guardar preferencias',
   'settings.preferences.invalidTimezone': 'Debes seleccionar una timezone válida',
+  'settings.preferences.invalidMaxDailyHours':
+    'El máximo diario debe ser un número entero entre 1 y 14.',
   'settings.preferences.success': 'Preferencias actualizadas',
   'settings.preferences.error': 'No se pudieron guardar las preferencias',
   'settings.preferences.theme.system': 'Sistema',
@@ -739,6 +830,9 @@ export const messages = {
   'columns.project.created_at': 'Creado',
   'columns.project.updated_at': 'Actualizado',
   'columns.category.name': 'Nombre',
+  'columns.activity.name': 'Nombre',
+  'columns.activity.created_at': 'Creado',
+  'columns.activity.updated_at': 'Actualizado',
   'columns.tag.name': 'Nombre',
   'columns.tag.color': 'Color',
   'columns.milestone.name': 'Nombre',
@@ -770,6 +864,15 @@ export const messages = {
   'columns.attachment.mime_type': 'Tipo',
   'columns.attachment.size_bytes': 'Tamaño',
   'columns.attachment.created_at': 'Subido',
+  'columns.timeEntry.id': 'ID',
+  'columns.timeEntry.activity': 'Actividad',
+  'columns.timeEntry.duration_minutes': 'Duración',
+  'columns.timeEntry.work_date': 'Fecha de trabajo',
+  'columns.timeEntry.start_time': 'Inicio',
+  'columns.timeEntry.end_time': 'Fin',
+  'columns.timeEntry.notes': 'Observaciones',
+  'columns.timeEntry.created_at': 'Creado',
+  'columns.timeEntry.updated_at': 'Actualizado',
 
   'chatbot.panel.chats': 'Chats',
   'chatbot.panel.newChatDisabled': 'Envía al menos un mensaje para crear otro chat',
@@ -871,6 +974,35 @@ export const messages = {
     'La prioridad de la tarea debe estar entre 1 y 4.',
   'backendErrors.task complexity must be between 1 and 4':
     'La complejidad de la tarea debe estar entre 1 y 4.',
+  'backendErrors.duration_minutes must be at least 1':
+    'La duración en minutos debe ser mayor o igual a 1.',
+  'backendErrors.notes must be at most 1000 characters':
+    'Las observaciones deben tener máximo 1000 caracteres.',
+  'backendErrors.Ya existe un cronometro activo para este usuario':
+    'Ya existe un cronómetro activo para este usuario.',
+  'backendErrors.El registro de tiempo no corresponde a un cronometro iniciado':
+    'El registro de tiempo no corresponde a un cronómetro iniciado.',
+  'backendErrors.El cronometro ya fue detenido previamente':
+    'El cronómetro ya fue detenido previamente.',
+  'backendErrors.La hora de finalizacion debe ser posterior al inicio':
+    'La hora de finalización debe ser posterior al inicio.',
+  'backendErrors.La duracion del cronometro debe ser de al menos 1 minuto':
+    'La duración del cronómetro debe ser de al menos 1 minuto.',
+  'backendErrors.No puedes registrar mas horas en este dia':
+    'No puedes registrar más horas en este día.',
+  'backendErrors.La entrada de tiempo excede el limite diario configurado':
+    'La entrada de tiempo excede el límite diario configurado.',
+  'backendErrors.No puedes registrar mas de 14 horas en un mismo dia':
+    'Ya alcanzaste el límite diario de 14 horas para esa fecha.',
+  'backendErrors.La entrada de tiempo excede el limite diario de 14 horas':
+    'La entrada de tiempo excede el límite diario de 14 horas.',
+  'backendErrors.max daily hours must be between 1 and 14':
+    'El máximo diario debe estar entre 1 y 14 horas.',
+  'backendErrors.La duracion calculada excede el limite permitido':
+    'La duración calculada excede el límite permitido.',
+  'backendErrors.Registro de tiempo no encontrado': 'Registro de tiempo no encontrado.',
+  'backendErrors.Tarea invalida o sin permisos': 'Tarea inválida o sin permisos.',
+  'backendErrors.Actividad invalida o sin permisos': 'Actividad inválida o sin permisos.',
   'backendErrors.client name must be between 1 and 255 characters':
     'El nombre del cliente debe tener entre 1 y 255 caracteres.',
   'backendErrors.client email must be a valid email address': 'El correo del cliente no es válido.',

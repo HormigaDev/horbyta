@@ -269,7 +269,7 @@ pub struct AssessChangeRequestDto {
     pub schedule_impact_days: i32,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct AssignChangeRequestTaskDto {
     pub task_id: Option<Uuid>,
@@ -278,7 +278,7 @@ pub struct AssignChangeRequestTaskDto {
     pub version: i32,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct ClientCreateChangeRequestDto {
     pub project_id: Uuid,
@@ -298,7 +298,7 @@ pub struct ClientCreateChangeRequestDto {
     pub client_request_description: String,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct ClientUpdateChangeRequestDto {
     #[validate(length(
@@ -319,18 +319,24 @@ pub struct ClientUpdateChangeRequestDto {
     pub version: i32,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct ClientCancelChangeRequestDto {
     #[validate(range(min = 1, message = "version must be at least 1"))]
     pub version: i32,
 }
 
-#[derive(Debug, Deserialize, Validate, Default)]
+#[derive(Deserialize, Validate, Default)]
 #[serde(deny_unknown_fields)]
 pub struct ClientApproveChangeRequestDto {
     #[validate(custom(function = "validate_signature_ip"))]
     pub client_signature_ip: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ClientDeclineChangeRequestDto {
+    pub decline_reason: ChangeRequestDeclineReason,
 }
 
 #[derive(Debug, Serialize, FromQueryResult)]
@@ -367,6 +373,7 @@ pub struct ChangeRequestDetailDto {
     pub schedule_impact_days: i32,
     pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
+    pub decline_reason: Option<ChangeRequestDeclineReason>,
     pub client_approved_at: Option<DateTimeWithTimeZone>,
     pub client_signature_ip: Option<String>,
     pub created_at: DateTimeWithTimeZone,
@@ -402,6 +409,7 @@ pub struct ClientChangeRequestDetailDto {
     pub schedule_impact_days: i32,
     pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
+    pub decline_reason: Option<ChangeRequestDeclineReason>,
     pub client_approved_at: Option<DateTimeWithTimeZone>,
     pub client_signature_ip: Option<String>,
     pub created_at: DateTimeWithTimeZone,
@@ -427,6 +435,7 @@ pub struct ChangeRequestDetailRow {
     pub schedule_impact_days: i32,
     pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
+    pub decline_reason: Option<String>,
     pub client_approved_at: Option<DateTimeWithTimeZone>,
     pub client_signature_ip: Option<String>,
     pub created_at: DateTimeWithTimeZone,
@@ -449,6 +458,7 @@ pub struct ClientChangeRequestDetailRow {
     pub schedule_impact_days: i32,
     pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
+    pub decline_reason: Option<String>,
     pub client_approved_at: Option<DateTimeWithTimeZone>,
     pub client_signature_ip: Option<String>,
     pub created_at: DateTimeWithTimeZone,
@@ -472,5 +482,19 @@ string_enum!(
     pub enum ChangeRequestOrigin {
         FreelancerDashboard,
         ClientPortal,
+    }
+);
+
+string_enum!(
+    pub enum ChangeRequestDeclineReason {
+        BudgetExceeded,
+        RoiNotJustified,
+        ScheduleTooLong,
+        JeopardizesMainDeadline,
+        PostponedToNextPhase,
+        RethinkingRequirements,
+        NotNecessaryAnymore,
+        WillSolveInternally,
+        ThoughtItWasIncluded,
     }
 );

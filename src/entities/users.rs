@@ -21,6 +21,8 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(has_many = "super::activities::Entity")]
+    Activities,
     #[sea_orm(has_many = "super::attachments::Entity")]
     Attachments,
     #[sea_orm(has_many = "super::categories::Entity")]
@@ -45,6 +47,14 @@ pub enum Relation {
     Tags,
     #[sea_orm(has_many = "super::tasks::Entity")]
     Tasks,
+    #[sea_orm(has_many = "super::time_entries::Entity")]
+    TimeEntries,
+}
+
+impl Related<super::activities::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Activities.def()
+    }
 }
 
 impl Related<super::attachments::Entity> for Entity {
@@ -116,6 +126,12 @@ impl Related<super::tags::Entity> for Entity {
 impl Related<super::tasks::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Tasks.def()
+    }
+}
+
+impl Related<super::time_entries::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::TimeEntries.def()
     }
 }
 

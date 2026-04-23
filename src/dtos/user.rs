@@ -50,6 +50,7 @@ fn validate_non_empty_preferences_patch(payload: &UpdateUserPreferencesDto) -> R
         && payload.language.is_none()
         && payload.ai_model.is_none()
         && payload.ai_api_key.is_none()
+        && payload.max_daily_hours.is_none()
     {
         return Err(ValidationError::new("empty_preferences_patch"));
     }
@@ -231,8 +232,14 @@ pub struct UserPreferences {
     pub timezone: String,
     pub date_format: UserDateFormatPreference,
     pub language: UserLanguagePreference,
+    #[serde(default = "default_max_daily_hours")]
+    pub max_daily_hours: i32,
     pub ai: UserAiPreferences,
     pub notifications: NotificationPreferences,
+}
+
+fn default_max_daily_hours() -> i32 {
+    8
 }
 
 impl Default for UserPreferences {
@@ -242,6 +249,7 @@ impl Default for UserPreferences {
             timezone: "UTC".to_string(),
             date_format: UserDateFormatPreference::DdMmYyyy,
             language: UserLanguagePreference::Es,
+            max_daily_hours: default_max_daily_hours(),
             ai: UserAiPreferences::default(),
             notifications: NotificationPreferences::default(),
         }
@@ -279,6 +287,10 @@ impl UserPreferences {
 
         if let Some(language) = patch.language {
             self.language = language;
+        }
+
+        if let Some(max_daily_hours) = patch.max_daily_hours {
+            self.max_daily_hours = max_daily_hours;
         }
 
         if let Some(model) = patch.ai_model.as_ref() {
@@ -405,6 +417,9 @@ pub struct UpdateUserPreferencesDto {
 
     #[validate(length(min = 8, max = 4096, message = "ai api key must be between 8 and 4096 characters"))]
     pub ai_api_key: Option<String>,
+
+    #[validate(range(min = 1, max = 14, message = "max daily hours must be between 1 and 14"))]
+    pub max_daily_hours: Option<i32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, Default)]

@@ -1,6 +1,8 @@
 use sea_orm::prelude::Decimal;
 use validator::ValidationError;
 
+use crate::error::AppError;
+
 pub fn is_numeric(s: &str) -> Result<(), ValidationError> {
     if s.chars().all(|c| c.is_ascii_digit()) {
         Ok(())
@@ -36,3 +38,5 @@ pub fn is_non_negative_decimal(decimal: &Decimal) -> Result<(), ValidationError>
 
     Ok(())
 }
+
+pub type AppResult<T> = Result<T, AppError>;

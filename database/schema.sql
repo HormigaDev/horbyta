@@ -178,6 +178,38 @@ create table tasks (
     constraint chk_tasks_parent_id check (parent_id <> id)
 );
 
+create table activities (
+    id uuid primary key default uuidv7(),
+    user_id uuid not null references users (id) on delete cascade,
+    name varchar(100) not null,
+
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+create table time_entries (
+    id uuid primary key default uuidv7(),
+    user_id uuid not null references users (id) on delete cascade,
+    task_id uuid not null references tasks (id) on delete cascade,
+    activity uuid not null references activities (id) on delete restrict,
+    start_time timestamptz,
+    end_time timestamptz,
+    duration_minutes integer not null default 0,
+    work_date date not null default current_date,
+    notes text,
+
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint chk_time_entries_logic check (
+        (start_time is not null and end_time is null and duration_minutes = 0)
+        or
+        (start_time is not null and end_time is not null and end_time > start_time and duration_minutes > 0)
+        or
+        (start_time is null and end_time is null and duration_minutes > 0)
+    )
+);
+
 create table task_tags (
     task_id uuid not null references tasks (id) on delete cascade,
     tag_id uuid not null references tags (id) on delete cascade,
@@ -222,6 +254,7 @@ create table change_requests (
     schedule_impact_days integer not null default 0,
 
     status varchar(30) not null default 'draft',
+    decline_reason varchar(100),
 
     client_approved_at timestamptz,
     client_signature_ip varchar(45),
@@ -241,6 +274,22 @@ create table change_requests (
             'declined',
             'implemented',
             'cancelled'
+        )
+    ),
+    constraint chk_change_requests_decline_reason check (
+        decline_reason is null or decline_reason in (
+            'budget_exceeded',
+            'roi_not_justified',
+
+            'schedule_too_long',
+            'jeopardizes_main_deadline',
+
+            'postponed_to_next_phase',
+            'rethinking_requirements',
+            'not_necessary_anymore',
+            
+            'will_solve_internaly',
+            'thought_it_was_included'
         )
     )
 );
@@ -336,6 +385,12 @@ create index idx_tasks_user_due_date on tasks(user_id, due_date);
 create index idx_tasks_user_created_at on tasks(user_id, created_at desc);
 create index idx_tasks_user_updated_at on tasks(user_id, updated_at desc);
 create index idx_task_tags_tag_id on task_tags(tag_id);
+create unique index idx_activities_name_per_user on activities(user_id, lower(name));
+create index idx_activities_user_created_at on activities(user_id, created_at desc);
+create index idx_activities_user_updated_at on activities(user_id, updated_at desc);
+create index idx_time_entries_task on time_entries(task_id);
+create index idx_time_entries_user on time_entries(user_id);
+create index idx_time_entries_created_at on time_entries(user_id, created_at desc);
 create index idx_conversation_history_user on conversation_history(user_id);
 create index idx_conversation_history_user_title on conversation_history(user_id, title);
 create index idx_conversation_history_user_created_at on conversation_history(user_id, created_at desc);
@@ -383,7 +438,10 @@ begin
         'clients',
         'client_auth',
         'attachments',
-        'change_requests'
+        'change_requests',
+        'project_billing',
+        'activities',
+        'time_entries'
     ]
     loop
         execute format(
@@ -463,6 +521,50 @@ for each row
 execute function fn_increment_cr_version();
 
 -- ---------------------------------
+-- TRIGGER TIME ENTRIES
+-- ---------------------------------
+
+create or replace function fn_check_daily_hours_limit()
+returns trigger language plpgsql as $$
+declare
+    total_minutes_registered integer;
+    user_max_minutes integer;
+begin
+    select (
+        least(
+            greatest(coalesce((preferences->>'max_daily_hours')::integer, 8), 1),
+            14
+        ) * 60
+    )
+    into user_max_minutes
+    from users
+    where id = new.user_id;
+
+    select coalesce(sum(duration_minutes), 0)
+    into total_minutes_registered
+    from time_entries
+    where user_id = new.user_id
+        and work_date = new.work_date
+        and (TG_OP = 'INSERT' or id <> new.id);
+
+    if (total_minutes_registered + new.duration_minutes) > user_max_minutes then
+        raise exception 'daily_limit_exceeded: personal limit exceeded. yout maximum is % hours. you are trying to add % hours to a day that already has % hours',
+            (user_max_minutes / 60),
+            round(new.duration_minutes / 60.0, 1),
+            round(total_minutes_registered / 60.0, 1)
+        using hint = 'Check if you left a timer running, or adjust your maximum hours settings.';
+    end if;
+
+    return new;
+end;
+$$;
+
+create trigger trg_check_daily_hours_limit
+before insert or update on time_entries
+for each row
+execute function fn_check_daily_hours_limit();
+
+-- ---------------------------------
 -- COMMENTS
 -- ---------------------------------
 
@@ -480,6 +582,8 @@ comment on table client_auth is 'Table containing client authentication data for
 comment on table seq_by_user is 'Sequences of tables with incremental numeric fields';
 comment on table attachments is 'Attachments uploaded by users. Can be linked to tasks or directly to projects. Stores metadata and the path (storage_key) for the ObjectStore.';
 comment on table change_requests is 'Transactional Anti-Scope-Creep engine. Forces the client to formally accept cost overruns and delays through a state action, eliminating negotiation by chat.';
+comment on table activities is 'User-defined activities for time tracking (e.g. Design, Coding, Meeting). Used to categorize time entries.';
+comment on table time_entries is 'Time tracking entries. Each entry is linked to a task and an activity. Enforces daily hour limits per user.';
 
 comment on column tasks.parent_id is 'Recursive reference to support n-level subtasks.';
 comment on column tasks.status is 'Workflow state. Restricted to 4 predefined values by CHECK.';

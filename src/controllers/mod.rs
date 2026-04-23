@@ -1,3 +1,4 @@
+pub mod activities;
 pub mod attachments;
 pub mod auth;
 pub mod categories;
@@ -8,5 +9,6 @@ pub mod milestones;
 pub mod projects;
 pub mod tags;
 pub mod tasks;
+pub mod time_entries;
 pub mod users;
 pub mod websocket;

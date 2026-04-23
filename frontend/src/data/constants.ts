@@ -1,3 +1,5 @@
+import type { ComposerTranslation } from 'vue-i18n';
+
 export const APP_VERSION = 'v1.0.0';
 
 export const COMMON_TIMEZONES = [
@@ -94,4 +96,36 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   ZAR: 'R',
   EGP: '£',
   NGN: '₦',
+};
+
+export const getChangeRequestsDeclineReasons = (t: ComposerTranslation) => {
+  return [
+    { label: t('changeRequests.decline_reason.budget_exceeded'), value: 'budget_exceeded' },
+    { label: t('changeRequests.decline_reason.roi_not_justified'), value: 'roi_not_justified' },
+    { label: t('changeRequests.decline_reason.schedule_too_long'), value: 'schedule_too_long' },
+    {
+      label: t('changeRequests.decline_reason.jeopardized_main_deadline'),
+      value: 'jeopardized_main_deadline',
+    },
+    {
+      label: t('changeRequests.decline_reason.postponed_to_next_phase'),
+      value: 'postponed_to_next_phase',
+    },
+    {
+      label: t('changeRequests.decline_reason.rethinking_requirements'),
+      value: 'rethinking_requirements',
+    },
+    {
+      label: t('changeRequests.decline_reason.not_necessary_anymore'),
+      value: 'not_necessary_anymore',
+    },
+    {
+      label: t('changeRequests.decline_reason.will_solve_internally'),
+      value: 'will_solve_internally',
+    },
+    {
+      label: t('changeRequests.decline_reason.thought_it_was_included'),
+      value: 'thought_it_was_included',
+    },
+  ];
 };

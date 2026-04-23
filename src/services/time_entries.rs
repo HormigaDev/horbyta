@@ -1,0 +1,466 @@
+use std::collections::HashMap;
+
+use chrono::{NaiveDate, Utc};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    QuerySelect, Set, prelude::Expr,
+};
+use uuid::Uuid;
+
+use crate::{
+    dtos::{
+        query::QueryPayload,
+        time_entries::{
+            CreateTimeEntryDto, StartTimeEntryTimerDto, StopTimeEntryTimerDto, TimeEntryDetailDto, TimeEntryDetailRow,
+            TimeEntrySearchField, TimeEntrySummaryDto, UpdateTimeEntryDto,
+        },
+        user::UserPreferences,
+    },
+    entities::{
+        activities,
+        prelude::{Activities, Tasks, TimeEntries, Users},
+        tasks,
+        time_entries::{self, Model as TimeEntryModel},
+    },
+    error::AppError,
+    utils::search::{apply_filters, apply_ordering, apply_pagination},
+};
+
+pub const MAX_DAILY_DURATION_LIMIT_HOURS: i32 = 14;
+
+pub struct TimeEntryService;
+
+impl TimeEntryService {
+    pub async fn create_manual(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        dto: CreateTimeEntryDto,
+    ) -> Result<TimeEntryDetailDto, AppError> {
+        Self::ensure_task_ownership(db, user_id, dto.task_id).await?;
+        Self::ensure_activity_ownership(db, user_id, dto.activity).await?;
+
+        let work_date = dto.work_date.unwrap_or_else(|| Utc::now().date_naive());
+        let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
+
+        let total_duration = Self::get_daily_duration(db, user_id, work_date, None).await?;
+        Self::ensure_daily_duration_limit(total_duration, i64::from(dto.duration_minutes), daily_limit_minutes)?;
+
+        let entry = time_entries::ActiveModel {
+            user_id: Set(user_id),
+            task_id: Set(dto.task_id),
+            activity: Set(dto.activity),
+            start_time: Set(None),
+            end_time: Set(None),
+            duration_minutes: Set(dto.duration_minutes),
+            work_date: Set(work_date),
+            notes: Set(dto.notes),
+            ..Default::default()
+        };
+
+        let created = entry.insert(db).await.map_err(Self::map_time_entry_write_error)?;
+        Self::get_by_id(db, user_id, created.id).await
+    }
+
+    pub async fn start_timer(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        dto: StartTimeEntryTimerDto,
+    ) -> Result<TimeEntryDetailDto, AppError> {
+        Self::ensure_no_active_timer(db, user_id).await?;
+        Self::ensure_task_ownership(db, user_id, dto.task_id).await?;
+        Self::ensure_activity_ownership(db, user_id, dto.activity).await?;
+
+        let start_time = dto.start_time.unwrap_or_else(|| Utc::now().fixed_offset());
+        let work_date = dto.work_date.unwrap_or_else(|| start_time.date_naive());
+        let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
+        let total_duration = Self::get_daily_duration(db, user_id, work_date, None).await?;
+        Self::ensure_daily_duration_limit(total_duration, 0, daily_limit_minutes)?;
+
+        let entry = time_entries::ActiveModel {
+            user_id: Set(user_id),
+            task_id: Set(dto.task_id),
+            activity: Set(dto.activity),
+            start_time: Set(Some(start_time)),
+            end_time: Set(None),
+            duration_minutes: Set(0),
+            work_date: Set(work_date),
+            notes: Set(dto.notes),
+            ..Default::default()
+        };
+
+        let created = entry.insert(db).await.map_err(Self::map_time_entry_write_error)?;
+        Self::get_by_id(db, user_id, created.id).await
+    }
+
+    pub async fn stop_timer(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        id: Uuid,
+        dto: StopTimeEntryTimerDto,
+    ) -> Result<TimeEntryDetailDto, AppError> {
+        let entry = Self::find_by_id(db, user_id, id).await?;
+
+        let entry_id = entry.id;
+        let entry_work_date = entry.work_date;
+
+        let start_time = entry.start_time.ok_or_else(|| {
+            AppError::Conflict("El registro de tiempo no corresponde a un cronometro iniciado".to_string())
+        })?;
+
+        if entry.end_time.is_some() {
+            return Err(AppError::Conflict(
+                "El cronometro ya fue detenido previamente".to_string(),
+            ));
+        }
+
+        let end_time = dto.end_time.unwrap_or_else(|| Utc::now().fixed_offset());
+
+        if end_time <= start_time {
+            return Err(AppError::BadRequest(
+                "La hora de finalizacion debe ser posterior al inicio".to_string(),
+            ));
+        }
+
+        let duration_minutes_i64 = end_time.signed_duration_since(start_time).num_minutes();
+        let duration_minutes = i32::try_from(duration_minutes_i64)
+            .map_err(|_| AppError::BadRequest("La duracion calculada excede el limite permitido".to_string()))?;
+
+        if duration_minutes <= 0 {
+            return Err(AppError::BadRequest(
+                "La duracion del cronometro debe ser de al menos 1 minuto".to_string(),
+            ));
+        }
+
+        let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
+        let total_duration = Self::get_daily_duration(db, user_id, entry_work_date, Some(entry_id)).await?;
+        Self::ensure_daily_duration_limit(total_duration, i64::from(duration_minutes), daily_limit_minutes)?;
+
+        let mut active_entry: time_entries::ActiveModel = entry.into();
+        active_entry.end_time = Set(Some(end_time));
+        active_entry.duration_minutes = Set(duration_minutes);
+
+        let updated = active_entry
+            .update(db)
+            .await
+            .map_err(Self::map_time_entry_write_error)?;
+        Self::get_by_id(db, user_id, updated.id).await
+    }
+
+    pub async fn update(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        id: Uuid,
+        dto: UpdateTimeEntryDto,
+    ) -> Result<TimeEntryDetailDto, AppError> {
+        let entry = Self::find_by_id(db, user_id, id).await?;
+
+        if entry.start_time.is_some() && entry.end_time.is_none() {
+            return Err(AppError::Conflict(
+                "No se puede editar un cronometro activo".to_string(),
+            ));
+        }
+
+        Self::ensure_task_ownership(db, user_id, dto.task_id).await?;
+        Self::ensure_activity_ownership(db, user_id, dto.activity).await?;
+
+        let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
+        let total_duration = Self::get_daily_duration(db, user_id, dto.work_date, Some(entry.id)).await?;
+        Self::ensure_daily_duration_limit(total_duration, i64::from(dto.duration_minutes), daily_limit_minutes)?;
+
+        let mut active_entry: time_entries::ActiveModel = entry.into();
+        active_entry.task_id = Set(dto.task_id);
+        active_entry.activity = Set(dto.activity);
+        active_entry.duration_minutes = Set(dto.duration_minutes);
+        active_entry.work_date = Set(dto.work_date);
+        active_entry.notes = Set(dto.notes);
+
+        let updated = active_entry
+            .update(db)
+            .await
+            .map_err(Self::map_time_entry_write_error)?;
+        Self::get_by_id(db, user_id, updated.id).await
+    }
+
+    pub async fn get_active_timer(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+    ) -> Result<Option<TimeEntryDetailDto>, AppError> {
+        let active = Self::find_active_timer(db, user_id).await?;
+
+        match active {
+            Some(model) => Ok(Some(Self::get_by_id(db, user_id, model.id).await?)),
+            None => Ok(None),
+        }
+    }
+
+    pub async fn get_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<TimeEntryDetailDto, AppError> {
+        let row: TimeEntryDetailRow = TimeEntries::find()
+            .filter(time_entries::Column::Id.eq(id))
+            .filter(time_entries::Column::UserId.eq(user_id))
+            .left_join(tasks::Entity)
+            .left_join(activities::Entity)
+            .select_only()
+            .column(time_entries::Column::Id)
+            .column(time_entries::Column::UserId)
+            .column(time_entries::Column::TaskId)
+            .column(time_entries::Column::Activity)
+            .column(time_entries::Column::StartTime)
+            .column(time_entries::Column::EndTime)
+            .column(time_entries::Column::DurationMinutes)
+            .column(time_entries::Column::WorkDate)
+            .column(time_entries::Column::Notes)
+            .column(time_entries::Column::CreatedAt)
+            .column(time_entries::Column::UpdatedAt)
+            .column_as(tasks::Column::Title, "task_title")
+            .column_as(activities::Column::Name, "activity_name")
+            .into_model::<TimeEntryDetailRow>()
+            .one(db)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Registro de tiempo no encontrado".to_string()))?;
+
+        Ok(Self::map_detail_row(row))
+    }
+
+    pub async fn delete(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
+        let entry = Self::find_by_id(db, user_id, id).await?;
+
+        time_entries::ActiveModel {
+            id: Set(entry.id),
+            ..Default::default()
+        }
+        .delete(db)
+        .await
+        .map_err(AppError::Database)?;
+
+        Ok(())
+    }
+
+    pub async fn search(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        payload: QueryPayload,
+    ) -> Result<(Vec<TimeEntrySummaryDto>, u64, HashMap<String, i64>, i64), AppError> {
+        let base_condition = Condition::all().add(time_entries::Column::UserId.eq(user_id));
+        let condition = apply_filters(base_condition, &payload.filters, |column| {
+            column
+                .parse::<TimeEntrySearchField>()
+                .ok()
+                .map(TimeEntrySearchField::filter_field)
+        })?;
+
+        let query = TimeEntries::find()
+            .filter(condition)
+            .left_join(tasks::Entity)
+            .left_join(activities::Entity);
+
+        let query = apply_ordering(
+            query,
+            &payload,
+            TimeEntrySearchField::CreatedAt.order_column(),
+            false,
+            |column| {
+                column
+                    .parse::<TimeEntrySearchField>()
+                    .ok()
+                    .map(TimeEntrySearchField::order_column)
+            },
+        )?;
+
+        let total_items = query.clone().count(db).await?;
+        let items = apply_pagination(
+            query
+                .select_only()
+                .column(time_entries::Column::Id)
+                .column(time_entries::Column::TaskId)
+                .column(time_entries::Column::Activity)
+                .column(time_entries::Column::StartTime)
+                .column(time_entries::Column::EndTime)
+                .column(time_entries::Column::DurationMinutes)
+                .column(time_entries::Column::WorkDate)
+                .column(time_entries::Column::Notes)
+                .column(time_entries::Column::CreatedAt)
+                .column(time_entries::Column::UpdatedAt)
+                .column_as(tasks::Column::Title, "task_title")
+                .column_as(activities::Column::Name, "activity_name"),
+            &payload,
+        )
+        .into_model::<TimeEntrySummaryDto>()
+        .all(db)
+        .await?;
+
+        let daily_totals_by_date = Self::get_daily_totals_by_date(db, user_id).await?;
+        let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
+
+        Ok((items, total_items, daily_totals_by_date, daily_limit_minutes))
+    }
+
+    async fn get_effective_daily_limit_minutes(db: &impl ConnectionTrait, user_id: Uuid) -> Result<i64, AppError> {
+        let user = Users::find_by_id(user_id)
+            .one(db)
+            .await?
+            .ok_or_else(|| AppError::Unauthorized("Usuario no autenticado".to_string()))?;
+
+        let preferences = UserPreferences::from_json_value(user.preferences.as_ref());
+        let limited_hours = preferences.max_daily_hours.clamp(1, MAX_DAILY_DURATION_LIMIT_HOURS);
+
+        Ok(i64::from(limited_hours) * 60)
+    }
+
+    async fn find_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<TimeEntryModel, AppError> {
+        TimeEntries::find()
+            .filter(time_entries::Column::Id.eq(id))
+            .filter(time_entries::Column::UserId.eq(user_id))
+            .one(db)
+            .await?
+            .ok_or_else(|| AppError::NotFound("Registro de tiempo no encontrado".to_string()))
+    }
+
+    async fn find_active_timer(db: &impl ConnectionTrait, user_id: Uuid) -> Result<Option<TimeEntryModel>, AppError> {
+        TimeEntries::find()
+            .filter(time_entries::Column::UserId.eq(user_id))
+            .filter(time_entries::Column::StartTime.is_not_null())
+            .filter(time_entries::Column::EndTime.is_null())
+            .order_by_desc(time_entries::Column::StartTime)
+            .one(db)
+            .await
+            .map_err(AppError::Database)
+    }
+
+    async fn ensure_no_active_timer(db: &impl ConnectionTrait, user_id: Uuid) -> Result<(), AppError> {
+        let active_timer = Self::find_active_timer(db, user_id).await?;
+
+        if active_timer.is_some() {
+            return Err(AppError::Conflict(
+                "Ya existe un cronometro activo para este usuario".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    async fn ensure_task_ownership(db: &impl ConnectionTrait, user_id: Uuid, task_id: Uuid) -> Result<(), AppError> {
+        let exists = Tasks::find()
+            .filter(tasks::Column::Id.eq(task_id))
+            .filter(tasks::Column::UserId.eq(user_id))
+            .one(db)
+            .await?
+            .is_some();
+
+        if !exists {
+            return Err(AppError::BadRequest("Tarea invalida o sin permisos".to_string()));
+        }
+
+        Ok(())
+    }
+
+    async fn ensure_activity_ownership(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        activity_id: Uuid,
+    ) -> Result<(), AppError> {
+        let exists = Activities::find()
+            .filter(activities::Column::Id.eq(activity_id))
+            .filter(activities::Column::UserId.eq(user_id))
+            .one(db)
+            .await?
+            .is_some();
+
+        if !exists {
+            return Err(AppError::BadRequest("Actividad invalida o sin permisos".to_string()));
+        }
+
+        Ok(())
+    }
+
+    async fn get_daily_duration(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        work_date: NaiveDate,
+        exclude_entry_id: Option<Uuid>,
+    ) -> Result<i64, AppError> {
+        let mut query = TimeEntries::find()
+            .filter(time_entries::Column::UserId.eq(user_id))
+            .filter(time_entries::Column::WorkDate.eq(work_date));
+
+        if let Some(entry_id) = exclude_entry_id {
+            query = query.filter(time_entries::Column::Id.ne(entry_id));
+        }
+
+        let result = query
+            .select_only()
+            .column_as(Expr::col(time_entries::Column::DurationMinutes).sum(), "total_duration")
+            .into_tuple::<Option<i64>>()
+            .one(db)
+            .await?;
+
+        Ok(result.flatten().unwrap_or(0))
+    }
+
+    async fn get_daily_totals_by_date(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+    ) -> Result<HashMap<String, i64>, AppError> {
+        let rows = TimeEntries::find()
+            .filter(time_entries::Column::UserId.eq(user_id))
+            .select_only()
+            .column(time_entries::Column::WorkDate)
+            .column_as(Expr::col(time_entries::Column::DurationMinutes).sum(), "total_duration")
+            .group_by(time_entries::Column::WorkDate)
+            .into_tuple::<(NaiveDate, Option<i64>)>()
+            .all(db)
+            .await?;
+
+        let mut totals = HashMap::with_capacity(rows.len());
+        for (work_date, total) in rows {
+            totals.insert(work_date.to_string(), total.unwrap_or(0));
+        }
+
+        Ok(totals)
+    }
+
+    fn ensure_daily_duration_limit(
+        current_total: i64,
+        new_duration: i64,
+        daily_limit_minutes: i64,
+    ) -> Result<(), AppError> {
+        if current_total >= daily_limit_minutes {
+            return Err(AppError::Conflict(
+                "No puedes registrar mas horas en este dia".to_string(),
+            ));
+        }
+
+        if current_total + new_duration > daily_limit_minutes {
+            return Err(AppError::Conflict(
+                "La entrada de tiempo excede el limite diario configurado".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn map_time_entry_write_error(error: sea_orm::DbErr) -> AppError {
+        if error.to_string().contains("daily_limit_exceeded") {
+            return AppError::Conflict("La entrada de tiempo excede el limite diario configurado".to_string());
+        }
+
+        AppError::Database(error)
+    }
+
+    fn map_detail_row(row: TimeEntryDetailRow) -> TimeEntryDetailDto {
+        TimeEntryDetailDto {
+            id: row.id,
+            user_id: row.user_id,
+            task_id: row.task_id,
+            activity: row.activity,
+            start_time: row.start_time,
+            end_time: row.end_time,
+            duration_minutes: row.duration_minutes,
+            work_date: row.work_date,
+            notes: row.notes,
+            task_title: row.task_title,
+            activity_name: row.activity_name,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        }
+    }
+}

@@ -186,7 +186,7 @@
             clickable
             v-ripple
             class="q-pa-md"
-            @click="declineChangeRequest"
+            @click="showDeclineDialog = true"
           >
             <q-item-section avatar>
               <q-icon name="thumb_down" style="color: var(--text-color)" />
@@ -198,6 +198,38 @@
         </q-list>
       </q-card>
     </div>
+    <q-dialog v-model="showDeclineDialog" persistent>
+      <q-card flat bordered style="width: 400px">
+        <q-card-section>
+          <span class="text-h6 text-weight-bold">
+            {{ $t('client.changeRequests.detail.decline.title') }}
+          </span>
+        </q-card-section>
+        <q-card-section>
+          <q-select
+            outlined
+            v-model="declineReason"
+            :options="getChangeRequestsDeclineReasons($t)"
+            map-options
+            emit-value
+            :label="$t('changeRequests.detail.decline_reason')"
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn
+            color="secondary"
+            :label="$t('common.cancel')"
+            @click="showDeclineDialog = false"
+          />
+          <q-btn
+            color="negative"
+            :label="$t('client.changeRequests.detail.action.decline')"
+            :disable="!declineReason"
+            @click="declineChangeRequest"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -211,6 +243,7 @@ import { ClientChangeRequestsService } from 'src/services/clientChangeRequests';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { ChangeRequestStatus, ClientChangeRequestDetailDto } from 'src/types/changeRequest';
+import { getChangeRequestsDeclineReasons } from 'src/data/constants';
 
 const route = useRoute();
 const router = useRouter();
@@ -219,6 +252,8 @@ const { notify, notifyError, confirmAction, showLoading, hideLoading } = useUI()
 const userPreferencesStore = useUserPreferencesStore();
 
 const changeRequest = ref<ClientChangeRequestDetailDto | null>(null);
+const showDeclineDialog = ref(false);
+const declineReason = ref('');
 const changeRequestId = String(route.params.id || '');
 
 const formatDate = (value: string, fallback = t('common.empty')) =>
@@ -309,14 +344,19 @@ const approveChangeRequest = async () => {
 
 const declineChangeRequest = async () => {
   if (!changeRequest.value) return;
+  if (!declineReason.value) return;
 
   showLoading(t('client.changeRequests.detail.action.decline'));
   try {
-    changeRequest.value = await ClientChangeRequestsService.decline(changeRequest.value.id);
+    changeRequest.value = await ClientChangeRequestsService.decline(
+      changeRequest.value.id,
+      declineReason.value,
+    );
     notify(t('client.changeRequests.detail.declineSuccess'), 'positive');
   } catch (err: unknown) {
     notifyError(t('client.changeRequests.detail.declineError'), err);
   } finally {
+    showDeclineDialog.value = false;
     hideLoading();
   }
 };

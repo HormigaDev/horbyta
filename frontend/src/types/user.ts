@@ -46,6 +46,7 @@ export interface UserPreferences {
   timezone: string;
   date_format: UserDateFormatPreference;
   language: UserLanguagePreference;
+  max_daily_hours: number;
   ai: {
     model: string;
     api_key_configured: boolean;
@@ -81,6 +82,7 @@ export interface UpdateUserPreferencesDto {
   timezone?: string;
   date_format?: UserDateFormatPreference;
   language?: UserLanguagePreference;
+  max_daily_hours?: number;
   ai_model?: string;
   ai_api_key?: string;
 }

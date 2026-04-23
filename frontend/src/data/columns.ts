@@ -25,6 +25,8 @@ const COLUMN_WIDTHS = {
 const WIDE_TEXT_COLUMN_NAMES = new Set([
   'name',
   'title',
+  'notes',
+  'activity_name',
   'project_name',
   'milestone_name',
   'original_name',
@@ -37,7 +39,14 @@ const MEDIUM_TEXT_COLUMN_NAMES = new Set(['mime_type']);
 
 const COMPACT_COLUMN_NAMES = new Set(['status', 'origin', 'priority', 'complexity', 'color']);
 
-const DATE_COLUMN_NAMES = new Set(['created_at', 'updated_at', 'due_date']);
+const DATE_COLUMN_NAMES = new Set([
+  'created_at',
+  'updated_at',
+  'due_date',
+  'work_date',
+  'start_time',
+  'end_time',
+]);
 
 const normalizeStyleString = (style: string): string => {
   return style.trim().replace(/;*$/, '');
@@ -386,6 +395,35 @@ export const getCategoryColumns = (t: ComposerTranslation) => {
   ]);
 };
 
+export const getActivityColumns = (t: ComposerTranslation) => {
+  const formatDate = useDateFormatter();
+  return withFixedColumnSizing([
+    {
+      name: 'name',
+      label: t('columns.activity.name'),
+      field: 'name',
+      sortable: true,
+      align: 'left',
+    },
+    {
+      name: 'created_at',
+      label: t('columns.activity.created_at'),
+      field: 'created_at',
+      sortable: true,
+      align: 'center',
+      format: (val: string) => formatDate(val),
+    },
+    {
+      name: 'updated_at',
+      label: t('columns.activity.updated_at'),
+      field: 'updated_at',
+      sortable: true,
+      align: 'center',
+      format: (val: string) => formatDate(val),
+    },
+  ]);
+};
+
 export const getTagColumns = (t: ComposerTranslation) => {
   return withFixedColumnSizing([
     {
@@ -592,6 +630,58 @@ export const getAttachmentColumns = (t: ComposerTranslation) => {
       sortable: true,
       align: 'center' as const,
       format: (val: string) => formatDate(val, t('common.empty')),
+    },
+  ]);
+};
+
+export const getTimeEntryColumns = (t: ComposerTranslation) => {
+  const userPreferencesStore = useUserPreferencesStore();
+
+  const formatDate = (value: string | null, fallback = '-') => {
+    if (!value) return fallback;
+
+    return formatDateByPreferences(value, {
+      timezone: userPreferencesStore.timezone,
+      dateFormat: userPreferencesStore.dateFormat,
+      fallback,
+    });
+  };
+
+  function formatDuration(totalMinutes: number): string {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours >= 1) {
+      return `${hours} h${minutes > 0 ? ` ${minutes} min` : ''}`;
+    }
+
+    return `${minutes} min`;
+  }
+
+  return withFixedColumnSizing([
+    {
+      name: 'activity_name',
+      label: t('columns.timeEntry.activity'),
+      field: 'activity_name',
+      sortable: true,
+      align: 'left' as const,
+      format: (val: string | null) => val || t('common.empty'),
+    },
+    {
+      name: 'duration_minutes',
+      label: t('columns.timeEntry.duration_minutes'),
+      field: 'duration_minutes',
+      sortable: true,
+      align: 'center' as const,
+      format: formatDuration,
+    },
+    {
+      name: 'work_date',
+      label: t('columns.timeEntry.work_date'),
+      field: 'work_date',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => formatDate(val, t('common.empty')),
     },
   ]);
 };

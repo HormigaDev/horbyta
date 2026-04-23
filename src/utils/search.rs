@@ -1,4 +1,4 @@
-use chrono::{DateTime, FixedOffset};
+use chrono::{DateTime, FixedOffset, NaiveDate};
 use sea_orm::{ColumnTrait, Condition, QueryOrder, QuerySelect, sea_query::SimpleExpr};
 
 use crate::{
@@ -17,6 +17,7 @@ where
     NumberI16(C),
     NumberI64(C),
     Boolean(C),
+    Date(C),
     DateTime(C),
 }
 
@@ -32,6 +33,7 @@ where
             FilterField::NumberI16(column) => number_i16_expression(column, filter),
             FilterField::NumberI64(column) => number_i64_expression(column, filter),
             FilterField::Boolean(column) => boolean_expression(column, filter),
+            FilterField::Date(column) => date_expression(column, filter),
             FilterField::DateTime(column) => datetime_expression(column, filter),
         }
     }
@@ -230,10 +232,45 @@ fn parse_bool_value(filter: &Filter) -> Result<bool, AppError> {
         .ok_or_else(|| AppError::BadRequest(format!("field {} requires a boolean", filter.column)))
 }
 
+fn parse_date_value(filter: &Filter) -> Result<NaiveDate, AppError> {
+    let raw = parse_string_value(filter)?;
+    NaiveDate::parse_from_str(&raw, "%Y-%m-%d")
+        .map_err(|_| AppError::BadRequest(format!("field {} requires a valid date", filter.column)))
+}
+
 fn parse_datetime_value(filter: &Filter) -> Result<DateTime<FixedOffset>, AppError> {
     let raw = parse_string_value(filter)?;
     DateTime::parse_from_rfc3339(&raw)
         .map_err(|_| AppError::BadRequest(format!("field {} requires an rfc3339 date", filter.column)))
+}
+
+fn parse_date_between(filter: &Filter) -> Result<(NaiveDate, NaiveDate), AppError> {
+    let format = "%Y-%m-%d";
+    let values = filter
+        .value
+        .as_array()
+        .ok_or_else(|| AppError::BadRequest(format!("operator () requires an array for field {}", filter.column)))?;
+
+    if values.len() != 2 {
+        return Err(AppError::BadRequest(format!(
+            "operator () requires exactly two dates in {}",
+            filter.column
+        )));
+    }
+
+    let start_raw = values[0]
+        .as_str()
+        .ok_or_else(|| AppError::BadRequest(format!("the start date of {} must be a date string", filter.column)))?;
+    let end_raw = values[1]
+        .as_str()
+        .ok_or_else(|| AppError::BadRequest(format!("the end date of {} must be a date string", filter.column)))?;
+
+    let start = NaiveDate::parse_from_str(start_raw, &format)
+        .map_err(|_| AppError::BadRequest(format!("the start date of {} is invalid", filter.column)))?;
+    let end = NaiveDate::parse_from_str(end_raw, &format)
+        .map_err(|_| AppError::BadRequest(format!("the end date of {} is invalid", filter.column)))?;
+
+    Ok((start, end))
 }
 
 fn parse_datetime_between(filter: &Filter) -> Result<(DateTime<FixedOffset>, DateTime<FixedOffset>), AppError> {
@@ -336,6 +373,43 @@ where
     match filter.operator {
         FilterOperator::Eq => Ok(column.eq(value).into()),
         FilterOperator::Neq => Ok(column.ne(value).into()),
+        _ => Err(unsupported_operator_error(filter)),
+    }
+}
+
+fn date_expression<C>(column: C, filter: &Filter) -> Result<SimpleExpr, AppError>
+where
+    C: ColumnTrait + Copy,
+{
+    match filter.operator {
+        FilterOperator::Between => {
+            let (start, end) = parse_date_between(filter)?;
+            Ok(column.between(start, end).into())
+        }
+        FilterOperator::Eq => {
+            let value = parse_date_value(filter)?;
+            Ok(column.eq(value).into())
+        }
+        FilterOperator::Neq => {
+            let value = parse_date_value(filter)?;
+            Ok(column.ne(value).into())
+        }
+        FilterOperator::Gt => {
+            let value = parse_date_value(filter)?;
+            Ok(column.gt(value).into())
+        }
+        FilterOperator::Lt => {
+            let value = parse_date_value(filter)?;
+            Ok(column.lt(value).into())
+        }
+        FilterOperator::Gte => {
+            let value = parse_date_value(filter)?;
+            Ok(column.gte(value).into())
+        }
+        FilterOperator::Lte => {
+            let value = parse_date_value(filter)?;
+            Ok(column.lte(value).into())
+        }
         _ => Err(unsupported_operator_error(filter)),
     }
 }

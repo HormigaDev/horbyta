@@ -1,3 +1,4 @@
+pub mod activities;
 pub mod ai;
 pub mod ai_tools;
 pub mod attachments;
@@ -9,5 +10,6 @@ pub mod milestones;
 pub mod projects;
 pub mod tags;
 pub mod tasks;
+pub mod time_entries;
 pub mod users;
 pub mod websocket;
