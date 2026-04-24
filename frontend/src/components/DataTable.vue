@@ -33,7 +33,9 @@
     >
       <template #top="_props">
         <div class="row full-width items-center q-pb-sm">
-          <div class="col-xs-12 col-sm text-h5 text-weight-bold" v-if="title">
+          <div class="col-xs-12 col-sm text-h5 text-weight-bold flex items-center" v-if="title">
+            <q-icon v-if="icon" :name="icon" size="md" class="q-mr-sm" />
+
             {{ translateLabel(title) }}
             <q-badge color="primary" class="q-ml-sm" v-if="totalItems > 0">
               {{ totalItems }}
@@ -308,6 +310,7 @@ type LocalFilterFieldConfig = {
 interface Props {
   tableId: string;
   title?: string;
+  icon?: string;
   rows?: T[];
   columns: NonNullable<QTableProps['columns']>;
   totalItems?: number;

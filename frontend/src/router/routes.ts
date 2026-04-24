@@ -126,6 +126,30 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: '/payments',
+        name: 'payments',
+        component: () => import('pages/PaymentsPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/payments/new',
+        name: 'payment-create',
+        component: () => import('pages/PaymentFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/payments/:id/edit',
+        name: 'payment-edit',
+        component: () => import('pages/PaymentFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/payments/:id',
+        name: 'payment-detail',
+        component: () => import('pages/PaymentDetailPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: '/invoices',
         name: 'invoices',
         component: () => import('pages/InvoicesPage.vue'),

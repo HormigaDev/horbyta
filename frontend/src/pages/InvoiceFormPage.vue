@@ -11,6 +11,19 @@
           </div>
         </q-card-section>
 
+        <q-banner
+          v-if="!isNew && !isDraft"
+          dense
+          class="bg-warning text-white q-mx-md q-mb-md rounded-borders"
+        >
+          <template #avatar>
+            <q-icon name="lock" />
+          </template>
+          {{
+            t('invoices.form.notDraftWarning', { status: t(`invoices.status.${invoiceStatus}`) })
+          }}
+        </q-banner>
+
         <q-card-section class="q-pt-none row q-col-gutter-md">
           <div class="col-12 col-md-9">
             <SelectByTerm
@@ -31,9 +44,10 @@
               :label="t('invoices.form.dueDateLabel')"
               dense
               outlined
+              :disable="!isDraft"
             >
               <template #append>
-                <q-icon name="event" class="cursor-pointer">
+                <q-icon name="event" class="cursor-pointer" v-if="isDraft">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                     <q-date v-model="dueDateDisplay" :mask="qDateMask">
                       <div class="row items-center justify-end">
@@ -66,6 +80,7 @@
               :label="t('invoices.form.manualAmountLabel')"
               :decimal-places="4"
               :error="hasManualAmountError"
+              :disable="!isDraft"
             >
               <template #right-icon>
                 <span class="text-caption" style="color: var(--text-muted)">{{
@@ -83,6 +98,7 @@
               v-model="discount"
               :label="t('invoices.form.discountLabel')"
               :decimal-places="4"
+              :disable="!isDraft"
             >
               <template #right-icon>
                 <span class="text-caption" style="color: var(--text-muted)">{{
@@ -136,6 +152,7 @@
                     <q-checkbox
                       :model-value="getTaskCheckState(task)"
                       color="primary"
+                      :disable="!isDraft"
                       @update:model-value="toggleTask(task)"
                       @click.stop
                     />
@@ -263,7 +280,7 @@ import { useUI } from 'src/composables/useUI';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { parseNumericText } from 'src/utils/numericInput';
 import type { ProjectSummaryDto } from 'src/types/project';
-import type { BillableTaskDto, BillableTimeEntryDto } from 'src/types/invoice';
+import type { BillableTaskDto, BillableTimeEntryDto, InvoiceStatus } from 'src/types/invoice';
 import {
   formatIsoDateForInput,
   getDateInputMask,
@@ -284,6 +301,9 @@ const invoiceId = computed(() => route.params.id as string);
 const dueDateDisplay = ref('');
 const dateInputMask = computed(() => getDateInputMask(userPreferencesStore.dateFormat));
 const qDateMask = computed(() => getQDateMask(userPreferencesStore.dateFormat));
+
+const invoiceStatus = ref<InvoiceStatus | null>(null);
+const isDraft = computed(() => isNew.value || invoiceStatus.value === 'draft');
 
 const isSubmitting = ref(false);
 const hasAttemptedSubmit = ref(false);
@@ -381,6 +401,7 @@ const hasManualAmountError = computed(() => {
 });
 
 const canSave = computed(() => {
+  if (!isDraft.value) return false;
   if (!form.value.project_id) return false;
   if (selectedEntryIds.value.size === 0) return false;
   if (calculatedAmount.value === null || calculatedAmount.value <= 0) {
@@ -501,6 +522,7 @@ const loadInvoice = async () => {
   try {
     const data = await InvoicesService.getById(invoiceId.value);
 
+    invoiceStatus.value = data.status;
     form.value = {
       project_id: data.project_id,
       freelancer_notes: data.freelancer_notes ?? null,

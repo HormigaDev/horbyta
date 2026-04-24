@@ -4,6 +4,7 @@
       class="col"
       table-id="invoices_table"
       :title="t('invoices.list.title')"
+      icon="receipt_long"
       :columns="getInvoiceColumns($t)"
       :rows="items"
       :totalItems="total"
@@ -19,6 +20,33 @@
       <template #body-cell-amount="props">
         <q-td :props="props" class="text-right">
           {{ CURRENCY_SYMBOLS[(props.row as InvoiceSummaryDto).currency_type] }} {{ props.value }}
+        </q-td>
+      </template>
+
+      <template #body-cell-status="props">
+        <q-td :props="props" class="text-center">
+          <q-chip
+            :color="invoiceStatusColor((props.row as InvoiceSummaryDto).status)"
+            text-color="white"
+            dense
+            class="text-caption text-weight-medium"
+          >
+            {{ props.value }}
+          </q-chip>
+        </q-td>
+      </template>
+
+      <template #body-cell-due_date="props">
+        <q-td :props="props" class="text-center">
+          <span
+            v-if="props.value && props.value !== '-'"
+            :class="isInvoiceOverdue(props.row as InvoiceSummaryDto) ? 'text-negative' : ''"
+            class="row items-center justify-center no-wrap q-gutter-x-xs"
+          >
+            <q-icon v-if="isInvoiceOverdue(props.row as InvoiceSummaryDto)" name="schedule" size="xs" />
+            <span>{{ props.value }}</span>
+          </span>
+          <span v-else class="text-grey-5">—</span>
         </q-td>
       </template>
 
@@ -60,6 +88,18 @@ import { CURRENCY_SYMBOLS } from 'src/data/constants';
 const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmDelete } = useUI();
+
+const invoiceStatusColor = (status: string): string =>
+  ({ draft: 'grey-5', open: 'primary', paid: 'positive', void: 'grey-7', uncollectible: 'deep-orange' }[status] ?? 'grey');
+
+const isInvoiceOverdue = (row: InvoiceSummaryDto): boolean => {
+  if (!row.due_date || row.status !== 'open') return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(row.due_date);
+  due.setHours(0, 0, 0, 0);
+  return due < today;
+};
 
 const {
   options: projectFilterOptions,

@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{DateTime, FixedOffset, NaiveDate};
 use sea_orm::{
     FromQueryResult,
     prelude::{DateTimeWithTimeZone, Decimal},
@@ -12,6 +12,7 @@ use super::utils::is_positive_decimal;
 use crate::{
     dtos::query::{ColumnType, FilterSchema},
     entities::payments,
+    string_enum,
     utils::search::FilterField,
 };
 
@@ -155,7 +156,7 @@ pub struct PaymentSummaryDto {
     pub amount: Decimal,
 
     pub currency_type: String,
-    pub transaction_type: String,
+    pub transaction_type: PaymentTransactionType,
 
     pub payment_date: NaiveDate,
     pub payment_method: Option<String>,
@@ -179,7 +180,7 @@ pub struct PaymentDetailDto {
 
     pub amount: Decimal,
     pub currency_type: String,
-    pub transaction_type: String,
+    pub transaction_type: PaymentTransactionType,
     pub status: String,
 
     pub related_refunds: Vec<RelatedRefundDto>,
@@ -217,4 +218,34 @@ pub struct ParentPaymentReferenceDto {
     pub id: Uuid,
     pub record_number: i64,
     pub payment_date: NaiveDate,
+}
+
+string_enum!(
+    pub enum PaymentTransactionType {
+        Charge,
+        Refund,
+    }
+);
+
+#[derive(Debug, FromQueryResult)]
+pub struct PaymentDetailRow {
+    pub id: Uuid,
+    pub record_number: i64,
+    pub project_id: Uuid,
+    pub project_name: Option<String>,
+    pub client_id: Option<Uuid>,
+    pub client_name: Option<String>,
+    pub invoice_id: Option<Uuid>,
+    pub parent_payment_id: Option<Uuid>,
+    pub amount: Decimal,
+    pub currency_type: String,
+    pub transaction_type: String,
+    pub payment_date: NaiveDate,
+    pub payment_method: Option<String>,
+    pub reference_code: Option<String>,
+    pub provider: String,
+    pub provider_external_id: Option<String>,
+    pub notes: Option<String>,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
 }

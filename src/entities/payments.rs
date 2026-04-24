@@ -21,6 +21,7 @@ pub struct Model {
     pub provider: String,
     pub provider_external_id: Option<String>,
     pub payment_method: Option<String>,
+    pub reference_code: Option<String>,
     #[sea_orm(column_type = "Text", nullable)]
     pub notes: Option<String>,
     pub created_at: DateTimeWithTimeZone,

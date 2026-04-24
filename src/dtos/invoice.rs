@@ -9,6 +9,7 @@ use super::utils::is_non_negative_decimal;
 use crate::{
     dtos::query::{ColumnType, FilterSchema},
     entities::invoices,
+    string_enum,
     utils::search::FilterField,
 };
 
@@ -61,7 +62,7 @@ impl InvoiceSearchField {
             Self::RecordNumber => FilterField::NumberI64(invoices::Column::RecordNumber),
             Self::ProjectId => FilterField::Uuid(invoices::Column::ProjectId),
             Self::CurrencyType => FilterField::Text(invoices::Column::CurrencyType),
-            Self::Status => FilterField::Text(invoices::Column::Status),
+            Self::Status => FilterField::Keyword(invoices::Column::Status),
             Self::DueDate => FilterField::Date(invoices::Column::DueDate),
             Self::IssuedAt => FilterField::DateTime(invoices::Column::IssuedAt),
             Self::CreatedAt => FilterField::DateTime(invoices::Column::CreatedAt),
@@ -122,7 +123,7 @@ pub struct UpdateInvoiceDto {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct UpdateInvoiceStatusDto {
-    pub status: String,
+    pub status: InvoiceStatus,
 }
 
 #[derive(Debug, Serialize, FromQueryResult)]
@@ -134,7 +135,7 @@ pub struct InvoiceSummaryDto {
     pub client_name: Option<String>,
     pub amount: Decimal,
     pub currency_type: String,
-    pub status: String,
+    pub status: InvoiceStatus,
     pub due_date: Option<NaiveDate>,
     pub issued_at: Option<DateTime<FixedOffset>>,
     pub created_at: DateTime<FixedOffset>,
@@ -154,7 +155,7 @@ pub struct InvoiceDetailDto {
     pub client_email: Option<String>,
     pub amount: Decimal,
     pub currency_type: String,
-    pub status: String,
+    pub status: InvoiceStatus,
     pub due_date: Option<NaiveDate>,
     pub issued_at: Option<DateTime<FixedOffset>>,
     pub notes: Option<String>,
@@ -251,3 +252,13 @@ pub struct BillableTimeEntryWithTask {
     pub task_record_number: i64,
     pub task_title: String,
 }
+
+string_enum!(
+    pub enum InvoiceStatus {
+        Draft,
+        Open,
+        Paid,
+        Void,
+        Uncollectible,
+    }
+);

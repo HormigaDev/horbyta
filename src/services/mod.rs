@@ -8,6 +8,7 @@ pub mod chats;
 pub mod clients;
 pub mod invoices;
 pub mod milestones;
+pub mod payments;
 pub mod projects;
 pub mod tags;
 pub mod tasks;

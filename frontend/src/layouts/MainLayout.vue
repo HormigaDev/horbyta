@@ -142,15 +142,21 @@
             </q-tooltip>
           </q-btn>
 
+          <q-btn flat round dense icon="people" to="/clients">
+            <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
+              {{ $t('layout.drawer.clients') }}
+            </q-tooltip>
+          </q-btn>
+
           <q-btn flat round dense icon="receipt_long" to="/invoices">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.invoices') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="people" to="/clients">
+          <q-btn flat round dense icon="paid" to="/payments">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
-              {{ $t('layout.drawer.clients') }}
+              {{ t('layout.drawer.payments') }}
             </q-tooltip>
           </q-btn>
 

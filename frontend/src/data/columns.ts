@@ -702,6 +702,77 @@ export const getTimeEntryColumns = (t: ComposerTranslation) => {
   ]);
 };
 
+export const getPaymentColumns = (t: ComposerTranslation) => {
+  const formatDate = useDateFormatter();
+
+  return withFixedColumnSizing([
+    {
+      name: 'record_number',
+      label: t('columns.payment.record_number'),
+      field: 'record_number',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: bigint | null) => (val ? normalizeId(val) : '-'),
+    },
+    {
+      name: 'project_id',
+      label: t('columns.payment.project'),
+      field: 'project_name',
+      sortable: false,
+      align: 'left' as const,
+      format: (val: string | null) => val ?? '-',
+    },
+    {
+      name: 'client_id',
+      label: t('columns.payment.client'),
+      field: 'client_name',
+      sortable: false,
+      align: 'left' as const,
+      format: (val: string | null) => val ?? '-',
+    },
+    {
+      name: 'invoice_id',
+      label: t('columns.payment.invoice'),
+      field: 'invoice_record_number',
+      sortable: false,
+      align: 'center' as const,
+      format: (val: bigint | null) => (val ? `FAC-${normalizeId(val)}` : '-'),
+    },
+    {
+      name: 'transaction_type',
+      label: t('columns.payment.transaction_type'),
+      field: 'transaction_type',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => (val ? t(`payments.transactionType.${val}`) : '-'),
+    },
+    {
+      name: 'amount',
+      label: t('columns.payment.amount'),
+      field: 'amount',
+      sortable: false,
+      align: 'right' as const,
+      format: (val: string | null) => (val ? Number(val).toFixed(2) : '-'),
+    },
+    {
+      name: 'payment_date',
+      label: t('columns.payment.payment_date'),
+      field: 'payment_date',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => (val ? formatDate(val) : '-'),
+    },
+    {
+      name: 'created_at',
+      label: t('columns.payment.created_at'),
+      field: 'created_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val),
+    },
+  ]);
+};
+
 export const getInvoiceColumns = (t: ComposerTranslation) => {
   const formatDate = useDateFormatter();
 

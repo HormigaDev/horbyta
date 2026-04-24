@@ -205,26 +205,6 @@
           </div>
         </q-card-section>
       </q-card>
-
-      <q-card
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-        v-if="invoice && invoice.freelancer_notes"
-      >
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
-            {{ t('invoices.detail.freelancerNotesTitle') }}
-          </div>
-          <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
-            <pre
-              class="text-caption"
-              style="white-space: pre-wrap; font-family: inherit; color: var(--text-color)"
-              >{{ invoice.freelancer_notes }}</pre
-            >
-          </div>
-        </q-card-section>
-      </q-card>
     </div>
 
     <div class="col-12 col-md-2" style="position: sticky; top: 80px">
@@ -260,7 +240,7 @@
             clickable
             v-ripple
             class="text-positive q-pa-md"
-            @click="markAsPaid"
+            @click="openMarkPaidDialog"
             v-if="invoice && invoice.status === 'open'"
           >
             <q-item-section avatar>
@@ -297,6 +277,45 @@
         </q-list>
       </q-card>
     </div>
+
+    <q-dialog v-model="showMarkPaidDialog" persistent>
+      <q-card style="min-width: 360px">
+        <q-card-section>
+          <div class="text-h6">{{ t('invoices.detail.markingPaidDialog.title') }}</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-input
+            v-model="markPaidForm.payment_method"
+            :label="t('invoices.detail.markingPaidDialog.paymentMethod')"
+            dense
+            outlined
+            maxlength="50"
+            class="q-mb-md"
+          />
+          <q-input
+            v-model="markPaidForm.notes"
+            type="textarea"
+            :label="t('invoices.detail.markingPaidDialog.notes')"
+            outlined
+            dense
+            rows="3"
+            :maxlength="5000"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat :label="t('common.cancel')" color="grey" v-close-popup />
+          <q-btn
+            unelevated
+            :label="t('invoices.detail.markingPaidDialog.confirm')"
+            color="positive"
+            :loading="isMarkingPaid"
+            @click="markAsPaid"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -305,6 +324,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { InvoicesService } from 'src/services/invoices';
+import { PaymentsService } from 'src/services/payments';
 import { useUI } from 'src/composables/useUI';
 import { normalizeId } from 'src/utils/normalizeId';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
@@ -322,6 +342,10 @@ const userPreferencesStore = useUserPreferencesStore();
 const { isCopied: idCopied, copyToClipboard } = useCopyClipboard();
 const invoiceId = route.params.id as string;
 const invoice = ref<InvoiceDetailDto | null>(null);
+
+const showMarkPaidDialog = ref(false);
+const isMarkingPaid = ref(false);
+const markPaidForm = ref({ payment_method: null as string | null, notes: null as string | null });
 
 const formatDate = (value: string) =>
   formatDateByPreferences(value, {
@@ -369,15 +393,30 @@ const issueInvoice = async () => {
   }
 };
 
+const openMarkPaidDialog = () => {
+  markPaidForm.value = { payment_method: null, notes: null };
+  showMarkPaidDialog.value = true;
+};
+
 const markAsPaid = async () => {
   if (!invoice.value) return;
+  isMarkingPaid.value = true;
   showLoading(t('invoices.detail.markingPaid'));
   try {
+    await PaymentsService.create({
+      project_id: invoice.value.project_id,
+      invoice_id: invoice.value.id,
+      amount: invoice.value.amount,
+      payment_method: markPaidForm.value.payment_method || null,
+      notes: markPaidForm.value.notes || null,
+    });
     invoice.value = await InvoicesService.updateStatus(invoiceId, { status: 'paid' });
-    notify(t('invoices.detail.paidSuccess'), 'positive');
+    showMarkPaidDialog.value = false;
+    notify(t('invoices.detail.paymentCreated'), 'positive');
   } catch (err: unknown) {
-    notifyError(t('invoices.detail.paidError'), err);
+    notifyError(t('invoices.detail.paymentCreationError'), err);
   } finally {
+    isMarkingPaid.value = false;
     hideLoading();
   }
 };

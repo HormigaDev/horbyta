@@ -191,6 +191,7 @@ create table payments (
     provider varchar(30) not null default 'manual',
     provider_external_id varchar(255),
     payment_method varchar(50),
+    reference_code varchar(255),
 
     notes text,
 

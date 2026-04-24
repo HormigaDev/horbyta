@@ -11,7 +11,7 @@ use crate::{
     dtos::{
         invoice::{
             BillableTaskDto, BillableTaskRow, BillableTasksResponse, BillableTimeEntryDto, BillableTimeEntryWithTask,
-            CreateInvoiceDto, InvoiceDetailDto, InvoiceDetailRow, InvoiceSearchField, InvoiceSummaryDto,
+            CreateInvoiceDto, InvoiceDetailDto, InvoiceDetailRow, InvoiceSearchField, InvoiceStatus, InvoiceSummaryDto,
             InvoiceTaskGroupDto, InvoiceTimeEntryDto, UpdateInvoiceDto, UpdateInvoiceStatusDto,
         },
         query::QueryPayload,
@@ -122,7 +122,10 @@ impl InvoiceService {
         let time_entries = Self::get_invoice_time_entries(db, id).await?;
         let task_groups = Self::group_time_entries_by_task(time_entries);
         let freelancer_notes = Self::extract_freelancer_notes(row.notes.as_deref());
-
+        let status: InvoiceStatus = row
+            .status
+            .try_into()
+            .map_err(|_| AppError::Internal("Status inválido".to_string()))?;
         Ok(InvoiceDetailDto {
             id: row.id,
             record_number: row.record_number,
@@ -135,7 +138,7 @@ impl InvoiceService {
             client_email: row.client_email,
             amount: row.amount,
             currency_type: row.currency_type,
-            status: row.status,
+            status,
             due_date: row.due_date,
             issued_at: row.issued_at,
             notes: row.notes,
@@ -236,12 +239,12 @@ impl InvoiceService {
     ) -> Result<InvoiceDetailDto, AppError> {
         let invoice = Self::find_by_id(db, user_id, id).await?;
 
-        Self::validate_status_transition(&invoice.status, &dto.status)?;
+        Self::validate_status_transition(&invoice.status, &dto.status.to_string())?;
 
         let mut active: invoices::ActiveModel = invoice.into();
-        active.status = Set(dto.status.clone());
+        active.status = Set(dto.status.clone().to_string());
 
-        if dto.status == "open" {
+        if dto.status.to_string() == "open" {
             active.issued_at = Set(Some(Utc::now().fixed_offset()));
         }
 
