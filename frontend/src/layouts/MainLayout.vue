@@ -112,7 +112,7 @@
     <q-drawer v-model="drawer" show-if-above :mini="!$q.screen.lt.md" :mini-width="60" bordered>
       <template v-if="!$q.screen.lt.md">
         <div class="column flex-center q-pt-md q-gutter-y-md">
-          <q-btn flat round dense icon="dashboard" to="/">
+          <q-btn flat round dense icon="area_chart" to="/">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.dashboard') }}
             </q-tooltip>
@@ -130,7 +130,7 @@
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="task" to="/tasks">
+          <q-btn flat round dense icon="checklist" to="/tasks">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">{{
               t('layout.drawer.tasks')
             }}</q-tooltip>
@@ -219,7 +219,7 @@
             <q-list>
               <q-item clickable v-ripple to="/">
                 <q-item-section avatar>
-                  <q-icon name="dashboard" />
+                  <q-icon name="area_chart" />
                 </q-item-section>
                 <q-item-section>{{ t('layout.drawer.dashboard') }}</q-item-section>
               </q-item>
@@ -240,7 +240,7 @@
 
               <q-item clickable v-ripple to="/tasks">
                 <q-item-section avatar>
-                  <q-icon name="task" />
+                  <q-icon name="checklist" />
                 </q-item-section>
                 <q-item-section>{{ t('layout.drawer.tasks') }}</q-item-section>
               </q-item>

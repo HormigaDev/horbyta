@@ -1,9 +1,10 @@
 <template>
   <q-page class="q-pa-md">
-    <div>
+    <div class="padding-page">
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
-          <div class="text-h6">
+          <div class="text-h6 flex items-center">
+            <q-icon :name="isNew ? 'add' : 'edit'" size="md" class="q-mr-md" />
             {{ isNew ? t('changeRequests.form.createTitle') : t('changeRequests.form.editTitle') }}
           </div>
           <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
@@ -96,7 +97,7 @@
                 v-model="clientRequestMarkdown"
                 :edit-mode="!isReadOnlyForm"
                 :enable-preview-toggle="true"
-                class="full-height fit-textarea"
+                class="full-height"
               />
               <div v-if="hasClientRequestError" class="text-negative text-caption q-mt-xs">
                 {{ t('changeRequests.form.clientRequestTitle') }}
@@ -150,7 +151,7 @@
                 v-model="technicalAssessmentMarkdown"
                 :edit-mode="!isReadOnlyForm"
                 :enable-preview-toggle="true"
-                class="full-height fit-textarea"
+                class="full-height"
               />
             </div>
           </div>
@@ -539,11 +540,3 @@ onMounted(() => {
   void loadChangeRequest();
 });
 </script>
-
-<style scoped>
-.fit-textarea :deep(.q-field__control),
-.fit-textarea :deep(.q-field__native) {
-  height: 100%;
-  min-height: 36vh;
-}
-</style>

@@ -1,9 +1,10 @@
 <template>
   <q-page class="q-pa-md">
-    <div>
+    <div class="padding-page">
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
-          <div class="text-h6">
+          <div class="text-h6 flex items-center">
+            <q-icon :name="isNew ? 'person_add' : 'person_edit'" size="md" class="q-mr-md" />
             {{ isNew ? $t('clients.form.createTitle') : $t('clients.form.editTitle') }}
           </div>
           <div class="text-caption text-grey" v-if="!isNew">
@@ -86,28 +87,13 @@
         <q-card-section>
           <div class="text-subtitle1 q-mb-sm">{{ $t('clients.form.notesTitle') }}</div>
           <div class="row q-col-gutter-md" style="min-height: 50vh">
-            <div class="col-12 col-md-6" style="display: flex; flex-direction: column">
+            <div class="col-12" style="display: flex; flex-direction: column">
               <MarkdownRenderer
                 v-model="client.notes!"
-                :edit-mode="true"
-                class="full-height fit-textarea"
+                edit-mode
+                enable-preview-toggle
+                class="full-height"
               />
-            </div>
-            <div class="col-12 col-md-6" style="display: flex; flex-direction: column">
-              <div
-                class="bordered rounded-borders q-pa-md full-height"
-                style="
-                  border: 1px solid var(--border-color);
-                  background-color: var(--card-bg);
-                  overflow-y: auto;
-                  flex-grow: 1;
-                "
-              >
-                <div class="text-caption text-grey q-mb-sm">
-                  {{ $t('clients.form.markdownPreview') }}
-                </div>
-                <MarkdownRenderer :model-value="client.notes || t('clients.form.emptyNotes')" />
-              </div>
             </div>
           </div>
         </q-card-section>

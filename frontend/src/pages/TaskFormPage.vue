@@ -1,9 +1,10 @@
 <template>
   <q-page class="q-pa-md">
-    <div>
+    <div class="padding-page">
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
-          <div class="text-h6">
+          <div class="text-h6 flex items-center">
+            <q-icon :name="isNew ? 'add' : 'edit'" size="md" class="q-mr-md" />
             {{ isNew ? t('tasks.form.createTitle') : t('tasks.form.editTitle') }}
           </div>
           <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
@@ -155,30 +156,13 @@
         <q-card-section>
           <div class="text-subtitle1 q-mb-sm">{{ t('tasks.form.descriptionTitle') }}</div>
           <div class="row q-col-gutter-md" style="min-height: 30vh">
-            <div class="col-12 col-md-6" style="display: flex; flex-direction: column">
+            <div class="col-12" style="display: flex; flex-direction: column">
               <MarkdownRenderer
                 v-model="taskDescription"
-                :edit-mode="true"
-                class="full-height fit-textarea"
+                edit-mode
+                enable-preview-toggle
+                class="full-height"
               />
-            </div>
-            <div class="col-12 col-md-6" style="display: flex; flex-direction: column">
-              <div
-                class="bordered rounded-borders q-pa-md full-height"
-                style="
-                  border: 1px solid var(--border-color);
-                  background-color: var(--card-bg);
-                  overflow-y: auto;
-                  flex-grow: 1;
-                "
-              >
-                <div class="text-caption q-mb-sm" style="color: var(--text-muted)">
-                  {{ t('tasks.form.previewTitle') }}
-                </div>
-                <MarkdownRenderer
-                  :model-value="form.description || t('tasks.form.emptyDescription')"
-                />
-              </div>
             </div>
           </div>
 
@@ -690,12 +674,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.fit-textarea :deep(.q-field__control),
-.fit-textarea :deep(.q-field__native) {
-  height: 100%;
-  min-height: 30vh;
-}
-
 .tag-option-chip {
   align-self: flex-start;
   width: auto;

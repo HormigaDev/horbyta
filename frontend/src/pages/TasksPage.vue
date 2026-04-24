@@ -4,6 +4,7 @@
       class="col"
       table-id="tasks_table"
       :title="t('tasks.list.title')"
+      icon="checklist"
       :columns="getTaskColumns($t)"
       :rows="items"
       :totalItems="total"

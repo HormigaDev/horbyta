@@ -4,6 +4,7 @@
       class="col"
       table-id="categories_table"
       :title="t('categories.list.title')"
+      icon="extension"
       :columns="getCategoryColumns($t)"
       :rows="items"
       :totalItems="total"

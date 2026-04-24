@@ -4,6 +4,7 @@
       class="col"
       table-id="change_requests_table"
       :title="t('changeRequests.list.title')"
+      icon="compare_arrows"
       :columns="getChangeRequestColumns($t)"
       :rows="items"
       :total-items="total"

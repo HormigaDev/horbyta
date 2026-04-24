@@ -1,9 +1,10 @@
 <template>
   <q-page class="q-pa-md">
-    <div>
+    <div class="padding-page">
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
-          <div class="text-h6">
+          <div class="text-h6 flex items-center">
+            <q-icon name="flag" class="q-mr-md" size="md" />
             {{ isNew ? t('milestones.form.createTitle') : t('milestones.form.editTitle') }}
           </div>
           <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
@@ -79,27 +80,10 @@
             <div class="col-12 col-md-6" style="display: flex; flex-direction: column">
               <MarkdownRenderer
                 v-model="milestoneDescription"
-                :edit-mode="true"
-                class="full-height fit-textarea"
+                edit-mode
+                enable-preview-toggle
+                class="full-height"
               />
-            </div>
-            <div class="col-12 col-md-6" style="display: flex; flex-direction: column">
-              <div
-                class="bordered rounded-borders q-pa-md full-height"
-                style="
-                  border: 1px solid var(--border-color);
-                  background-color: var(--card-bg);
-                  overflow-y: auto;
-                  flex-grow: 1;
-                "
-              >
-                <div class="text-caption q-mb-sm" style="color: var(--text-muted)">
-                  {{ t('milestones.form.previewTitle') }}
-                </div>
-                <MarkdownRenderer
-                  :model-value="form.description || t('milestones.form.emptyDescription')"
-                />
-              </div>
             </div>
           </div>
         </q-card-section>
@@ -302,11 +286,3 @@ onMounted(async () => {
   await loadMilestone();
 });
 </script>
-
-<style scoped>
-.fit-textarea :deep(.q-field__control),
-.fit-textarea :deep(.q-field__native) {
-  height: 100%;
-  min-height: 45vh;
-}
-</style>

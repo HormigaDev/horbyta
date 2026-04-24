@@ -4,6 +4,7 @@
       class="col"
       table-id="activities_table"
       :title="$t('activities.list.title')"
+      icon="list_alt"
       :columns="getActivityColumns($t)"
       :rows="items"
       :total-items="total"

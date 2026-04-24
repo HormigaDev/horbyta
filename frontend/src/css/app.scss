@@ -280,3 +280,8 @@ body {
 *::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
 }
+
+.padding-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}

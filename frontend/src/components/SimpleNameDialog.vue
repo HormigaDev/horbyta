@@ -4,6 +4,7 @@
       <q-form @submit.prevent="emit('submit')">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">
+            <q-icon :name="!editing ? 'add' : 'edit'" size="md" class="q-mr-md" />
             {{ editing ? editTitle : createTitle }}
           </div>
           <q-space />

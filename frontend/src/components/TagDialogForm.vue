@@ -3,7 +3,8 @@
     <q-card style="min-width: 420px; max-width: 92vw">
       <q-form @submit.prevent="onSubmit">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">
+          <div class="text-h6 flex items-center">
+            <q-icon :name="!editingId ? 'add' : 'edit'" size="md" class="q-mr-md" />
             {{ editingId ? t('tags.dialog.editTitle') : t('tags.dialog.newTitle') }}
           </div>
           <q-space />

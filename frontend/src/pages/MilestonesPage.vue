@@ -4,6 +4,7 @@
       class="col"
       table-id="milestones_management_table"
       :title="t('milestones.list.title')"
+      icon="flag"
       :columns="getMilestoneColumns($t)"
       :rows="items"
       :totalItems="total"

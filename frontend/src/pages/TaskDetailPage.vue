@@ -11,7 +11,7 @@
         <q-card-section>
           <div class="flex justify-between">
             <div class="text-h5 text-weight-bold q-mb-xs" style="color: var(--text-color)">
-              <q-icon name="task" size="lg" />
+              <q-icon name="checklist" size="lg" />
               {{ task?.title ? `${task.title}` : t('common.loading') }}
             </div>
             <div class="text-h6 flex items-center" style="color: var(--text-muted)">

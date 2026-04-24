@@ -4,6 +4,7 @@
       class="col"
       table-id="clients_table"
       :title="$t('clients.list.title')"
+      icon="people"
       :columns="getClientColumns($t)"
       :rows="items"
       :total-items="total"

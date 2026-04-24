@@ -1,9 +1,10 @@
 <template>
   <q-page class="q-pa-md">
-    <div>
+    <div class="padding-page">
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
-          <div class="text-h6">
+          <div class="text-h6 flex items-center">
+            <q-icon :name="isNew ? 'add' : 'edit'" size="md" class="q-mr-md" />
             {{ isNew ? t('payments.form.createTitle') : t('payments.form.editTitle') }}
           </div>
           <div class="text-caption text-grey" v-if="!isNew">
@@ -344,7 +345,10 @@ const savePayment = async () => {
   showLoading(t('payments.form.saving'));
 
   try {
-    const paymentDate = parseDisplayDateToIso(paymentDateDisplay.value, userPreferencesStore.dateFormat);
+    const paymentDate = parseDisplayDateToIso(
+      paymentDateDisplay.value,
+      userPreferencesStore.dateFormat,
+    );
 
     if (isNew.value) {
       const created = await PaymentsService.create({

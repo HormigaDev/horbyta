@@ -4,6 +4,7 @@
       class="col"
       table-id="tags_table"
       :title="t('tags.list.title')"
+      icon="sell"
       :columns="getTagColumns($t)"
       :rows="items"
       :totalItems="total"

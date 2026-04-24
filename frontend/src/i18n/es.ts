@@ -29,6 +29,7 @@ export const messages = {
   'common.copied': 'Copiado',
   'common.minutes': 'Minutos',
   'common.hours': 'Horas',
+  'common.preview': 'Vista previa',
 
   'auth.login.brand': 'Horbyta',
   'auth.login.subtitle': 'Ingreso al sistema',

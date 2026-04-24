@@ -59,7 +59,7 @@
               <MarkdownRenderer
                 v-model="clientRequestMarkdown"
                 :edit-mode="true"
-                class="full-height fit-textarea"
+                class="full-height"
               />
               <div v-if="hasClientRequestError" class="text-negative text-caption q-mt-xs">
                 {{ t('client.changeRequests.form.clientRequestTitle') }}
@@ -281,11 +281,3 @@ onMounted(() => {
   void loadChangeRequest();
 });
 </script>
-
-<style scoped>
-.fit-textarea :deep(.q-field__control),
-.fit-textarea :deep(.q-field__native) {
-  height: 100%;
-  min-height: 42vh;
-}
-</style>

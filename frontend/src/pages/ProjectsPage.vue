@@ -4,6 +4,7 @@
       class="col"
       table-id="projects_table"
       :title="t('projects.list.title')"
+      icon="folder"
       :columns="getProjectColumns($t)"
       :rows="items"
       :totalItems="total"

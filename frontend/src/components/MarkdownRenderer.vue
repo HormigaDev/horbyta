@@ -53,6 +53,15 @@
           <q-tooltip>{{ t('markdown.toolbar.code') }}</q-tooltip>
         </q-btn>
       </template>
+      <template v-else>
+        <span
+          class="text-subtitle1 font-weight-bold flex items-center"
+          style="color: var(--text-muted)"
+        >
+          <q-icon name="visibility" size="sm" class="q-mr-md" />
+          {{ $t('common.preview') }}
+        </span>
+      </template>
 
       <q-space />
 
@@ -76,9 +85,9 @@
       ref="editorRef"
       v-model="rawContent"
       type="textarea"
-      autogrow
       outlined
       class="markdown-editor"
+      :input-style="editorInputStyle"
       @keydown="handleKeydown"
     />
 
@@ -201,6 +210,12 @@ const showEditor = computed(() => {
   if (!props.enablePreviewToggle) return true;
   return !isPreviewMode.value;
 });
+
+const editorInputStyle = {
+  height: '100%',
+  minHeight: '100%',
+  resize: 'none',
+};
 
 const renderedContent = computed(() => {
   const html = marked.parse(rawContent.value || '');
@@ -337,28 +352,53 @@ const togglePreviewMode = () => {
   border-radius: 4px;
   overflow: hidden;
   background-color: var(--md-color-bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 12rem;
+  height: 100%;
 
   .markdown-toolbar {
     border-bottom: 1px solid var(--md-color-border);
     background-color: var(--md-color-toolbar);
+    flex-shrink: 0;
   }
 
   .markdown-editor {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+
+    .q-field__inner,
     .q-field__control {
+      height: 100%;
+      min-height: 100%;
       border: none !important;
+
       &:before,
       &:after {
         border: none !important;
       }
     }
+
+    .q-field__control-container,
+    .q-field__native {
+      height: 100%;
+      min-height: 100%;
+    }
+
     textarea {
       font-family: var(--md-font-code);
       font-size: 14px;
       line-height: 1.5;
+      height: 100% !important;
+      min-height: 100% !important;
     }
   }
 
   .markdown-preview {
+    flex: 1 1 auto;
+    min-height: 0;
     padding: 16px;
     font-family: var(--md-font-family);
     color: var(--md-color-text);
