@@ -1,13 +1,14 @@
 pub mod activity;
 pub mod attachment;
-pub mod invoice;
 pub mod auth;
 pub mod category;
 pub mod change_request;
 pub mod chat;
 pub mod client;
 pub mod hex_color;
+pub mod invoice;
 pub mod milestone;
+pub mod payment;
 pub mod project;
 pub mod project_billing;
 pub mod query;

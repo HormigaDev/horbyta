@@ -11,8 +11,6 @@ Cargo.lock   # remove this line if publishing a library (keep for binaries)
 __pycache__/
 *.py[cod]
 *.pyo
-.venv/
-venv/
 ai_service/generated/   # compiled proto stubs — generated at build time
  
 # Docker

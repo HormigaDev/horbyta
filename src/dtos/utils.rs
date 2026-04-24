@@ -39,4 +39,12 @@ pub fn is_non_negative_decimal(decimal: &Decimal) -> Result<(), ValidationError>
     Ok(())
 }
 
+pub fn is_positive_decimal(decimal: &Decimal) -> Result<(), ValidationError> {
+    if decimal <= &Decimal::ZERO {
+        return Err(ValidationError::new("strict_positive_decimal"));
+    }
+
+    Ok(())
+}
+
 pub type AppResult<T> = Result<T, AppError>;

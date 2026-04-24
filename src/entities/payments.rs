@@ -13,8 +13,8 @@ pub struct Model {
     pub project_id: Uuid,
     pub invoice_id: Option<Uuid>,
     pub parent_payment_id: Option<Uuid>,
-    #[sea_orm(column_type = "Decimal(Some((15, 4)))", nullable)]
-    pub amount: Option<Decimal>,
+    #[sea_orm(column_type = "Decimal(Some((15, 4)))")]
+    pub amount: Decimal,
     pub currency_type: String,
     pub transaction_type: String,
     pub payment_date: Date,

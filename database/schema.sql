@@ -182,7 +182,7 @@ create table payments (
     invoice_id uuid references invoices (id) on delete set null,
     parent_payment_id uuid references payments (id) on delete restrict,
 
-    amount numeric(15,4),
+    amount numeric(15,4) not null,
     currency_type varchar(3) not null,
     transaction_type varchar(20) not null default 'charge',
     
