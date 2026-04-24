@@ -11,10 +11,14 @@ pub struct Model {
     pub user_id: Uuid,
     pub task_id: Uuid,
     pub activity: Uuid,
+    pub invoice_id: Option<Uuid>,
     pub start_time: Option<DateTimeWithTimeZone>,
     pub end_time: Option<DateTimeWithTimeZone>,
     pub duration_minutes: i32,
     pub work_date: Date,
+    pub billable: bool,
+    #[sea_orm(column_type = "Decimal(Some((15, 4)))", nullable)]
+    pub applied_rate: Option<Decimal>,
     #[sea_orm(column_type = "Text", nullable)]
     pub notes: Option<String>,
     pub created_at: DateTimeWithTimeZone,
@@ -31,6 +35,14 @@ pub enum Relation {
         on_delete = "Restrict"
     )]
     Activities,
+    #[sea_orm(
+        belongs_to = "super::invoices::Entity",
+        from = "Column::InvoiceId",
+        to = "super::invoices::Column::Id",
+        on_update = "NoAction",
+        on_delete = "SetNull"
+    )]
+    Invoices,
     #[sea_orm(
         belongs_to = "super::tasks::Entity",
         from = "Column::TaskId",
@@ -52,6 +64,12 @@ pub enum Relation {
 impl Related<super::activities::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Activities.def()
+    }
+}
+
+impl Related<super::invoices::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Invoices.def()
     }
 }
 

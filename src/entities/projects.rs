@@ -43,8 +43,12 @@ pub enum Relation {
         on_delete = "SetNull"
     )]
     Clients,
+    #[sea_orm(has_many = "super::invoices::Entity")]
+    Invoices,
     #[sea_orm(has_many = "super::milestones::Entity")]
     Milestones,
+    #[sea_orm(has_many = "super::payments::Entity")]
+    Payments,
     #[sea_orm(has_many = "super::project_billing::Entity")]
     ProjectBilling,
     #[sea_orm(has_many = "super::tasks::Entity")]
@@ -83,9 +87,21 @@ impl Related<super::clients::Entity> for Entity {
     }
 }
 
+impl Related<super::invoices::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Invoices.def()
+    }
+}
+
 impl Related<super::milestones::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Milestones.def()
+    }
+}
+
+impl Related<super::payments::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Payments.def()
     }
 }
 

@@ -35,8 +35,12 @@ pub enum Relation {
     Clients,
     #[sea_orm(has_many = "super::conversation_history::Entity")]
     ConversationHistory,
+    #[sea_orm(has_many = "super::invoices::Entity")]
+    Invoices,
     #[sea_orm(has_many = "super::notifications::Entity")]
     Notifications,
+    #[sea_orm(has_many = "super::payments::Entity")]
+    Payments,
     #[sea_orm(has_many = "super::project_billing::Entity")]
     ProjectBilling,
     #[sea_orm(has_many = "super::projects::Entity")]
@@ -93,9 +97,21 @@ impl Related<super::conversation_history::Entity> for Entity {
     }
 }
 
+impl Related<super::invoices::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Invoices.def()
+    }
+}
+
 impl Related<super::notifications::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Notifications.def()
+    }
+}
+
+impl Related<super::payments::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Payments.def()
     }
 }
 

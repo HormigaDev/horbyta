@@ -683,5 +683,92 @@ export const getTimeEntryColumns = (t: ComposerTranslation) => {
       align: 'center' as const,
       format: (val: string | null) => formatDate(val, t('common.empty')),
     },
+    {
+      name: 'billable',
+      label: t('columns.timeEntry.billable'),
+      field: 'billable',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: boolean) => (val ? t('common.yes') : t('common.no')),
+    },
+    {
+      name: 'applied_rate',
+      label: t('columns.timeEntry.applied_rate'),
+      field: 'applied_rate',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => `${val}`.replace('.', ',') || t('common.empty'),
+    },
+  ]);
+};
+
+export const getInvoiceColumns = (t: ComposerTranslation) => {
+  const formatDate = useDateFormatter();
+
+  return withFixedColumnSizing([
+    {
+      name: 'record_number',
+      label: t('columns.invoice.record_number'),
+      field: 'record_number',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: bigint | null) => (val ? normalizeId(val) : '-'),
+    },
+    {
+      name: 'project_id',
+      label: t('columns.invoice.project'),
+      field: 'project_name',
+      sortable: true,
+      align: 'left' as const,
+      format: (val: string | null) => val ?? '-',
+    },
+    {
+      name: 'client_id',
+      label: t('columns.invoice.client'),
+      field: 'client_name',
+      sortable: false,
+      align: 'left' as const,
+      format: (val: string | null) => val ?? '-',
+    },
+    {
+      name: 'amount',
+      label: t('columns.invoice.amount'),
+      field: 'amount',
+      sortable: false,
+      align: 'right',
+      format: (val: string | null) => (val ? Number(val).toFixed(2) : '-'),
+    },
+    {
+      name: 'status',
+      label: t('columns.invoice.status'),
+      field: 'status',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => (val ? t(`invoices.status.${val}`) : '-'),
+    },
+    {
+      name: 'due_date',
+      label: t('columns.invoice.due_date'),
+      field: 'due_date',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => (val ? formatDate(val) : '-'),
+    },
+    {
+      name: 'created_at',
+      label: t('columns.invoice.created_at'),
+      field: 'created_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val),
+    },
+    {
+      name: 'updated_at',
+      label: t('columns.invoice.updated_at'),
+      field: 'updated_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val),
+    },
   ]);
 };

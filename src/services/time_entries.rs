@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use chrono::{NaiveDate, Utc};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-    QuerySelect, Set, prelude::Expr,
+    QuerySelect, Set,
+    prelude::{Decimal, Expr},
 };
 use uuid::Uuid;
 
@@ -18,8 +19,8 @@ use crate::{
     },
     entities::{
         activities,
-        prelude::{Activities, Tasks, TimeEntries, Users},
-        tasks,
+        prelude::{Activities, ProjectBilling, Projects, Tasks, TimeEntries, Users},
+        project_billing, projects, tasks,
         time_entries::{self, Model as TimeEntryModel},
     },
     error::AppError,
@@ -36,11 +37,12 @@ impl TimeEntryService {
         user_id: Uuid,
         dto: CreateTimeEntryDto,
     ) -> Result<TimeEntryDetailDto, AppError> {
-        Self::ensure_task_ownership(db, user_id, dto.task_id).await?;
+        let task = Self::find_owned_task(db, user_id, dto.task_id).await?;
         Self::ensure_activity_ownership(db, user_id, dto.activity).await?;
 
         let work_date = dto.work_date.unwrap_or_else(|| Utc::now().date_naive());
         let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
+        let applied_rate = Self::resolve_applied_rate(db, user_id, &task, dto.billable).await?;
 
         let total_duration = Self::get_daily_duration(db, user_id, work_date, None).await?;
         Self::ensure_daily_duration_limit(total_duration, i64::from(dto.duration_minutes), daily_limit_minutes)?;
@@ -53,6 +55,8 @@ impl TimeEntryService {
             end_time: Set(None),
             duration_minutes: Set(dto.duration_minutes),
             work_date: Set(work_date),
+            billable: Set(dto.billable),
+            applied_rate: Set(applied_rate),
             notes: Set(dto.notes),
             ..Default::default()
         };
@@ -67,12 +71,13 @@ impl TimeEntryService {
         dto: StartTimeEntryTimerDto,
     ) -> Result<TimeEntryDetailDto, AppError> {
         Self::ensure_no_active_timer(db, user_id).await?;
-        Self::ensure_task_ownership(db, user_id, dto.task_id).await?;
+        let task = Self::find_owned_task(db, user_id, dto.task_id).await?;
         Self::ensure_activity_ownership(db, user_id, dto.activity).await?;
 
         let start_time = dto.start_time.unwrap_or_else(|| Utc::now().fixed_offset());
         let work_date = dto.work_date.unwrap_or_else(|| start_time.date_naive());
         let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
+        let applied_rate = Self::resolve_applied_rate(db, user_id, &task, dto.billable).await?;
         let total_duration = Self::get_daily_duration(db, user_id, work_date, None).await?;
         Self::ensure_daily_duration_limit(total_duration, 0, daily_limit_minutes)?;
 
@@ -84,6 +89,8 @@ impl TimeEntryService {
             end_time: Set(None),
             duration_minutes: Set(0),
             work_date: Set(work_date),
+            billable: Set(dto.billable),
+            applied_rate: Set(applied_rate),
             notes: Set(dto.notes),
             ..Default::default()
         };
@@ -160,18 +167,21 @@ impl TimeEntryService {
             ));
         }
 
-        Self::ensure_task_ownership(db, user_id, dto.task_id).await?;
+        let task = Self::find_owned_task(db, user_id, dto.task_id).await?;
         Self::ensure_activity_ownership(db, user_id, dto.activity).await?;
 
         let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
         let total_duration = Self::get_daily_duration(db, user_id, dto.work_date, Some(entry.id)).await?;
         Self::ensure_daily_duration_limit(total_duration, i64::from(dto.duration_minutes), daily_limit_minutes)?;
+        let applied_rate = Self::resolve_applied_rate(db, user_id, &task, dto.billable).await?;
 
         let mut active_entry: time_entries::ActiveModel = entry.into();
         active_entry.task_id = Set(dto.task_id);
         active_entry.activity = Set(dto.activity);
         active_entry.duration_minutes = Set(dto.duration_minutes);
         active_entry.work_date = Set(dto.work_date);
+        active_entry.billable = Set(dto.billable);
+        active_entry.applied_rate = Set(applied_rate);
         active_entry.notes = Set(dto.notes);
 
         let updated = active_entry
@@ -204,10 +214,13 @@ impl TimeEntryService {
             .column(time_entries::Column::UserId)
             .column(time_entries::Column::TaskId)
             .column(time_entries::Column::Activity)
+            .column(time_entries::Column::InvoiceId)
             .column(time_entries::Column::StartTime)
             .column(time_entries::Column::EndTime)
             .column(time_entries::Column::DurationMinutes)
             .column(time_entries::Column::WorkDate)
+            .column(time_entries::Column::Billable)
+            .column(time_entries::Column::AppliedRate)
             .column(time_entries::Column::Notes)
             .column(time_entries::Column::CreatedAt)
             .column(time_entries::Column::UpdatedAt)
@@ -273,10 +286,13 @@ impl TimeEntryService {
                 .column(time_entries::Column::Id)
                 .column(time_entries::Column::TaskId)
                 .column(time_entries::Column::Activity)
+                .column(time_entries::Column::InvoiceId)
                 .column(time_entries::Column::StartTime)
                 .column(time_entries::Column::EndTime)
                 .column(time_entries::Column::DurationMinutes)
                 .column(time_entries::Column::WorkDate)
+                .column(time_entries::Column::Billable)
+                .column(time_entries::Column::AppliedRate)
                 .column(time_entries::Column::Notes)
                 .column(time_entries::Column::CreatedAt)
                 .column(time_entries::Column::UpdatedAt)
@@ -338,19 +354,59 @@ impl TimeEntryService {
         Ok(())
     }
 
-    async fn ensure_task_ownership(db: &impl ConnectionTrait, user_id: Uuid, task_id: Uuid) -> Result<(), AppError> {
-        let exists = Tasks::find()
+    async fn find_owned_task(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        task_id: Uuid,
+    ) -> Result<tasks::Model, AppError> {
+        Tasks::find()
             .filter(tasks::Column::Id.eq(task_id))
             .filter(tasks::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .is_some();
+            .ok_or_else(|| AppError::BadRequest("Tarea invalida o sin permisos".to_string()))
+    }
 
-        if !exists {
-            return Err(AppError::BadRequest("Tarea invalida o sin permisos".to_string()));
+    async fn resolve_applied_rate(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        task: &tasks::Model,
+        time_entry_billable: bool,
+    ) -> Result<Option<Decimal>, AppError> {
+        if !time_entry_billable {
+            return Ok(None);
         }
 
-        Ok(())
+        let Some(project_id) = task.project_id else {
+            return Ok(None);
+        };
+
+        let project = Projects::find()
+            .filter(projects::Column::Id.eq(project_id))
+            .filter(projects::Column::UserId.eq(user_id))
+            .one(db)
+            .await?
+            .ok_or_else(|| AppError::BadRequest("Proyecto invalido o sin permisos".to_string()))?;
+
+        if !project.billable {
+            return Ok(None);
+        }
+
+        let billing = ProjectBilling::find()
+            .filter(project_billing::Column::ProjectId.eq(project_id))
+            .filter(project_billing::Column::UserId.eq(user_id))
+            .one(db)
+            .await?;
+
+        let Some(billing) = billing else {
+            return Ok(None);
+        };
+
+        if !billing.billing_type.eq_ignore_ascii_case("hourly") {
+            return Ok(None);
+        }
+
+        Ok(billing.hourly_rate)
     }
 
     async fn ensure_activity_ownership(
@@ -452,10 +508,13 @@ impl TimeEntryService {
             user_id: row.user_id,
             task_id: row.task_id,
             activity: row.activity,
+            invoice_id: row.invoice_id,
             start_time: row.start_time,
             end_time: row.end_time,
             duration_minutes: row.duration_minutes,
             work_date: row.work_date,
+            billable: row.billable,
+            applied_rate: row.applied_rate,
             notes: row.notes,
             task_title: row.task_title,
             activity_name: row.activity_name,

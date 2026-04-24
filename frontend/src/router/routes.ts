@@ -126,6 +126,30 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: '/invoices',
+        name: 'invoices',
+        component: () => import('pages/InvoicesPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/invoices/new',
+        name: 'invoice-create',
+        component: () => import('pages/InvoiceFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/invoices/:id/edit',
+        name: 'invoice-edit',
+        component: () => import('pages/InvoiceFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/invoices/:id',
+        name: 'invoice-detail',
+        component: () => import('pages/InvoiceDetailPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: '/change-requests',
         name: 'change-requests',
         component: () => import('pages/ChangeRequestsPage.vue'),

@@ -1,6 +1,4 @@
-# HormigaPM (frontend)
-
-Hormiga Personal PM
+# Horbyta (frontend)
 
 ## Install the dependencies
 

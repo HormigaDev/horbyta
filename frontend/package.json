@@ -1,8 +1,8 @@
 {
   "name": "frontend",
   "version": "0.0.1",
-  "description": "Hormiga Personal PM",
-  "productName": "HormigaPM",
+  "description": "Horbyta PM",
+  "productName": "Horbyta",
   "author": "HormigaDev <hormigadev7@gmail.com>",
   "type": "module",
   "private": true,

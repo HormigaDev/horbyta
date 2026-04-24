@@ -84,6 +84,21 @@
             :label="t('tasks.timeEntries.dialog.activityLabel')"
           />
 
+          <q-toggle
+            v-if="timeEntryDialogMode !== 'view'"
+            v-model="timeEntryForm.billable"
+            :label="t('tasks.timeEntries.dialog.billableLabel')"
+            color="primary"
+          />
+          <q-input
+            v-else
+            :model-value="timeEntryForm.billable ? t('common.yes') : t('common.no')"
+            dense
+            outlined
+            readonly
+            :label="t('tasks.timeEntries.dialog.billableLabel')"
+          />
+
           <q-input
             v-if="timeEntryDialogMode === 'manual' || timeEntryDialogMode === 'edit'"
             v-model="timeEntryForm.work_date"
@@ -136,6 +151,24 @@
             :counter="timeEntryDialogMode !== 'view'"
             maxlength="1000"
             :label="t('tasks.timeEntries.dialog.notesLabel')"
+          />
+
+          <q-input
+            v-if="timeEntryDialogMode === 'view'"
+            :model-value="timeEntryForm.invoice_id || t('common.empty')"
+            dense
+            outlined
+            readonly
+            :label="t('tasks.timeEntries.dialog.invoiceIdLabel')"
+          />
+
+          <q-input
+            v-if="timeEntryDialogMode === 'view'"
+            :model-value="timeEntryForm.applied_rate || t('common.empty')"
+            dense
+            outlined
+            readonly
+            :label="t('tasks.timeEntries.dialog.appliedRateLabel')"
           />
         </q-card-section>
 
@@ -214,9 +247,12 @@ const editingTimeEntryId = ref<string | null>(null);
 const timeEntryForm = reactive({
   activity: null as string | null,
   activity_name: '',
+  billable: true,
   duration_minutes: 60,
   work_date: '',
   notes: '',
+  invoice_id: '',
+  applied_rate: '',
 });
 
 const timeEntriesQuery = reactive<QueryPayload>({
@@ -230,6 +266,7 @@ const timeEntriesQuery = reactive<QueryPayload>({
 const timeEntriesFilterSchema: FilterSchema = {
   id: 'Text',
   activity: { type: 'Text', label: t('columns.timeEntry.activity'), useSelectByTerm: true },
+  billable: { type: 'Boolean', label: t('columns.timeEntry.billable') },
   duration_minutes: { type: 'Number', label: t('columns.timeEntry.duration_minutes') },
   work_date: { type: 'Date', label: t('columns.timeEntry.work_date') },
   start_time: { type: 'Date', label: t('columns.timeEntry.start_time') },
@@ -335,12 +372,15 @@ const { onRequest: onRequestTimeEntries } = useCrudListHandlers({
 const resetTimeEntryForm = () => {
   timeEntryForm.activity = null;
   timeEntryForm.activity_name = '';
+  timeEntryForm.billable = true;
   timeEntryForm.duration_minutes = 60;
   timeEntryForm.work_date = formatIsoDateForInput(new Date().toISOString(), {
     timezone: userPreferencesStore.timezone,
     dateFormat: userPreferencesStore.dateFormat,
   });
   timeEntryForm.notes = '';
+  timeEntryForm.invoice_id = '';
+  timeEntryForm.applied_rate = '';
   editingTimeEntryId.value = null;
   editingOriginalEntry.value = null;
 };
@@ -375,12 +415,15 @@ const handleEditTimeEntry = async (ids: string[]) => {
       duration_minutes: entry.duration_minutes,
     };
     timeEntryForm.activity = entry.activity;
+    timeEntryForm.billable = entry.billable;
     timeEntryForm.duration_minutes = entry.duration_minutes;
     timeEntryForm.work_date = formatIsoDateForInput(entry.work_date, {
       timezone: userPreferencesStore.timezone,
       dateFormat: userPreferencesStore.dateFormat,
     });
     timeEntryForm.notes = entry.notes || '';
+    timeEntryForm.invoice_id = entry.invoice_id || '';
+    timeEntryForm.applied_rate = entry.applied_rate || '';
     await loadActivitiesByTerm('');
     isTimeEntryDialogOpen.value = true;
   } catch (err) {
@@ -398,9 +441,12 @@ const handleViewTimeEntry = async (id: string) => {
     editingTimeEntryId.value = entry.id;
     editingOriginalEntry.value = null;
     timeEntryForm.activity_name = entry.activity_name || t('common.empty');
+    timeEntryForm.billable = entry.billable;
     timeEntryForm.duration_minutes = entry.duration_minutes;
     timeEntryForm.work_date = entry.work_date;
     timeEntryForm.notes = entry.notes || '';
+    timeEntryForm.invoice_id = entry.invoice_id || '';
+    timeEntryForm.applied_rate = entry.applied_rate || '';
     isTimeEntryDialogOpen.value = true;
   } catch (err) {
     notifyError(t('tasks.timeEntries.loadError'), err);
@@ -453,6 +499,7 @@ const saveTimeEntry = async () => {
       const payload: CreateTimeEntryDto = {
         task_id: props.task.id,
         activity: timeEntryForm.activity,
+        billable: timeEntryForm.billable,
         duration_minutes: timeEntryForm.duration_minutes,
         work_date: workDate,
         ...(normalizedNotes ? { notes: normalizedNotes } : {}),
@@ -480,6 +527,7 @@ const saveTimeEntry = async () => {
       const payload: UpdateTimeEntryDto = {
         task_id: props.task.id,
         activity: timeEntryForm.activity,
+        billable: timeEntryForm.billable,
         duration_minutes: timeEntryForm.duration_minutes,
         work_date: workDate,
         ...(normalizedNotes ? { notes: normalizedNotes } : {}),
@@ -497,6 +545,7 @@ const saveTimeEntry = async () => {
       const payload: StartTimeEntryTimerDto = {
         task_id: props.task.id,
         activity: timeEntryForm.activity,
+        billable: timeEntryForm.billable,
         ...(workDate ? { work_date: workDate } : {}),
         ...(normalizedNotes ? { notes: normalizedNotes } : {}),
       };

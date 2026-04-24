@@ -6,6 +6,7 @@ pub mod categories;
 pub mod change_requests;
 pub mod chats;
 pub mod clients;
+pub mod invoices;
 pub mod milestones;
 pub mod projects;
 pub mod tags;

@@ -1,5 +1,6 @@
 pub mod activity;
 pub mod attachment;
+pub mod invoice;
 pub mod auth;
 pub mod category;
 pub mod change_request;

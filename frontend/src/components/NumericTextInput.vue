@@ -1,5 +1,6 @@
 <template>
   <q-input
+    input-style="text-align: right"
     :model-value="displayValue"
     type="text"
     :inputmode="onlyIntegers ? 'numeric' : 'decimal'"

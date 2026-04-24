@@ -106,7 +106,7 @@ create table project_billing (
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
 
-    constraint chk_payment_day_is_in_range check (payment_day >= 0 and payment_day <= 31),
+    constraint chk_payment_day_is_in_range check (payment_day >= 0 and payment_day <= 28),
     constraint chk_project_billing_billing_type check (billing_type in ('fixed', 'hourly', 'retainer')),
     constraint chk_project_billing_billing check (
         (
@@ -143,6 +143,71 @@ create table milestones (
     updated_at timestamptz not null default now(),
 
     constraint chk_milestones_status check (status in ('open', 'review', 'approved', 'released', 'cancelled'))
+);
+
+create table invoices (
+    id uuid primary key default uuidv7(),
+    record_number bigint not null,
+    user_id uuid not null references users (id) on delete cascade,
+    project_id uuid not null references projects (id) on delete cascade,
+    
+    amount numeric(15,4) not null,
+    currency_type varchar(3) not null,
+
+    status varchar(30) not null default 'draft',
+    due_date date,
+    issued_at timestamptz,
+
+    provider varchar(30) not null default 'manual',
+    provider_external_id varchar(255),
+    payment_link varchar(1024),
+
+    notes text,
+
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint chk_invoices_status check (status in ('draft', 'open', 'paid', 'void', 'uncollectible')),
+    constraint chk_invoices_provider check (
+        (provider = 'manual') or
+        (provider <> 'manual' and provider_external_id is not null)
+    )
+);
+
+create table payments (
+    id uuid primary key default uuidv7(),
+    record_number bigint not null,
+    user_id uuid not null references users (id) on delete cascade,
+    project_id uuid not null references projects (id) on delete cascade,
+    invoice_id uuid references invoices (id) on delete set null,
+    parent_payment_id uuid references payments (id) on delete restrict,
+
+    amount numeric(15,4),
+    currency_type varchar(3) not null,
+    transaction_type varchar(20) not null default 'charge',
+    
+    payment_date date not null default current_date,
+
+    provider varchar(30) not null default 'manual',
+    provider_external_id varchar(255),
+    payment_method varchar(50),
+
+    notes text,
+
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint chk_payments_amount check (amount > 0),
+    constraint chk_payments_provider check (
+        (provider = 'manual') or 
+        (provider <> 'manual' and provider_external_id is not null)
+    ),
+    constraint chk_payments_type check (transaction_type in ('charge', 'refund')),
+    constraint chk_payments_refund_logic check (
+        (transaction_type = 'charge' and parent_payment_id is null)
+        or
+        (transaction_type = 'refund' and parent_payment_id is not null)
+    )
 );
 
 create table tags (
@@ -192,10 +257,13 @@ create table time_entries (
     user_id uuid not null references users (id) on delete cascade,
     task_id uuid not null references tasks (id) on delete cascade,
     activity uuid not null references activities (id) on delete restrict,
+    invoice_id uuid references invoices (id) on delete set null,
     start_time timestamptz,
     end_time timestamptz,
     duration_minutes integer not null default 0,
     work_date date not null default current_date,
+    billable boolean not null default true,
+    applied_rate numeric(15,4),
     notes text,
 
     created_at timestamptz not null default now(),
@@ -368,6 +436,16 @@ create index idx_milestones_status on milestones(status);
 create index idx_milestones_project_due_date on milestones(project_id, due_date);
 create index idx_milestones_project_created_at on milestones(project_id, created_at desc);
 create index idx_milestones_project_updated_at on milestones(project_id, updated_at desc);
+create index idx_invoices_user on invoices(user_id);
+create index idx_invoices_project on invoices(project_id);
+create index idx_invoices_record_number on invoices(record_number);
+create unique index idx_uq_invoices_external_id on invoices(provider, provider_external_id) where provider_external_id is not null;
+create index idx_payments_user on payments(user_id);
+create index idx_payments_project on payments(project_id);
+create index idx_payments_invoice on payments(invoice_id);
+create index idx_payments_record_number on payments(record_number);
+create index idx_payments_parent on payments(parent_payment_id);
+create unique index idx_uq_payments_external_id on payments(provider, provider_external_id) where provider_external_id is not null;
 create index idx_tags_user_id on tags(user_id);
 create index idx_tags_user_created_at on tags(user_id, created_at desc);
 create index idx_tags_user_updated_at on tags(user_id, updated_at desc);
@@ -390,6 +468,7 @@ create index idx_activities_user_created_at on activities(user_id, created_at de
 create index idx_activities_user_updated_at on activities(user_id, updated_at desc);
 create index idx_time_entries_task on time_entries(task_id);
 create index idx_time_entries_user on time_entries(user_id);
+create index idx_time_entries_invoice on time_entries(invoice_id);
 create index idx_time_entries_created_at on time_entries(user_id, created_at desc);
 create index idx_conversation_history_user on conversation_history(user_id);
 create index idx_conversation_history_user_title on conversation_history(user_id, title);
@@ -441,7 +520,9 @@ begin
         'change_requests',
         'project_billing',
         'activities',
-        'time_entries'
+        'time_entries',
+        'invoices',
+        'payments'
     ]
     loop
         execute format(
@@ -483,7 +564,9 @@ begin
     foreach t in array array[
         'tasks',
         'projects',
-        'change_requests'
+        'change_requests',
+        'invoices',
+        'payments'
     ]
     loop
         execute format(
@@ -498,9 +581,7 @@ begin
 end;
 $$;
 
--- ---------------------------------
--- TRIGGER TO INCREMENT THE VERSION OF CHANGE REQUESTS
--- ---------------------------------
+---------------------------------------------
 
 create or replace function fn_increment_cr_version()
 returns trigger language plpgsql as $$
@@ -520,9 +601,7 @@ before update on change_requests
 for each row
 execute function fn_increment_cr_version();
 
--- ---------------------------------
--- TRIGGER TIME ENTRIES
--- ---------------------------------
+---------------------------------------------
 
 create or replace function fn_check_daily_hours_limit()
 returns trigger language plpgsql as $$
@@ -564,6 +643,55 @@ before insert or update on time_entries
 for each row
 execute function fn_check_daily_hours_limit();
 
+---------------------------------------------
+
+create or replace function fn_prevent_payment_tampering()
+returns trigger language plpgsql as $$
+begin
+    if (
+        new.amount <> old.amount
+        or new.currency_type <> old.currency_type
+        or new.payment_date <> old.payment_date
+        or new.invoice_id is distinct from old.invoice_id
+        or new.provider <> old.provider
+        or new.provider_external_id is distinct from old.provider_external_id
+    ) then
+        raise exception 'payment_tampering_detected: Payments records are immutable. You cannot change amounts, dates, currencies, vendors, or associated invoices. If there is an error, you must record a refund or adjustment.';
+    end if;
+
+    return new;
+end;
+$$;
+
+create trigger trg_prevent_payment_tampering
+before update on payments
+for each row
+execute function fn_prevent_payment_tampering();
+
+---------------------------------------------
+
+create or replace function fn_release_voided_time_entries()
+returns trigger language plpgsql as $$
+begin
+    if new.status = 'void' and old.status <> 'void' then
+        if exists (select 1 from payments where invoice_id = new.id) then
+            raise exception 'invoice_has_payments: You cannot void an invoice that already has payments recorded. You must refund the payments first.';
+        end if;
+
+        update time_entries
+        set invoice_id = null
+        where invoice_id = new.id;
+    end if;
+
+    return new;
+end;
+$$;
+
+create trigger trg_release_voided_time_entries
+after update on invoices
+for each row
+execute function fn_release_voided_time_entries();
+
 -- ---------------------------------
 -- COMMENTS
 -- ---------------------------------
@@ -594,5 +722,7 @@ comment on column change_requests.technical_assessment is 'The freelancer''s for
 comment on column change_requests.schedule_impact_days is 'Days to be added to the delivery date (milestones) if the client approves this change.';
 comment on column change_requests.client_approved_at is 'Timestamp when the client clicked the button to accept cost/delay.';
 comment on column change_requests.version is 'Change record version. Increments when the client edits the title or description';
+comment on column time_entries.applied_rate is 'Snapshot del hourly_rate. Solo aplica para proyectos hourly.';
+comment on column time_entries.invoice_id is 'Liga los tiempos trabajados a una factura consolidada.';
 
 commit;

@@ -378,7 +378,7 @@ const hasPaymentDayError = computed(() => {
 
   if (Number.isNaN(parsedPaymentDay.value)) return true;
 
-  return parsedPaymentDay.value < 1 || parsedPaymentDay.value > 31;
+  return parsedPaymentDay.value < 1 || parsedPaymentDay.value > 28;
 });
 
 const buildSelectedFileId = (file: File, index: number): string => {
@@ -518,7 +518,7 @@ const validateProjectBilling = (): boolean => {
       parsedRetainerAmount.value >= 0 &&
       !Number.isNaN(parsedPaymentDay.value) &&
       parsedPaymentDay.value >= 1 &&
-      parsedPaymentDay.value <= 31
+      parsedPaymentDay.value <= 28
     );
   }
 

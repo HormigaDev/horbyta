@@ -66,7 +66,7 @@ class OpenRouterClient:
     def __init__(self) -> None:
         self._base_url = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
         self._site_url = os.environ.get("OPENROUTER_SITE_URL", "")
-        self._app_title = os.environ.get("OPENROUTER_APP_NAME", "HormigaPM")
+        self._app_title = os.environ.get("OPENROUTER_APP_NAME", "Horbyta")
         self._enable_cache_control = os.environ.get("OPENROUTER_ENABLE_CACHE_CONTROL", "true").lower() not in {
             "0",
             "false",

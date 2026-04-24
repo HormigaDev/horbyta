@@ -21,7 +21,7 @@ pub struct CreateProjectBillingDto {
     #[validate(custom(function = "is_non_negative_decimal"))]
     pub retainer_amount: Option<Decimal>,
 
-    #[validate(range(min = 1, max = 31, message = "the payment day must be between 1 and 31"))]
+    #[validate(range(min = 1, max = 28, message = "the payment day must be between 1 and 28"))]
     pub payment_day: Option<i16>,
 }
 
@@ -41,7 +41,7 @@ pub struct UpdateProjectBillingDto {
     #[validate(custom(function = "is_non_negative_decimal"))]
     pub retainer_amount: Option<Decimal>,
 
-    #[validate(range(min = 1, max = 31, message = "the payment day must be between 1 and 31"))]
+    #[validate(range(min = 1, max = 28, message = "the payment day must be between 1 and 28"))]
     pub payment_day: Option<i16>,
 }
 
