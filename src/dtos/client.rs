@@ -75,11 +75,7 @@ pub fn client_filter_schema() -> FilterSchema {
 
 #[derive(Serialize, Deserialize, Validate, Debug, Clone)]
 pub struct CreateClientDto {
-    #[validate(length(
-        min = 1,
-        max = 255,
-        message = "client name must be between 1 and 255 characters"
-    ))]
+    #[validate(length(min = 1, max = 255, message = "client name must be between 1 and 255 characters"))]
     pub name: String,
 
     #[validate(
@@ -106,11 +102,7 @@ pub struct CreateClientDto {
 
 #[derive(Serialize, Deserialize, Validate, Debug, Clone)]
 pub struct UpdateClientDto {
-    #[validate(length(
-        min = 1,
-        max = 255,
-        message = "client name must be between 1 and 255 characters"
-    ))]
+    #[validate(length(min = 1, max = 255, message = "client name must be between 1 and 255 characters"))]
     pub name: String,
 
     #[validate(

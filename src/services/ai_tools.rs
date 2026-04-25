@@ -193,7 +193,7 @@ pub async fn execute_tool(
             let parsed: IdArgs = serde_json::from_value(args)
                 .map_err(|e| AppError::BadRequest(format!("Argumentos invalidos para project_read: {}", e)))?;
 
-          let project = ProjectService::get_by_id(db.as_ref(), user_id, parsed.id).await?;
+            let project = ProjectService::get_by_id(db.as_ref(), user_id, parsed.id).await?;
             Ok(json!({ "project": project }))
         }
         "projects_list" => {
@@ -233,7 +233,7 @@ pub async fn execute_tool(
             let parsed: IdArgs = serde_json::from_value(args)
                 .map_err(|e| AppError::BadRequest(format!("Argumentos invalidos para task_read: {}", e)))?;
 
-          let task = TaskService::get_by_id(db.as_ref(), user_id, parsed.id).await?;
+            let task = TaskService::get_by_id(db.as_ref(), user_id, parsed.id).await?;
             Ok(json!({ "task": task }))
         }
         "tasks_list" => {

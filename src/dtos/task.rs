@@ -119,11 +119,7 @@ pub struct CreateTaskDto {
     pub parent_id: Option<Uuid>,
     pub milestone_id: Option<Uuid>,
 
-    #[validate(length(
-        min = 1,
-        max = 255,
-        message = "task title must be between 1 and 255 characters"
-    ))]
+    #[validate(length(min = 1, max = 255, message = "task title must be between 1 and 255 characters"))]
     pub title: String,
 
     #[validate(length(max = 15000, message = "task description must be at most 15000 characters"))]
@@ -151,11 +147,7 @@ pub struct UpdateTaskDto {
     pub parent_id: Option<Uuid>,
     pub milestone_id: Option<Uuid>,
 
-    #[validate(length(
-        min = 1,
-        max = 255,
-        message = "task title must be between 1 and 255 characters"
-    ))]
+    #[validate(length(min = 1, max = 255, message = "task title must be between 1 and 255 characters"))]
     pub title: String,
 
     #[validate(length(max = 15000, message = "task description must be at most 15000 characters"))]

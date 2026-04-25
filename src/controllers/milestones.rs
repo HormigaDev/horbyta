@@ -44,9 +44,14 @@ async fn client_search_milestones(
 ) -> Result<impl IntoResponse, AppError> {
     client_milestone_filter_schema().validate_payload(&payload)?;
 
-    let (milestones, total_items) =
-        MilestoneService::client_search_project_milestones(state.db.as_ref(), client.user_id, client.client_id, id, payload.clone())
-            .await?;
+    let (milestones, total_items) = MilestoneService::client_search_project_milestones(
+        state.db.as_ref(),
+        client.user_id,
+        client.client_id,
+        id,
+        payload.clone(),
+    )
+    .await?;
 
     Ok(Json(json!({
         "payload": payload,

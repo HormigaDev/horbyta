@@ -147,11 +147,7 @@ pub fn client_milestone_filter_schema() -> FilterSchema {
 #[derive(Validate, Deserialize)]
 pub struct CreateMilestoneDto {
     pub project_id: Uuid,
-    #[validate(length(
-        min = 1,
-        max = 100,
-        message = "milestone name must be between 1 and 100 characters"
-    ))]
+    #[validate(length(min = 1, max = 100, message = "milestone name must be between 1 and 100 characters"))]
     pub name: String,
     #[validate(length(max = 10000, message = "milestone description must be at most 10000 characters"))]
     pub description: Option<String>,
@@ -162,11 +158,7 @@ pub struct CreateMilestoneDto {
 #[derive(Validate, Deserialize)]
 pub struct UpdateMilestoneDto {
     pub project_id: Uuid,
-    #[validate(length(
-        min = 1,
-        max = 100,
-        message = "milestone name must be between 1 and 100 characters"
-    ))]
+    #[validate(length(min = 1, max = 100, message = "milestone name must be between 1 and 100 characters"))]
     pub name: String,
     #[validate(length(max = 10000, message = "milestone description must be at most 10000 characters"))]
     pub description: Option<String>,

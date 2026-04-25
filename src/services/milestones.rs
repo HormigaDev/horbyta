@@ -25,7 +25,11 @@ pub struct MilestoneService;
 const PROJECT_MILESTONES_PREVIEW_LIMIT: u64 = 10;
 
 impl MilestoneService {
-    async fn check_project_ownership(db: &impl ConnectionTrait, user_id: Uuid, project_id: Uuid) -> Result<(), AppError> {
+    async fn check_project_ownership(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        project_id: Uuid,
+    ) -> Result<(), AppError> {
         let project = Projects::find()
             .filter(projects::Column::Id.eq(project_id))
             .filter(projects::Column::UserId.eq(user_id))
@@ -85,7 +89,11 @@ impl MilestoneService {
         }
     }
 
-    pub async fn create(db: &impl ConnectionTrait, user_id: Uuid, dto: CreateMilestoneDto) -> Result<MilestoneModel, AppError> {
+    pub async fn create(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        dto: CreateMilestoneDto,
+    ) -> Result<MilestoneModel, AppError> {
         Self::check_project_ownership(db, user_id, dto.project_id).await?;
 
         let status = dto.status.unwrap_or(MilestoneStatus::Open).to_string();
@@ -121,10 +129,7 @@ impl MilestoneService {
         active_milestone.status = Set(dto.status.to_string());
         active_milestone.due_date = Set(dto.due_date);
 
-        active_milestone
-            .update(db)
-            .await
-            .map_err(AppError::Database)
+        active_milestone.update(db).await.map_err(AppError::Database)
     }
 
     pub async fn delete(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
@@ -225,8 +230,7 @@ impl MilestoneService {
         project_id: Uuid,
         payload: QueryPayload,
     ) -> Result<(Vec<ProjectMilestoneSummaryDto>, u64), AppError> {
-        Self::check_client_project_ownership(db, user_id, client_id, project_id)
-            .await?;
+        Self::check_client_project_ownership(db, user_id, client_id, project_id).await?;
 
         let base_condition = Condition::all().add(milestones::Column::ProjectId.eq(project_id));
         let condition = apply_filters(base_condition, &payload.filters, |column| {
@@ -286,8 +290,7 @@ impl MilestoneService {
         client_id: Uuid,
         project_id: Uuid,
     ) -> Result<Vec<ProjectMilestoneSummaryDto>, AppError> {
-        Self::check_client_project_ownership(db, user_id, client_id, project_id)
-            .await?;
+        Self::check_client_project_ownership(db, user_id, client_id, project_id).await?;
         Self::fetch_project_milestones_preview(db, project_id).await
     }
 

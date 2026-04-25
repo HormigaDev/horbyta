@@ -99,15 +99,9 @@ async fn get_billable_tasks(
     let page = query.page.unwrap_or(1);
     let per_page = query.per_page.unwrap_or(100);
 
-    let result = InvoiceService::get_billable_tasks(
-        state.db.as_ref(),
-        user.id,
-        project_id,
-        query.invoice_id,
-        page,
-        per_page,
-    )
-    .await?;
+    let result =
+        InvoiceService::get_billable_tasks(state.db.as_ref(), user.id, project_id, query.invoice_id, page, per_page)
+            .await?;
 
     Ok(Json(result))
 }
@@ -117,9 +111,6 @@ pub fn invoices_controller() -> Router<AppState> {
         .route("/search", get(search_invoices))
         .route("/", post(create_invoice))
         .route("/project/{project_id}/billable-tasks", get(get_billable_tasks))
-        .route(
-            "/{id}",
-            get(get_invoice).put(update_invoice).delete(delete_invoice),
-        )
+        .route("/{id}", get(get_invoice).put(update_invoice).delete(delete_invoice))
         .route("/{id}/status", patch(update_invoice_status))
 }

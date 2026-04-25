@@ -788,6 +788,112 @@ inner join projects p on t.project_id = p.id
 where p.status = 'open'
 group by t.user_id, p.id, p.name;
 
+create view vw_client_dash_project_status as
+select
+    p.user_id,
+    p.client_id,
+    p.status,
+    count(*) as total_projects
+from projects p
+where p.client_id is not null
+group by p.user_id, p.client_id, p.status;
+
+create view vw_client_dash_milestone_health as
+select
+    p.user_id,
+    p.client_id,
+    p.id as project_id,
+    p.name as project_name,
+    count(m.id) as total_milestones,
+    sum(case when m.status in ('approved', 'released') then 1 else 0 end) as completed_milestones,
+    sum(
+        case
+            when m.status not in ('approved', 'released', 'cancelled')
+                and m.due_date is not null
+                and m.due_date < now()
+            then 1
+            else 0
+        end
+    ) as overdue_milestones,
+    sum(
+        case
+            when m.status not in ('approved', 'released', 'cancelled')
+                and m.due_date is not null
+                and m.due_date >= now()
+                and m.due_date < now() + interval '7 days'
+            then 1
+            else 0
+        end
+    ) as upcoming_milestones,
+    min(m.due_date::date) filter (
+        where m.status not in ('approved', 'released', 'cancelled')
+            and m.due_date is not null
+    ) as next_due_date
+from projects p
+left join milestones m on m.project_id = p.id
+where p.client_id is not null
+group by p.user_id, p.client_id, p.id, p.name;
+
+create view vw_client_dash_change_request_status as
+select
+    cr.user_id,
+    cr.client_id,
+    cr.status,
+    count(*) as total_requests
+from change_requests cr
+group by cr.user_id, cr.client_id, cr.status;
+
+create view vw_client_dash_approved_change_value as
+select
+    cr.user_id,
+    cr.client_id,
+    pb.currency_type,
+    count(cr.id) as total_approved_changes,
+    sum(cr.impact_cost) as total_approved_value
+from change_requests cr
+inner join projects p on p.id = cr.project_id
+inner join project_billing pb on pb.project_id = p.id and pb.user_id = p.user_id
+where cr.status in ('approved', 'implemented')
+group by cr.user_id, cr.client_id, pb.currency_type;
+
+create view vw_client_dash_project_portfolio as
+with next_milestone as (
+    select
+        m.project_id,
+        m.name as next_milestone_name,
+        m.due_date::date as next_milestone_due_date,
+        row_number() over (
+            partition by m.project_id
+            order by m.due_date asc nulls last, m.created_at asc
+        ) as rn
+    from milestones m
+    where m.status not in ('approved', 'released', 'cancelled')
+)
+select
+    p.user_id,
+    p.client_id,
+    p.id as project_id,
+    p.name as project_name,
+    p.status as project_status,
+    p.billable,
+    pb.currency_type,
+    pb.billing_type,
+    pb.hourly_rate,
+    pb.fixed_price,
+    pb.retainer_amount,
+    pb.payment_day,
+    coalesce(mh.total_milestones, 0) as total_milestones,
+    coalesce(mh.completed_milestones, 0) as completed_milestones,
+    coalesce(mh.overdue_milestones, 0) as overdue_milestones,
+    coalesce(mh.upcoming_milestones, 0) as upcoming_milestones,
+    nm.next_milestone_name,
+    nm.next_milestone_due_date
+from projects p
+left join project_billing pb on pb.project_id = p.id and pb.user_id = p.user_id
+left join vw_client_dash_milestone_health mh on mh.project_id = p.id
+left join next_milestone nm on nm.project_id = p.id and nm.rn = 1
+where p.client_id is not null;
+
 -- ---------------------------------
 -- COMMENTS
 -- ---------------------------------

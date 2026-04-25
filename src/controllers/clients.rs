@@ -109,8 +109,8 @@ async fn activate_client_magic_token(
     user: UserDto,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let result = ClientService::generate_client_magic_token(state.db.as_ref(), state.config.time_to_exp, user.id, id)
-        .await?;
+    let result =
+        ClientService::generate_client_magic_token(state.db.as_ref(), state.config.time_to_exp, user.id, id).await?;
     Ok(Json(result))
 }
 

@@ -1,3 +1,6 @@
+import type { ChangeRequestStatus } from './changeRequest';
+import type { ProjectBillingType, ProjectStatus } from './project';
+
 export interface CurrencyAmountDto {
   currency_type: string;
   amount: string;
@@ -61,4 +64,65 @@ export interface DashboardDto {
   billable_ratio_daily: BillableRatioDailyRow[];
   scope_creep_value: ScopeCreepValueRow[];
   task_bottlenecks: TaskBottleneckRow[];
+}
+
+export interface ClientDashboardKpisDto {
+  active_projects_total: number;
+  overdue_milestones_total: number;
+  open_change_requests_total: number;
+  approved_change_value: CurrencyAmountDto[];
+}
+
+export interface ClientProjectStatusRow {
+  status: ProjectStatus;
+  total_projects: number;
+}
+
+export interface ClientMilestoneHealthRow {
+  project_id: string;
+  project_name: string;
+  total_milestones: number;
+  completed_milestones: number;
+  overdue_milestones: number;
+  upcoming_milestones: number;
+  next_due_date: string | null;
+}
+
+export interface ClientChangeRequestStatusRow {
+  status: ChangeRequestStatus;
+  total_requests: number;
+}
+
+export interface ClientApprovedChangeValueRow {
+  currency_type: string;
+  total_approved_changes: number;
+  total_approved_value: string;
+}
+
+export interface ClientProjectPortfolioRow {
+  project_id: string;
+  project_name: string;
+  project_status: ProjectStatus;
+  billable: boolean;
+  currency_type: string | null;
+  billing_type: ProjectBillingType | null;
+  hourly_rate: string | null;
+  fixed_price: string | null;
+  retainer_amount: string | null;
+  payment_day: number | null;
+  total_milestones: number;
+  completed_milestones: number;
+  overdue_milestones: number;
+  upcoming_milestones: number;
+  next_milestone_name: string | null;
+  next_milestone_due_date: string | null;
+}
+
+export interface ClientDashboardDto {
+  kpis: ClientDashboardKpisDto;
+  project_status: ClientProjectStatusRow[];
+  milestone_health: ClientMilestoneHealthRow[];
+  change_request_status: ClientChangeRequestStatusRow[];
+  approved_change_value: ClientApprovedChangeValueRow[];
+  project_portfolio: ClientProjectPortfolioRow[];
 }
