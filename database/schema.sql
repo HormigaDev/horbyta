@@ -694,6 +694,101 @@ for each row
 execute function fn_release_voided_time_entries();
 
 -- ---------------------------------
+-- VIEWS
+-- ---------------------------------
+
+create view vw_dash_monthly_revenue as
+select
+    user_id,
+    currency_type,
+    date_trunc('month', payment_date)::date as month_date,
+    sum(
+        case when transaction_type = 'charge' then amount else -amount end
+    ) as total_revenue
+from payments
+group by user_id, currency_type, date_trunc('month', payment_date)
+order by month_date desc;
+
+create view vw_dash_accounts_receivable as
+with invoice_balances as (
+    select
+        i.id as invoice_id,
+        i.user_id,
+        i.currency_type,
+        i.due_date,
+        prj.client_id,
+        i.amount - coalesce((
+            select sum(case when p.transaction_type = 'charge' then p.amount else -p.amount end)
+            from payments p
+            where p.invoice_id = i.id
+        ), 0) as invoice_outstanding
+    from invoices i
+    inner join projects prj on i.project_id = prj.id
+    where i.status = 'open'
+)
+select
+    ib.user_id,
+    c.name as client_name,
+    ib.currency_type,
+    sum(ib.invoice_outstanding) as outstanding_balance,
+    min(ib.due_date) as oldest_due_date
+from invoice_balances ib
+inner join clients c on ib.client_id = c.id
+group by ib.user_id, c.name, ib.currency_type
+having sum(ib.invoice_outstanding) > 0;
+
+
+create view vw_dash_time_by_activity as
+select
+    te.user_id,
+    a.name as activity_name,
+    te.billable,
+    date_trunc('week', te.work_date)::date as week_date,
+    round(sum(te.duration_minutes) / 60.0, 2) as total_hours
+from time_entries te
+inner join activities a on te.activity = a.id
+group by te.user_id, a.name, te.billable, date_trunc('week', te.work_date);
+
+create view vw_dash_billable_ratio_daily as
+select
+    user_id,
+    work_date,
+    round(sum(case when billable then duration_minutes else 0 end) / 60.0, 2) as billable_hours,
+    round(sum(case when not billable then duration_minutes else 0 end) / 60.0, 2) as no_billable_hours,
+    round(sum(duration_minutes) / 60.0, 2) as total_hours
+from time_entries
+group by user_id, work_date
+order by work_date desc;
+
+create view vw_dash_scope_creep_value as
+select
+    cr.user_id,
+    pb.currency_type,
+    count(cr.id) as total_approved_changes,
+    sum(cr.impact_cost) as total_additional_revenue,
+    sum(cr.schedule_impact_days) as total_days_extended
+from change_requests cr
+inner join projects p on cr.project_id = p.id
+inner join project_billing pb on p.id = pb.project_id
+where cr.status in ('approved', 'implemented')
+group by cr.user_id, pb.currency_type;
+
+create view vw_dash_task_bottlenecks as
+select
+    t.user_id,
+    p.name as project_name,
+    p.id as project_id,
+    count(t.id) as total_tasks,
+    sum(case when t.status = 'todo' then 1 else 0 end) as tasks_todo,
+    sum(case when t.status = 'in_progress' then 1 else 0 end) as tasks_in_progress,
+    sum(case when t.status = 'review' then 1 else 0 end) as tasks_in_review,
+    sum(case when t.due_date < now() and t.status != 'done' then 1 else 0 end) as overdue_tasks
+from tasks t
+inner join projects p on t.project_id = p.id
+where p.status = 'open'
+group by t.user_id, p.id, p.name;
+
+-- ---------------------------------
 -- COMMENTS
 -- ---------------------------------
 

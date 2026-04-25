@@ -50,6 +50,7 @@ async fn main() {
             }),
         )
         .nest("/auth", controllers::auth::auth_controller())
+        .route("/dashboard", get(controllers::dashboard::get_dashboard))
         .nest("/attachments", controllers::attachments::attachments_controller())
         .nest("/chats", controllers::chats::chats_controller())
         .nest(

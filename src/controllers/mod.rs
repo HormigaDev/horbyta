@@ -5,6 +5,7 @@ pub mod categories;
 pub mod change_requests;
 pub mod chats;
 pub mod clients;
+pub mod dashboard;
 pub mod invoices;
 pub mod milestones;
 pub mod payments;
