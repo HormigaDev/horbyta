@@ -697,7 +697,7 @@ export const getTimeEntryColumns = (t: ComposerTranslation) => {
       field: 'applied_rate',
       sortable: true,
       align: 'center' as const,
-      format: (val: string | null) => `${val}`.replace('.', ',') || t('common.empty'),
+      format: (val: string | null) => (val ? `${val}`.replace('.', ',') : t('common.empty')),
     },
   ]);
 };

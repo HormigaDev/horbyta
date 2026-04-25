@@ -410,7 +410,7 @@ const markAsPaid = async () => {
       payment_method: markPaidForm.value.payment_method || null,
       notes: markPaidForm.value.notes || null,
     });
-    invoice.value = await InvoicesService.updateStatus(invoiceId, { status: 'paid' });
+    invoice.value = await InvoicesService.getById(invoiceId);
     showMarkPaidDialog.value = false;
     notify(t('invoices.detail.paymentCreated'), 'positive');
   } catch (err: unknown) {

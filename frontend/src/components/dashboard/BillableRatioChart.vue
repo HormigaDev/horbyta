@@ -52,15 +52,16 @@ const option = computed<DashboardEChartsOption | null>(() => {
     color: [pickColor(props.palette, 0), pickColor(props.palette, 4)],
     tooltip: { trigger: 'axis', ...baseTooltip(props.palette) },
     legend: {
+      top: 4,
       textStyle: { color: props.palette.text },
       data: [props.billableLabel, props.nonBillableLabel],
     },
-    grid: { top: 40, left: 56, right: 24, bottom: 32 },
+    grid: { top: 72, left: 56, right: 24, bottom: 56, containLabel: true },
     xAxis: {
       type: 'category',
       data: dates,
       axisLine: { lineStyle: { color: props.palette.axis } },
-      axisLabel: { color: props.palette.text },
+      axisLabel: { color: props.palette.text, margin: 14 },
     },
     yAxis: {
       type: 'value',

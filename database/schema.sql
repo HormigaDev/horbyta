@@ -624,15 +624,16 @@ begin
     into total_minutes_registered
     from time_entries
     where user_id = new.user_id
+        and task_id = new.task_id
         and work_date = new.work_date
         and (TG_OP = 'INSERT' or id <> new.id);
 
     if (total_minutes_registered + new.duration_minutes) > user_max_minutes then
-        raise exception 'daily_limit_exceeded: personal limit exceeded. yout maximum is % hours. you are trying to add % hours to a day that already has % hours',
+        raise exception 'daily_limit_exceeded: task daily limit exceeded. your maximum is % hours. you are trying to add % hours to a task-day that already has % hours',
             (user_max_minutes / 60),
             round(new.duration_minutes / 60.0, 1),
             round(total_minutes_registered / 60.0, 1)
-        using hint = 'Check if you left a timer running, or adjust your maximum hours settings.';
+        using hint = 'Check if you left a timer running on this task, or adjust your maximum hours settings.';
     end if;
 
     return new;

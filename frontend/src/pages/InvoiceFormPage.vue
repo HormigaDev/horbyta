@@ -404,7 +404,6 @@ const hasManualAmountError = computed(() => {
 const canSave = computed(() => {
   if (!isDraft.value) return false;
   if (!form.value.project_id) return false;
-  if (selectedEntryIds.value.size === 0) return false;
   if (calculatedAmount.value === null || calculatedAmount.value <= 0) {
     if (parsedManualAmount.value <= 0) return false;
   }
@@ -572,11 +571,6 @@ const saveInvoice = async () => {
 
   if (!form.value.project_id) {
     notify(t('invoices.form.validation.projectRequired'), 'warning');
-    return;
-  }
-
-  if (selectedEntryIds.value.size === 0) {
-    notify(t('invoices.form.validation.timeEntriesRequired'), 'warning');
     return;
   }
 

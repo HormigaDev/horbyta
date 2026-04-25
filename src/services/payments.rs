@@ -174,7 +174,7 @@ impl PaymentService {
 
             InvoiceService::update_status(
                 db,
-                user_id.clone(),
+                user_id,
                 invoice_id,
                 UpdateInvoiceStatusDto {
                     status: InvoiceStatus::Paid,

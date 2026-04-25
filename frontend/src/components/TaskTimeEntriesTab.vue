@@ -184,6 +184,7 @@
             color="primary"
             :label="timeEntryDialogSubmitLabel"
             :loading="isSavingTimeEntry"
+            :disable="!canSubmitTimeEntry"
             @click="saveTimeEntry"
           />
         </q-card-actions>
@@ -236,8 +237,6 @@ const timeEntries = ref<TimeEntrySummaryDto[]>([]);
 const timeEntriesTotal = ref(0);
 const isLoadingTimeEntries = ref(false);
 const activeTimerEntry = ref<TimeEntryDetailDto | null>(null);
-const dailyTotalsByDate = ref<Record<string, number>>({});
-const dailyLimitMinutes = ref(14 * 60);
 const editingOriginalEntry = ref<{ work_date: string; duration_minutes: number } | null>(null);
 
 const isTimeEntryDialogOpen = ref(false);
@@ -308,6 +307,19 @@ const timeEntryDialogSubmitLabel = computed(() => {
   return t('tasks.timeEntries.dialog.startTimerAction');
 });
 
+const canSubmitTimeEntry = computed(() => {
+  if (timeEntryDialogMode.value === 'view') return false;
+  if (!props.task) return false;
+  if (!timeEntryForm.activity) return false;
+
+  if (timeEntryDialogMode.value === 'manual' || timeEntryDialogMode.value === 'edit') {
+    if (!timeEntryForm.work_date.trim()) return false;
+    if (timeEntryForm.duration_minutes <= 0) return false;
+  }
+
+  return true;
+});
+
 const formatDateTime = (value: string | null | undefined, fallback = t('common.empty')) => {
   if (!value) return fallback;
   return formatDateByPreferences(value, {
@@ -316,24 +328,6 @@ const formatDateTime = (value: string | null | undefined, fallback = t('common.e
     includeTime: true,
     fallback,
   });
-};
-
-const getDailyTotalMinutes = (workDate: string): number => dailyTotalsByDate.value[workDate] ?? 0;
-
-const validateDailyLimit = (currentTotalMinutes: number, addedMinutes: number): boolean => {
-  const limitHours = dailyLimitMinutes.value / 60;
-
-  if (currentTotalMinutes >= dailyLimitMinutes.value) {
-    notify(t('tasks.timeEntries.dailyLimitReached', { limitHours }), 'warning');
-    return false;
-  }
-
-  if (currentTotalMinutes + addedMinutes > dailyLimitMinutes.value) {
-    notify(t('tasks.timeEntries.dailyLimitWouldExceed', { limitHours }), 'warning');
-    return false;
-  }
-
-  return true;
 };
 
 const fetchTimeEntries = async () => {
@@ -346,8 +340,6 @@ const fetchTimeEntries = async () => {
     });
     timeEntries.value = response.items;
     timeEntriesTotal.value = response.total;
-    dailyTotalsByDate.value = response.daily_totals_by_date;
-    dailyLimitMinutes.value = response.daily_limit_minutes;
   } catch (err) {
     notifyError(t('tasks.timeEntries.fetchError'), err);
   } finally {
@@ -467,7 +459,11 @@ const { deleteSelected: confirmDeleteTimeEntries } = useCrudDelete({
 });
 
 const saveTimeEntry = async () => {
-  if (!props.task || !timeEntryForm.activity) return;
+  if (!props.task) return;
+  if (!timeEntryForm.activity) {
+    notify(t('tasks.timeEntries.dialog.validation.activityRequired'), 'warning');
+    return;
+  }
 
   const isoWorkDate = parseDisplayDateToIso(
     timeEntryForm.work_date,
@@ -491,11 +487,6 @@ const saveTimeEntry = async () => {
         return;
       }
 
-      const currentTotalMinutes = getDailyTotalMinutes(workDate);
-      if (!validateDailyLimit(currentTotalMinutes, timeEntryForm.duration_minutes)) {
-        return;
-      }
-
       const payload: CreateTimeEntryDto = {
         task_id: props.task.id,
         activity: timeEntryForm.activity,
@@ -512,18 +503,6 @@ const saveTimeEntry = async () => {
         return;
       }
 
-      const baseTotalMinutes =
-        editingOriginalEntry.value.work_date === workDate
-          ? Math.max(
-              0,
-              getDailyTotalMinutes(workDate) - editingOriginalEntry.value.duration_minutes,
-            )
-          : getDailyTotalMinutes(workDate);
-
-      if (!validateDailyLimit(baseTotalMinutes, timeEntryForm.duration_minutes)) {
-        return;
-      }
-
       const payload: UpdateTimeEntryDto = {
         task_id: props.task.id,
         activity: timeEntryForm.activity,
@@ -535,13 +514,6 @@ const saveTimeEntry = async () => {
       await TimeEntriesService.update(editingTimeEntryId.value, payload);
       notify(t('tasks.timeEntries.updateSuccess'), 'positive');
     } else {
-      if (workDate) {
-        const currentTotalMinutes = getDailyTotalMinutes(workDate);
-        if (!validateDailyLimit(currentTotalMinutes, 0)) {
-          return;
-        }
-      }
-
       const payload: StartTimeEntryTimerDto = {
         task_id: props.task.id,
         activity: timeEntryForm.activity,
@@ -566,22 +538,6 @@ const saveTimeEntry = async () => {
 
 const stopActiveTimerForCurrentTask = async () => {
   if (!activeTimerEntry.value) return;
-
-  if (activeTimerEntry.value.start_time) {
-    const elapsedMinutes = Math.max(
-      1,
-      Math.floor((Date.now() - new Date(activeTimerEntry.value.start_time).getTime()) / 60000),
-    );
-    const baseTotalMinutes = Math.max(
-      0,
-      getDailyTotalMinutes(activeTimerEntry.value.work_date) -
-        activeTimerEntry.value.duration_minutes,
-    );
-
-    if (!validateDailyLimit(baseTotalMinutes, elapsedMinutes)) {
-      return;
-    }
-  }
 
   showLoading(t('tasks.timeEntries.stoppingTimer'));
   try {

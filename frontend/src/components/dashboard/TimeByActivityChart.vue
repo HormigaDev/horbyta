@@ -46,13 +46,14 @@ const option = computed<DashboardEChartsOption | null>(() => {
     tooltip: { trigger: 'item', ...baseTooltip(props.palette) },
     legend: {
       orient: 'horizontal',
-      bottom: 0,
+      bottom: 4,
       textStyle: { color: props.palette.text },
     },
     series: [
       {
         type: 'pie',
-        radius: ['45%', '70%'],
+        center: ['50%', '42%'],
+        radius: ['42%', '62%'],
         avoidLabelOverlap: true,
         label: { color: props.palette.text },
         itemStyle: { borderColor: props.palette.tooltipBg, borderWidth: 2 },

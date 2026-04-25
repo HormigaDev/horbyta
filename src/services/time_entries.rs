@@ -6,6 +6,7 @@ use sea_orm::{
     QuerySelect, Set,
     prelude::{Decimal, Expr},
 };
+use serde_json::Value as JsonValue;
 use uuid::Uuid;
 
 use crate::{
@@ -44,7 +45,7 @@ impl TimeEntryService {
         let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
         let applied_rate = Self::resolve_applied_rate(db, user_id, &task, dto.billable).await?;
 
-        let total_duration = Self::get_daily_duration(db, user_id, work_date, None).await?;
+        let total_duration = Self::get_daily_duration(db, user_id, dto.task_id, work_date, None).await?;
         Self::ensure_daily_duration_limit(total_duration, i64::from(dto.duration_minutes), daily_limit_minutes)?;
 
         let entry = time_entries::ActiveModel {
@@ -78,7 +79,7 @@ impl TimeEntryService {
         let work_date = dto.work_date.unwrap_or_else(|| start_time.date_naive());
         let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
         let applied_rate = Self::resolve_applied_rate(db, user_id, &task, dto.billable).await?;
-        let total_duration = Self::get_daily_duration(db, user_id, work_date, None).await?;
+        let total_duration = Self::get_daily_duration(db, user_id, dto.task_id, work_date, None).await?;
         Self::ensure_daily_duration_limit(total_duration, 0, daily_limit_minutes)?;
 
         let entry = time_entries::ActiveModel {
@@ -139,7 +140,8 @@ impl TimeEntryService {
         }
 
         let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
-        let total_duration = Self::get_daily_duration(db, user_id, entry_work_date, Some(entry_id)).await?;
+        let total_duration =
+            Self::get_daily_duration(db, user_id, entry.task_id, entry_work_date, Some(entry_id)).await?;
         Self::ensure_daily_duration_limit(total_duration, i64::from(duration_minutes), daily_limit_minutes)?;
 
         let mut active_entry: time_entries::ActiveModel = entry.into();
@@ -171,7 +173,7 @@ impl TimeEntryService {
         Self::ensure_activity_ownership(db, user_id, dto.activity).await?;
 
         let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
-        let total_duration = Self::get_daily_duration(db, user_id, dto.work_date, Some(entry.id)).await?;
+        let total_duration = Self::get_daily_duration(db, user_id, dto.task_id, dto.work_date, Some(entry.id)).await?;
         Self::ensure_daily_duration_limit(total_duration, i64::from(dto.duration_minutes), daily_limit_minutes)?;
         let applied_rate = Self::resolve_applied_rate(db, user_id, &task, dto.billable).await?;
 
@@ -304,7 +306,8 @@ impl TimeEntryService {
         .all(db)
         .await?;
 
-        let daily_totals_by_date = Self::get_daily_totals_by_date(db, user_id).await?;
+        let task_id = Self::extract_task_filter(&payload);
+        let daily_totals_by_date = Self::get_daily_totals_by_date(db, user_id, task_id).await?;
         let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
 
         Ok((items, total_items, daily_totals_by_date, daily_limit_minutes))
@@ -431,11 +434,13 @@ impl TimeEntryService {
     async fn get_daily_duration(
         db: &impl ConnectionTrait,
         user_id: Uuid,
+        task_id: Uuid,
         work_date: NaiveDate,
         exclude_entry_id: Option<Uuid>,
     ) -> Result<i64, AppError> {
         let mut query = TimeEntries::find()
             .filter(time_entries::Column::UserId.eq(user_id))
+            .filter(time_entries::Column::TaskId.eq(task_id))
             .filter(time_entries::Column::WorkDate.eq(work_date));
 
         if let Some(entry_id) = exclude_entry_id {
@@ -455,9 +460,15 @@ impl TimeEntryService {
     async fn get_daily_totals_by_date(
         db: &impl ConnectionTrait,
         user_id: Uuid,
+        task_id: Option<Uuid>,
     ) -> Result<HashMap<String, i64>, AppError> {
-        let rows = TimeEntries::find()
-            .filter(time_entries::Column::UserId.eq(user_id))
+        let mut query = TimeEntries::find().filter(time_entries::Column::UserId.eq(user_id));
+
+        if let Some(task_id) = task_id {
+            query = query.filter(time_entries::Column::TaskId.eq(task_id));
+        }
+
+        let rows = query
             .select_only()
             .column(time_entries::Column::WorkDate)
             .column_as(Expr::col(time_entries::Column::DurationMinutes).sum(), "total_duration")
@@ -472,6 +483,22 @@ impl TimeEntryService {
         }
 
         Ok(totals)
+    }
+
+    fn extract_task_filter(payload: &QueryPayload) -> Option<Uuid> {
+        payload.filters.iter().find_map(|filter| {
+            if filter.column != "task_id" {
+                return None;
+            }
+
+            match filter.operator {
+                crate::dtos::query::FilterOperator::Eq => match &filter.value {
+                    JsonValue::String(raw) => Uuid::parse_str(raw).ok(),
+                    _ => None,
+                },
+                _ => None,
+            }
+        })
     }
 
     fn ensure_daily_duration_limit(

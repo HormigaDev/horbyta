@@ -103,7 +103,6 @@ pub struct CreateInvoiceDto {
     #[validate(length(max = 5000, message = "freelancer_notes must be at most 5000 characters"))]
     pub freelancer_notes: Option<String>,
 
-    #[validate(length(min = 1, message = "at least one time entry must be selected"))]
     pub time_entry_ids: Vec<Uuid>,
 }
 
@@ -117,7 +116,6 @@ pub struct UpdateInvoiceDto {
     #[validate(length(max = 5000, message = "freelancer_notes must be at most 5000 characters"))]
     pub freelancer_notes: Option<String>,
 
-    #[validate(length(min = 1, message = "at least one time entry must be selected"))]
     pub time_entry_ids: Vec<Uuid>,
 }
 

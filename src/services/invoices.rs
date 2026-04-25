@@ -448,9 +448,7 @@ impl InvoiceService {
         current_invoice_id: Option<Uuid>,
     ) -> Result<Vec<BillableTimeEntryWithTask>, AppError> {
         if ids.is_empty() {
-            return Err(AppError::BadRequest(
-                "Debes seleccionar al menos una entrada de tiempo".to_string(),
-            ));
+            return Ok(Vec::new());
         }
 
         let rows: Vec<BillableTimeEntryWithTask> = TimeEntries::find()
@@ -627,19 +625,23 @@ impl InvoiceService {
         }
 
         let task_section = lines.join("\n");
+        let trimmed_notes = freelancer_notes.map(str::trim).filter(|notes| !notes.is_empty());
 
-        match freelancer_notes {
-            Some(notes) if !notes.trim().is_empty() => {
-                format!("{task_section}{FREELANCER_NOTES_SEPARATOR}{}", notes.trim())
-            }
-            _ => task_section,
+        match (task_section.is_empty(), trimmed_notes) {
+            (false, Some(notes)) => format!("{task_section}{FREELANCER_NOTES_SEPARATOR}{notes}"),
+            (true, Some(notes)) => format!("{FREELANCER_NOTES_SEPARATOR}{notes}"),
+            (_, None) => task_section,
         }
     }
 
     fn extract_freelancer_notes(notes: Option<&str>) -> Option<String> {
         notes.and_then(|n| {
-            n.find(FREELANCER_NOTES_SEPARATOR)
-                .map(|pos| n[pos + FREELANCER_NOTES_SEPARATOR.len()..].to_string())
+            if let Some(pos) = n.find(FREELANCER_NOTES_SEPARATOR) {
+                let extracted = n[pos + FREELANCER_NOTES_SEPARATOR.len()..].trim();
+                return (!extracted.is_empty()).then(|| extracted.to_string());
+            }
+
+            None
         })
     }
 }
