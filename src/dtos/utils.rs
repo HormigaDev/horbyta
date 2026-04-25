@@ -1,4 +1,6 @@
+use chrono::{DateTime, FixedOffset, NaiveDate};
 use sea_orm::prelude::Decimal;
+use serde::{Deserialize, Deserializer};
 use validator::ValidationError;
 
 use crate::error::AppError;
@@ -45,6 +47,36 @@ pub fn is_positive_decimal(decimal: &Decimal) -> Result<(), ValidationError> {
     }
 
     Ok(())
+}
+
+pub fn deserialize_optional_naive_date_from_string_or_datetime<'de, D>(
+    deserializer: D,
+) -> Result<Option<NaiveDate>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let raw = Option::<String>::deserialize(deserializer)?;
+
+    match raw.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+        None => Ok(None),
+        Some(value) => {
+            if let Ok(date) = NaiveDate::parse_from_str(value, "%Y-%m-%d") {
+                return Ok(Some(date));
+            }
+
+            if let Ok(datetime) = DateTime::parse_from_rfc3339(value) {
+                return Ok(Some(datetime.date_naive()));
+            }
+
+            if let Ok(datetime) = DateTime::<FixedOffset>::parse_from_str(value, "%Y-%m-%dT%H:%M:%S%.f%:z") {
+                return Ok(Some(datetime.date_naive()));
+            }
+
+            Err(serde::de::Error::custom(
+                "date must be in YYYY-MM-DD or ISO 8601 datetime format",
+            ))
+        }
+    }
 }
 
 pub type AppResult<T> = Result<T, AppError>;

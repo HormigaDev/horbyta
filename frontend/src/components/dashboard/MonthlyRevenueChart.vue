@@ -16,6 +16,9 @@ import {
   type DashboardEChartsOption,
 } from '../../composables/dashboard/chartHelpers';
 import type { ChartPalette } from '../../composables/dashboard/useChartPalette';
+import { formatDateByPreferences } from 'src/utils/dateFormatting';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useI18n } from 'vue-i18n';
 
 interface Props {
   rows: MonthlyRevenueRow[];
@@ -24,6 +27,15 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const userPreferencesStore = useUserPreferencesStore();
+const { t } = useI18n();
+
+const formatDate = (rawDate: string) =>
+  formatDateByPreferences(rawDate, {
+    timezone: userPreferencesStore.timezone,
+    dateFormat: userPreferencesStore.dateFormat,
+    fallback: t('common.empty'),
+  });
 
 ensureEChartsRegistered();
 
@@ -33,13 +45,13 @@ const option = computed<DashboardEChartsOption | null>(() => {
   }
 
   const currencies = Array.from(new Set(props.rows.map((row) => row.currency_type)));
-  const months = Array.from(new Set(props.rows.map((row) => row.month_date))).sort();
+  const months = Array.from(new Set(props.rows.map((row) => formatDate(row.month_date)))).sort();
 
   const series: LineSeriesOption[] = currencies.map((currency, idx) => {
     const dataByMonth = new Map<string, number>();
     props.rows
       .filter((row) => row.currency_type === currency)
-      .forEach((row) => dataByMonth.set(row.month_date, Number(row.total_revenue)));
+      .forEach((row) => dataByMonth.set(formatDate(row.month_date), Number(row.total_revenue)));
 
     return {
       name: currency,
