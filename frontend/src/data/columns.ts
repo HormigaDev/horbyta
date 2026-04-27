@@ -384,6 +384,8 @@ export const getClientChangeRequestColumns = (t: ComposerTranslation) => {
 };
 
 export const getCategoryColumns = (t: ComposerTranslation) => {
+  const formatDate = useDateFormatter();
+
   return withFixedColumnSizing([
     {
       name: 'name',
@@ -391,6 +393,22 @@ export const getCategoryColumns = (t: ComposerTranslation) => {
       field: 'name',
       sortable: true,
       align: 'left' as const,
+    },
+    {
+      name: 'created_at',
+      label: t('columns.changeRequest.created_at'),
+      field: 'created_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val),
+    },
+    {
+      name: 'updated_at',
+      label: t('columns.changeRequest.updated_at'),
+      field: 'updated_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val),
     },
   ]);
 };
@@ -816,6 +834,14 @@ export const getInvoiceColumns = (t: ComposerTranslation) => {
       sortable: true,
       align: 'center' as const,
       format: (val: string | null) => (val ? t(`invoices.status.${val}`) : '-'),
+    },
+    {
+      name: 'issued_at',
+      label: t('columns.invoice.issued_at'),
+      field: 'issued_at',
+      sortable: true,
+      align: 'center',
+      format: (val: string | null) => (val ? formatDate(val) : '-'),
     },
     {
       name: 'due_date',

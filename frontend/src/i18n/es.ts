@@ -1278,6 +1278,7 @@ export const messages = {
   'columns.invoice.client': 'Cliente',
   'columns.invoice.amount': 'Monto',
   'columns.invoice.status': 'Estado',
+  'columns.invoice.issued_at': 'Emitido',
   'columns.invoice.due_date': 'Vencimiento',
   'columns.invoice.created_at': 'Creado',
   'columns.invoice.updated_at': 'Actualizado',
