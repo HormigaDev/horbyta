@@ -88,75 +88,37 @@
 
       <div class="row q-col-gutter-md q-mt-sm">
         <div class="col-12 col-md-8">
-          <DashboardChartCard
-            :title="t('dashboard.charts.monthlyRevenue.title')"
-            :caption="t('dashboard.charts.monthlyRevenue.caption')"
-          >
-            <MonthlyRevenueChart
-              :rows="data.monthly_revenue"
-              :palette="chartPalette"
-              :empty-label="t('dashboard.empty')"
-            />
-          </DashboardChartCard>
+          <MonthlyRevenueCard
+            :initial-rows="data.monthly_revenue"
+            :palette="chartPalette"
+            :empty-label="t('dashboard.empty')"
+          />
         </div>
 
         <div class="col-12 col-md-4">
-          <DashboardChartCard
-            :title="t('dashboard.charts.timeByActivity.title')"
-            :caption="t('dashboard.charts.timeByActivity.caption')"
-          >
-            <TimeByActivityChart
-              :rows="data.time_by_activity"
-              :palette="chartPalette"
-              :empty-label="t('dashboard.empty')"
-            />
-          </DashboardChartCard>
+          <TimeByActivityCard
+            :initial-rows="data.time_by_activity"
+            :palette="chartPalette"
+            :empty-label="t('dashboard.empty')"
+          />
         </div>
 
         <div class="col-12">
-          <DashboardChartCard
-            :title="t('dashboard.charts.billableRatio.title')"
-            :caption="t('dashboard.charts.billableRatio.caption')"
-            short
-          >
-            <BillableRatioChart
-              :rows="data.billable_ratio_daily"
-              :palette="chartPalette"
-              :empty-label="t('dashboard.empty')"
-              :billable-label="t('dashboard.charts.series.billable')"
-              :non-billable-label="t('dashboard.charts.series.nonBillable')"
-            />
-          </DashboardChartCard>
+          <BillableRatioCard
+            :initial-rows="data.billable_ratio_daily"
+            :palette="chartPalette"
+            :empty-label="t('dashboard.empty')"
+          />
         </div>
       </div>
 
       <div class="row q-col-gutter-md q-mt-sm">
         <div class="col-12 col-md-7">
-          <DashboardChartCard
-            :title="t('dashboard.bottlenecks.title')"
-            :caption="t('dashboard.bottlenecks.caption')"
-            short
-          >
-            <TaskBottlenecksList
-              :rows="data.task_bottlenecks"
-              :labels="bottleneckLabels"
-              :empty-label="t('dashboard.bottlenecks.empty')"
-            />
-          </DashboardChartCard>
+          <TaskBottlenecksCard :initial-rows="data.task_bottlenecks" />
         </div>
 
         <div class="col-12 col-md-5">
-          <DashboardChartCard
-            :title="t('dashboard.accountsReceivable.title')"
-            :caption="t('dashboard.kpi.accountsReceivable.caption')"
-            short
-          >
-            <AccountsReceivableList
-              :rows="data.accounts_receivable"
-              :empty-label="t('dashboard.accountsReceivable.empty')"
-              :oldest-due-date-label="t('dashboard.accountsReceivable.oldestDueDate')"
-            />
-          </DashboardChartCard>
+          <AccountsReceivableCard :initial-rows="data.accounts_receivable" />
         </div>
       </div>
     </template>
@@ -164,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { DashboardService } from 'src/services/dashboard';
@@ -172,16 +134,13 @@ import { useUI } from 'src/composables/useUI';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import type { DashboardDto } from 'src/types/dashboard';
 import DashboardKpiCard from 'src/components/dashboard/DashboardKpiCard.vue';
-import DashboardChartCard from 'src/components/dashboard/DashboardChartCard.vue';
 import CurrencyAmountValue from 'src/components/dashboard/CurrencyAmountValue.vue';
-import MonthlyRevenueChart from 'src/components/dashboard/MonthlyRevenueChart.vue';
-import TimeByActivityChart from 'src/components/dashboard/TimeByActivityChart.vue';
-import BillableRatioChart from 'src/components/dashboard/BillableRatioChart.vue';
-import TaskBottlenecksList, {
-  type TaskBottlenecksLabels,
-} from 'src/components/dashboard/TaskBottlenecksList.vue';
-import AccountsReceivableList from 'src/components/dashboard/AccountsReceivableList.vue';
 import { useChartPalette } from 'src/composables/dashboard/useChartPalette';
+import MonthlyRevenueCard from 'src/components/dashboard/MonthlyRevenueCard.vue';
+import TimeByActivityCard from 'src/components/dashboard/TimeByActivityCard.vue';
+import BillableRatioCard from 'src/components/dashboard/BillableRatioCard.vue';
+import TaskBottlenecksCard from 'src/components/dashboard/TaskBottlenecksCard.vue';
+import AccountsReceivableCard from 'src/components/dashboard/AccountsReceivableCard.vue';
 
 const { t } = useI18n();
 const { notifyError } = useUI();
@@ -191,14 +150,6 @@ const chartPalette = useChartPalette();
 const data = ref<DashboardDto | null>(null);
 const isLoading = ref(false);
 const loadError = ref(false);
-
-const bottleneckLabels = computed<TaskBottlenecksLabels>(() => ({
-  total: t('dashboard.bottlenecks.column.total'),
-  todo: t('dashboard.bottlenecks.column.todo'),
-  inProgress: t('dashboard.bottlenecks.column.inProgress'),
-  review: t('dashboard.bottlenecks.column.review'),
-  overdue: t('dashboard.bottlenecks.column.overdue'),
-}));
 
 const fetchDashboard = async () => {
   isLoading.value = true;

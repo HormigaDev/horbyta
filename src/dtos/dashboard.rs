@@ -1,9 +1,91 @@
 use chrono::NaiveDate;
 use sea_orm::{FromQueryResult, prelude::Decimal};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::{change_request::ChangeRequestStatus, project::ProjectStatus, project_billing::ProjectBillingType};
+
+#[derive(Debug, Default, Deserialize)]
+pub struct MonthlyRevenueFiltersDto {
+    pub date_from: Option<NaiveDate>,
+    pub date_to: Option<NaiveDate>,
+    pub currency_type: Option<String>,
+    pub client_id: Option<Uuid>,
+    pub project_id: Option<Uuid>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct AccountsReceivableFiltersDto {
+    pub client_id: Option<Uuid>,
+    pub currency_type: Option<String>,
+    pub due_date_from: Option<NaiveDate>,
+    pub due_date_to: Option<NaiveDate>,
+    pub overdue_only: Option<bool>,
+    pub min_outstanding_balance: Option<Decimal>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct TimeByActivityFiltersDto {
+    pub date_from: Option<NaiveDate>,
+    pub date_to: Option<NaiveDate>,
+    pub activity_id: Option<Uuid>,
+    pub billable: Option<bool>,
+    pub client_id: Option<Uuid>,
+    pub project_id: Option<Uuid>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct BillableRatioFiltersDto {
+    pub date_from: Option<NaiveDate>,
+    pub date_to: Option<NaiveDate>,
+    pub client_id: Option<Uuid>,
+    pub project_id: Option<Uuid>,
+    pub activity_id: Option<Uuid>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct TaskBottlenecksFiltersDto {
+    pub client_id: Option<Uuid>,
+    pub project_id: Option<Uuid>,
+    pub status: Option<String>,
+    pub priority: Option<i16>,
+    pub overdue_only: Option<bool>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct ClientProjectStatusFiltersDto {
+    pub project_status: Option<String>,
+    pub billable: Option<bool>,
+    pub category_id: Option<Uuid>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct ClientMilestoneHealthFiltersDto {
+    pub project_id: Option<Uuid>,
+    pub milestone_status: Option<String>,
+    pub due_date_from: Option<NaiveDate>,
+    pub due_date_to: Option<NaiveDate>,
+    pub overdue_only: Option<bool>,
+    pub upcoming_only: Option<bool>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct ClientChangeRequestStatusFiltersDto {
+    pub project_id: Option<Uuid>,
+    pub status: Option<String>,
+    pub date_from: Option<NaiveDate>,
+    pub date_to: Option<NaiveDate>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct ClientProjectPortfolioFiltersDto {
+    pub project_status: Option<String>,
+    pub billable: Option<bool>,
+    pub billing_type: Option<String>,
+    pub currency_type: Option<String>,
+    pub overdue_milestones_only: Option<bool>,
+    pub upcoming_milestones_only: Option<bool>,
+}
 
 #[derive(Debug, Serialize, FromQueryResult)]
 pub struct MonthlyRevenueRow {

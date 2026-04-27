@@ -101,77 +101,33 @@
 
       <div class="row q-col-gutter-md q-mt-sm">
         <div class="col-12 col-md-5">
-          <DashboardChartCard
-            :title="t('clientDashboard.projectStatus.title')"
-            :caption="t('clientDashboard.projectStatus.caption')"
-          >
-            <ClientProjectStatusChart
-              :rows="data.project_status"
-              :palette="chartPalette"
-              :empty-label="t('clientDashboard.empty')"
-              :label-for-status="projectStatusLabel"
-            />
-          </DashboardChartCard>
+          <ClientProjectStatusCard
+            :initial-rows="data.project_status"
+            :palette="chartPalette"
+            :label-for-status="projectStatusLabel"
+          />
         </div>
 
         <div class="col-12 col-md-7">
-          <DashboardChartCard
-            :title="t('clientDashboard.changeRequests.title')"
-            :caption="t('clientDashboard.changeRequests.caption')"
-            short
-          >
-            <ClientChangeRequestStatusList
-              :rows="data.change_request_status"
-              :empty-label="t('clientDashboard.changeRequests.empty')"
-              :label-for-status="changeRequestStatusLabel"
-              :helper-for-status="changeRequestStatusHelper"
-            />
-          </DashboardChartCard>
+          <ClientChangeRequestStatusCard
+            :initial-rows="data.change_request_status"
+            :label-for-status="changeRequestStatusLabel"
+            :helper-for-status="changeRequestStatusHelper"
+          />
         </div>
       </div>
 
       <div class="row q-col-gutter-md q-mt-sm">
         <div class="col-12 col-md-6">
-          <DashboardChartCard
-            :title="t('clientDashboard.milestones.title')"
-            :caption="t('clientDashboard.milestones.caption')"
-            short
-          >
-            <ClientMilestoneHealthList
-              :rows="data.milestone_health"
-              :empty-label="t('clientDashboard.milestones.empty')"
-              :total-label="t('clientDashboard.milestones.total')"
-              :completed-label="t('clientDashboard.milestones.completed')"
-              :upcoming-label="t('clientDashboard.milestones.upcoming')"
-              :overdue-label="t('clientDashboard.milestones.overdue')"
-              :next-due-date-label="t('clientDashboard.milestones.nextDueDate')"
-              :empty-value="t('common.empty')"
-            />
-          </DashboardChartCard>
+          <ClientMilestoneHealthCard :initial-rows="data.milestone_health" />
         </div>
 
         <div class="col-12 col-md-6">
-          <DashboardChartCard
-            :title="t('clientDashboard.portfolio.title')"
-            :caption="t('clientDashboard.portfolio.caption')"
-            short
-          >
-            <ClientProjectPortfolioList
-              :rows="data.project_portfolio"
-              :empty-label="t('clientDashboard.portfolio.empty')"
-              :status-label="t('common.status')"
-              :billing-label="t('clientDashboard.portfolio.billing')"
-              :next-milestone-label="t('clientDashboard.portfolio.nextMilestone')"
-              :total-milestones-label="t('clientDashboard.milestones.total')"
-              :completed-label="t('clientDashboard.milestones.completed')"
-              :upcoming-label="t('clientDashboard.milestones.upcoming')"
-              :overdue-label="t('clientDashboard.milestones.overdue')"
-              :empty-value="t('common.empty')"
-              :day-label="t('projects.detail.paymentDayValue', { day: '{day}' })"
-              :label-for-project-status="projectStatusLabel"
-              :label-for-billing-type="projectBillingTypeLabel"
-            />
-          </DashboardChartCard>
+          <ClientProjectPortfolioCard
+            :initial-rows="data.project_portfolio"
+            :label-for-project-status="projectStatusLabel"
+            :label-for-billing-type="projectBillingTypeLabel"
+          />
         </div>
       </div>
     </template>
@@ -190,12 +146,11 @@ import { useUI } from 'src/composables/useUI';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { useChartPalette } from 'src/composables/dashboard/useChartPalette';
 import DashboardKpiCard from 'src/components/dashboard/DashboardKpiCard.vue';
-import DashboardChartCard from 'src/components/dashboard/DashboardChartCard.vue';
 import CurrencyAmountValue from 'src/components/dashboard/CurrencyAmountValue.vue';
-import ClientProjectStatusChart from 'src/components/dashboard/ClientProjectStatusChart.vue';
-import ClientMilestoneHealthList from 'src/components/dashboard/ClientMilestoneHealthList.vue';
-import ClientChangeRequestStatusList from 'src/components/dashboard/ClientChangeRequestStatusList.vue';
-import ClientProjectPortfolioList from 'src/components/dashboard/ClientProjectPortfolioList.vue';
+import ClientProjectStatusCard from 'src/components/dashboard/ClientProjectStatusCard.vue';
+import ClientMilestoneHealthCard from 'src/components/dashboard/ClientMilestoneHealthCard.vue';
+import ClientChangeRequestStatusCard from 'src/components/dashboard/ClientChangeRequestStatusCard.vue';
+import ClientProjectPortfolioCard from 'src/components/dashboard/ClientProjectPortfolioCard.vue';
 
 const { t } = useI18n();
 const { notifyError } = useUI();
