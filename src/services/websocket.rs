@@ -88,7 +88,7 @@ impl WebSocketService {
         sender: &mut futures::stream::SplitSink<WebSocket, Message>,
     ) -> Result<bool, AppError> {
         let ws_msg: WsMessage =
-            serde_json::from_str(text).map_err(|_| AppError::BadRequest("Invalid message format".to_string()))?;
+            serde_json::from_str(text).map_err(|_| AppError::BadRequest("invalid message format".to_string()))?;
 
         tracing::debug!("WebSocket message received: {:?}", ws_msg);
 
@@ -110,7 +110,7 @@ impl WebSocketService {
                 Ok(true)
             }
             "close" => Ok(false),
-            _ => Err(AppError::BadRequest("Unknown message type".to_string())),
+            _ => Err(AppError::BadRequest("unknown message type".to_string())),
         }
     }
 
@@ -137,15 +137,15 @@ impl WebSocketService {
         let data = msg
             .data
             .as_ref()
-            .ok_or_else(|| AppError::BadRequest("Missing data field".to_string()))?;
+            .ok_or_else(|| AppError::BadRequest("missing data field".to_string()))?;
 
         let payload: ChatClientPayload = serde_json::from_value(data.clone())
-            .map_err(|_| AppError::BadRequest("Invalid chat payload".to_string()))?;
+            .map_err(|_| AppError::BadRequest("invalid chat payload".to_string()))?;
 
         let requested_chat_id = payload
             .chat_id
             .parse::<Uuid>()
-            .map_err(|_| AppError::BadRequest("Invalid chat_id format".to_string()))?;
+            .map_err(|_| AppError::BadRequest("invalid chat_id format".to_string()))?;
 
         let user_content = payload.content.as_str();
 
@@ -194,7 +194,7 @@ impl WebSocketService {
                     *ai_service_guard = Some(service);
                 }
                 Err(error) => {
-                    let unavailable = AppError::Unavailable(format!("Servicio de IA no disponible: {}", error));
+                    let unavailable = AppError::Unavailable(format!("ai service unavailable: {}", error));
                     let details = Self::build_ai_error_details(&unavailable);
                     let _ = self
                         .send_ai_runtime_status(sender, "error", details.message.as_str(), Some(details.payload))
@@ -219,7 +219,7 @@ impl WebSocketService {
                     .await
             }
             None => Err(AppError::Unavailable(
-                "Servicio de IA no disponible en este momento".to_string(),
+                "ai service unavailable at this moment".to_string(),
             )),
         };
 
@@ -415,7 +415,7 @@ impl WebSocketService {
             .one(self.state.db.as_ref())
             .await
             .map_err(AppError::Database)?
-            .ok_or_else(|| AppError::Unauthorized("Authenticated user not found".to_string()))?;
+            .ok_or_else(|| AppError::Unauthorized("authenticated user not found".to_string()))?;
 
         let preferences = UserPreferences::from_json_value(user.preferences.as_ref());
         if !is_notification_enabled(CHATBOT_NOTIFICATION_KEY, &preferences) {
@@ -466,21 +466,21 @@ impl WebSocketService {
             .one(self.state.db.as_ref())
             .await
             .map_err(AppError::Database)?
-            .ok_or_else(|| AppError::Unauthorized("Authenticated user not found".to_string()))?;
+            .ok_or_else(|| AppError::Unauthorized("authenticated user not found".to_string()))?;
 
         let preferences = UserPreferences::from_json_value(user.preferences.as_ref());
         let encrypted_key = preferences
             .ai
             .api_key_encrypted
             .as_ref()
-            .ok_or_else(|| AppError::BadRequest("Configura tu API key AI en preferencias".to_string()))?;
+            .ok_or_else(|| AppError::BadRequest("configure your ai api key in preferences".to_string()))?;
 
         let api_key = decrypt_secret(&self.state.config.ai_prefs_encryption_key, encrypted_key)?;
 
         let model = preferences.ai.model.trim().to_string();
         if model.is_empty() {
             return Err(AppError::BadRequest(
-                "Configura un modelo AI en preferencias".to_string(),
+                "configure an ai model in preferences".to_string(),
             ));
         }
 
@@ -500,7 +500,7 @@ impl WebSocketService {
 
         if !allowed_models.contains(&model.as_str()) {
             return Err(AppError::BadRequest(
-                "El modelo configurado no esta permitido".to_string(),
+                "configured model is not allowed".to_string(),
             ));
         }
 
@@ -513,7 +513,7 @@ impl WebSocketService {
 
         if Self::is_ai_error_message_unavailable(&lowered) {
             return AiErrorDetails {
-                message: "Servicio de IA no disponible en este momento. Intenta nuevamente en unos segundos"
+                message: "ai service unavailable at this moment, try again in a few seconds"
                     .to_string(),
                 payload: json!({
                     "code": "AI_UNAVAILABLE",
@@ -524,7 +524,7 @@ impl WebSocketService {
 
         if lowered.contains("api key") || lowered.contains("auth") {
             return AiErrorDetails {
-                message: "API key de OpenRouter invalida o no configurada".to_string(),
+                message: "openrouter api key invalid or not configured".to_string(),
                 payload: json!({
                     "code": "AI_AUTH",
                     "error": raw,
@@ -534,7 +534,7 @@ impl WebSocketService {
 
         if lowered.contains("rate") || lowered.contains("429") {
             return AiErrorDetails {
-                message: "OpenRouter aplico limite de tasa. Intenta nuevamente en unos segundos".to_string(),
+                message: "openrouter applied a rate limit, try again in a few seconds".to_string(),
                 payload: json!({
                     "code": "AI_RATE_LIMIT",
                     "error": raw,
@@ -544,7 +544,7 @@ impl WebSocketService {
 
         if lowered.contains("model") {
             return AiErrorDetails {
-                message: "El modelo configurado no esta disponible".to_string(),
+                message: "configured model is not available".to_string(),
                 payload: json!({
                     "code": "AI_MODEL",
                     "error": raw,
@@ -554,7 +554,7 @@ impl WebSocketService {
 
         if lowered.contains("timeout") {
             return AiErrorDetails {
-                message: "El proveedor de IA tardo demasiado en responder".to_string(),
+                message: "ai provider took too long to respond".to_string(),
                 payload: json!({
                     "code": "AI_TIMEOUT",
                     "error": raw,
@@ -563,7 +563,7 @@ impl WebSocketService {
         }
 
         AiErrorDetails {
-            message: "Ocurrio un error procesando la respuesta del modelo".to_string(),
+            message: "an error occurred processing the model response".to_string(),
             payload: json!({
                 "code": "AI_UNKNOWN",
                 "error": raw,
@@ -617,12 +617,12 @@ impl WebSocketService {
         message: &WsMessage,
     ) -> Result<(), AppError> {
         let payload = serde_json::to_string(message)
-            .map_err(|_| AppError::Internal("Failed serializing websocket message".to_string()))?;
+            .map_err(|_| AppError::Internal("failed serializing websocket message".to_string()))?;
 
         sender
             .send(Message::Text(payload.into()))
             .await
-            .map_err(|_| AppError::Internal("Failed sending websocket message".to_string()))
+            .map_err(|_| AppError::Internal("failed sending websocket message".to_string()))
     }
 
     fn validate_origin(&self, headers: &HeaderMap) -> Result<(), StatusCode> {

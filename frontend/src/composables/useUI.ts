@@ -68,6 +68,8 @@ interface BadRequestExtraction {
   hasUnmappedMessages: boolean;
 }
 
+const STRUCTURED_ERROR_STATUSES = new Set<number>([400, 403, 404, 409, 422]);
+
 export function useUI() {
   const $q = useQuasar();
   const { t } = useI18n();
@@ -188,12 +190,13 @@ export function useUI() {
     };
   };
 
-  const showBadRequestDialog = (summary: string, messages: string[]) => {
+  const showBadRequestDialog = (summary: string, messages: string[], payload?: unknown) => {
     $q.dialog({
       component: BadRequestDialog,
       componentProps: {
         summary,
         messages,
+        payload,
       },
     });
   };
@@ -232,44 +235,17 @@ export function useUI() {
   };
 
   const notifyError = (message: string, payload?: unknown, isAsync = false) => {
-    if (isApiHttpError(payload) && payload.status === 400) {
+    if (isApiHttpError(payload) && STRUCTURED_ERROR_STATUSES.has(payload.status)) {
       const technicalPayload = buildTechnicalPayload(payload);
       const summaryMessage = resolveErrorMessage(message, payload);
       const extraction = extractBadRequestMessages(payload);
 
-      if (extraction.hasUnmappedMessages) {
-        const genericMessage = t('error.badRequestDialog.defaultMessage');
-        const actionList = [];
-        if (technicalPayload) {
-          actionList.push({
-            label: t('common.details'),
-            color: 'white',
-            handler: () => showErrorDialog(technicalPayload),
-          });
-        }
-        actionList.push({ icon: 'close', color: 'white', round: true, size: 'sm' });
-
-        notificationsStore.addNotification({
-          source: 'sync',
-          message: genericMessage,
-          type: 'warning',
-          payload: technicalPayload,
-        });
-        $q.notify({
-          message: genericMessage,
-          type: 'warning',
-          position: 'top-right',
-          timeout: 3500,
-          actions: actionList,
-        });
-        return;
-      }
-
-      showBadRequestDialog(summaryMessage, extraction.messages);
+      showBadRequestDialog(summaryMessage, extraction.messages, technicalPayload);
       notificationsStore.addNotification({
         source: 'sync',
         message: summaryMessage,
         type: 'warning',
+        payload: technicalPayload,
       });
 
       return;

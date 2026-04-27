@@ -112,12 +112,12 @@ impl TimeEntryService {
         let entry_work_date = entry.work_date;
 
         let start_time = entry.start_time.ok_or_else(|| {
-            AppError::Conflict("El registro de tiempo no corresponde a un cronometro iniciado".to_string())
+            AppError::Conflict("time entry does not correspond to a started timer".to_string())
         })?;
 
         if entry.end_time.is_some() {
             return Err(AppError::Conflict(
-                "El cronometro ya fue detenido previamente".to_string(),
+                "timer was already stopped previously".to_string(),
             ));
         }
 
@@ -125,17 +125,17 @@ impl TimeEntryService {
 
         if end_time <= start_time {
             return Err(AppError::BadRequest(
-                "La hora de finalizacion debe ser posterior al inicio".to_string(),
+                "end time must be after the start time".to_string(),
             ));
         }
 
         let duration_minutes_i64 = end_time.signed_duration_since(start_time).num_minutes();
         let duration_minutes = i32::try_from(duration_minutes_i64)
-            .map_err(|_| AppError::BadRequest("La duracion calculada excede el limite permitido".to_string()))?;
+            .map_err(|_| AppError::BadRequest("computed duration exceeds the allowed limit".to_string()))?;
 
         if duration_minutes <= 0 {
             return Err(AppError::BadRequest(
-                "La duracion del cronometro debe ser de al menos 1 minuto".to_string(),
+                "timer duration must be at least 1 minute".to_string(),
             ));
         }
 
@@ -165,7 +165,7 @@ impl TimeEntryService {
 
         if entry.start_time.is_some() && entry.end_time.is_none() {
             return Err(AppError::Conflict(
-                "No se puede editar un cronometro activo".to_string(),
+                "an active timer cannot be edited".to_string(),
             ));
         }
 
@@ -231,7 +231,7 @@ impl TimeEntryService {
             .into_model::<TimeEntryDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Registro de tiempo no encontrado".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("time entry not found".to_string()))?;
 
         Ok(Self::map_detail_row(row))
     }
@@ -317,7 +317,7 @@ impl TimeEntryService {
         let user = Users::find_by_id(user_id)
             .one(db)
             .await?
-            .ok_or_else(|| AppError::Unauthorized("Usuario no autenticado".to_string()))?;
+            .ok_or_else(|| AppError::Unauthorized("user not authenticated".to_string()))?;
 
         let preferences = UserPreferences::from_json_value(user.preferences.as_ref());
         let limited_hours = preferences.max_daily_hours.clamp(1, MAX_DAILY_DURATION_LIMIT_HOURS);
@@ -331,7 +331,7 @@ impl TimeEntryService {
             .filter(time_entries::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Registro de tiempo no encontrado".to_string()))
+            .ok_or_else(|| AppError::NotFound("time entry not found".to_string()))
     }
 
     async fn find_active_timer(db: &impl ConnectionTrait, user_id: Uuid) -> Result<Option<TimeEntryModel>, AppError> {
@@ -350,7 +350,7 @@ impl TimeEntryService {
 
         if active_timer.is_some() {
             return Err(AppError::Conflict(
-                "Ya existe un cronometro activo para este usuario".to_string(),
+                "there is already an active timer for this user".to_string(),
             ));
         }
 
@@ -367,7 +367,7 @@ impl TimeEntryService {
             .filter(tasks::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::BadRequest("Tarea invalida o sin permisos".to_string()))
+            .ok_or_else(|| AppError::BadRequest("invalid task or no permissions".to_string()))
     }
 
     async fn resolve_applied_rate(
@@ -389,7 +389,7 @@ impl TimeEntryService {
             .filter(projects::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::BadRequest("Proyecto invalido o sin permisos".to_string()))?;
+            .ok_or_else(|| AppError::BadRequest("invalid project or no permissions".to_string()))?;
 
         if !project.billable {
             return Ok(None);
@@ -425,7 +425,7 @@ impl TimeEntryService {
             .is_some();
 
         if !exists {
-            return Err(AppError::BadRequest("Actividad invalida o sin permisos".to_string()));
+            return Err(AppError::BadRequest("invalid activity or no permissions".to_string()));
         }
 
         Ok(())
@@ -508,13 +508,13 @@ impl TimeEntryService {
     ) -> Result<(), AppError> {
         if current_total >= daily_limit_minutes {
             return Err(AppError::Conflict(
-                "No puedes registrar mas horas en este dia".to_string(),
+                "you cannot log more hours on this day".to_string(),
             ));
         }
 
         if current_total + new_duration > daily_limit_minutes {
             return Err(AppError::Conflict(
-                "La entrada de tiempo excede el limite diario configurado".to_string(),
+                "time entry exceeds the configured daily limit".to_string(),
             ));
         }
 
@@ -523,7 +523,7 @@ impl TimeEntryService {
 
     fn map_time_entry_write_error(error: sea_orm::DbErr) -> AppError {
         if error.to_string().contains("daily_limit_exceeded") {
-            return AppError::Conflict("La entrada de tiempo excede el limite diario configurado".to_string());
+            return AppError::Conflict("time entry exceeds the configured daily limit".to_string());
         }
 
         AppError::Database(error)

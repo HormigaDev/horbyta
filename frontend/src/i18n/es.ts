@@ -1057,31 +1057,163 @@ export const messages = {
     'La duración en minutos debe ser mayor o igual a 1.',
   'backendErrors.notes must be at most 1000 characters':
     'Las observaciones deben tener máximo 1000 caracteres.',
-  'backendErrors.Ya existe un cronometro activo para este usuario':
+  'backendErrors.there is already an active timer for this user':
     'Ya existe un cronómetro activo para este usuario.',
-  'backendErrors.El registro de tiempo no corresponde a un cronometro iniciado':
+  'backendErrors.time entry does not correspond to a started timer':
     'El registro de tiempo no corresponde a un cronómetro iniciado.',
-  'backendErrors.El cronometro ya fue detenido previamente':
+  'backendErrors.timer was already stopped previously':
     'El cronómetro ya fue detenido previamente.',
-  'backendErrors.La hora de finalizacion debe ser posterior al inicio':
+  'backendErrors.end time must be after the start time':
     'La hora de finalización debe ser posterior al inicio.',
-  'backendErrors.La duracion del cronometro debe ser de al menos 1 minuto':
+  'backendErrors.timer duration must be at least 1 minute':
     'La duración del cronómetro debe ser de al menos 1 minuto.',
-  'backendErrors.No puedes registrar mas horas en este dia':
+  'backendErrors.you cannot log more hours on this day':
     'No puedes registrar más horas en este día.',
-  'backendErrors.La entrada de tiempo excede el limite diario configurado':
+  'backendErrors.time entry exceeds the configured daily limit':
     'La entrada de tiempo excede el límite diario configurado.',
-  'backendErrors.No puedes registrar mas de 14 horas en un mismo dia':
-    'Ya alcanzaste el límite diario de 14 horas para esa fecha.',
-  'backendErrors.La entrada de tiempo excede el limite diario de 14 horas':
-    'La entrada de tiempo excede el límite diario de 14 horas.',
+  'backendErrors.an active timer cannot be edited': 'No se puede editar un cronómetro activo.',
   'backendErrors.max daily hours must be between 1 and 14':
     'El máximo diario debe estar entre 1 y 14 horas.',
-  'backendErrors.La duracion calculada excede el limite permitido':
+  'backendErrors.computed duration exceeds the allowed limit':
     'La duración calculada excede el límite permitido.',
-  'backendErrors.Registro de tiempo no encontrado': 'Registro de tiempo no encontrado.',
-  'backendErrors.Tarea invalida o sin permisos': 'Tarea inválida o sin permisos.',
-  'backendErrors.Actividad invalida o sin permisos': 'Actividad inválida o sin permisos.',
+  'backendErrors.time entry not found': 'Registro de tiempo no encontrado.',
+  'backendErrors.invalid task or no permissions': 'Tarea inválida o sin permisos.',
+  'backendErrors.invalid parent task or no permissions':
+    'Tarea padre inválida o sin permisos.',
+  'backendErrors.invalid activity or no permissions': 'Actividad inválida o sin permisos.',
+  'backendErrors.invalid project or no permissions': 'Proyecto inválido o sin permisos.',
+  'backendErrors.invalid milestone': 'Milestone inválido.',
+  'backendErrors.invalid milestone or no permissions': 'Milestone inválido o sin permisos.',
+  'backendErrors.milestone does not belong to the selected project':
+    'El hito no pertenece al proyecto seleccionado.',
+  'backendErrors.one or more tags are not valid': 'Una o más etiquetas no son válidas.',
+  'backendErrors.a task cannot be its own parent': 'Una tarea no puede ser padre de sí misma.',
+  'backendErrors.task not found': 'Tarea no encontrada.',
+  'backendErrors.project not found': 'Proyecto no encontrado.',
+  'backendErrors.project not found or no permission':
+    'Proyecto no encontrado o no tienes permiso.',
+  'backendErrors.client not found': 'Cliente no encontrado.',
+  'backendErrors.client not found or no permission':
+    'Cliente no encontrado o no tienes permiso.',
+  'backendErrors.client authentication data not found':
+    'Datos de autenticación del cliente no encontrados.',
+  'backendErrors.invalid client authentication state':
+    'Estado de autenticación del cliente inválido.',
+  'backendErrors.project is not assigned to the specified client':
+    'El proyecto no está asignado al cliente indicado.',
+  'backendErrors.task does not belong to the specified project':
+    'La tarea no pertenece al proyecto indicado.',
+  'backendErrors.invoice not found': 'Factura no encontrada.',
+  'backendErrors.invalid invoice or does not belong to the project':
+    'Factura inválida o no pertenece al proyecto.',
+  'backendErrors.invalid status': 'Estado inválido.',
+  'backendErrors.only invoices in draft status can be modified or deleted':
+    'Solo se pueden modificar o eliminar facturas en estado borrador.',
+  'backendErrors.payment not found': 'Pago no encontrado.',
+  'backendErrors.only a charge-type payment can be refunded':
+    'Solo se puede reembolsar un pago de tipo cargo.',
+  'backendErrors.only manually registered payments can be edited':
+    'Solo se pueden editar pagos registrados manualmente.',
+  'backendErrors.only manually registered payments can be deleted':
+    'Solo se pueden eliminar pagos registrados manualmente.',
+  "backendErrors.payments can only be recorded for invoices in 'open' status":
+    'Solo se pueden registrar pagos para facturas en estado emitida (open).',
+  'backendErrors.milestone not found': 'Hito no encontrado.',
+  'backendErrors.milestone not found or no permission':
+    'Hito no encontrado o no tienes permiso.',
+  'backendErrors.tag not found': 'Etiqueta no encontrada.',
+  'backendErrors.category not found': 'Categoría no encontrada.',
+  'backendErrors.activity not found': 'Actividad no encontrada.',
+  'backendErrors.attachment not found': 'Adjunto no encontrado.',
+  'backendErrors.chat not found': 'Chat no encontrado.',
+  'backendErrors.change request not found': 'Solicitud de cambio no encontrada.',
+  'backendErrors.the client updated the change record':
+    'El cliente actualizó el registro de cambio.',
+  'backendErrors.an approved request only allows updating the related task':
+    'Una solicitud aprobada solo permite actualizar la tarea relacionada.',
+  'backendErrors.request was created by the client and only the client can edit it':
+    'La solicitud fue creada por el cliente y solo el cliente puede editarla.',
+  'backendErrors.a finalized change request cannot be edited':
+    'No se puede editar una solicitud de cambio finalizada.',
+  'backendErrors.the freelancer updated the change request, reload to continue':
+    'El freelancer actualizó la solicitud. Recarga para continuar.',
+  'backendErrors.request cannot be edited in its current status':
+    'No se puede editar la solicitud en su estado actual.',
+  'backendErrors.only an approved request allows updating the related task':
+    'Solo una solicitud aprobada permite actualizar la tarea relacionada.',
+  'backendErrors.only a draft request can be submitted':
+    'Solo una solicitud en borrador puede enviarse.',
+  'backendErrors.only a submitted request can be assessed':
+    'Solo una solicitud enviada puede evaluarse.',
+  'backendErrors.only an approved request can be marked as implemented':
+    'Solo una solicitud aprobada puede marcarse como implementada.',
+  'backendErrors.you can only cancel requests created by the freelancer':
+    'Solo puedes cancelar solicitudes creadas por el freelancer.',
+  'backendErrors.request is already finalized and cannot be cancelled':
+    'La solicitud ya está finalizada y no puede cancelarse.',
+  'backendErrors.only an assessed request can be approved':
+    'Solo una solicitud evaluada puede aprobarse.',
+  'backendErrors.only an assessed request can be declined':
+    'Solo una solicitud evaluada puede rechazarse.',
+  'backendErrors.you can only cancel requests created by the client':
+    'Solo puedes cancelar solicitudes creadas por el cliente.',
+  'backendErrors.an assessed request can only be approved or declined':
+    'Una solicitud evaluada solo puede aprobarse o rechazarse.',
+  'backendErrors.only a cancelled request can be deleted':
+    'Solo se puede eliminar una solicitud cancelada.',
+  'backendErrors.invalid credentials': 'Credenciales inválidas.',
+  'backendErrors.invalid token': 'Token inválido.',
+  'backendErrors.expired token': 'Token expirado.',
+  'backendErrors.user not authenticated': 'Usuario no autenticado.',
+  'backendErrors.authenticated user not found': 'Usuario autenticado no encontrado.',
+  'backendErrors.registration is disabled, personal-use system':
+    'El registro está deshabilitado. Sistema de uso personal.',
+  'backendErrors.name cannot be empty': 'El nombre no puede estar vacío.',
+  'backendErrors.that email is already in use': 'Ese correo ya está en uso.',
+  'backendErrors.that name is already in use': 'Ese nombre ya está en uso.',
+  'backendErrors.ai api key cannot be empty': 'La API key de IA no puede estar vacía.',
+  'backendErrors.configure your ai api key in preferences':
+    'Configura tu API key de IA en preferencias.',
+  'backendErrors.configure an ai model in preferences':
+    'Configura un modelo de IA en preferencias.',
+  'backendErrors.configured model is not allowed': 'El modelo configurado no está permitido.',
+  'backendErrors.configured model is not available':
+    'El modelo configurado no está disponible.',
+  'backendErrors.ai service unavailable at this moment':
+    'El servicio de IA no está disponible en este momento.',
+  'backendErrors.ai service unavailable at this moment, try again in a few seconds':
+    'El servicio de IA no está disponible. Intenta nuevamente en unos segundos.',
+  'backendErrors.openrouter api key invalid or not configured':
+    'API key de OpenRouter inválida o no configurada.',
+  'backendErrors.openrouter applied a rate limit, try again in a few seconds':
+    'OpenRouter aplicó un límite de tasa. Intenta nuevamente en unos segundos.',
+  'backendErrors.ai provider took too long to respond':
+    'El proveedor de IA tardó demasiado en responder.',
+  'backendErrors.an error occurred processing the model response':
+    'Ocurrió un error procesando la respuesta del modelo.',
+  'backendErrors.file cannot be empty': 'El archivo no puede estar vacío.',
+  'backendErrors.file exceeds the supported size': 'El archivo excede el tamaño soportado.',
+  'backendErrors.each file cannot exceed 50mb': 'Cada archivo no puede exceder 50MB.',
+  'backendErrors.total file size exceeds the allowed limit':
+    'El tamaño total de archivos excede el límite permitido.',
+  'backendErrors.you must send at least one valid file':
+    'Debes enviar al menos un archivo válido.',
+  'backendErrors.you must send files in the files field':
+    'Debes enviar archivos en el campo files.',
+  'backendErrors.file must be associated with a project or a task':
+    'Debes asociar el archivo a un proyecto o una tarea.',
+  'backendErrors.original file name cannot be empty':
+    'El nombre original del archivo no puede estar vacío.',
+  'backendErrors.you have reached your total storage limit for attachments':
+    'Has alcanzado tu límite total de almacenamiento para adjuntos.',
+  'backendErrors.error processing multipart form':
+    'Error al procesar el formulario multipart.',
+  'backendErrors.could not read one of the files': 'No se pudo leer uno de los archivos.',
+  'backendErrors.unknown message type': 'Tipo de mensaje desconocido.',
+  'backendErrors.invalid message format': 'Formato de mensaje inválido.',
+  'backendErrors.missing data field': 'Falta el campo data.',
+  'backendErrors.invalid chat payload': 'Payload de chat inválido.',
+  'backendErrors.invalid chat_id format': 'Formato de chat_id inválido.',
   'backendErrors.client name must be between 1 and 255 characters':
     'El nombre del cliente debe tener entre 1 y 255 caracteres.',
   'backendErrors.client email must be a valid email address': 'El correo del cliente no es válido.',

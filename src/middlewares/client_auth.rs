@@ -28,7 +28,7 @@ impl FromRequestParts<AppState> for ClientAuthDto {
         let token = jar.get(CLIENT_AUTH_COOKIE_NAME).map(|c| c.value()).ok_or_else(|| {
             (
                 StatusCode::UNAUTHORIZED,
-                Json(json!({"error": "No session", "type": "Unauthorized"})),
+                Json(json!({"error": "no session", "type": "unauthorized"})),
             )
         })?;
 
@@ -40,7 +40,7 @@ impl FromRequestParts<AppState> for ClientAuthDto {
         .map_err(|_| {
             (
                 StatusCode::UNAUTHORIZED,
-                Json(json!({"error": "Invalid Token", "type": "JwtError"})),
+                Json(json!({"error": "invalid token", "type": "jwt_error"})),
             )
         })?;
 
@@ -56,13 +56,13 @@ impl FromRequestParts<AppState> for ClientAuthDto {
             .map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(json!({"error": "DB Error", "type": "Database"})),
+                    Json(json!({"error": "db error", "type": "database"})),
                 )
             })?
             .ok_or_else(|| {
                 (
                     StatusCode::UNAUTHORIZED,
-                    Json(json!({"error": "Invalid Token", "type": "Unauthorized"})),
+                    Json(json!({"error": "invalid token", "type": "unauthorized"})),
                 )
             })?;
 

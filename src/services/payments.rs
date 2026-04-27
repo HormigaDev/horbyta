@@ -116,7 +116,7 @@ impl PaymentService {
             .into_model::<PaymentDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Pago no encontrado".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("payment not found".to_string()))?;
 
         let invoice = if let Some(invoice_id) = row.invoice_id {
             Self::get_invoice_reference(db, invoice_id).await?
@@ -135,7 +135,7 @@ impl PaymentService {
         let status = Self::compute_status(&row.transaction_type, &related_refunds, row.amount);
 
         let transaction_type = PaymentTransactionType::try_from(row.transaction_type)
-            .map_err(|_| AppError::Internal("Tipo de transacción inválido en la base de datos".to_string()))?;
+            .map_err(|_| AppError::Internal("invalid transaction type in database".to_string()))?;
 
         Ok(PaymentDetailDto {
             id: row.id,
@@ -225,7 +225,7 @@ impl PaymentService {
 
         if parent.transaction_type != "charge" {
             return Err(AppError::BadRequest(
-                "Solo se puede reembolsar un pago de tipo cargo".to_string(),
+                "only a charge-type payment can be refunded".to_string(),
             ));
         }
 
@@ -240,7 +240,7 @@ impl PaymentService {
         let remaining = parent.amount - existing_refunds_total;
         if dto.amount > remaining {
             return Err(AppError::BadRequest(format!(
-                "El monto del reembolso ({}) supera el saldo disponible ({})",
+                "refund amount ({}) exceeds the available balance ({})",
                 dto.amount, remaining
             )));
         }
@@ -279,7 +279,7 @@ impl PaymentService {
 
         if payment.provider != "manual" {
             return Err(AppError::Conflict(
-                "Solo se pueden editar pagos registrados manualmente".to_string(),
+                "only manually registered payments can be edited".to_string(),
             ));
         }
 
@@ -297,7 +297,7 @@ impl PaymentService {
 
         if payment.provider != "manual" {
             return Err(AppError::Conflict(
-                "Solo se pueden eliminar pagos registrados manualmente".to_string(),
+                "only manually registered payments can be deleted".to_string(),
             ));
         }
 
@@ -318,7 +318,7 @@ impl PaymentService {
             .filter(payments::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Pago no encontrado".to_string()))
+            .ok_or_else(|| AppError::NotFound("payment not found".to_string()))
     }
 
     async fn ensure_project_ownership(
@@ -331,7 +331,7 @@ impl PaymentService {
             .filter(projects::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::BadRequest("Proyecto inválido o sin permisos".to_string()))?;
+            .ok_or_else(|| AppError::BadRequest("invalid project or no permissions".to_string()))?;
         Ok(())
     }
 
@@ -347,11 +347,11 @@ impl PaymentService {
             .filter(invoices::Column::ProjectId.eq(project_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::BadRequest("Factura inválida o no pertenece al proyecto".to_string()))?;
+            .ok_or_else(|| AppError::BadRequest("invalid invoice or does not belong to the project".to_string()))?;
 
         if invoice.status != InvoiceStatus::Open.to_string() {
             return Err(AppError::Conflict(
-                "Solo se pueden registrar pagos para facturas en estado 'emitida' (open)".to_string(),
+                "payments can only be recorded for invoices in 'open' status".to_string(),
             ));
         }
 

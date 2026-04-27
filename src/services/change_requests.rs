@@ -116,7 +116,7 @@ impl ChangeRequestService {
             .into_model::<ChangeRequestDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Solicitud de cambio no encontrada".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("change request not found".to_string()))?;
 
         Ok(Self::map_detail_row(row)?)
     }
@@ -155,7 +155,7 @@ impl ChangeRequestService {
             .into_model::<ClientChangeRequestDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Solicitud de cambio no encontrada".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("change request not found".to_string()))?;
 
         Ok(Self::map_client_detail_row(row)?)
     }
@@ -172,7 +172,7 @@ impl ChangeRequestService {
 
         if model.version != dto.version {
             return Err(AppError::Conflict(
-                "El cliente actualizó el registro de cambio".to_string(),
+                "the client updated the change record".to_string(),
             ));
         }
 
@@ -188,7 +188,7 @@ impl ChangeRequestService {
 
             if non_task_fields_changed {
                 return Err(AppError::Conflict(
-                    "Una solicitud aprobada solo permite actualizar la tarea relacionada".to_string(),
+                    "an approved request only allows updating the related task".to_string(),
                 ));
             }
 
@@ -203,7 +203,7 @@ impl ChangeRequestService {
 
         if origin == ChangeRequestOrigin::ClientPortal {
             return Err(AppError::Forbidden(
-                "La solicitud fue creada por cliente y solo puede editarla el cliente".to_string(),
+                "request was created by the client and only the client can edit it".to_string(),
             ));
         }
 
@@ -212,7 +212,7 @@ impl ChangeRequestService {
             ChangeRequestStatus::Draft | ChangeRequestStatus::Submitted | ChangeRequestStatus::Assessed
         ) {
             return Err(AppError::Conflict(
-                "No se puede editar una solicitud de cambio finalizada".to_string(),
+                "a finalized change request cannot be edited".to_string(),
             ));
         }
 
@@ -246,13 +246,13 @@ impl ChangeRequestService {
 
         if model.version != dto.version {
             return Err(AppError::Conflict(
-                "El freelancer actualizó el cambio. Recarga para continuar".to_string(),
+                "the freelancer updated the change request, reload to continue".to_string(),
             ));
         }
 
         if !matches!(status, ChangeRequestStatus::Draft | ChangeRequestStatus::Submitted) {
             return Err(AppError::Conflict(
-                "No se puede editar la solicitud en el estado actual".to_string(),
+                "request cannot be edited in its current status".to_string(),
             ));
         }
 
@@ -275,13 +275,13 @@ impl ChangeRequestService {
 
         if model.version != dto.version {
             return Err(AppError::Conflict(
-                "El cliente actualizó el registro de cambio".to_string(),
+                "the client updated the change record".to_string(),
             ));
         }
 
         if status != ChangeRequestStatus::Approved {
             return Err(AppError::Conflict(
-                "Solo una solicitud aprobada permite actualizar la tarea relacionada".to_string(),
+                "only an approved request allows updating the related task".to_string(),
             ));
         }
 
@@ -304,7 +304,7 @@ impl ChangeRequestService {
 
         if status != ChangeRequestStatus::Draft {
             return Err(AppError::Conflict(
-                "Solo una solicitud en borrador puede enviarse".to_string(),
+                "only a draft request can be submitted".to_string(),
             ));
         }
 
@@ -326,7 +326,7 @@ impl ChangeRequestService {
 
         if status != ChangeRequestStatus::Submitted {
             return Err(AppError::Conflict(
-                "Solo una solicitud enviada puede evaluarse".to_string(),
+                "only a submitted request can be assessed".to_string(),
             ));
         }
 
@@ -351,7 +351,7 @@ impl ChangeRequestService {
 
         if status != ChangeRequestStatus::Approved {
             return Err(AppError::Conflict(
-                "Solo una solicitud aprobada puede marcarse como implementada".to_string(),
+                "only an approved request can be marked as implemented".to_string(),
             ));
         }
 
@@ -373,7 +373,7 @@ impl ChangeRequestService {
 
         if origin != ChangeRequestOrigin::FreelancerDashboard {
             return Err(AppError::Forbidden(
-                "Solo puedes cancelar solicitudes creadas por freelancer".to_string(),
+                "you can only cancel requests created by the freelancer".to_string(),
             ));
         }
 
@@ -385,7 +385,7 @@ impl ChangeRequestService {
                 | ChangeRequestStatus::Cancelled
         ) {
             return Err(AppError::Conflict(
-                "La solicitud ya está finalizada y no puede cancelarse".to_string(),
+                "request is already finalized and cannot be cancelled".to_string(),
             ));
         }
 
@@ -408,7 +408,7 @@ impl ChangeRequestService {
 
         if status != ChangeRequestStatus::Assessed {
             return Err(AppError::Conflict(
-                "Solo una solicitud evaluada puede aprobarse".to_string(),
+                "only an assessed request can be approved".to_string(),
             ));
         }
 
@@ -433,7 +433,7 @@ impl ChangeRequestService {
 
         if status != ChangeRequestStatus::Assessed {
             return Err(AppError::Conflict(
-                "Solo una solicitud evaluada puede rechazarse".to_string(),
+                "only an assessed request can be declined".to_string(),
             ));
         }
 
@@ -460,25 +460,25 @@ impl ChangeRequestService {
 
         if model.version != dto.version {
             return Err(AppError::Conflict(
-                "El freelancer actualizó el cambio. Recarga para continuar".to_string(),
+                "the freelancer updated the change request, reload to continue".to_string(),
             ));
         }
 
         if origin != ChangeRequestOrigin::ClientPortal {
             return Err(AppError::Forbidden(
-                "Solo puedes cancelar solicitudes creadas por el cliente".to_string(),
+                "you can only cancel requests created by the client".to_string(),
             ));
         }
 
         if status == ChangeRequestStatus::Assessed {
             return Err(AppError::Conflict(
-                "Una solicitud evaluada solo puede aprobarse o rechazarse".to_string(),
+                "an assessed request can only be approved or declined".to_string(),
             ));
         }
 
         if !matches!(status, ChangeRequestStatus::Draft | ChangeRequestStatus::Submitted) {
             return Err(AppError::Conflict(
-                "La solicitud ya está finalizada y no puede cancelarse".to_string(),
+                "request is already finalized and cannot be cancelled".to_string(),
             ));
         }
 
@@ -495,7 +495,7 @@ impl ChangeRequestService {
 
         if status != ChangeRequestStatus::Cancelled {
             return Err(AppError::Conflict(
-                "Solo se puede eliminar una solicitud cancelada".to_string(),
+                "only a cancelled request can be deleted".to_string(),
             ));
         }
 
@@ -629,7 +629,7 @@ impl ChangeRequestService {
             .filter(change_requests::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Solicitud de cambio no encontrada".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("change request not found".to_string()))?;
 
         Ok(model)
     }
@@ -646,7 +646,7 @@ impl ChangeRequestService {
             .filter(change_requests::Column::ClientId.eq(client_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Solicitud de cambio no encontrada".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("change request not found".to_string()))?;
 
         Ok(model)
     }
@@ -662,7 +662,7 @@ impl ChangeRequestService {
             .filter(projects::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Proyecto no encontrado o no tienes permiso".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("project not found or no permission".to_string()))?;
 
         let client_exists = Clients::find()
             .filter(clients::Column::Id.eq(client_id))
@@ -673,13 +673,13 @@ impl ChangeRequestService {
 
         if !client_exists {
             return Err(AppError::NotFound(
-                "Cliente no encontrado o no tienes permiso".to_string(),
+                "client not found or no permission".to_string(),
             ));
         }
 
         if project.client_id != Some(client_id) {
             return Err(AppError::BadRequest(
-                "El proyecto no está asignado al cliente indicado".to_string(),
+                "project is not assigned to the specified client".to_string(),
             ));
         }
 
@@ -702,7 +702,7 @@ impl ChangeRequestService {
 
         if !project_exists {
             return Err(AppError::NotFound(
-                "Proyecto no encontrado o no tienes permiso".to_string(),
+                "project not found or no permission".to_string(),
             ));
         }
 
@@ -721,11 +721,11 @@ impl ChangeRequestService {
                 .filter(tasks::Column::UserId.eq(user_id))
                 .one(db)
                 .await?
-                .ok_or_else(|| AppError::BadRequest("Tarea inválida o sin permisos".to_string()))?;
+                .ok_or_else(|| AppError::BadRequest("invalid task or no permissions".to_string()))?;
 
             if task.project_id != Some(project_id) {
                 return Err(AppError::BadRequest(
-                    "La tarea no pertenece al proyecto indicado".to_string(),
+                    "task does not belong to the specified project".to_string(),
                 ));
             }
         }
@@ -735,12 +735,12 @@ impl ChangeRequestService {
 
     fn parse_status(raw: &str) -> Result<ChangeRequestStatus, AppError> {
         ChangeRequestStatus::try_from(raw.to_string())
-            .map_err(|_| AppError::Internal(format!("Estado inválido almacenado en change_requests: {}", raw)))
+            .map_err(|_| AppError::Internal(format!("invalid status stored in change_requests: {}", raw)))
     }
 
     fn parse_origin(raw: &str) -> Result<ChangeRequestOrigin, AppError> {
         ChangeRequestOrigin::try_from(raw.to_string())
-            .map_err(|_| AppError::Internal(format!("Origen inválido almacenado en change_requests: {}", raw)))
+            .map_err(|_| AppError::Internal(format!("invalid origin stored in change_requests: {}", raw)))
     }
 
     fn now_with_offset() -> DateTime<FixedOffset> {

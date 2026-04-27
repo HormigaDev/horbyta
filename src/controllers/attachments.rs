@@ -38,7 +38,7 @@ async fn parse_uploaded_files(mut multipart: Multipart) -> Result<(Vec<UploadedF
     while let Some(field) = multipart
         .next_field()
         .await
-        .map_err(|_| AppError::BadRequest("Error al procesar el formulario multipart.".to_string()))?
+        .map_err(|_| AppError::BadRequest("error processing multipart form".to_string()))?
     {
         if field.name().unwrap_or_default() != FILES_FIELD_NAME {
             continue;
@@ -49,19 +49,19 @@ async fn parse_uploaded_files(mut multipart: Multipart) -> Result<(Vec<UploadedF
         let bytes = field
             .bytes()
             .await
-            .map_err(|_| AppError::BadRequest("No se pudo leer uno de los archivos".to_string()))?;
+            .map_err(|_| AppError::BadRequest("could not read one of the files".to_string()))?;
 
         let file_size = i64::try_from(bytes.len())
-            .map_err(|_| AppError::BadRequest("El archivo excede el tamaño soportado".to_string()))?;
+            .map_err(|_| AppError::BadRequest("file exceeds the supported size".to_string()))?;
 
         if file_size > MAX_ATTACHMENT_FILE_BYTES {
             return Err(AppError::BadRequest(
-                "Cada archivo no puede exceder los 50MB".to_string(),
+                "each file cannot exceed 50mb".to_string(),
             ));
         }
 
         total_upload_bytes = total_upload_bytes.checked_add(file_size).ok_or_else(|| {
-            AppError::BadRequest("El tamaño total de archivos excede el límite permitido".to_string())
+            AppError::BadRequest("total file size exceeds the allowed limit".to_string())
         })?;
 
         files.push(UploadedFile {
@@ -73,7 +73,7 @@ async fn parse_uploaded_files(mut multipart: Multipart) -> Result<(Vec<UploadedF
 
     if files.is_empty() {
         return Err(AppError::BadRequest(
-            "Debes enviar archivos en el campo files".to_string(),
+            "you must send files in the files field".to_string(),
         ));
     }
 
@@ -203,18 +203,18 @@ async fn get_attachment_raw(
     let attachment = AttachmentService::get_by_id(state.db.as_ref(), user.id, id).await?;
 
     let storage_path = ObjectPath::parse(attachment.storage_key.as_str())
-        .map_err(|error| AppError::Internal(format!("Storage key inválido: {}", error)))?;
+        .map_err(|error| AppError::Internal(format!("invalid storage key: {}", error)))?;
 
     let object = state
         .storage
         .get(&storage_path)
         .await
-        .map_err(|error| AppError::NotFound(format!("Archivo no encontrado en storage: {}", error)))?;
+        .map_err(|error| AppError::NotFound(format!("file not found in storage: {}", error)))?;
 
     let bytes = object
         .bytes()
         .await
-        .map_err(|error| AppError::Internal(format!("No se pudo leer el archivo: {}", error)))?;
+        .map_err(|error| AppError::Internal(format!("could not read file: {}", error)))?;
 
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, HeaderValue::from_str(&attachment.mime_type)?);

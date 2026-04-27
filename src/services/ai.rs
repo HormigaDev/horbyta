@@ -21,10 +21,10 @@ pub struct AiService {
 impl AiService {
     pub async fn connect(url: &str, db: Arc<DatabaseConnection>) -> Result<Self, AppError> {
         let channel = Channel::from_shared(url.to_string())
-            .map_err(|_| AppError::Internal(format!("Invalid AI service URL: {}", url)))?
+            .map_err(|_| AppError::Internal(format!("invalid ai service url: {}", url)))?
             .connect()
             .await
-            .map_err(|e| AppError::Internal(format!("Failed to connect to AI service: {}", e)))?;
+            .map_err(|e| AppError::Internal(format!("failed to connect to ai service: {}", e)))?;
 
         Ok(Self {
             client: ai_service_client::AiServiceClient::new(channel),
@@ -53,38 +53,38 @@ impl AiService {
             user_id
                 .to_string()
                 .parse::<MetadataValue<_>>()
-                .map_err(|_| AppError::Internal("Invalid user ID format".to_string()))?,
+                .map_err(|_| AppError::Internal("invalid user id format".to_string()))?,
         );
         request.metadata_mut().insert(
             "x-session-id",
             session_id
                 .parse::<MetadataValue<_>>()
-                .map_err(|_| AppError::Internal("Invalid session ID format".to_string()))?,
+                .map_err(|_| AppError::Internal("invalid session id format".to_string()))?,
         );
         request.metadata_mut().insert(
             "x-model",
             model
                 .parse::<MetadataValue<_>>()
-                .map_err(|_| AppError::BadRequest("Invalid model value".to_string()))?,
+                .map_err(|_| AppError::BadRequest("invalid model value".to_string()))?,
         );
         request.metadata_mut().insert(
             "x-api-key",
             api_key
                 .parse::<MetadataValue<_>>()
-                .map_err(|_| AppError::BadRequest("Invalid API key value".to_string()))?,
+                .map_err(|_| AppError::BadRequest("invalid api key value".to_string()))?,
         );
 
         let mut stream = self
             .client
             .chat(request)
             .await
-            .map_err(|e| AppError::Internal(format!("gRPC request failed: {}", e)))?
+            .map_err(|e| AppError::Internal(format!("grpc request failed: {}", e)))?
             .into_inner();
 
         let mut full_content = String::new();
 
         while let Some(event_result) = futures::stream::StreamExt::next(&mut stream).await {
-            let event = event_result.map_err(|e| AppError::Internal(format!("Stream error from AI service: {}", e)))?;
+            let event = event_result.map_err(|e| AppError::Internal(format!("stream error from ai service: {}", e)))?;
 
             match event.payload {
                 Some(chat_event::Payload::TextDelta(delta)) => {
@@ -145,7 +145,7 @@ impl AiService {
                 }
                 Some(chat_event::Payload::Error(err)) => {
                     tracing::error!("AI service error: {} - {}", err.code, err.message);
-                    return Err(AppError::Internal(format!("AI service error: {}", err.message)));
+                    return Err(AppError::Internal(format!("ai service error: {}", err.message)));
                 }
                 None => {
                     tracing::warn!("Received event with no payload");
@@ -163,13 +163,13 @@ impl AiService {
             "x-session-id",
             session_id
                 .parse::<MetadataValue<_>>()
-                .map_err(|_| AppError::Internal("Invalid session ID format".to_string()))?,
+                .map_err(|_| AppError::Internal("invalid session id format".to_string()))?,
         );
 
         self.client
             .submit_tool_result(request)
             .await
-            .map_err(|e| AppError::Internal(format!("SubmitToolResult failed: {}", e)))?;
+            .map_err(|e| AppError::Internal(format!("submit tool result failed: {}", e)))?;
 
         Ok(())
     }
@@ -191,7 +191,7 @@ fn build_tool_definitions() -> Result<Vec<ToolDefinition>, AppError> {
 fn json_value_to_struct(value: JsonValue) -> Result<prost_types::Struct, AppError> {
     let object = value
         .as_object()
-        .ok_or_else(|| AppError::BadRequest("Tool payload debe ser un objeto JSON".to_string()))?;
+        .ok_or_else(|| AppError::BadRequest("tool payload must be a json object".to_string()))?;
 
     let fields = object
         .iter()
@@ -208,7 +208,7 @@ fn json_value_to_proto_value(value: &JsonValue) -> Result<prost_types::Value, Ap
         JsonValue::Number(v) => {
             let num = v
                 .as_f64()
-                .ok_or_else(|| AppError::BadRequest("Numero JSON invalido".to_string()))?;
+                .ok_or_else(|| AppError::BadRequest("invalid json number".to_string()))?;
             prost_types::value::Kind::NumberValue(num)
         }
         JsonValue::String(v) => prost_types::value::Kind::StringValue(v.clone()),
@@ -285,12 +285,12 @@ async fn send_typing_message(
     };
 
     let payload = serde_json::to_string(&typing_msg)
-        .map_err(|_| AppError::Internal("Failed serializing websocket message".to_string()))?;
+        .map_err(|_| AppError::Internal("failed serializing websocket message".to_string()))?;
 
     sender
         .send(WsMessageRaw::Text(payload.into()))
         .await
-        .map_err(|_| AppError::Internal("Failed sending websocket message".to_string()))
+        .map_err(|_| AppError::Internal("failed sending websocket message".to_string()))
 }
 
 async fn send_complete_message(
@@ -310,12 +310,12 @@ async fn send_complete_message(
     };
 
     let payload = serde_json::to_string(&complete_msg)
-        .map_err(|_| AppError::Internal("Failed serializing websocket message".to_string()))?;
+        .map_err(|_| AppError::Internal("failed serializing websocket message".to_string()))?;
 
     sender
         .send(WsMessageRaw::Text(payload.into()))
         .await
-        .map_err(|_| AppError::Internal("Failed sending websocket message".to_string()))
+        .map_err(|_| AppError::Internal("failed sending websocket message".to_string()))
 }
 
 async fn send_tool_status_message(
@@ -340,12 +340,12 @@ async fn send_tool_status_message(
     };
 
     let payload = serde_json::to_string(&tool_status_msg)
-        .map_err(|_| AppError::Internal("Failed serializing websocket message".to_string()))?;
+        .map_err(|_| AppError::Internal("failed serializing websocket message".to_string()))?;
 
     sender
         .send(WsMessageRaw::Text(payload.into()))
         .await
-        .map_err(|_| AppError::Internal("Failed sending websocket message".to_string()))
+        .map_err(|_| AppError::Internal("failed sending websocket message".to_string()))
 }
 
 fn build_tool_status_details(tool_name: &str, result: &JsonValue) -> Option<JsonValue> {

@@ -33,7 +33,7 @@ async fn login(
         .filter(users::Column::Email.eq(&payload.email))
         .one(state.db.as_ref())
         .await?
-        .ok_or(AppError::Unauthorized("Credenciales inválidas".to_string()))?;
+        .ok_or(AppError::Unauthorized("invalid credentials".to_string()))?;
 
     compare_password(payload.password, user_model.password_hash)?;
 
@@ -68,14 +68,14 @@ async fn login_client(
         .filter(client_auth::Column::Email.eq(payload.email))
         .one(state.db.as_ref())
         .await?
-        .ok_or(AppError::Unauthorized("Credenciales inválidas".to_string()))?;
+        .ok_or(AppError::Unauthorized("invalid credentials".to_string()))?;
 
     if let Some(password_hash) = &client_model.password_hash {
         compare_password(payload.password, password_hash.clone())?;
         return handle_client_login_success(client_model, &state).await;
     }
 
-    Err(AppError::Unauthorized("Credenciales inválidas".to_string()))
+    Err(AppError::Unauthorized("invalid credentials".to_string()))
 }
 
 async fn login_magic_token(
@@ -88,21 +88,21 @@ async fn login_magic_token(
         .filter(client_auth::Column::MagicLinkHash.eq(hash))
         .one(state.db.as_ref())
         .await?
-        .ok_or(AppError::Unauthorized("Credenciales inválidas".to_string()))?;
+        .ok_or(AppError::Unauthorized("invalid credentials".to_string()))?;
 
     if let Some(exp) = client_model.magic_link_exp {
         if exp.with_timezone(&Utc) < Utc::now() {
-            return Err(AppError::Unauthorized("Token expirado".to_string()));
+            return Err(AppError::Unauthorized("expired token".to_string()));
         }
         return handle_client_login_success(client_model, &state).await;
     }
 
-    Err(AppError::Unauthorized("Credenciales inválidas".to_string()))
+    Err(AppError::Unauthorized("invalid credentials".to_string()))
 }
 
 async fn register() -> Result<impl IntoResponse, AppError> {
     Err::<axum::Json<()>, AppError>(AppError::NotImplemented(
-        "Registro deshabilitado. Sistema de uso personal.".to_string(),
+        "registration is disabled, personal-use system".to_string(),
     ))
 }
 

@@ -58,7 +58,7 @@ impl AppState {
                 .with_endpoint(config.s3_endpoint.as_deref().unwrap_or_default())
                 .with_allow_http(true)
                 .build()
-                .map_err(|e| AppError::Internal(format!("Failed to init S3: {}", e)))?;
+                .map_err(|e| AppError::Internal(format!("failed to init s3: {}", e)))?;
 
             Arc::new(s3)
         } else {
@@ -66,11 +66,11 @@ impl AppState {
             let path = Path::new(upload_dir);
 
             std::fs::create_dir_all(path)
-                .map_err(|e| AppError::Internal(format!("Failed to create upload dir: {}", e)))?;
+                .map_err(|e| AppError::Internal(format!("failed to create upload dir: {}", e)))?;
 
             let absolute_path = path
                 .canonicalize()
-                .map_err(|e| AppError::Internal(format!("Failed to resolve absolute path: {}", e)))?;
+                .map_err(|e| AppError::Internal(format!("failed to resolve absolute path: {}", e)))?;
 
             tracing::info!(
                 "Initializing Local storage driver at absolute path: {:?}",
@@ -78,7 +78,7 @@ impl AppState {
             );
 
             let local = LocalFileSystem::new_with_prefix(absolute_path)
-                .map_err(|e| AppError::Internal(format!("Failed to init local storage: {}", e)))?;
+                .map_err(|e| AppError::Internal(format!("failed to init local storage: {}", e)))?;
 
             Arc::new(local)
         };

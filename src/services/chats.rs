@@ -153,7 +153,7 @@ impl ChatService {
             .one(db)
             .await
             .map_err(AppError::Database)?
-            .ok_or_else(|| AppError::NotFound("Chat no encontrado".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("chat not found".to_string()))?;
 
         Ok(model)
     }

@@ -60,7 +60,7 @@ impl ClientService {
             .filter(clients::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Cliente no encontrado".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("client not found".to_string()))?;
 
         Ok(client)
     }
@@ -173,10 +173,10 @@ impl ClientService {
         let (token, hashed_token) = generate_magic_link_token();
         let time = Utc::now();
         let ttl_seconds = i64::try_from(magic_token_ttl.as_secs())
-            .map_err(|_| AppError::Internal("TTL de token mágico fuera de rango".to_string()))?;
+            .map_err(|_| AppError::Internal("magic token ttl out of range".to_string()))?;
         let expiration_time = time
             .checked_add_signed(chrono::Duration::seconds(ttl_seconds))
-            .ok_or_else(|| AppError::Internal("No se pudo calcular la expiración del token mágico".to_string()))?;
+            .ok_or_else(|| AppError::Internal("could not compute magic token expiration".to_string()))?;
         let timestamp = expiration_time.timestamp();
         if let Some(offset) = FixedOffset::east_opt(0) {
             let fixed_time: DateTime<FixedOffset> = expiration_time.with_timezone(&offset);
@@ -213,7 +213,7 @@ impl ClientService {
                 magic_client_token_exp: timestamp,
             })
         } else {
-            Err(AppError::Internal("Error del offset".to_string()))
+            Err(AppError::Internal("offset error".to_string()))
         }
     }
 
@@ -281,7 +281,7 @@ impl ClientService {
 
         if has_credentials && has_magic_token {
             return Err(AppError::Internal(
-                "Estado de autenticación del cliente inválido".to_string(),
+                "invalid client authentication state".to_string(),
             ));
         }
 
@@ -318,7 +318,7 @@ impl ClientService {
             .filter(client_auth::Column::ClientId.eq(client_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Datos de autenticación del cliente no encontrados".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("client authentication data not found".to_string()))?;
 
         Ok(client_auth)
     }

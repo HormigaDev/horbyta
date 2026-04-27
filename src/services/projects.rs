@@ -273,7 +273,7 @@ impl ProjectService {
             .into_model::<ProjectDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Proyecto no encontrado".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("project not found".to_string()))?;
 
         let milestones = MilestoneService::list_project_milestones_preview(db, user_id, id).await?;
         let this_project_billing: Option<project_billing::Model> = match project_billing::Entity::find()
@@ -328,7 +328,7 @@ impl ProjectService {
             .into_model::<ClientProjectDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Proyecto no encontrado".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("project not found".to_string()))?;
 
         let milestones =
             MilestoneService::list_client_project_milestones_preview(db, user_id, client_id, project_id).await?;
@@ -611,7 +611,7 @@ impl ProjectService {
             .filter(projects::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Proyecto no encontrado".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("project not found".to_string()))?;
 
         Ok(project)
     }

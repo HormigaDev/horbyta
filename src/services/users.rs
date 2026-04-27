@@ -23,12 +23,12 @@ impl UserService {
         Users::find_by_id(user_id)
             .one(db)
             .await?
-            .ok_or_else(|| AppError::Unauthorized("Usuario no autenticado".to_string()))
+            .ok_or_else(|| AppError::Unauthorized("user not authenticated".to_string()))
     }
 
     fn serialize_preferences(preferences: &UserPreferences) -> Result<serde_json::Value, AppError> {
         serde_json::to_value(preferences)
-            .map_err(|_| AppError::Internal("No se pudieron serializar las preferencias".to_string()))
+            .map_err(|_| AppError::Internal("could not serialize preferences".to_string()))
     }
 
     pub async fn get_me(db: &impl ConnectionTrait, user_id: Uuid) -> Result<UserSettingsDto, AppError> {
@@ -45,7 +45,7 @@ impl UserService {
         let normalized_email = dto.email.trim().to_lowercase();
 
         if normalized_name.is_empty() {
-            return Err(AppError::BadRequest("El nombre no puede estar vacío".to_string()));
+            return Err(AppError::BadRequest("name cannot be empty".to_string()));
         }
 
         let email_exists = Users::find()
@@ -55,7 +55,7 @@ impl UserService {
             .await?;
 
         if email_exists.is_some() {
-            return Err(AppError::Conflict("Ese correo ya está en uso".to_string()));
+            return Err(AppError::Conflict("that email is already in use".to_string()));
         }
 
         let name_exists = Users::find()
@@ -65,7 +65,7 @@ impl UserService {
             .await?;
 
         if name_exists.is_some() {
-            return Err(AppError::Conflict("Ese nombre ya está en uso".to_string()));
+            return Err(AppError::Conflict("that name is already in use".to_string()));
         }
 
         let user = Self::get_user_model(db, user_id).await?;
@@ -107,7 +107,7 @@ impl UserService {
         if let Some(api_key) = dto.ai_api_key.as_ref() {
             let cleaned_key = api_key.trim();
             if cleaned_key.is_empty() {
-                return Err(AppError::BadRequest("La API key AI no puede estar vacia".to_string()));
+                return Err(AppError::BadRequest("ai api key cannot be empty".to_string()));
             }
 
             preferences.ai.api_key_encrypted = Some(encrypt_secret(&config.ai_prefs_encryption_key, cleaned_key)?);

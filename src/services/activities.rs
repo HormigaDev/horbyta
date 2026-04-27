@@ -127,7 +127,7 @@ impl ActivityService {
             .filter(activities::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Categoría no encontrada".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("activity not found".to_string()))?;
 
         Ok(activity)
     }

@@ -29,6 +29,13 @@
 
       <q-card-actions align="right" class="q-px-md q-pb-md">
         <q-btn
+          v-if="payload !== undefined"
+          flat
+          color="grey-7"
+          :label="t('common.details')"
+          @click="onShowPayload"
+        />
+        <q-btn
           unelevated
           color="primary"
           :label="t('error.badRequestDialog.accept')"
@@ -40,18 +47,28 @@
 </template>
 
 <script setup lang="ts">
-import { useDialogPluginComponent } from 'quasar';
+import { useDialogPluginComponent, useQuasar } from 'quasar';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import ErrorDetailsDialog from './ErrorDetailsDialog.vue';
 
 const props = defineProps<{
   summary: string;
   messages: string[];
+  payload?: unknown;
 }>();
 
 defineEmits([...useDialogPluginComponent.emits]);
 const { dialogRef, onDialogHide, onDialogOK } = useDialogPluginComponent();
 const { t } = useI18n();
+const $q = useQuasar();
+
+const onShowPayload = () => {
+  $q.dialog({
+    component: ErrorDetailsDialog,
+    componentProps: { payload: props.payload },
+  });
+};
 
 const orderedMessages = computed(() => {
   const unique = Array.from(

@@ -87,23 +87,23 @@ impl AttachmentService {
     ) -> Result<(), AppError> {
         if upload_bytes <= 0 {
             return Err(AppError::BadRequest(
-                "Debes enviar al menos un archivo válido".to_string(),
+                "you must send at least one valid file".to_string(),
             ));
         }
 
         let scope_name = if task_id.is_some() {
-            "tarea"
+            "task"
         } else if project_id.is_some() {
-            "proyecto"
+            "project"
         } else {
             return Err(AppError::BadRequest(
-                "Debes asociar el archivo a un proyecto o a una tarea".to_string(),
+                "file must be associated with a project or a task".to_string(),
             ));
         };
 
         if upload_bytes > MAX_ATTACHMENT_SCOPE_BYTES {
             return Err(AppError::BadRequest(format!(
-                "El tamaño total de archivos no puede exceder 50MB por {}",
+                "total file size cannot exceed 50mb per {}",
                 scope_name
             )));
         }
@@ -112,7 +112,7 @@ impl AttachmentService {
         let next_scope_usage = i128::from(current_scope_usage) + i128::from(upload_bytes);
         if next_scope_usage > i128::from(MAX_ATTACHMENT_SCOPE_BYTES) {
             return Err(AppError::BadRequest(format!(
-                "Este {} alcanzó su límite de 50MB en adjuntos",
+                "this {} has reached its 50mb attachment limit",
                 scope_name
             )));
         }
@@ -122,7 +122,7 @@ impl AttachmentService {
         let next_user_usage = i128::from(current_user_usage) + i128::from(upload_bytes);
         if next_user_usage > i128::from(user_limit_bytes) {
             return Err(AppError::BadRequest(
-                "Has alcanzado tu límite total de almacenamiento para adjuntos".to_string(),
+                "you have reached your total storage limit for attachments".to_string(),
             ));
         }
 
@@ -141,20 +141,20 @@ impl AttachmentService {
         let original_name = dto.original_name.trim().to_string();
         if original_name.is_empty() {
             return Err(AppError::BadRequest(
-                "El nombre original del archivo no puede estar vacío".to_string(),
+                "original file name cannot be empty".to_string(),
             ));
         }
 
         if file_bytes.is_empty() {
-            return Err(AppError::BadRequest("El archivo no puede estar vacío".to_string()));
+            return Err(AppError::BadRequest("file cannot be empty".to_string()));
         }
 
         let size_bytes = i64::try_from(file_bytes.len())
-            .map_err(|_| AppError::BadRequest("El archivo excede el tamaño soportado".to_string()))?;
+            .map_err(|_| AppError::BadRequest("file exceeds the supported size".to_string()))?;
 
         if size_bytes > MAX_ATTACHMENT_FILE_BYTES {
             return Err(AppError::BadRequest(
-                "Cada archivo no puede exceder los 50MB".to_string(),
+                "each file cannot exceed 50mb".to_string(),
             ));
         }
 
@@ -169,12 +169,12 @@ impl AttachmentService {
 
         let storage_key = Self::build_storage_key(user_id, project_id, task_id, &original_name);
         let location = ObjectPath::parse(storage_key.as_str())
-            .map_err(|error| AppError::Internal(format!("Storage key inválido: {}", error)))?;
+            .map_err(|error| AppError::Internal(format!("invalid storage key: {}", error)))?;
 
         storage
             .put(&location, file_bytes.into())
             .await
-            .map_err(|error| AppError::Internal(format!("No se pudo guardar el archivo en storage: {}", error)))?;
+            .map_err(|error| AppError::Internal(format!("could not save file to storage: {}", error)))?;
 
         let inserted = attachments::ActiveModel {
             user_id: Set(user_id),
@@ -223,7 +223,7 @@ impl AttachmentService {
         let model = Self::find_by_id(db, user_id, attachment_id).await?;
 
         let location = ObjectPath::parse(model.storage_key.as_str())
-            .map_err(|error| AppError::Internal(format!("Storage key inválido: {}", error)))?;
+            .map_err(|error| AppError::Internal(format!("invalid storage key: {}", error)))?;
 
         if let Err(error) = storage.delete(&location).await {
             tracing::warn!(
@@ -300,7 +300,7 @@ impl AttachmentService {
             .parse::<u64>()
             .map_err(|_| {
                 AppError::Internal(format!(
-                    "Configuración inválida: {} debe ser un entero positivo",
+                    "invalid configuration: {} must be a positive integer",
                     USER_STORAGE_LIMIT_GB_ENV
                 ))
             })?;
@@ -308,7 +308,7 @@ impl AttachmentService {
         let bytes = u128::from(limit_gb) * 1024_u128 * 1024_u128 * 1024_u128;
         if bytes > i64::MAX as u128 {
             return Err(AppError::Internal(
-                "El límite de almacenamiento configurado excede el máximo soportado".to_string(),
+                "configured storage limit exceeds the supported maximum".to_string(),
             ));
         }
 
@@ -332,7 +332,7 @@ impl AttachmentService {
                 .add(attachments::Column::TaskId.is_null())
         } else {
             return Err(AppError::BadRequest(
-                "Debes asociar el archivo a un proyecto o a una tarea".to_string(),
+                "file must be associated with a project or a task".to_string(),
             ));
         };
 
@@ -366,7 +366,7 @@ impl AttachmentService {
     ) -> Result<(Option<Uuid>, Option<Uuid>), AppError> {
         if project_id.is_none() && task_id.is_none() {
             return Err(AppError::BadRequest(
-                "Debes asociar el archivo a un proyecto o a una tarea".to_string(),
+                "file must be associated with a project or a task".to_string(),
             ));
         }
 
@@ -379,7 +379,7 @@ impl AttachmentService {
                 .map_err(AppError::Database)?;
 
             if project.is_none() {
-                return Err(AppError::BadRequest("Proyecto inválido o sin permisos".to_string()));
+                return Err(AppError::BadRequest("invalid project or no permissions".to_string()));
             }
 
             Some(pid)
@@ -395,12 +395,12 @@ impl AttachmentService {
                 .await
                 .map_err(AppError::Database)?;
 
-            let task = task.ok_or_else(|| AppError::BadRequest("Tarea inválida o sin permisos".to_string()))?;
+            let task = task.ok_or_else(|| AppError::BadRequest("invalid task or no permissions".to_string()))?;
 
             if let Some(project_id_from_dto) = owned_project_id {
                 if task.project_id != Some(project_id_from_dto) {
                     return Err(AppError::BadRequest(
-                        "La tarea no pertenece al proyecto indicado".to_string(),
+                        "task does not belong to the specified project".to_string(),
                     ));
                 }
             }
@@ -427,7 +427,7 @@ impl AttachmentService {
             .one(db)
             .await
             .map_err(AppError::Database)?
-            .ok_or_else(|| AppError::NotFound("Adjunto no encontrado".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("attachment not found".to_string()))?;
 
         Ok(attachment)
     }

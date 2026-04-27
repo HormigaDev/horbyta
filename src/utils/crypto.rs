@@ -17,11 +17,11 @@ const KEY_LENGTH: usize = 32;
 fn decode_key(key_b64: &str) -> Result<[u8; KEY_LENGTH], AppError> {
     let raw = STANDARD
         .decode(key_b64)
-        .map_err(|_| AppError::Internal("AI_PREFS_ENCRYPTION_KEY no es base64 valido".to_string()))?;
+        .map_err(|_| AppError::Internal("ai_prefs_encryption_key is not valid base64".to_string()))?;
 
     if raw.len() != KEY_LENGTH {
         return Err(AppError::Internal(
-            "AI_PREFS_ENCRYPTION_KEY debe representar 32 bytes (AES-256-GCM)".to_string(),
+            "ai_prefs_encryption_key must represent 32 bytes (aes-256-gcm)".to_string(),
         ));
     }
 
@@ -33,7 +33,7 @@ fn decode_key(key_b64: &str) -> Result<[u8; KEY_LENGTH], AppError> {
 pub fn encrypt_secret(key_b64: &str, plaintext: &str) -> Result<String, AppError> {
     let key = decode_key(key_b64)?;
     let cipher = Aes256Gcm::new_from_slice(&key)
-        .map_err(|_| AppError::Internal("No se pudo inicializar cifrado AES".to_string()))?;
+        .map_err(|_| AppError::Internal("could not initialize aes encryption".to_string()))?;
 
     let mut nonce_bytes = [0u8; NONCE_LENGTH];
     OsRng.fill_bytes(&mut nonce_bytes);
@@ -41,7 +41,7 @@ pub fn encrypt_secret(key_b64: &str, plaintext: &str) -> Result<String, AppError
 
     let ciphertext = cipher
         .encrypt(nonce, plaintext.as_bytes())
-        .map_err(|_| AppError::Internal("No se pudo cifrar el secreto".to_string()))?;
+        .map_err(|_| AppError::Internal("could not encrypt secret".to_string()))?;
 
     let mut packed = Vec::with_capacity(NONCE_LENGTH + ciphertext.len());
     packed.extend_from_slice(&nonce_bytes);
@@ -53,14 +53,14 @@ pub fn encrypt_secret(key_b64: &str, plaintext: &str) -> Result<String, AppError
 pub fn decrypt_secret(key_b64: &str, encrypted_b64: &str) -> Result<String, AppError> {
     let key = decode_key(key_b64)?;
     let cipher = Aes256Gcm::new_from_slice(&key)
-        .map_err(|_| AppError::Internal("No se pudo inicializar descifrado AES".to_string()))?;
+        .map_err(|_| AppError::Internal("could not initialize aes decryption".to_string()))?;
 
     let packed = STANDARD
         .decode(encrypted_b64)
-        .map_err(|_| AppError::Internal("Secreto cifrado invalido (base64)".to_string()))?;
+        .map_err(|_| AppError::Internal("invalid encrypted secret (base64)".to_string()))?;
 
     if packed.len() <= NONCE_LENGTH {
-        return Err(AppError::Internal("Secreto cifrado invalido (tamano)".to_string()));
+        return Err(AppError::Internal("invalid encrypted secret (size)".to_string()));
     }
 
     let (nonce_bytes, ciphertext) = packed.split_at(NONCE_LENGTH);
@@ -68,10 +68,10 @@ pub fn decrypt_secret(key_b64: &str, encrypted_b64: &str) -> Result<String, AppE
 
     let plaintext_bytes = cipher
         .decrypt(nonce, ciphertext)
-        .map_err(|_| AppError::Internal("No se pudo descifrar el secreto".to_string()))?;
+        .map_err(|_| AppError::Internal("could not decrypt secret".to_string()))?;
 
     String::from_utf8(plaintext_bytes)
-        .map_err(|_| AppError::Internal("Secreto descifrado no es UTF-8 valido".to_string()))
+        .map_err(|_| AppError::Internal("decrypted secret is not valid utf-8".to_string()))
 }
 
 pub fn hash_password(password: String) -> Result<String, AppError> {
@@ -88,7 +88,7 @@ pub fn compare_password(password: String, hashed_password: String) -> Result<boo
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_err()
     {
-        return Err(AppError::Unauthorized("Credenciales inválidas".to_string()));
+        return Err(AppError::Unauthorized("invalid credentials".to_string()));
     } else {
         return Ok(true);
     }
@@ -105,7 +105,7 @@ pub fn generate_magic_link_token() -> (String, Vec<u8>) {
 }
 
 pub fn verify_magic_link_token(token: &str) -> Result<Vec<u8>, AppError> {
-    let token_bytes = hex::decode(token).map_err(|_| AppError::Unauthorized("Token inválido".to_string()))?;
+    let token_bytes = hex::decode(token).map_err(|_| AppError::Unauthorized("invalid token".to_string()))?;
 
     let hash = Sha256::digest(token_bytes);
 

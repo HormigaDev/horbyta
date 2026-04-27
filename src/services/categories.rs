@@ -119,7 +119,7 @@ impl CategoryService {
             .filter(categories::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Categoría no encontrada".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("category not found".to_string()))?;
 
         Ok(category)
     }

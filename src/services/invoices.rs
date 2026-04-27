@@ -117,7 +117,7 @@ impl InvoiceService {
             .into_model::<InvoiceDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Factura no encontrada".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("invoice not found".to_string()))?;
 
         let time_entries = Self::get_invoice_time_entries(db, id).await?;
         let task_groups = Self::group_time_entries_by_task(time_entries);
@@ -125,7 +125,7 @@ impl InvoiceService {
         let status: InvoiceStatus = row
             .status
             .try_into()
-            .map_err(|_| AppError::Internal("Status inválido".to_string()))?;
+            .map_err(|_| AppError::Internal("invalid status".to_string()))?;
         Ok(InvoiceDetailDto {
             id: row.id,
             record_number: row.record_number,
@@ -393,7 +393,7 @@ impl InvoiceService {
             .filter(invoices::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Factura no encontrada".to_string()))
+            .ok_or_else(|| AppError::NotFound("invoice not found".to_string()))
     }
 
     async fn ensure_project_ownership(
@@ -406,7 +406,7 @@ impl InvoiceService {
             .filter(crate::entities::projects::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::BadRequest("Proyecto inválido o sin permisos".to_string()))?;
+            .ok_or_else(|| AppError::BadRequest("invalid project or no permissions".to_string()))?;
 
         Ok(())
     }
@@ -414,7 +414,7 @@ impl InvoiceService {
     fn ensure_draft(invoice: &InvoiceModel) -> Result<(), AppError> {
         if invoice.status != "draft" {
             return Err(AppError::Conflict(
-                "Solo se pueden modificar o eliminar facturas en estado borrador".to_string(),
+                "only invoices in draft status can be modified or deleted".to_string(),
             ));
         }
         Ok(())

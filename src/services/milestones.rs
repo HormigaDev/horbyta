@@ -38,7 +38,7 @@ impl MilestoneService {
 
         if project.is_none() {
             return Err(AppError::NotFound(
-                "Proyecto no encontrado o no tienes permiso".to_string(),
+                "project not found or no permission".to_string(),
             ));
         }
         Ok(())
@@ -59,7 +59,7 @@ impl MilestoneService {
 
         if project.is_none() {
             return Err(AppError::NotFound(
-                "Proyecto no encontrado o no tienes permiso".to_string(),
+                "project not found or no permission".to_string(),
             ));
         }
 
@@ -81,11 +81,11 @@ impl MilestoneService {
         match milestone_opt {
             Some((milestone, Some(project))) => {
                 if project.user_id != user_id {
-                    return Err(AppError::NotFound("Hito no encontrado o no tienes permiso".to_string()));
+                    return Err(AppError::NotFound("milestone not found or no permission".to_string()));
                 }
                 Ok(milestone)
             }
-            _ => Err(AppError::NotFound("Hito no encontrado".to_string())),
+            _ => Err(AppError::NotFound("milestone not found".to_string())),
         }
     }
 

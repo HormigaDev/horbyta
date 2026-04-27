@@ -43,10 +43,10 @@ struct TasksListArgs {
 
 fn ensure_valid_pagination(page: u64, limit: u64) -> Result<(), AppError> {
     if page < 1 {
-        return Err(AppError::BadRequest("'page' debe ser mayor o igual a 1".to_string()));
+        return Err(AppError::BadRequest("'page' must be greater than or equal to 1".to_string()));
     }
     if !(1..=100).contains(&limit) {
-        return Err(AppError::BadRequest("'limit' debe estar entre 1 y 100".to_string()));
+        return Err(AppError::BadRequest("'limit' must be between 1 and 100".to_string()));
     }
     Ok(())
 }
@@ -191,14 +191,14 @@ pub async fn execute_tool(
     match tool_name {
         "project_read" => {
             let parsed: IdArgs = serde_json::from_value(args)
-                .map_err(|e| AppError::BadRequest(format!("Argumentos invalidos para project_read: {}", e)))?;
+                .map_err(|e| AppError::BadRequest(format!("invalid arguments for project_read: {}", e)))?;
 
             let project = ProjectService::get_by_id(db.as_ref(), user_id, parsed.id).await?;
             Ok(json!({ "project": project }))
         }
         "projects_list" => {
             let parsed: PaginationArgs = serde_json::from_value(args)
-                .map_err(|e| AppError::BadRequest(format!("Argumentos invalidos para projects_list: {}", e)))?;
+                .map_err(|e| AppError::BadRequest(format!("invalid arguments for projects_list: {}", e)))?;
 
             ensure_valid_pagination(parsed.page, parsed.limit)?;
 
@@ -231,14 +231,14 @@ pub async fn execute_tool(
         }
         "task_read" => {
             let parsed: IdArgs = serde_json::from_value(args)
-                .map_err(|e| AppError::BadRequest(format!("Argumentos invalidos para task_read: {}", e)))?;
+                .map_err(|e| AppError::BadRequest(format!("invalid arguments for task_read: {}", e)))?;
 
             let task = TaskService::get_by_id(db.as_ref(), user_id, parsed.id).await?;
             Ok(json!({ "task": task }))
         }
         "tasks_list" => {
             let parsed: TasksListArgs = serde_json::from_value(args)
-                .map_err(|e| AppError::BadRequest(format!("Argumentos invalidos para tasks_list: {}", e)))?;
+                .map_err(|e| AppError::BadRequest(format!("invalid arguments for tasks_list: {}", e)))?;
 
             ensure_valid_pagination(parsed.page, parsed.limit)?;
 
@@ -252,7 +252,7 @@ pub async fn execute_tool(
 
             payload
                 .validate()
-                .map_err(|e| AppError::BadRequest(format!("Payload invalido en tasks_list: {}", e)))?;
+                .map_err(|e| AppError::BadRequest(format!("invalid payload in tasks_list: {}", e)))?;
             task_filter_schema().validate_payload(&payload)?;
 
             let (items, total) = TaskService::search(db.as_ref(), user_id, payload.clone()).await?;
@@ -281,15 +281,15 @@ pub async fn execute_tool(
         }
         "task_create" => {
             let dto: CreateTaskDto = serde_json::from_value(args)
-                .map_err(|e| AppError::BadRequest(format!("Argumentos invalidos para task_create: {}", e)))?;
+                .map_err(|e| AppError::BadRequest(format!("invalid arguments for task_create: {}", e)))?;
 
             dto.validate()
-                .map_err(|e| AppError::BadRequest(format!("Payload invalido en task_create: {}", e)))?;
+                .map_err(|e| AppError::BadRequest(format!("invalid payload in task_create: {}", e)))?;
 
             let created = TaskService::create(db.as_ref(), user_id, dto).await?;
             Ok(json!({ "task": created }))
         }
-        _ => Err(AppError::BadRequest(format!("Tool no soportada: {}", tool_name))),
+        _ => Err(AppError::BadRequest(format!("tool not supported: {}", tool_name))),
     }
 }
 

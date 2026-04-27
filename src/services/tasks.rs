@@ -34,7 +34,7 @@ impl TaskService {
             .filter(tasks::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Tarea no encontrada".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("task not found".to_string()))?;
 
         Ok(task)
     }
@@ -53,7 +53,7 @@ impl TaskService {
 
     fn parse_tag_color_or_internal(color: &str, tag_id: Uuid) -> Result<HexColor, AppError> {
         HexColor::new(color)
-            .map_err(|_| AppError::Internal(format!("La etiqueta {tag_id} tiene un color inválido almacenado")))
+            .map_err(|_| AppError::Internal(format!("tag {tag_id} has an invalid stored color")))
     }
 
     async fn to_task_detail(db: &impl ConnectionTrait, task: TaskModel) -> Result<TaskDetailDto, AppError> {
@@ -137,7 +137,7 @@ impl TaskService {
                 .await?;
 
             if project.is_none() {
-                return Err(AppError::BadRequest("Proyecto inválido o sin permisos".to_string()));
+                return Err(AppError::BadRequest("invalid project or no permissions".to_string()));
             }
         }
 
@@ -157,7 +157,7 @@ impl TaskService {
                 .await?;
 
             if parent.is_none() {
-                return Err(AppError::BadRequest("Tarea padre inválida o sin permisos".to_string()));
+                return Err(AppError::BadRequest("invalid parent task or no permissions".to_string()));
             }
         }
 
@@ -180,19 +180,19 @@ impl TaskService {
             match milestone_join {
                 Some((milestone, Some(project))) => {
                     if project.user_id != user_id {
-                        return Err(AppError::BadRequest("Milestone inválido o sin permisos".to_string()));
+                        return Err(AppError::BadRequest("invalid milestone or no permissions".to_string()));
                     }
 
                     if let Some(pid) = project_id {
                         if milestone.project_id != pid {
                             return Err(AppError::BadRequest(
-                                "El milestone no pertenece al proyecto seleccionado".to_string(),
+                                "milestone does not belong to the selected project".to_string(),
                             ));
                         }
                     }
                 }
                 _ => {
-                    return Err(AppError::BadRequest("Milestone inválido".to_string()));
+                    return Err(AppError::BadRequest("invalid milestone".to_string()));
                 }
             }
         }
@@ -218,7 +218,7 @@ impl TaskService {
             .await?;
 
         if found_count != deduped_ids.len() as u64 {
-            return Err(AppError::BadRequest("Una o más etiquetas no son válidas".to_string()));
+            return Err(AppError::BadRequest("one or more tags are not valid".to_string()));
         }
 
         Ok(deduped_ids)
@@ -305,7 +305,7 @@ impl TaskService {
     ) -> Result<TaskDetailDto, AppError> {
         if dto.parent_id == Some(id) {
             return Err(AppError::BadRequest(
-                "Una tarea no puede ser padre de sí misma".to_string(),
+                "a task cannot be its own parent".to_string(),
             ));
         }
 

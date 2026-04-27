@@ -110,7 +110,7 @@ impl TagService {
             .filter(tags::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("Etiqueta no encontrada".to_string()))?;
+            .ok_or_else(|| AppError::NotFound("tag not found".to_string()))?;
 
         Ok(tag)
     }
