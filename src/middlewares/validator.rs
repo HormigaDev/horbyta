@@ -104,7 +104,6 @@ fn format_custom_message(field: &str, code: &str) -> Option<String> {
         "invalid_decimal_range" => format!("{field} must be greater than or equal to 0"),
         "invalid_signature_ip" => format!("{field} must be a valid ip address"),
         "invalid_timezone" => format!("{field} must be a valid timezone"),
-        "invalid_ai_model" => format!("{field} is not a supported model"),
         "password_mismatch" => "new password and confirm password must match".to_string(),
         "new_password_must_change" => "new password must be different from current password".to_string(),
         "empty_preferences_patch" => "request must include at least one preference field".to_string(),

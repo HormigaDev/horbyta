@@ -5,12 +5,7 @@ use std::time::Duration;
 use std::{path::Path, sync::Arc};
 use uuid::Uuid;
 
-use crate::{
-    dtos::{client::ClientAuthDto, user::UserDto},
-    env::Config,
-    error::AppError,
-    services::ai::AiService,
-};
+use crate::{dtos::client::ClientAuthDto, dtos::user::UserDto, env::Config, error::AppError};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -18,7 +13,6 @@ pub struct AppState {
     pub user_cache: Cache<Uuid, UserDto>,
     pub client_cache: Cache<Uuid, ClientAuthDto>,
     pub config: Config,
-    pub ai_service: Arc<tokio::sync::Mutex<Option<AiService>>>,
     pub storage: Arc<dyn ObjectStore>,
 }
 
@@ -34,18 +28,6 @@ impl AppState {
             .time_to_idle(Duration::from_secs(15 * 60))
             .max_capacity(10_000)
             .build();
-
-        let ai_service = match AiService::connect(&config.ai_service_url, db.clone()).await {
-            Ok(service) => Some(service),
-            Err(error) => {
-                tracing::warn!(
-                    ai_service_url = %config.ai_service_url,
-                    error = %error,
-                    "AI service unavailable at startup, continuing in degraded mode"
-                );
-                None
-            }
-        };
 
         let storage: Arc<dyn ObjectStore> = if let Some(bucket) = &config.s3_bucket {
             tracing::info!("Initializing S3 storage driver for bucket: {}", bucket);
@@ -88,7 +70,6 @@ impl AppState {
             user_cache,
             client_cache,
             config,
-            ai_service: Arc::new(tokio::sync::Mutex::new(ai_service)),
             storage,
         })
     }

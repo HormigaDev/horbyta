@@ -63,7 +63,7 @@ async fn update_preferences(
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<UpdateUserPreferencesDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let updated = UserService::update_preferences(state.db.as_ref(), &state.config, user.id, payload).await?;
+    let updated = UserService::update_preferences(state.db.as_ref(), user.id, payload).await?;
     Ok(Json(updated))
 }
 

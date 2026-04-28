@@ -11,9 +11,7 @@ use crate::{
         prelude::Users,
         users::{self, Model as UserModel},
     },
-    env::Config,
     error::AppError,
-    utils::crypto::encrypt_secret,
 };
 
 pub struct UserService;
@@ -27,8 +25,7 @@ impl UserService {
     }
 
     fn serialize_preferences(preferences: &UserPreferences) -> Result<serde_json::Value, AppError> {
-        serde_json::to_value(preferences)
-            .map_err(|_| AppError::Internal("could not serialize preferences".to_string()))
+        serde_json::to_value(preferences).map_err(|_| AppError::Internal("could not serialize preferences".to_string()))
     }
 
     pub async fn get_me(db: &impl ConnectionTrait, user_id: Uuid) -> Result<UserSettingsDto, AppError> {
@@ -96,23 +93,12 @@ impl UserService {
 
     pub async fn update_preferences(
         db: &impl ConnectionTrait,
-        config: &Config,
         user_id: Uuid,
         dto: UpdateUserPreferencesDto,
     ) -> Result<UserSettingsDto, AppError> {
         let user = Self::get_user_model(db, user_id).await?;
         let mut preferences = UserPreferences::from_json_value(user.preferences.as_ref());
         preferences.apply_general_patch(&dto);
-
-        if let Some(api_key) = dto.ai_api_key.as_ref() {
-            let cleaned_key = api_key.trim();
-            if cleaned_key.is_empty() {
-                return Err(AppError::BadRequest("ai api key cannot be empty".to_string()));
-            }
-
-            preferences.ai.api_key_encrypted = Some(encrypt_secret(&config.ai_prefs_encryption_key, cleaned_key)?);
-            preferences.ai.api_key_configured = true;
-        }
 
         let preferences_json = Self::serialize_preferences(&preferences)?;
 

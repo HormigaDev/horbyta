@@ -1,78 +1,13 @@
-use aes_gcm::{
-    Aes256Gcm, Nonce,
-    aead::{Aead, KeyInit, OsRng, rand_core::RngCore},
+use argon2::{
+    Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
+    password_hash::{SaltString, rand_core::OsRng},
 };
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_hash::SaltString};
-use base64::{Engine as _, engine::general_purpose::STANDARD};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use rand::RngExt;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
 use crate::error::AppError;
-
-const NONCE_LENGTH: usize = 12;
-const KEY_LENGTH: usize = 32;
-
-fn decode_key(key_b64: &str) -> Result<[u8; KEY_LENGTH], AppError> {
-    let raw = STANDARD
-        .decode(key_b64)
-        .map_err(|_| AppError::Internal("ai_prefs_encryption_key is not valid base64".to_string()))?;
-
-    if raw.len() != KEY_LENGTH {
-        return Err(AppError::Internal(
-            "ai_prefs_encryption_key must represent 32 bytes (aes-256-gcm)".to_string(),
-        ));
-    }
-
-    let mut key = [0u8; KEY_LENGTH];
-    key.copy_from_slice(&raw);
-    Ok(key)
-}
-
-pub fn encrypt_secret(key_b64: &str, plaintext: &str) -> Result<String, AppError> {
-    let key = decode_key(key_b64)?;
-    let cipher = Aes256Gcm::new_from_slice(&key)
-        .map_err(|_| AppError::Internal("could not initialize aes encryption".to_string()))?;
-
-    let mut nonce_bytes = [0u8; NONCE_LENGTH];
-    OsRng.fill_bytes(&mut nonce_bytes);
-    let nonce = Nonce::from_slice(&nonce_bytes);
-
-    let ciphertext = cipher
-        .encrypt(nonce, plaintext.as_bytes())
-        .map_err(|_| AppError::Internal("could not encrypt secret".to_string()))?;
-
-    let mut packed = Vec::with_capacity(NONCE_LENGTH + ciphertext.len());
-    packed.extend_from_slice(&nonce_bytes);
-    packed.extend_from_slice(&ciphertext);
-
-    Ok(STANDARD.encode(packed))
-}
-
-pub fn decrypt_secret(key_b64: &str, encrypted_b64: &str) -> Result<String, AppError> {
-    let key = decode_key(key_b64)?;
-    let cipher = Aes256Gcm::new_from_slice(&key)
-        .map_err(|_| AppError::Internal("could not initialize aes decryption".to_string()))?;
-
-    let packed = STANDARD
-        .decode(encrypted_b64)
-        .map_err(|_| AppError::Internal("invalid encrypted secret (base64)".to_string()))?;
-
-    if packed.len() <= NONCE_LENGTH {
-        return Err(AppError::Internal("invalid encrypted secret (size)".to_string()));
-    }
-
-    let (nonce_bytes, ciphertext) = packed.split_at(NONCE_LENGTH);
-    let nonce = Nonce::from_slice(nonce_bytes);
-
-    let plaintext_bytes = cipher
-        .decrypt(nonce, ciphertext)
-        .map_err(|_| AppError::Internal("could not decrypt secret".to_string()))?;
-
-    String::from_utf8(plaintext_bytes)
-        .map_err(|_| AppError::Internal("decrypted secret is not valid utf-8".to_string()))
-}
 
 pub fn hash_password(password: String) -> Result<String, AppError> {
     let salt = SaltString::generate(&mut OsRng);

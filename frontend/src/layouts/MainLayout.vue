@@ -41,18 +41,6 @@
             flat
             round
             dense
-            icon="smart_toy"
-            class="q-mr-md"
-            :aria-label="t('layout.header.openAssistant')"
-            @click="openChatbot"
-          >
-            <q-tooltip>{{ t('layout.header.openAssistant') }}</q-tooltip>
-          </q-btn>
-
-          <q-btn
-            flat
-            round
-            dense
             icon="notifications"
             class="q-mr-sm"
             @click="openNotificationsCenter"
@@ -466,13 +454,11 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-
-    <ChatbotPanel v-if="chatbotPanelLoaded" v-model="chatbotOpen" />
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/auth';
@@ -490,8 +476,6 @@ const { t } = useI18n();
 
 const search = ref(''); // TODO: Implementar búsqueda
 const drawer = ref(true);
-const chatbotOpen = ref(false);
-const chatbotPanelLoaded = ref(false);
 const notificationsCenterOpen = ref(false);
 const notificationDetailsOpen = ref(false);
 const selectedNotification = ref<AppNotification | null>(null);
@@ -499,11 +483,9 @@ const appVersion = APP_VERSION;
 const notificationsStore = useNotificationsStore();
 const userPreferencesStore = useUserPreferencesStore();
 const { showErrorDialog } = useUI();
-const ChatbotPanel = defineAsyncComponent(() => import('src/components/ChatbotPanel.vue'));
 
 onMounted(() => {
   notificationsStore.init();
-  chatbotPanelLoaded.value = true;
 });
 
 async function logout() {
@@ -514,11 +496,6 @@ async function logout() {
 
 function gotoSettings() {
   void router.push({ name: 'settings' });
-}
-
-function openChatbot() {
-  chatbotPanelLoaded.value = true;
-  chatbotOpen.value = true;
 }
 
 function openNotificationsCenter() {

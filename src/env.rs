@@ -6,8 +6,6 @@ pub struct Config {
     pub jwt_secret: String,
     pub jwt_secret_client: String,
     pub app_uri: String,
-    pub ai_service_url: String,
-    pub ai_prefs_encryption_key: String,
     pub frontend_origin: String,
     pub is_production: bool,
     pub time_to_exp: Duration,
@@ -32,9 +30,6 @@ impl Config {
             jwt_secret_client: env::var("JWT_SECRET_CLIENT")
                 .expect("CRÍTICO: Falta JWT_SECRET_CLIENT en las variables de entorno"),
             app_uri: env::var("APP_URI").unwrap_or_else(|_| "127.0.0.1:8890".to_string()),
-            ai_service_url: env::var("AI_SERVICE_URL").unwrap_or_else(|_| "http://horbyta_ai:50051".to_string()),
-            ai_prefs_encryption_key: env::var("AI_PREFS_ENCRYPTION_KEY")
-                .expect("CRÍTICO: Falta AI_PREFS_ENCRYPTION_KEY (base64 para AES-256-GCM)."),
             frontend_origin: env::var("FRONTEND_ORIGIN").unwrap_or_else(|_| "http://localhost:9000".to_string()),
             is_production: environment == "production",
             time_to_exp: duration_str::parse(

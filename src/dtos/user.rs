@@ -4,8 +4,6 @@ use std::str::FromStr;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
-use crate::constants::ALLOWED_AI_MODELS;
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct UserDto {
     pub id: Uuid,
@@ -21,14 +19,6 @@ fn validate_timezone(timezone: &str) -> Result<(), ValidationError> {
     }
 
     Ok(())
-}
-
-fn validate_ai_model(model: &str) -> Result<(), ValidationError> {
-    if ALLOWED_AI_MODELS.contains(&model) {
-        return Ok(());
-    }
-
-    Err(ValidationError::new("invalid_ai_model"))
 }
 
 fn validate_password_confirmation(payload: &UpdateUserPasswordDto) -> Result<(), ValidationError> {
@@ -48,8 +38,6 @@ fn validate_non_empty_preferences_patch(payload: &UpdateUserPreferencesDto) -> R
         && payload.timezone.is_none()
         && payload.date_format.is_none()
         && payload.language.is_none()
-        && payload.ai_model.is_none()
-        && payload.ai_api_key.is_none()
         && payload.max_daily_hours.is_none()
     {
         return Err(ValidationError::new("empty_preferences_patch"));
@@ -100,26 +88,6 @@ pub enum UserDateFormatPreference {
 impl Default for UserDateFormatPreference {
     fn default() -> Self {
         Self::DdMmYyyy
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(default, deny_unknown_fields)]
-pub struct UserAiPreferences {
-    pub model: String,
-    #[serde(default)]
-    pub api_key_encrypted: Option<String>,
-    #[serde(default)]
-    pub api_key_configured: bool,
-}
-
-impl Default for UserAiPreferences {
-    fn default() -> Self {
-        Self {
-            model: "google/gemini-2.5-flash".to_string(),
-            api_key_encrypted: None,
-            api_key_configured: false,
-        }
     }
 }
 
@@ -234,7 +202,6 @@ pub struct UserPreferences {
     pub language: UserLanguagePreference,
     #[serde(default = "default_max_daily_hours")]
     pub max_daily_hours: i32,
-    pub ai: UserAiPreferences,
     pub notifications: NotificationPreferences,
 }
 
@@ -250,7 +217,6 @@ impl Default for UserPreferences {
             date_format: UserDateFormatPreference::DdMmYyyy,
             language: UserLanguagePreference::Es,
             max_daily_hours: default_max_daily_hours(),
-            ai: UserAiPreferences::default(),
             notifications: NotificationPreferences::default(),
         }
     }
@@ -258,18 +224,8 @@ impl Default for UserPreferences {
 
 impl UserPreferences {
     pub fn from_json_value(raw: Option<&serde_json::Value>) -> Self {
-        let mut preferences = raw
-            .and_then(|value| serde_json::from_value::<Self>(value.clone()).ok())
-            .unwrap_or_default();
-
-        preferences.ai.api_key_configured = preferences
-            .ai
-            .api_key_encrypted
-            .as_ref()
-            .map(|value| !value.trim().is_empty())
-            .unwrap_or(false);
-
-        preferences
+        raw.and_then(|value| serde_json::from_value::<Self>(value.clone()).ok())
+            .unwrap_or_default()
     }
 
     pub fn apply_general_patch(&mut self, patch: &UpdateUserPreferencesDto) {
@@ -291,10 +247,6 @@ impl UserPreferences {
 
         if let Some(max_daily_hours) = patch.max_daily_hours {
             self.max_daily_hours = max_daily_hours;
-        }
-
-        if let Some(model) = patch.ai_model.as_ref() {
-            self.ai.model = model.clone();
         }
     }
 
@@ -411,13 +363,6 @@ pub struct UpdateUserPreferencesDto {
 
     pub language: Option<UserLanguagePreference>,
 
-    #[validate(length(min = 1, max = 128, message = "ai model must be between 1 and 128 characters"))]
-    #[validate(custom(function = "validate_ai_model"))]
-    pub ai_model: Option<String>,
-
-    #[validate(length(min = 8, max = 4096, message = "ai api key must be between 8 and 4096 characters"))]
-    pub ai_api_key: Option<String>,
-
     #[validate(range(min = 1, max = 14, message = "max daily hours must be between 1 and 14"))]
     pub max_daily_hours: Option<i32>,
 }
@@ -495,9 +440,7 @@ pub struct UserSettingsDto {
 
 impl From<crate::entities::users::Model> for UserSettingsDto {
     fn from(model: crate::entities::users::Model) -> Self {
-        let mut preferences = UserPreferences::from_json_value(model.preferences.as_ref());
-        // Nunca devolver la clave encriptada al frontend
-        preferences.ai.api_key_encrypted = None;
+        let preferences = UserPreferences::from_json_value(model.preferences.as_ref());
         Self {
             id: model.id,
             name: model.name,

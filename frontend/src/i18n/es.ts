@@ -138,8 +138,10 @@ export const messages = {
   'dashboard.filters.clientMilestoneHealth.upcomingOnly': 'Solo próximos 7 días',
   'dashboard.filters.clientChangeRequestStatus.title': 'Filtrar solicitudes de cambio',
   'dashboard.filters.clientProjectPortfolio.title': 'Filtrar portafolio',
-  'dashboard.filters.clientProjectPortfolio.overdueMilestonesOnly': 'Solo proyectos con hitos vencidos',
-  'dashboard.filters.clientProjectPortfolio.upcomingMilestonesOnly': 'Solo proyectos con hitos próximos',
+  'dashboard.filters.clientProjectPortfolio.overdueMilestonesOnly':
+    'Solo proyectos con hitos vencidos',
+  'dashboard.filters.clientProjectPortfolio.upcomingMilestonesOnly':
+    'Solo proyectos con hitos próximos',
 
   'clientDashboard.title': 'Dashboard del cliente',
   'clientDashboard.subtitle': 'Resumen de proyectos, hitos y cambios en curso',
@@ -847,12 +849,6 @@ export const messages = {
   'settings.preferences.languageLabel': 'Idioma',
   'settings.preferences.dateFormatLabel': 'Formato de fecha',
   'settings.preferences.timezoneLabel': 'Timezone',
-  'settings.preferences.aiModelLabel': 'Modelo de IA',
-  'settings.preferences.aiModelInfo':
-    'Algunos modelos pueden consumir muchos créditos. Úsalos con sabiduría',
-  'settings.preferences.aiApiKeyLabel': 'API key de OpenRouter',
-  'settings.preferences.aiApiKeyConfigured': 'API key configurada',
-  'settings.preferences.aiApiKeyMissing': 'API key no configurada',
   'settings.preferences.maxDailyHoursLabel': 'Máximo de horas diarias',
   'settings.preferences.maxDailyHoursHint':
     'Se aplica tu preferencia, pero nunca puede superar el techo global de 14 horas.',
@@ -919,7 +915,6 @@ export const messages = {
 
   'layout.header.welcome': 'Bienvenido',
   'layout.header.searchPlaceholder': 'Buscar tareas...',
-  'layout.header.openAssistant': 'Abrir asistente',
   'layout.header.notifications': 'Notificaciones',
   'layout.notifications.subtitle': 'Actividad asíncrona y avisos pendientes',
   'layout.header.markAllRead': 'Marcar leídas',
@@ -996,25 +991,6 @@ export const messages = {
   'columns.timeEntry.notes': 'Observaciones',
   'columns.timeEntry.created_at': 'Creado',
   'columns.timeEntry.updated_at': 'Actualizado',
-
-  'chatbot.panel.chats': 'Chats',
-  'chatbot.panel.newChatDisabled': 'Envía al menos un mensaje para crear otro chat',
-  'chatbot.panel.newChat': 'Nuevo chat',
-  'chatbot.panel.assistant': 'Asistente',
-  'chatbot.panel.emptyState': 'Escribe un mensaje para iniciar la conversación.',
-  'chatbot.panel.thinking': 'Pensando',
-  'chatbot.panel.inputPlaceholder': 'Escribe tu mensaje...',
-  'chatbot.panel.disclaimer':
-    'HormigAI puede cometer errores. Verifique siempre la información importante.',
-  'chatbot.panel.deleteTarget': 'el chat {title}',
-  'chatbot.panel.loadError': 'No se pudo cargar el historial de chats',
-  'chatbot.panel.createError': 'No se pudo crear el chat',
-  'chatbot.panel.deleteSuccess': 'Chat eliminado correctamente',
-  'chatbot.panel.deleteError': 'No se pudo eliminar el chat',
-  'chatbot.panel.updateTitleError': 'No se pudo actualizar el título del chat',
-  'chatbot.panel.sendError': 'No se pudo enviar el mensaje al asistente',
-  'chatbot.panel.websocketError': 'No se pudo establecer conexión en tiempo real',
-  'chatbot.panel.toolWorking': 'Ejecutando herramienta:',
 
   'markdown.toolbar.bold': 'Negrita (Ctrl+B)',
   'markdown.toolbar.italic': 'Cursiva (Ctrl+I)',
@@ -1122,8 +1098,7 @@ export const messages = {
     'La duración calculada excede el límite permitido.',
   'backendErrors.time entry not found': 'Registro de tiempo no encontrado.',
   'backendErrors.invalid task or no permissions': 'Tarea inválida o sin permisos.',
-  'backendErrors.invalid parent task or no permissions':
-    'Tarea padre inválida o sin permisos.',
+  'backendErrors.invalid parent task or no permissions': 'Tarea padre inválida o sin permisos.',
   'backendErrors.invalid activity or no permissions': 'Actividad inválida o sin permisos.',
   'backendErrors.invalid project or no permissions': 'Proyecto inválido o sin permisos.',
   'backendErrors.invalid milestone': 'Milestone inválido.',
@@ -1134,11 +1109,9 @@ export const messages = {
   'backendErrors.a task cannot be its own parent': 'Una tarea no puede ser padre de sí misma.',
   'backendErrors.task not found': 'Tarea no encontrada.',
   'backendErrors.project not found': 'Proyecto no encontrado.',
-  'backendErrors.project not found or no permission':
-    'Proyecto no encontrado o no tienes permiso.',
+  'backendErrors.project not found or no permission': 'Proyecto no encontrado o no tienes permiso.',
   'backendErrors.client not found': 'Cliente no encontrado.',
-  'backendErrors.client not found or no permission':
-    'Cliente no encontrado o no tienes permiso.',
+  'backendErrors.client not found or no permission': 'Cliente no encontrado o no tienes permiso.',
   'backendErrors.client authentication data not found':
     'Datos de autenticación del cliente no encontrados.',
   'backendErrors.invalid client authentication state':
@@ -1163,8 +1136,7 @@ export const messages = {
   "backendErrors.payments can only be recorded for invoices in 'open' status":
     'Solo se pueden registrar pagos para facturas en estado emitida (open).',
   'backendErrors.milestone not found': 'Hito no encontrado.',
-  'backendErrors.milestone not found or no permission':
-    'Hito no encontrado o no tienes permiso.',
+  'backendErrors.milestone not found or no permission': 'Hito no encontrado o no tienes permiso.',
   'backendErrors.tag not found': 'Etiqueta no encontrada.',
   'backendErrors.category not found': 'Categoría no encontrada.',
   'backendErrors.activity not found': 'Actividad no encontrada.',
@@ -1221,8 +1193,7 @@ export const messages = {
   'backendErrors.configure an ai model in preferences':
     'Configura un modelo de IA en preferencias.',
   'backendErrors.configured model is not allowed': 'El modelo configurado no está permitido.',
-  'backendErrors.configured model is not available':
-    'El modelo configurado no está disponible.',
+  'backendErrors.configured model is not available': 'El modelo configurado no está disponible.',
   'backendErrors.ai service unavailable at this moment':
     'El servicio de IA no está disponible en este momento.',
   'backendErrors.ai service unavailable at this moment, try again in a few seconds':
@@ -1240,8 +1211,7 @@ export const messages = {
   'backendErrors.each file cannot exceed 50mb': 'Cada archivo no puede exceder 50MB.',
   'backendErrors.total file size exceeds the allowed limit':
     'El tamaño total de archivos excede el límite permitido.',
-  'backendErrors.you must send at least one valid file':
-    'Debes enviar al menos un archivo válido.',
+  'backendErrors.you must send at least one valid file': 'Debes enviar al menos un archivo válido.',
   'backendErrors.you must send files in the files field':
     'Debes enviar archivos en el campo files.',
   'backendErrors.file must be associated with a project or a task':
@@ -1250,8 +1220,7 @@ export const messages = {
     'El nombre original del archivo no puede estar vacío.',
   'backendErrors.you have reached your total storage limit for attachments':
     'Has alcanzado tu límite total de almacenamiento para adjuntos.',
-  'backendErrors.error processing multipart form':
-    'Error al procesar el formulario multipart.',
+  'backendErrors.error processing multipart form': 'Error al procesar el formulario multipart.',
   'backendErrors.could not read one of the files': 'No se pudo leer uno de los archivos.',
   'backendErrors.unknown message type': 'Tipo de mensaje desconocido.',
   'backendErrors.invalid message format': 'Formato de mensaje inválido.',

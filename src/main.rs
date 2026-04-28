@@ -52,7 +52,6 @@ async fn main() {
         .nest("/auth", controllers::auth::auth_controller())
         .nest("/dashboard", controllers::dashboard::dashboard_controller())
         .nest("/attachments", controllers::attachments::attachments_controller())
-        .nest("/chats", controllers::chats::chats_controller())
         .nest(
             "/change-requests",
             controllers::change_requests::change_requests_controller(),

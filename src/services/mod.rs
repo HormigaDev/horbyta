@@ -1,10 +1,7 @@
 pub mod activities;
-pub mod ai;
-pub mod ai_tools;
 pub mod attachments;
 pub mod categories;
 pub mod change_requests;
-pub mod chats;
 pub mod clients;
 pub mod dashboard;
 pub mod invoices;

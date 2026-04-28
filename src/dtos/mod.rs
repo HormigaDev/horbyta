@@ -3,7 +3,6 @@ pub mod attachment;
 pub mod auth;
 pub mod category;
 pub mod change_request;
-pub mod chat;
 pub mod client;
 pub mod dashboard;
 pub mod hex_color;

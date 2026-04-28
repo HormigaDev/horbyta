@@ -47,10 +47,6 @@ export interface UserPreferences {
   date_format: UserDateFormatPreference;
   language: UserLanguagePreference;
   max_daily_hours: number;
-  ai: {
-    model: string;
-    api_key_configured: boolean;
-  };
   notifications: NotificationPreferences;
 }
 
@@ -83,8 +79,6 @@ export interface UpdateUserPreferencesDto {
   date_format?: UserDateFormatPreference;
   language?: UserLanguagePreference;
   max_daily_hours?: number;
-  ai_model?: string;
-  ai_api_key?: string;
 }
 
 export interface ClientsProjectsNotificationsPatch {
