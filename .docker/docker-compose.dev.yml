@@ -2,7 +2,7 @@ services:
   horbyta_app:
     build:
       context: ..
-      dockerfile: .docker/Dockerfile.rust.dev
+      dockerfile: .docker/Dockerfile.dev
     restart: "no"
     entrypoint: ["/bin/bash", "-c"]
     environment:
@@ -33,26 +33,6 @@ services:
       resources:
         limits:
           memory: 2G
-
-  horbyta_ai:
-    environment:
-      APP_ENV: development
-      LOG_LEVEL: DEBUG
-      GRPC_PORT: ${GRPC_PORT:-50051}
-      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL}
-      OPENROUTER_SITE_URL: ${OPENROUTER_SITE_URL}
-      OPENROUTER_APP_NAME: ${OPENROUTER_APP_NAME}
-      OPENROUTER_ENABLE_CACHE_CONTROL: ${OPENROUTER_ENABLE_CACHE_CONTROL}
-      OPENROUTER_CACHE_TTL: ${OPENROUTER_CACHE_TTL}
-    ports:
-      - "127.0.0.1:${GRPC_PORT:-50051}:${GRPC_PORT:-50051}"
-    volumes:
-      - ../horbyta_ai/src:/app/src/:ro
-      - ../horbyta_ai/generated:/app/generated
-    deploy:
-      resources:
-        limits:
-          memory: 512M
 
 volumes:
   cargo_cache:

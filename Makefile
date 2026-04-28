@@ -11,25 +11,15 @@ help:
 setup:
 	@test -f .env || (cp .env.template .env && echo ".env creado — completá los valores antes de continuar.")
 
-## dev: Levanta todos los servicios en modo desarrollo
-dev: setup
-	$(COMPOSE_DEV) up --build
-
 ## dev-detached: Levanta en background (para dejar corriendo y salir)
 dev-detached: setup
 	$(COMPOSE_DEV) up --build -d
 
-dev-python: setup
-	$(COMPOSE_DEV) up --build horbyta_ai -d
-
-dev-rust: setup
+dev: setup
 	$(COMPOSE_DEV) up --build --no-deps horbyta_app -d
 
-up-rust: setup
+up: setup
 	$(COMPOSE_DEV) up --no-deps horbyta_app -d
-
-restart-python:
-	$(COMPOSE_DEV) restart horbyta_ai
 
 ## prod: Levanta en producción (detached)
 prod: setup
@@ -44,24 +34,16 @@ logs:
 	$(COMPOSE_DEV) logs -f
 
 ## logs-rust: Solo logs de Rust
-logs-rust:
+logs:
 	$(COMPOSE_DEV) logs -f horbyta_app
-
-## logs-python: Solo logs del servicio IA
-logs-python:
-	$(COMPOSE_DEV) logs -f horbyta_ai
 
 ## ps: Ver estado y health de los contenedores
 ps:
 	$(COMPOSE_DEV) ps
 
 ## shell-rust: Entrar al contenedor Rust
-shell-rust:
+shell:
 	$(COMPOSE_DEV) exec horbyta_app bash
-
-## shell-python: Entrar al contenedor Python
-shell-python:
-	$(COMPOSE_DEV) exec horbyta_ai bash
 
 ## clean: Elimina contenedores, imágenes locales y volúmenes del proyecto
 clean:
