@@ -3,6 +3,10 @@
     <q-page-container>
       <q-page class="flex flex-center">
         <q-card class="q-pa-md shadow-2" style="width: 100%; max-width: 400px">
+          <q-card-section class="flex items-center justify-center">
+            <q-img width="100px" height="100px" src="/logo.png" alt="Horbyta Logo" />
+          </q-card-section>
+
           <q-card-section class="text-center">
             <div class="text-h5 text-weight-bold">{{ t('auth.login.brand') }}</div>
             <div class="text-subtitle2 text-grey-7">{{ t('auth.login.subtitle') }}</div>

@@ -11,6 +11,10 @@
             border: 1px solid var(--border-color);
           "
         >
+          <q-card-section class="flex items-center justify-center">
+            <q-img width="100px" height="100px" src="/logo.png" alt="Horbyta Logo" />
+          </q-card-section>
+
           <q-card-section class="text-center">
             <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
               {{ t('client.auth.login.brand') }}
