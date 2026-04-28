@@ -211,7 +211,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
@@ -233,7 +233,7 @@ const userPreferencesStore = useUserPreferencesStore();
 const { isCopied: idCopied, copyToClipboard } = useCopyClipboard();
 
 const task = ref<TaskDetailDto | null>(null);
-const taskId = String(route.params.id || '');
+const currentTaskId = () => String(route.params.id || '');
 const detailsTab = ref<'description' | 'attachments' | 'time_entries'>('description');
 const timeEntriesTabRef = ref<InstanceType<typeof TaskTimeEntriesTab> | null>(null);
 
@@ -253,10 +253,10 @@ const statusLabel = (status: TaskStatus) => {
   return map[status] || status;
 };
 
-const loadTask = async () => {
+const loadTask = async (id: string) => {
   showLoading();
   try {
-    task.value = await TasksService.getById(taskId);
+    task.value = await TasksService.getById(id);
   } catch (err) {
     notifyError(t('tasks.detail.loadError'), err);
     router.push('/tasks');
@@ -283,7 +283,7 @@ const removeTask = async () => {
   if (!(await confirmDelete(t('tasks.detail.deleteTarget')))) return;
   showLoading();
   try {
-    await TasksService.delete(taskId);
+    await TasksService.delete(currentTaskId());
     router.push('/tasks');
   } catch (err) {
     notifyError(t('common.error'), err);
@@ -293,7 +293,14 @@ const removeTask = async () => {
 };
 
 const goBack = () => router.push('/tasks');
-const goToEdit = () => router.push(`/tasks/${taskId}/edit`);
+const goToEdit = () => router.push(`/tasks/${currentTaskId()}/edit`);
 
-onMounted(() => loadTask());
+watch(
+  () => route.params.id,
+  async (newId) => {
+    if (!newId) return;
+    await loadTask(String(newId));
+  },
+  { immediate: true },
+);
 </script>

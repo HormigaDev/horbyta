@@ -24,18 +24,7 @@
         <q-space v-if="!$q.screen.lt.md" />
 
         <div v-if="!$q.screen.lt.md" class="row items-center">
-          <q-input
-            v-model="search"
-            dense
-            outlined
-            :placeholder="t('layout.header.searchPlaceholder')"
-            class="q-mr-md"
-            style="width: 250px"
-          >
-            <template v-slot:append>
-              <q-icon name="search" />
-            </template>
-          </q-input>
+          <task-search-component />
 
           <q-btn
             flat
@@ -469,12 +458,12 @@ import { useUI } from 'src/composables/useUI';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { AppNotification } from 'src/types/ui';
 import { apiFetch } from 'src/boot/fetch';
+import TaskSearchComponent from 'src/components/TaskSearchComponent.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const { t } = useI18n();
 
-const search = ref(''); // TODO: Implementar búsqueda
 const drawer = ref(true);
 const notificationsCenterOpen = ref(false);
 const notificationDetailsOpen = ref(false);

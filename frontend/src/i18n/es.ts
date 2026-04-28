@@ -30,6 +30,8 @@ export const messages = {
   'common.minutes': 'Minutos',
   'common.hours': 'Horas',
   'common.preview': 'Vista previa',
+  'common.searching': 'Buscando...',
+  'common.noResults': 'No hay resultados',
 
   'auth.login.brand': 'Horbyta',
   'auth.login.subtitle': 'Ingreso al sistema',
