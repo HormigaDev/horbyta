@@ -16,7 +16,7 @@ use crate::{
         utils::AppResult,
     },
     middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
-    services::payments::PaymentService,
+    services::{notifications::NotificationService, payments::PaymentService},
     state::AppState,
 };
 
@@ -54,6 +54,10 @@ async fn create_payment(
     let payment = PaymentService::create(&txn, user.id, payload).await?;
 
     txn.commit().await?;
+
+    if let Err(error) = NotificationService::notify_payment_received(&state, user.id, &payment).await {
+        tracing::error!("Failed to create payment notification: {}", error);
+    }
 
     Ok(Json(payment))
 }

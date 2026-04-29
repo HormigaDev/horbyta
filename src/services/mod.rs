@@ -6,6 +6,7 @@ pub mod clients;
 pub mod dashboard;
 pub mod invoices;
 pub mod milestones;
+pub mod notifications;
 pub mod payments;
 pub mod projects;
 pub mod tags;

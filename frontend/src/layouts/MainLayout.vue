@@ -343,7 +343,7 @@
               dense
               color="primary"
               :label="t('layout.header.markAllRead')"
-              @click="notificationsStore.markAllAsRead"
+              @click="markAllNotificationsAsRead"
             />
             <q-btn flat round dense icon="close" @click="notificationsCenterOpen = false" />
           </div>
@@ -359,6 +359,63 @@
             <q-icon name="notifications_none" size="40px" color="grey-6" />
             <div class="text-subtitle1 q-mt-sm">{{ t('layout.header.noNotifications') }}</div>
           </div>
+
+          <q-list
+            v-else-if="userPreferencesStore.groupNotifications"
+            class="notifications-list"
+          >
+            <q-expansion-item
+              v-for="group in asyncNotificationGroups"
+              :key="group.key"
+              switch-toggle-side
+              expand-separator
+              default-opened
+              class="notification-group"
+            >
+              <template #header>
+                <q-item-section>
+                  <q-item-label class="text-weight-medium">{{ group.label }}</q-item-label>
+                  <q-item-label caption>
+                    {{ t('layout.notifications.groupCount', { count: group.notifications.length }) }}
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side v-if="group.unreadCount > 0">
+                  <q-badge color="negative">{{ group.unreadCount }}</q-badge>
+                </q-item-section>
+              </template>
+
+              <q-item
+                v-for="notif in group.notifications"
+                :key="notif.id"
+                clickable
+                class="notifications-list-item"
+                :class="{ 'notifications-list-item-unread': !notif.read }"
+                @click="handleNotificationClick(notif)"
+              >
+                <q-item-section avatar>
+                  <q-avatar :color="resolveNotificationColor(notif.type)" text-color="white">
+                    <q-icon :name="resolveNotificationIcon(notif.type)" />
+                  </q-avatar>
+                </q-item-section>
+
+                <q-item-section>
+                  <q-item-label class="text-weight-medium">{{
+                    notif.title || notif.message
+                  }}</q-item-label>
+                  <q-item-label lines="2" caption>
+                    {{ notif.body || notif.message }}
+                  </q-item-label>
+                  <q-item-label caption class="q-mt-xs">{{
+                    formatNotificationDate(notif.createdAt)
+                  }}</q-item-label>
+                </q-item-section>
+
+                <q-item-section side top>
+                  <q-badge v-if="!notif.read" rounded color="negative" class="q-mt-sm" />
+                </q-item-section>
+              </q-item>
+            </q-expansion-item>
+          </q-list>
 
           <q-list v-else class="notifications-list">
             <q-item
@@ -401,7 +458,7 @@
             flat
             color="negative"
             :label="t('layout.header.clearAll')"
-            @click="notificationsStore.clearAll"
+            @click="clearNotifications"
           />
           <q-btn
             flat
@@ -460,14 +517,16 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useQuasar, type QNotifyCreateOptions } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
 import { APP_VERSION } from 'src/data/constants';
-import { useNotificationsStore } from 'src/stores/notifications';
+import { useNotificationsStore, type AsyncNotificationEvent } from 'src/stores/notifications';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { useUI } from 'src/composables/useUI';
+import { useWebSocket } from 'src/composables/useWebSocket';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { AppNotification } from 'src/types/ui';
 import { apiFetch } from 'src/boot/fetch';
@@ -475,6 +534,7 @@ import TaskSearchComponent from 'src/components/TaskSearchComponent.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const $q = useQuasar();
 const { t } = useI18n();
 
 const drawer = ref(true);
@@ -485,6 +545,53 @@ const appVersion = APP_VERSION;
 const notificationsStore = useNotificationsStore();
 const userPreferencesStore = useUserPreferencesStore();
 const { showErrorDialog } = useUI();
+const websocket = useWebSocket();
+
+interface NotificationGroup {
+  key: string;
+  label: string;
+  unreadCount: number;
+  notifications: AppNotification[];
+}
+
+const asyncNotificationGroups = computed<NotificationGroup[]>(() => {
+  const groups = new Map<string, AppNotification[]>();
+
+  for (const notification of notificationsStore.asyncNotifications) {
+    const key = notification.preferenceKey ?? notification.eventType ?? notification.type;
+    const current = groups.get(key) ?? [];
+    current.push(notification);
+    groups.set(key, current);
+  }
+
+  return Array.from(groups.entries()).map(([key, notifications]) => ({
+    key,
+    label: resolveNotificationGroupLabel(key),
+    unreadCount: notifications.filter((notification) => !notification.read).length,
+    notifications,
+  }));
+});
+
+websocket.on('notification', (data: unknown) => {
+  if (!isAsyncNotificationEvent(data)) {
+    return;
+  }
+
+  const notification = notificationsStore.addAsyncNotificationFromEvent(data);
+  const notifyOptions: QNotifyCreateOptions = {
+    message: notification.title || notification.message,
+    type: notification.type,
+    position: 'top-right',
+    timeout: 3500,
+    actions: [{ icon: 'close', color: 'white', round: true, size: 'sm' }],
+  };
+
+  if (notification.body) {
+    notifyOptions.caption = notification.body;
+  }
+
+  $q.notify(notifyOptions);
+});
 
 onMounted(() => {
   notificationsStore.init();
@@ -518,6 +625,26 @@ function resolveNotificationColor(type: AppNotification['type']) {
   return 'info';
 }
 
+function resolveNotificationGroupLabel(key: string) {
+  const labels: Record<string, string> = {
+    'client_portal.change_request_created': t('layout.notifications.group.changeRequests'),
+    'client_portal.change_request_updated': t('layout.notifications.group.changeRequests'),
+    'client_portal.change_request_approved': t('layout.notifications.group.changeRequests'),
+    'client_portal.change_request_declined': t('layout.notifications.group.changeRequests'),
+    'client_portal.change_request_cancelled': t('layout.notifications.group.changeRequests'),
+    'billing.invoice_opened': t('layout.notifications.group.billing'),
+    'billing.invoice_paid': t('layout.notifications.group.billing'),
+    'billing.payment_received': t('layout.notifications.group.billing'),
+    'work.milestone_released': t('layout.notifications.group.work'),
+    positive: t('layout.notifications.group.positive'),
+    negative: t('layout.notifications.group.negative'),
+    warning: t('layout.notifications.group.warning'),
+    info: t('layout.notifications.group.info'),
+  };
+
+  return labels[key] ?? key;
+}
+
 function formatNotificationDate(rawDate: string) {
   return formatDateByPreferences(rawDate, {
     timezone: userPreferencesStore.timezone,
@@ -528,7 +655,7 @@ function formatNotificationDate(rawDate: string) {
 }
 
 function handleNotificationClick(notif: AppNotification) {
-  notificationsStore.markAsRead(notif.id);
+  markNotificationAsRead(notif);
 
   if (notif.body && notif.body.trim().length > 0) {
     selectedNotification.value = notif;
@@ -546,7 +673,69 @@ function openSelectedNotificationPayload() {
     return;
   }
 
+  const route = getPayloadRoute(selectedNotification.value.payload);
+  if (route) {
+    notificationDetailsOpen.value = false;
+    notificationsCenterOpen.value = false;
+    void router.push(route);
+    return;
+  }
+
   showErrorDialog(selectedNotification.value.payload);
+}
+
+function markNotificationAsRead(notif: AppNotification) {
+  notificationsStore.markAsRead(notif.id);
+
+  if (!notif.backendId) {
+    return;
+  }
+
+  sendWebSocketMessage({
+    type: 'notification.read',
+    data: { id: notif.backendId },
+  });
+}
+
+function markAllNotificationsAsRead() {
+  notificationsStore.markAllAsRead();
+  sendWebSocketMessage({ type: 'notification.read_all' });
+}
+
+function clearNotifications() {
+  markAllNotificationsAsRead();
+  notificationsStore.clearAll();
+}
+
+function sendWebSocketMessage(message: { type: string; data?: Record<string, unknown> }) {
+  try {
+    websocket.send(message);
+  } catch (error) {
+    console.debug('WebSocket notification acknowledgement skipped:', error);
+  }
+}
+
+function isAsyncNotificationEvent(data: unknown): data is AsyncNotificationEvent {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return false;
+  }
+
+  const candidate = data as Record<string, unknown>;
+  return (
+    (candidate.id === undefined || typeof candidate.id === 'string') &&
+    (candidate.message === undefined || typeof candidate.message === 'string') &&
+    (candidate.title === undefined || typeof candidate.title === 'string') &&
+    (candidate.body === undefined || candidate.body === null || typeof candidate.body === 'string')
+  );
+}
+
+function getPayloadRoute(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return null;
+  }
+
+  const route = (payload as Record<string, unknown>).route;
+  return typeof route === 'string' && route.trim().length > 0 ? route : null;
 }
 </script>
 
@@ -593,6 +782,16 @@ function openSelectedNotificationPayload() {
   border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 8px;
+}
+
+.notification-group {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.notification-group .notifications-list-item {
+  margin: 8px;
 }
 
 .notifications-list-item-unread {

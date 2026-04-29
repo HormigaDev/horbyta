@@ -2,43 +2,29 @@ export type UserThemePreference = 'system' | 'light' | 'dark';
 export type UserLanguagePreference = 'en' | 'es' | 'pt';
 export type UserDateFormatPreference = 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD';
 
-export interface ClientsProjectsNotifications {
-  proposal_decision: boolean;
-  deliverable_approved: boolean;
-  comment_or_review: boolean;
-  added_to_new_project: boolean;
-}
-
-export interface DeliveriesDeadlinesNotifications {
-  deadline_24h_48h: boolean;
-  deliverable_overdue: boolean;
-  milestone_completed: boolean;
-}
-
-export interface ContractsNotifications {
-  contract_sent: boolean;
-  contract_signed: boolean;
-  contract_expiring: boolean;
+export interface ClientPortalNotifications {
+  change_request_created: boolean;
+  change_request_updated: boolean;
+  change_request_approved: boolean;
+  change_request_declined: boolean;
+  change_request_cancelled: boolean;
 }
 
 export interface BillingNotifications {
-  invoice_sent: boolean;
-  invoice_overdue_unpaid: boolean;
+  invoice_opened: boolean;
+  invoice_paid: boolean;
   payment_received: boolean;
-  auto_payment_reminder: boolean;
 }
 
-export interface TimeTrackingNotifications {
-  long_running_timer: boolean;
-  weekly_hours_summary: boolean;
+export interface WorkNotifications {
+  milestone_released: boolean;
 }
 
 export interface NotificationPreferences {
-  clients_projects: ClientsProjectsNotifications;
-  deliveries_deadlines: DeliveriesDeadlinesNotifications;
-  contracts: ContractsNotifications;
+  group_notifications: boolean;
+  client_portal: ClientPortalNotifications;
   billing: BillingNotifications;
-  time_tracking: TimeTrackingNotifications;
+  work: WorkNotifications;
 }
 
 export interface UserPreferences {
@@ -81,41 +67,27 @@ export interface UpdateUserPreferencesDto {
   max_daily_hours?: number;
 }
 
-export interface ClientsProjectsNotificationsPatch {
-  proposal_decision?: boolean;
-  deliverable_approved?: boolean;
-  comment_or_review?: boolean;
-  added_to_new_project?: boolean;
-}
-
-export interface DeliveriesDeadlinesNotificationsPatch {
-  deadline_24h_48h?: boolean;
-  deliverable_overdue?: boolean;
-  milestone_completed?: boolean;
-}
-
-export interface ContractsNotificationsPatch {
-  contract_sent?: boolean;
-  contract_signed?: boolean;
-  contract_expiring?: boolean;
+export interface ClientPortalNotificationsPatch {
+  change_request_created?: boolean;
+  change_request_updated?: boolean;
+  change_request_approved?: boolean;
+  change_request_declined?: boolean;
+  change_request_cancelled?: boolean;
 }
 
 export interface BillingNotificationsPatch {
-  invoice_sent?: boolean;
-  invoice_overdue_unpaid?: boolean;
+  invoice_opened?: boolean;
+  invoice_paid?: boolean;
   payment_received?: boolean;
-  auto_payment_reminder?: boolean;
 }
 
-export interface TimeTrackingNotificationsPatch {
-  long_running_timer?: boolean;
-  weekly_hours_summary?: boolean;
+export interface WorkNotificationsPatch {
+  milestone_released?: boolean;
 }
 
 export interface UpdateNotificationPreferencesDto {
-  clients_projects?: ClientsProjectsNotificationsPatch;
-  deliveries_deadlines?: DeliveriesDeadlinesNotificationsPatch;
-  contracts?: ContractsNotificationsPatch;
+  group_notifications?: boolean;
+  client_portal?: ClientPortalNotificationsPatch;
   billing?: BillingNotificationsPatch;
-  time_tracking?: TimeTrackingNotificationsPatch;
+  work?: WorkNotificationsPatch;
 }

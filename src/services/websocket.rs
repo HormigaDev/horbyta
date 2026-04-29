@@ -7,16 +7,26 @@ use futures::SinkExt;
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use sea_orm::QuerySelect;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
+use serde::Deserialize;
 use serde_json::json;
+use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use crate::{
+    constants::USER_AUTH_COOKIE_NAME,
     dtos::websocket::WsMessage,
     entities::{notifications, prelude::Notifications},
     error::AppError,
     middlewares::auth::Claims,
+    services::notifications::{NotificationEvent, NotificationService},
     state::AppState,
 };
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct NotificationReadPayload {
+    id: Uuid,
+}
 
 #[derive(Clone)]
 pub struct WebSocketService {
@@ -33,7 +43,7 @@ impl WebSocketService {
 
         let jar = CookieJar::from_headers(headers);
         let token = jar
-            .get("hormiga_auth")
+            .get(USER_AUTH_COOKIE_NAME)
             .map(|cookie| cookie.value())
             .ok_or(StatusCode::UNAUTHORIZED)?;
 
@@ -45,6 +55,10 @@ impl WebSocketService {
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
 
         Ok((token_data.claims.sub, Uuid::now_v7().to_string()))
+    }
+
+    pub fn subscribe_notifications(&self) -> broadcast::Receiver<NotificationEvent> {
+        self.state.notification_bus.subscribe()
     }
 
     pub async fn send_unread_notifications(
@@ -94,6 +108,20 @@ impl WebSocketService {
                 Ok(true)
             }
             "close" => Ok(false),
+            "notification.read" => {
+                let data = ws_msg
+                    .data
+                    .ok_or_else(|| AppError::BadRequest("missing notification read payload".to_string()))?;
+                let payload: NotificationReadPayload = serde_json::from_value(data)
+                    .map_err(|_| AppError::BadRequest("invalid notification read payload".to_string()))?;
+
+                NotificationService::mark_as_read(self.state.db.as_ref(), _user_id, payload.id).await?;
+                Ok(true)
+            }
+            "notification.read_all" => {
+                NotificationService::mark_all_as_read(self.state.db.as_ref(), _user_id).await?;
+                Ok(true)
+            }
             _ => Err(AppError::BadRequest("unknown message type".to_string())),
         }
     }
@@ -111,7 +139,7 @@ impl WebSocketService {
             .await;
     }
 
-    async fn send_notification_event(
+    pub async fn send_notification_event(
         &self,
         sender: &mut futures::stream::SplitSink<WebSocket, Message>,
         notification: &notifications::Model,
@@ -126,6 +154,9 @@ impl WebSocketService {
                 "type": notification.severity,
                 "source": "async",
                 "preferenceKey": notification.preference_key,
+                "eventType": notification.event_type,
+                "entityType": notification.entity_type,
+                "entityId": notification.entity_id,
                 "payload": notification.payload,
                 "createdAt": notification.created_at
             })),

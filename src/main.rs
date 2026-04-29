@@ -70,10 +70,11 @@ async fn main() {
         .with_state(state.clone());
 
     let ws_routes = Router::new()
-        .route("/", get(controllers::websocket::websocket_handler))
+        .route("/ws", get(controllers::websocket::websocket_handler))
+        .route("/ws/", get(controllers::websocket::websocket_handler))
         .with_state(state.clone());
 
-    let app = Router::new().nest("/api/v1", api_routes).nest("/ws", ws_routes);
+    let app = Router::new().nest("/api/v1", api_routes).merge(ws_routes);
     let app = if config.is_production {
         app
     } else {

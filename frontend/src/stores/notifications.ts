@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import type { AppNotification } from '../types/ui';
 
-interface AsyncNotificationEvent {
+export interface AsyncNotificationEvent {
   id?: string;
   message?: string;
   title?: string;
@@ -11,6 +11,9 @@ interface AsyncNotificationEvent {
   payload?: unknown;
   createdAt?: string;
   preferenceKey?: string;
+  eventType?: string;
+  entityType?: string | null;
+  entityId?: string | null;
 }
 
 export const useNotificationsStore = defineStore('notifications', {
@@ -91,6 +94,9 @@ export const useNotificationsStore = defineStore('notifications', {
         payload: event.payload,
       };
       event.preferenceKey && (newNotification.preferenceKey = event.preferenceKey);
+      event.eventType && (newNotification.eventType = event.eventType);
+      event.entityType && (newNotification.entityType = event.entityType);
+      event.entityId && (newNotification.entityId = event.entityId);
       backendId && (newNotification.backendId = backendId);
 
       this.notifications.unshift(newNotification);

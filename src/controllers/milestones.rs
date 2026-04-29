@@ -10,13 +10,16 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         client::ClientAuthDto,
-        milestone::{CreateMilestoneDto, UpdateMilestoneDto, client_milestone_filter_schema, milestone_filter_schema},
+        milestone::{
+            CreateMilestoneDto, MilestoneStatus, UpdateMilestoneDto, client_milestone_filter_schema,
+            milestone_filter_schema,
+        },
         query::QueryPayload,
         user::UserDto,
     },
     error::AppError,
     middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
-    services::milestones::MilestoneService,
+    services::{milestones::MilestoneService, notifications::NotificationService},
     state::AppState,
 };
 
@@ -75,7 +78,14 @@ async fn update_milestone(
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateMilestoneDto>,
 ) -> Result<impl IntoResponse, AppError> {
+    let requested_status = payload.status.clone();
+    let previous = MilestoneService::get_by_id(state.db.as_ref(), user.id, id).await?;
     let milestone = MilestoneService::update(state.db.as_ref(), user.id, id, payload).await?;
+    if previous.status != MilestoneStatus::Released.to_string() && requested_status == MilestoneStatus::Released {
+        if let Err(error) = NotificationService::notify_milestone_released(&state, user.id, &milestone).await {
+            tracing::error!("Failed to create milestone notification: {}", error);
+        }
+    }
     Ok(Json(milestone))
 }
 

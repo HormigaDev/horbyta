@@ -21,7 +21,7 @@ use crate::{
     },
     error::AppError,
     middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
-    services::change_requests::ChangeRequestService,
+    services::{change_requests::ChangeRequestService, notifications::NotificationService},
     state::AppState,
 };
 
@@ -94,6 +94,16 @@ async fn client_create_change_request(
 ) -> Result<impl IntoResponse, AppError> {
     let change_request =
         ChangeRequestService::create_by_client(state.db.as_ref(), client.user_id, client.client_id, payload).await?;
+    if let Err(error) = NotificationService::notify_client_change_request_created(
+        &state,
+        client.user_id,
+        client.client_id,
+        &change_request,
+    )
+    .await
+    {
+        tracing::error!("Failed to create change request notification: {}", error);
+    }
     Ok(Json(change_request))
 }
 
@@ -106,6 +116,16 @@ async fn client_update_change_request(
     let change_request =
         ChangeRequestService::client_update_spec(state.db.as_ref(), client.user_id, client.client_id, id, payload)
             .await?;
+    if let Err(error) = NotificationService::notify_client_change_request_updated(
+        &state,
+        client.user_id,
+        client.client_id,
+        &change_request,
+    )
+    .await
+    {
+        tracing::error!("Failed to create change request update notification: {}", error);
+    }
     Ok(Json(change_request))
 }
 
@@ -184,6 +204,17 @@ async fn client_approve_change_request(
 ) -> Result<impl IntoResponse, AppError> {
     let change_request =
         ChangeRequestService::client_approve(state.db.as_ref(), client.user_id, client.client_id, id, payload).await?;
+    if let Err(error) = NotificationService::notify_client_change_request_decision(
+        &state,
+        client.user_id,
+        client.client_id,
+        &change_request,
+        true,
+    )
+    .await
+    {
+        tracing::error!("Failed to create change request approval notification: {}", error);
+    }
     Ok(Json(change_request))
 }
 
@@ -201,6 +232,17 @@ async fn client_decline_change_request(
         payload.decline_reason,
     )
     .await?;
+    if let Err(error) = NotificationService::notify_client_change_request_decision(
+        &state,
+        client.user_id,
+        client.client_id,
+        &change_request,
+        false,
+    )
+    .await
+    {
+        tracing::error!("Failed to create change request decline notification: {}", error);
+    }
     Ok(Json(change_request))
 }
 
@@ -212,6 +254,16 @@ async fn client_cancel_change_request(
 ) -> Result<impl IntoResponse, AppError> {
     let change_request =
         ChangeRequestService::client_cancel(state.db.as_ref(), client.user_id, client.client_id, id, payload).await?;
+    if let Err(error) = NotificationService::notify_client_change_request_cancelled(
+        &state,
+        client.user_id,
+        client.client_id,
+        &change_request,
+    )
+    .await
+    {
+        tracing::error!("Failed to create change request cancellation notification: {}", error);
+    }
     Ok(Json(change_request))
 }
 

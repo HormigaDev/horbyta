@@ -11,90 +11,51 @@
 
     <q-card-section class="q-gutter-y-md">
       <div class="settings-block q-pa-md">
+        <q-toggle
+          v-model="form.group_notifications"
+          color="primary"
+          :label="t('settings.notifications.item.groupNotifications')"
+        />
+      </div>
+
+      <div class="settings-block q-pa-md">
         <div class="text-subtitle2 q-mb-sm">
-          {{ t('settings.notifications.group.clientsProjects') }}
+          {{ t('settings.notifications.group.clientPortal') }}
         </div>
         <div class="row q-col-gutter-sm">
           <div class="col-12 col-md-6">
             <q-toggle
-              v-model="form.clients_projects.proposal_decision"
+              v-model="form.client_portal.change_request_created"
               color="primary"
-              :label="t('settings.notifications.item.proposalDecision')"
+              :label="t('settings.notifications.item.changeRequestCreated')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
-              v-model="form.clients_projects.deliverable_approved"
+              v-model="form.client_portal.change_request_updated"
               color="primary"
-              :label="t('settings.notifications.item.deliverableApproved')"
+              :label="t('settings.notifications.item.changeRequestUpdated')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
-              v-model="form.clients_projects.comment_or_review"
+              v-model="form.client_portal.change_request_approved"
               color="primary"
-              :label="t('settings.notifications.item.commentOrReview')"
+              :label="t('settings.notifications.item.changeRequestApproved')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
-              v-model="form.clients_projects.added_to_new_project"
+              v-model="form.client_portal.change_request_declined"
               color="primary"
-              :label="t('settings.notifications.item.addedToProject')"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-block q-pa-md">
-        <div class="text-subtitle2 q-mb-sm">{{ t('settings.notifications.group.deliveries') }}</div>
-        <div class="row q-col-gutter-sm">
-          <div class="col-12 col-md-6">
-            <q-toggle
-              v-model="form.deliveries_deadlines.deadline_24h_48h"
-              color="primary"
-              :label="t('settings.notifications.item.deadline24h48h')"
+              :label="t('settings.notifications.item.changeRequestDeclined')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
-              v-model="form.deliveries_deadlines.deliverable_overdue"
+              v-model="form.client_portal.change_request_cancelled"
               color="primary"
-              :label="t('settings.notifications.item.deliverableOverdue')"
-            />
-          </div>
-          <div class="col-12 col-md-6">
-            <q-toggle
-              v-model="form.deliveries_deadlines.milestone_completed"
-              color="primary"
-              :label="t('settings.notifications.item.milestoneCompleted')"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-block q-pa-md">
-        <div class="text-subtitle2 q-mb-sm">{{ t('settings.notifications.group.contracts') }}</div>
-        <div class="row q-col-gutter-sm">
-          <div class="col-12 col-md-6">
-            <q-toggle
-              v-model="form.contracts.contract_sent"
-              color="primary"
-              :label="t('settings.notifications.item.contractSent')"
-            />
-          </div>
-          <div class="col-12 col-md-6">
-            <q-toggle
-              v-model="form.contracts.contract_signed"
-              color="primary"
-              :label="t('settings.notifications.item.contractSigned')"
-            />
-          </div>
-          <div class="col-12 col-md-6">
-            <q-toggle
-              v-model="form.contracts.contract_expiring"
-              color="primary"
-              :label="t('settings.notifications.item.contractExpiring')"
+              :label="t('settings.notifications.item.changeRequestCancelled')"
             />
           </div>
         </div>
@@ -105,16 +66,16 @@
         <div class="row q-col-gutter-sm">
           <div class="col-12 col-md-6">
             <q-toggle
-              v-model="form.billing.invoice_sent"
+              v-model="form.billing.invoice_opened"
               color="primary"
-              :label="t('settings.notifications.item.invoiceSent')"
+              :label="t('settings.notifications.item.invoiceOpened')"
             />
           </div>
           <div class="col-12 col-md-6">
             <q-toggle
-              v-model="form.billing.invoice_overdue_unpaid"
+              v-model="form.billing.invoice_paid"
               color="primary"
-              :label="t('settings.notifications.item.invoiceOverdue')"
+              :label="t('settings.notifications.item.invoicePaid')"
             />
           </div>
           <div class="col-12 col-md-6">
@@ -124,31 +85,17 @@
               :label="t('settings.notifications.item.paymentReceived')"
             />
           </div>
-          <div class="col-12 col-md-6">
-            <q-toggle
-              v-model="form.billing.auto_payment_reminder"
-              color="primary"
-              :label="t('settings.notifications.item.autoPaymentReminder')"
-            />
-          </div>
         </div>
       </div>
 
       <div class="settings-block q-pa-md">
-        <div class="text-subtitle2 q-mb-sm">{{ t('settings.notifications.group.time') }}</div>
+        <div class="text-subtitle2 q-mb-sm">{{ t('settings.notifications.group.work') }}</div>
         <div class="row q-col-gutter-sm">
           <div class="col-12 col-md-6">
             <q-toggle
-              v-model="form.time_tracking.long_running_timer"
+              v-model="form.work.milestone_released"
               color="primary"
-              :label="t('settings.notifications.item.longRunningTimer')"
-            />
-          </div>
-          <div class="col-12 col-md-6">
-            <q-toggle
-              v-model="form.time_tracking.weekly_hours_summary"
-              color="primary"
-              :label="t('settings.notifications.item.weeklySummary')"
+              :label="t('settings.notifications.item.milestoneReleased')"
             />
           </div>
         </div>
@@ -194,62 +141,42 @@ const form = reactive<NotificationPreferences>(createDefaultNotifications());
 
 function createDefaultNotifications(): NotificationPreferences {
   return {
-    clients_projects: {
-      proposal_decision: true,
-      deliverable_approved: true,
-      comment_or_review: true,
-      added_to_new_project: true,
-    },
-    deliveries_deadlines: {
-      deadline_24h_48h: true,
-      deliverable_overdue: true,
-      milestone_completed: true,
-    },
-    contracts: {
-      contract_sent: true,
-      contract_signed: true,
-      contract_expiring: true,
+    group_notifications: false,
+    client_portal: {
+      change_request_created: true,
+      change_request_updated: true,
+      change_request_approved: true,
+      change_request_declined: true,
+      change_request_cancelled: true,
     },
     billing: {
-      invoice_sent: true,
-      invoice_overdue_unpaid: true,
+      invoice_opened: true,
+      invoice_paid: true,
       payment_received: true,
-      auto_payment_reminder: true,
     },
-    time_tracking: {
-      long_running_timer: true,
-      weekly_hours_summary: true,
+    work: {
+      milestone_released: true,
     },
   };
 }
 
 function buildNotificationsPayload(): UpdateNotificationPreferencesDto {
   return {
-    clients_projects: {
-      proposal_decision: form.clients_projects.proposal_decision,
-      deliverable_approved: form.clients_projects.deliverable_approved,
-      comment_or_review: form.clients_projects.comment_or_review,
-      added_to_new_project: form.clients_projects.added_to_new_project,
-    },
-    deliveries_deadlines: {
-      deadline_24h_48h: form.deliveries_deadlines.deadline_24h_48h,
-      deliverable_overdue: form.deliveries_deadlines.deliverable_overdue,
-      milestone_completed: form.deliveries_deadlines.milestone_completed,
-    },
-    contracts: {
-      contract_sent: form.contracts.contract_sent,
-      contract_signed: form.contracts.contract_signed,
-      contract_expiring: form.contracts.contract_expiring,
+    group_notifications: form.group_notifications,
+    client_portal: {
+      change_request_created: form.client_portal.change_request_created,
+      change_request_updated: form.client_portal.change_request_updated,
+      change_request_approved: form.client_portal.change_request_approved,
+      change_request_declined: form.client_portal.change_request_declined,
+      change_request_cancelled: form.client_portal.change_request_cancelled,
     },
     billing: {
-      invoice_sent: form.billing.invoice_sent,
-      invoice_overdue_unpaid: form.billing.invoice_overdue_unpaid,
+      invoice_opened: form.billing.invoice_opened,
+      invoice_paid: form.billing.invoice_paid,
       payment_received: form.billing.payment_received,
-      auto_payment_reminder: form.billing.auto_payment_reminder,
     },
-    time_tracking: {
-      long_running_timer: form.time_tracking.long_running_timer,
-      weekly_hours_summary: form.time_tracking.weekly_hours_summary,
+    work: {
+      milestone_released: form.work.milestone_released,
     },
   };
 }
@@ -271,13 +198,12 @@ async function saveNotifications() {
 watch(
   () => props.notifications,
   (value) => {
-    if (!value) return;
+    const next = value ?? createDefaultNotifications();
 
-    Object.assign(form.clients_projects, value.clients_projects);
-    Object.assign(form.deliveries_deadlines, value.deliveries_deadlines);
-    Object.assign(form.contracts, value.contracts);
-    Object.assign(form.billing, value.billing);
-    Object.assign(form.time_tracking, value.time_tracking);
+    form.group_notifications = next.group_notifications;
+    Object.assign(form.client_portal, next.client_portal);
+    Object.assign(form.billing, next.billing);
+    Object.assign(form.work, next.work);
   },
   { immediate: true },
 );

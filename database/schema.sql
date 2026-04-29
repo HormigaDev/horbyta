@@ -378,11 +378,14 @@ create table notifications (
     id uuid primary key default uuidv7(),
     user_id uuid not null references users (id) on delete cascade,
     preference_key varchar(80) not null,
+    event_type varchar(80) not null,
     title varchar(255) not null,
     body text,
     payload jsonb,
     severity varchar(20) not null default 'info',
     source varchar(40) not null default 'system',
+    entity_type varchar(40),
+    entity_id uuid,
     is_read boolean not null default false,
     read_at timestamptz,
     created_at timestamptz not null default now(),
@@ -390,24 +393,18 @@ create table notifications (
 
     constraint chk_notifications_preference_key check (
         preference_key in (
-            'clients_projects.proposal_decision',
-            'clients_projects.deliverable_approved',
-            'clients_projects.comment_or_review',
-            'clients_projects.added_to_new_project',
-            'deliveries_deadlines.deadline_24h_48h',
-            'deliveries_deadlines.deliverable_overdue',
-            'deliveries_deadlines.milestone_completed',
-            'contracts.contract_sent',
-            'contracts.contract_signed',
-            'contracts.contract_expiring',
-            'billing.invoice_sent',
-            'billing.invoice_overdue_unpaid',
+            'client_portal.change_request_created',
+            'client_portal.change_request_updated',
+            'client_portal.change_request_approved',
+            'client_portal.change_request_declined',
+            'client_portal.change_request_cancelled',
+            'billing.invoice_opened',
+            'billing.invoice_paid',
             'billing.payment_received',
-            'billing.auto_payment_reminder',
-            'time_tracking.long_running_timer',
-            'time_tracking.weekly_hours_summary'
+            'work.milestone_released'
         )
     ),
+    constraint chk_notifications_event_type check (event_type = preference_key),
     constraint chk_notifications_severity check (severity in ('info', 'positive', 'warning', 'negative'))
 );
 
@@ -477,6 +474,7 @@ create index idx_conversation_history_user_created_at on conversation_history(us
 create index idx_conversation_history_user_updated_at on conversation_history(user_id, updated_at desc);
 create index idx_notifications_user_read_created on notifications(user_id, is_read, created_at desc);
 create index idx_notifications_user_preference on notifications(user_id, preference_key);
+create index idx_notifications_user_entity on notifications(user_id, entity_type, entity_id);
 create index idx_notifications_created_at on notifications(created_at desc);
 create index idx_clients_user_id on clients(user_id);
 create index idx_clients_status on clients(status);

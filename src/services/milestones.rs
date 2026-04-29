@@ -37,9 +37,7 @@ impl MilestoneService {
             .await?;
 
         if project.is_none() {
-            return Err(AppError::NotFound(
-                "project not found or no permission".to_string(),
-            ));
+            return Err(AppError::NotFound("project not found or no permission".to_string()));
         }
         Ok(())
     }
@@ -58,9 +56,7 @@ impl MilestoneService {
             .await?;
 
         if project.is_none() {
-            return Err(AppError::NotFound(
-                "project not found or no permission".to_string(),
-            ));
+            return Err(AppError::NotFound("project not found or no permission".to_string()));
         }
 
         Ok(())
@@ -108,6 +104,10 @@ impl MilestoneService {
         };
 
         milestone.insert(db).await.map_err(AppError::Database)
+    }
+
+    pub async fn get_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<MilestoneModel, AppError> {
+        Self::check_milestone_ownership(db, user_id, id).await
     }
 
     pub async fn update(

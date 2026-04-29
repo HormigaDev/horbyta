@@ -10,6 +10,9 @@ export interface AppNotification {
   read: boolean;
   createdAt: string;
   preferenceKey?: string;
+  eventType?: string;
+  entityType?: string;
+  entityId?: string;
   backendId?: string;
   payload?: unknown;
 }

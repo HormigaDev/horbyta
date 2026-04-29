@@ -10,6 +10,7 @@ pub struct Model {
     pub id: Uuid,
     pub user_id: Uuid,
     pub preference_key: String,
+    pub event_type: String,
     pub title: String,
     #[sea_orm(column_type = "Text", nullable)]
     pub body: Option<String>,
@@ -17,6 +18,8 @@ pub struct Model {
     pub payload: Option<Json>,
     pub severity: String,
     pub source: String,
+    pub entity_type: Option<String>,
+    pub entity_id: Option<Uuid>,
     pub is_read: bool,
     pub read_at: Option<DateTimeWithTimeZone>,
     pub created_at: DateTimeWithTimeZone,

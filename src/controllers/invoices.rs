@@ -10,13 +10,13 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        invoice::{CreateInvoiceDto, UpdateInvoiceDto, UpdateInvoiceStatusDto, invoice_filter_schema},
+        invoice::{CreateInvoiceDto, InvoiceStatus, UpdateInvoiceDto, UpdateInvoiceStatusDto, invoice_filter_schema},
         query::QueryPayload,
         user::UserDto,
         utils::AppResult,
     },
     middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
-    services::invoices::InvoiceService,
+    services::{invoices::InvoiceService, notifications::NotificationService},
     state::AppState,
 };
 
@@ -77,7 +77,19 @@ async fn update_invoice_status(
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateInvoiceStatusDto>,
 ) -> AppResult<impl IntoResponse> {
+    let requested_status = payload.status.clone();
     let invoice = InvoiceService::update_status(state.db.as_ref(), user.id, id, payload).await?;
+
+    let notification_result = match requested_status {
+        InvoiceStatus::Open => NotificationService::notify_invoice_opened(&state, &invoice).await,
+        InvoiceStatus::Paid => NotificationService::notify_invoice_paid(&state, &invoice).await,
+        _ => Ok(()),
+    };
+
+    if let Err(error) = notification_result {
+        tracing::error!("Failed to create invoice status notification: {}", error);
+    }
+
     Ok(Json(invoice))
 }
 

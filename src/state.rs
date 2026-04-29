@@ -3,9 +3,13 @@ use object_store::{ObjectStore, aws::AmazonS3Builder, local::LocalFileSystem};
 use sea_orm::DatabaseConnection;
 use std::time::Duration;
 use std::{path::Path, sync::Arc};
+use tokio::sync::broadcast;
 use uuid::Uuid;
 
-use crate::{dtos::client::ClientAuthDto, dtos::user::UserDto, env::Config, error::AppError};
+use crate::{
+    dtos::client::ClientAuthDto, dtos::user::UserDto, env::Config, error::AppError,
+    services::notifications::NotificationEvent,
+};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -14,6 +18,7 @@ pub struct AppState {
     pub client_cache: Cache<Uuid, ClientAuthDto>,
     pub config: Config,
     pub storage: Arc<dyn ObjectStore>,
+    pub notification_bus: broadcast::Sender<NotificationEvent>,
 }
 
 impl AppState {
@@ -64,6 +69,7 @@ impl AppState {
 
             Arc::new(local)
         };
+        let (notification_bus, _) = broadcast::channel(1_024);
 
         Ok(Self {
             db,
@@ -71,6 +77,7 @@ impl AppState {
             client_cache,
             config,
             storage,
+            notification_bus,
         })
     }
 }
