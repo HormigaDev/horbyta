@@ -103,7 +103,9 @@ impl CategoryService {
             query
                 .select_only()
                 .column(categories::Column::Id)
-                .column(categories::Column::Name),
+                .column(categories::Column::Name)
+                .column(categories::Column::CreatedAt)
+                .column(categories::Column::UpdatedAt),
             &payload,
         )
         .into_model::<CategorySummaryDto>()

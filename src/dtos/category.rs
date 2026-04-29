@@ -1,4 +1,4 @@
-use sea_orm::FromQueryResult;
+use sea_orm::{FromQueryResult, prelude::DateTimeWithTimeZone};
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use uuid::Uuid;
@@ -79,6 +79,8 @@ pub struct UpdateCategoryDto {
 pub struct CategorySummaryDto {
     pub id: Uuid,
     pub name: String,
+    pub created_at: DateTimeWithTimeZone,
+    pub updated_at: DateTimeWithTimeZone,
 }
 
 #[derive(Serialize)]
