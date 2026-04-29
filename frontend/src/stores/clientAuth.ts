@@ -30,8 +30,8 @@ export const useClientAuthStore = defineStore('clientAuth', () => {
   async function checkAuth() {
     if (isInitialized.value) return;
     try {
-      await ClientAuthService.checkSession();
-      setAuthenticated(true);
+      const clientData = await ClientAuthService.checkSession();
+      setAuthenticated(true, clientData);
     } catch {
       clearAuth();
     } finally {

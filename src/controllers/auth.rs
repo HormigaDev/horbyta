@@ -3,11 +3,11 @@ use axum::{
     extract::State,
     http::{HeaderMap, StatusCode, header::SET_COOKIE},
     response::IntoResponse,
-    routing::post,
+    routing::{get, post},
 };
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use chrono::Utc;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, QueryFilter};
 use serde_json::json;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -18,7 +18,7 @@ use crate::{
         client::ClientAuthDto,
         user::UserDto,
     },
-    entities::{client_auth, users},
+    entities::{client_auth, clients, users},
     error::AppError,
     middlewares::{auth::Claims, client_auth::ClientClaims, validator::ValidatedJson},
     state::AppState,
@@ -152,10 +152,26 @@ fn build_auth_cookie<'a>(name: &'a str, token: String, is_production: bool) -> C
         .build()
 }
 
+async fn client_me(client: ClientAuthDto) -> Result<impl IntoResponse, AppError> {
+    Ok(Json(json!({
+        "id": client.id,
+        "client_id": client.client_id,
+        "user_id": client.user_id,
+        "name": client.name,
+        "email": client.email,
+    })))
+}
+
 async fn handle_client_login_success(
     client_model: client_auth::Model,
     state: &AppState,
 ) -> Result<(StatusCode, HeaderMap, Json<serde_json::Value>), AppError> {
+    let client_profile = client_model
+        .find_related(clients::Entity)
+        .one(state.db.as_ref())
+        .await?
+        .ok_or_else(|| AppError::NotFound("client not found".to_string()))?;
+
     let claims = ClientClaims {
         sub: client_model.id,
         exp: get_expiration_time(state.config.time_to_exp)?,
@@ -174,6 +190,8 @@ async fn handle_client_login_success(
             "id": client_model.id,
             "client_id": client_model.client_id,
             "user_id": client_model.user_id,
+            "name": client_profile.name,
+            "email": client_profile.email,
         }
     }));
 
@@ -181,13 +199,12 @@ async fn handle_client_login_success(
 }
 
 pub fn auth_controller() -> Router<AppState> {
-    let router = Router::new()
+    Router::new()
         .route("/login", post(login))
         .route("/login-client", post(login_client))
         .route("/login-client-token", post(login_magic_token))
         .route("/register", post(register))
         .route("/logout", post(logout))
-        .route("/logout-client", post(logout_client));
-
-    router
+        .route("/logout-client", post(logout_client))
+        .route("/client-me", get(client_me))
 }

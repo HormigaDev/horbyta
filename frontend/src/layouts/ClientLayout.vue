@@ -14,9 +14,9 @@
         />
 
         <q-img alt="Logo" src="/logo.png" width="36px" height="36px" class="q-mr-md q-ml-md" />
-        <q-toolbar-title class="text-h6 ellipsis" v-if="clientAuthStore.client?.email">
+        <q-toolbar-title class="text-h6 ellipsis" v-if="clientAuthStore.client?.name">
           {{ t('layout.header.welcome') }}
-          <b class="text-weight-bold">{{ clientAuthStore.client.email }}</b>
+          <b class="text-weight-bold">{{ clientAuthStore.client.name }}</b>
         </q-toolbar-title>
         <q-toolbar-title class="text-weight-bold text-h6 ellipsis" v-else>
           {{ t('layout.header.welcome') }}
@@ -33,11 +33,9 @@
               <q-item>
                 <q-item-section>
                   <q-item-label class="text-weight-bold">{{
-                    t('layout.profile.defaultUser')
+                    clientAuthStore.client?.name || t('layout.profile.defaultUser')
                   }}</q-item-label>
-                  <q-item-label caption>{{
-                    clientAuthStore.client?.email || t('layout.profile.defaultEmail')
-                  }}</q-item-label>
+                  <q-item-label caption>{{ clientAuthStore.client?.email }}</q-item-label>
                 </q-item-section>
               </q-item>
 
@@ -111,11 +109,9 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label class="text-weight-bold">{{
-                  t('layout.profile.defaultUser')
+                  clientAuthStore.client?.name || t('layout.profile.defaultUser')
                 }}</q-item-label>
-                <q-item-label caption>{{
-                  clientAuthStore.client?.email || t('layout.profile.defaultEmail')
-                }}</q-item-label>
+                <q-item-label caption>{{ clientAuthStore.client?.email }}</q-item-label>
               </q-item-section>
             </q-item>
 

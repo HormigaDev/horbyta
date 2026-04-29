@@ -5,12 +5,12 @@ use axum::{
 };
 use axum_extra::extract::CookieJar;
 use jsonwebtoken::{DecodingKey, Validation, decode};
-use sea_orm::EntityTrait;
+use sea_orm::{EntityTrait, ModelTrait};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::{constants::CLIENT_AUTH_COOKIE_NAME, entities::client_auth};
+use crate::{constants::CLIENT_AUTH_COOKIE_NAME, entities::{client_auth, clients}};
 use crate::{dtos::client::ClientAuthDto, state::AppState};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -66,11 +66,29 @@ impl FromRequestParts<AppState> for ClientAuthDto {
                 )
             })?;
 
+        let client_profile = client_model
+            .find_related(clients::Entity)
+            .one(state.db.as_ref())
+            .await
+            .map_err(|_| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": "db error", "type": "database"})),
+                )
+            })?
+            .ok_or_else(|| {
+                (
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({"error": "client not found", "type": "unauthorized"})),
+                )
+            })?;
+
         let client_dto = ClientAuthDto {
             id: client_model.id,
             client_id: client_model.client_id,
             user_id: client_model.user_id,
-            email: client_model.email,
+            name: client_profile.name,
+            email: client_profile.email,
             created_at: client_model.created_at,
             updated_at: client_model.updated_at,
         };

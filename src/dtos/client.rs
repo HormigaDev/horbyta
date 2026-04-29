@@ -148,6 +148,7 @@ pub struct ClientAuthDto {
     pub id: Uuid,
     pub user_id: Uuid,
     pub client_id: Uuid,
+    pub name: String,
     pub email: Option<String>,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
