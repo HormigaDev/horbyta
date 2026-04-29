@@ -1,4 +1,5 @@
 export type InvoiceStatus = 'draft' | 'open' | 'paid' | 'void' | 'uncollectible';
+export type InvoiceProvider = 'manual' | 'paypal' | 'stripe' | 'wise' | 'mercadopago' | 'revolut' | 'payoneer';
 
 export interface InvoiceSummaryDto {
   id: string;
@@ -49,6 +50,9 @@ export interface InvoiceDetailDto {
   status: InvoiceStatus;
   due_date: string | null;
   issued_at: string | null;
+  provider: InvoiceProvider;
+  provider_external_id: string | null;
+  payment_link: string | null;
   notes: string | null;
   freelancer_notes: string | null;
   task_groups: InvoiceTaskGroupDto[];
@@ -62,6 +66,9 @@ export interface CreateInvoiceDto {
   due_date?: string | null;
   freelancer_notes?: string | null;
   time_entry_ids: string[];
+  provider: InvoiceProvider;
+  provider_external_id?: string | null;
+  payment_link?: string | null;
 }
 
 export interface UpdateInvoiceDto {
@@ -69,6 +76,9 @@ export interface UpdateInvoiceDto {
   due_date?: string | null;
   freelancer_notes?: string | null;
   time_entry_ids: string[];
+  provider: InvoiceProvider;
+  provider_external_id?: string | null;
+  payment_link?: string | null;
 }
 
 export interface UpdateInvoiceStatusDto {

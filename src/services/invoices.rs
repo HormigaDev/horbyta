@@ -106,6 +106,9 @@ impl InvoiceService {
             .column(invoices::Column::Status)
             .column(invoices::Column::DueDate)
             .column(invoices::Column::IssuedAt)
+            .column(invoices::Column::Provider)
+            .column(invoices::Column::ProviderExternalId)
+            .column(invoices::Column::PaymentLink)
             .column(invoices::Column::Notes)
             .column(invoices::Column::CreatedAt)
             .column(invoices::Column::UpdatedAt)
@@ -141,6 +144,9 @@ impl InvoiceService {
             status,
             due_date: row.due_date,
             issued_at: row.issued_at,
+            provider: row.provider,
+            provider_external_id: row.provider_external_id,
+            payment_link: row.payment_link,
             notes: row.notes,
             freelancer_notes,
             task_groups,
@@ -174,6 +180,9 @@ impl InvoiceService {
 
         let txn = db.begin().await.map_err(AppError::Database)?;
 
+        let normalized_external_id = dto.provider_external_id.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+        let normalized_payment_link = dto.payment_link.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+
         let invoice = invoices::ActiveModel {
             user_id: Set(user_id),
             project_id: Set(dto.project_id),
@@ -182,9 +191,9 @@ impl InvoiceService {
             status: Set("draft".to_string()),
             due_date: Set(dto.due_date.map(|dt| dt.date_naive())),
             issued_at: Set(None),
-            provider: Set("manual".to_string()),
-            provider_external_id: Set(None),
-            payment_link: Set(None),
+            provider: Set(dto.provider.to_string()),
+            provider_external_id: Set(normalized_external_id),
+            payment_link: Set(normalized_payment_link),
             notes: Set(Some(notes)),
             ..Default::default()
         };
@@ -220,9 +229,15 @@ impl InvoiceService {
         Self::unlink_time_entries(&txn, id).await?;
         Self::link_time_entries(&txn, &dto.time_entry_ids, id).await?;
 
+        let normalized_external_id = dto.provider_external_id.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+        let normalized_payment_link = dto.payment_link.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+
         let mut active: invoices::ActiveModel = invoice.into();
         active.amount = Set(dto.amount);
         active.due_date = Set(dto.due_date.map(|dt| dt.date_naive()));
+        active.provider = Set(dto.provider.to_string());
+        active.provider_external_id = Set(normalized_external_id);
+        active.payment_link = Set(normalized_payment_link);
         active.notes = Set(Some(notes));
         active.update(&txn).await.map_err(AppError::Database)?;
 

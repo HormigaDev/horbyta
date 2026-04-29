@@ -64,6 +64,45 @@
 
         <q-card-section class="q-pt-none row q-col-gutter-md">
           <div class="col-12 col-md-4">
+            <q-select
+              v-model="form.provider"
+              :options="PROVIDER_OPTIONS"
+              :label="t('invoices.form.providerLabel')"
+              emit-value
+              map-options
+              outlined
+              dense
+              :disable="!isDraft"
+            />
+          </div>
+
+          <div class="col-12 col-md-4" v-if="isExternalProvider">
+            <q-input
+              v-model="form.provider_external_id"
+              :label="t('invoices.form.providerExternalIdLabel')"
+              :hint="t('invoices.form.providerExternalIdHint')"
+              outlined
+              dense
+              :disable="!isDraft"
+              :error="hasProviderExternalIdError"
+              :error-message="t('invoices.form.validation.providerExternalIdRequired')"
+            />
+          </div>
+
+          <div class="col-12" :class="isExternalProvider ? 'col-md-4' : 'col-md-8'">
+            <q-input
+              v-model="form.payment_link"
+              :label="t('invoices.form.paymentLinkLabel')"
+              :hint="t('invoices.form.paymentLinkHint')"
+              outlined
+              dense
+              :disable="!isDraft"
+            />
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none row q-col-gutter-md">
+          <div class="col-12 col-md-4">
             <q-input
               :model-value="calculatedAmountDisplay"
               :label="t('invoices.form.calculatedAmountLabel')"
@@ -281,7 +320,7 @@ import { useUI } from 'src/composables/useUI';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { parseNumericText } from 'src/utils/numericInput';
 import type { ProjectSummaryDto } from 'src/types/project';
-import type { BillableTaskDto, BillableTimeEntryDto, InvoiceStatus } from 'src/types/invoice';
+import type { BillableTaskDto, BillableTimeEntryDto, InvoiceProvider, InvoiceStatus } from 'src/types/invoice';
 import {
   formatIsoDateForInput,
   getDateInputMask,
@@ -321,10 +360,31 @@ const manualAmount = ref('');
 const discount = ref('');
 const selectedEntryIds = ref<Set<string>>(new Set());
 
+const PROVIDER_OPTIONS: { value: InvoiceProvider; label: string }[] = [
+  { value: 'manual', label: t('invoices.provider.manual') },
+  { value: 'paypal', label: t('invoices.provider.paypal') },
+  { value: 'stripe', label: t('invoices.provider.stripe') },
+  { value: 'wise', label: t('invoices.provider.wise') },
+  { value: 'mercadopago', label: t('invoices.provider.mercadopago') },
+  { value: 'revolut', label: t('invoices.provider.revolut') },
+  { value: 'payoneer', label: t('invoices.provider.payoneer') },
+];
+
 const form = ref({
   project_id: null as string | null,
   freelancer_notes: null as string | null,
+  provider: 'manual' as InvoiceProvider,
+  provider_external_id: null as string | null,
+  payment_link: null as string | null,
 });
+
+const isExternalProvider = computed(() => form.value.provider !== 'manual');
+const hasProviderExternalIdError = computed(
+  () =>
+    hasAttemptedSubmit.value &&
+    isExternalProvider.value &&
+    !form.value.provider_external_id?.trim(),
+);
 
 const calculatedAmount = computed(() => {
   let total = 0;
@@ -408,6 +468,7 @@ const canSave = computed(() => {
     if (parsedManualAmount.value <= 0) return false;
   }
   if (finalTotal.value <= 0) return false;
+  if (isExternalProvider.value && !form.value.provider_external_id?.trim()) return false;
   return true;
 });
 
@@ -526,6 +587,9 @@ const loadInvoice = async () => {
     form.value = {
       project_id: data.project_id,
       freelancer_notes: data.freelancer_notes ?? null,
+      provider: data.provider,
+      provider_external_id: data.provider_external_id ?? null,
+      payment_link: data.payment_link ?? null,
     };
     currencyType.value = data.currency_type;
     dueDateDisplay.value = formatIsoDateForInput(data.due_date, {
@@ -579,6 +643,11 @@ const saveInvoice = async () => {
     return;
   }
 
+  if (isExternalProvider.value && !form.value.provider_external_id?.trim()) {
+    notify(t('invoices.form.validation.providerExternalIdRequired'), 'warning');
+    return;
+  }
+
   isSubmitting.value = true;
   showLoading(t('invoices.form.saving'));
 
@@ -586,6 +655,10 @@ const saveInvoice = async () => {
     const timeEntryIds = [...selectedEntryIds.value];
     const amount = String(Math.max(0, finalTotal.value));
     const dueDate = parseDisplayDateToIso(dueDateDisplay.value, userPreferencesStore.dateFormat);
+    const providerExternalId = isExternalProvider.value
+      ? (form.value.provider_external_id?.trim() || null)
+      : null;
+    const paymentLink = form.value.payment_link?.trim() || null;
 
     if (isNew.value) {
       const created = await InvoicesService.create({
@@ -594,6 +667,9 @@ const saveInvoice = async () => {
         due_date: dueDate,
         freelancer_notes: form.value.freelancer_notes || null,
         time_entry_ids: timeEntryIds,
+        provider: form.value.provider,
+        provider_external_id: providerExternalId,
+        payment_link: paymentLink,
       });
       notify(t('invoices.form.createSuccess'), 'positive');
       void router.push(`/invoices/${created.id}`);
@@ -603,6 +679,9 @@ const saveInvoice = async () => {
         due_date: dueDate,
         freelancer_notes: form.value.freelancer_notes || null,
         time_entry_ids: timeEntryIds,
+        provider: form.value.provider,
+        provider_external_id: providerExternalId,
+        payment_link: paymentLink,
       });
       notify(t('invoices.form.updateSuccess'), 'positive');
       void router.push(`/invoices/${invoiceId.value}`);

@@ -118,6 +118,33 @@
                   {{ invoice.due_date ? formatDate(invoice.due_date) : '-' }}
                 </div>
               </div>
+
+              <div class="col-12 col-md-4" v-if="invoice.provider !== 'manual'">
+                <div class="text-caption" style="color: var(--text-muted)">
+                  {{ t('invoices.form.providerLabel') }}
+                </div>
+                <div style="color: var(--text-color)">
+                  {{ t(`invoices.provider.${invoice.provider}`) }}
+                  <span v-if="invoice.provider_external_id" class="text-caption" style="color: var(--text-muted)">
+                    · {{ invoice.provider_external_id }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-8" v-if="invoice.payment_link">
+                <div class="text-caption" style="color: var(--text-muted)">
+                  {{ t('invoices.form.paymentLinkLabel') }}
+                </div>
+                <a
+                  :href="invoice.payment_link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-primary"
+                  style="word-break: break-all"
+                >
+                  {{ invoice.payment_link }}
+                </a>
+              </div>
             </div>
           </div>
         </q-card-section>

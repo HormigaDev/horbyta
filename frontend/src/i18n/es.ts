@@ -1424,6 +1424,21 @@ export const messages = {
     'Notas adicionales (se agregan al final de las observaciones)',
   'invoices.form.freelancerNotesHint':
     'Estas notas se añaden al final del campo de observaciones de la factura.',
+  'invoices.form.providerLabel': 'Plataforma de cobro',
+  'invoices.form.providerExternalIdLabel': 'ID externo (en la plataforma)',
+  'invoices.form.paymentLinkLabel': 'Link de pago (opcional)',
+  'invoices.form.paymentLinkHint': 'URL que el cliente puede usar para pagar',
+  'invoices.form.providerExternalIdHint':
+    'ID o referencia de la factura en la plataforma seleccionada',
+  'invoices.provider.manual': 'Ninguna (registro manual)',
+  'invoices.provider.paypal': 'PayPal',
+  'invoices.provider.stripe': 'Stripe',
+  'invoices.provider.wise': 'Wise',
+  'invoices.provider.mercadopago': 'MercadoPago',
+  'invoices.provider.revolut': 'Revolut',
+  'invoices.provider.payoneer': 'Payoneer',
+  'invoices.form.validation.providerExternalIdRequired':
+    'El ID externo es requerido cuando se selecciona una plataforma de cobro',
   'invoices.form.saveButton': 'Guardar factura',
   'invoices.form.loading': 'Cargando factura...',
   'invoices.form.loadError': 'Error al cargar la factura',

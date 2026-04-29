@@ -3,9 +3,38 @@ use sea_orm::{FromQueryResult, prelude::Decimal};
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use uuid::Uuid;
-use validator::Validate;
+use validator::{Validate, ValidationError};
 
 use super::utils::is_non_negative_decimal;
+
+fn validate_provider_fields(dto: &CreateInvoiceDto) -> Result<(), ValidationError> {
+    if dto.provider != InvoiceProvider::Manual
+        && dto
+            .provider_external_id
+            .as_deref()
+            .map(str::trim)
+            .unwrap_or("")
+            .is_empty()
+    {
+        return Err(ValidationError::new("provider_external_id_required"));
+    }
+    Ok(())
+}
+
+fn validate_provider_fields_update(dto: &UpdateInvoiceDto) -> Result<(), ValidationError> {
+    if dto.provider != InvoiceProvider::Manual
+        && dto
+            .provider_external_id
+            .as_deref()
+            .map(str::trim)
+            .unwrap_or("")
+            .is_empty()
+    {
+        return Err(ValidationError::new("provider_external_id_required"));
+    }
+    Ok(())
+}
+
 use crate::{
     dtos::query::{ColumnType, FilterSchema},
     entities::invoices,
@@ -92,6 +121,7 @@ pub fn invoice_filter_schema() -> FilterSchema {
 }
 
 #[derive(Debug, Deserialize, Validate)]
+#[validate(schema(function = "validate_provider_fields"))]
 pub struct CreateInvoiceDto {
     pub project_id: Uuid,
 
@@ -104,9 +134,19 @@ pub struct CreateInvoiceDto {
     pub freelancer_notes: Option<String>,
 
     pub time_entry_ids: Vec<Uuid>,
+
+    #[serde(default)]
+    pub provider: InvoiceProvider,
+
+    #[validate(length(max = 255, message = "provider_external_id must be at most 255 characters"))]
+    pub provider_external_id: Option<String>,
+
+    #[validate(length(max = 1024, message = "payment_link must be at most 1024 characters"))]
+    pub payment_link: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Validate)]
+#[validate(schema(function = "validate_provider_fields_update"))]
 pub struct UpdateInvoiceDto {
     #[validate(custom(function = "is_non_negative_decimal"))]
     pub amount: Decimal,
@@ -117,6 +157,15 @@ pub struct UpdateInvoiceDto {
     pub freelancer_notes: Option<String>,
 
     pub time_entry_ids: Vec<Uuid>,
+
+    #[serde(default)]
+    pub provider: InvoiceProvider,
+
+    #[validate(length(max = 255, message = "provider_external_id must be at most 255 characters"))]
+    pub provider_external_id: Option<String>,
+
+    #[validate(length(max = 1024, message = "payment_link must be at most 1024 characters"))]
+    pub payment_link: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -156,6 +205,9 @@ pub struct InvoiceDetailDto {
     pub status: InvoiceStatus,
     pub due_date: Option<NaiveDate>,
     pub issued_at: Option<DateTime<FixedOffset>>,
+    pub provider: String,
+    pub provider_external_id: Option<String>,
+    pub payment_link: Option<String>,
     pub notes: Option<String>,
     pub freelancer_notes: Option<String>,
     pub task_groups: Vec<InvoiceTaskGroupDto>,
@@ -200,6 +252,9 @@ pub struct InvoiceDetailRow {
     pub status: String,
     pub due_date: Option<NaiveDate>,
     pub issued_at: Option<DateTime<FixedOffset>>,
+    pub provider: String,
+    pub provider_external_id: Option<String>,
+    pub payment_link: Option<String>,
     pub notes: Option<String>,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
@@ -260,3 +315,32 @@ string_enum!(
         Uncollectible,
     }
 );
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum InvoiceProvider {
+    #[default]
+    Manual,
+    Paypal,
+    Stripe,
+    Wise,
+    #[serde(rename = "mercadopago")]
+    MercadoPago,
+    Revolut,
+    Payoneer,
+}
+
+impl std::fmt::Display for InvoiceProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Self::Manual => "manual",
+            Self::Paypal => "paypal",
+            Self::Stripe => "stripe",
+            Self::Wise => "wise",
+            Self::MercadoPago => "mercadopago",
+            Self::Revolut => "revolut",
+            Self::Payoneer => "payoneer",
+        };
+        write!(f, "{s}")
+    }
+}
