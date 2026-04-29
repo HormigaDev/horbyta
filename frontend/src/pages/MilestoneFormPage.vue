@@ -77,7 +77,7 @@
         <q-card-section>
           <div class="text-subtitle1 q-mb-sm">{{ t('milestones.form.descriptionTitle') }}</div>
           <div class="row q-col-gutter-md" style="min-height: 45vh">
-            <div class="col-12 col-md-6" style="display: flex; flex-direction: column">
+            <div class="col-12" style="display: flex; flex-direction: column">
               <MarkdownRenderer
                 v-model="milestoneDescription"
                 edit-mode
