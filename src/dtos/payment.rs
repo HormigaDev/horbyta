@@ -107,7 +107,10 @@ pub struct CreatePaymentDto {
     #[validate(custom(function = "is_positive_decimal"))]
     pub amount: Decimal,
 
-    #[serde(deserialize_with = "deserialize_optional_naive_date_from_string_or_datetime")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_naive_date_from_string_or_datetime"
+    )]
     pub payment_date: Option<NaiveDate>,
 
     #[validate(length(max = 50, message = "payment_method must be at most 50 characters"))]
@@ -127,7 +130,10 @@ pub struct CreateRefundDto {
     #[validate(custom(function = "is_positive_decimal"))]
     pub amount: Decimal,
 
-    #[serde(deserialize_with = "deserialize_optional_naive_date_from_string_or_datetime")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_naive_date_from_string_or_datetime"
+    )]
     pub refund_date: Option<NaiveDate>,
 
     #[validate(length(max = 5000, message = "notes must be at most 5000 characters"))]

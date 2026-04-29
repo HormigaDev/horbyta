@@ -194,7 +194,7 @@ function normalizeDateTokens(value: string, dateFormat: UserDateFormatPreference
     monthNumber < 1 ||
     monthNumber > 12 ||
     dayNumber < 1 ||
-    dayNumber > 28
+    dayNumber > 31
   ) {
     return null;
   }
