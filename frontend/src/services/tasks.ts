@@ -60,6 +60,12 @@ export const TasksService = {
       body: JSON.stringify({ status }),
     }),
 
+  updateTaskStatus: (taskId: string, statusId: TaskStatus): Promise<void> =>
+    apiFetch(`/tasks/${taskId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: statusId }),
+    }),
+
   delete: (id: string): Promise<{ message: string }> =>
     apiFetch(`/tasks/${id}`, {
       method: 'DELETE',

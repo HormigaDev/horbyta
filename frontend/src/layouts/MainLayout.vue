@@ -95,6 +95,12 @@
             </q-tooltip>
           </q-btn>
 
+          <q-btn flat round dense icon="view_kanban" to="/board">
+            <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
+              {{ $t('layout.drawer.board') }}
+            </q-tooltip>
+          </q-btn>
+
           <q-btn flat round dense icon="folder" to="/projects">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.projects') }}
@@ -199,6 +205,13 @@
                   <q-icon name="bar_chart" />
                 </q-item-section>
                 <q-item-section>{{ t('layout.drawer.dashboard') }}</q-item-section>
+              </q-item>
+
+              <q-item clickable v-ripple to="/board">
+                <q-item-section avatar>
+                  <q-icon name="view_kanban" />
+                </q-item-section>
+                <q-item-section>{{ $t('layout.drawer.board') }}</q-item-section>
               </q-item>
 
               <q-item clickable v-ripple to="/projects">

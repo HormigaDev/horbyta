@@ -676,6 +676,24 @@ export const messages = {
   'tasks.list.deleteSuccess': 'Tareas eliminadas correctamente',
   'tasks.list.deleteError': 'Error al eliminar las tareas',
 
+  'board.title': 'Tablero Kanban',
+  'board.subtitle': 'Tareas agrupadas por estado',
+  'board.emptyColumn': 'Sin tareas',
+  'board.loadError': 'No se pudieron cargar las tareas del tablero',
+  'board.moveError': 'No se pudo mover la tarea. Se devolvió a su columna anterior.',
+  'board.limitExceeded':
+    'El tablero muestra hasta 100 tareas. Algunas tareas pueden quedar ocultas; filtra por un período menor para evitarlo.',
+  'board.moveBlockedTitle': 'Movimiento cancelado',
+  'board.moveBlockedMessage':
+    'La tarea necesita al menos una entrada de tiempo antes de pasar a Finalizada.',
+  'board.filters.project': 'Proyecto',
+  'board.filters.createdFrom': 'Creado desde',
+  'board.filters.createdTo': 'Creado hasta',
+  'board.columns.todo': 'Por hacer',
+  'board.columns.inProgress': 'En progreso',
+  'board.columns.review': 'En Review',
+  'board.columns.done': 'Finalizada',
+
   'tasks.form.createTitle': 'Crear nueva tarea',
   'tasks.form.editTitle': 'Editar tarea',
   'tasks.form.editingPrefix': 'Editando tarea: {id}',
@@ -927,6 +945,7 @@ export const messages = {
   'layout.header.pinnedTasks': 'Tareas fijadas',
   'layout.header.settings': 'Configuraciones',
   'layout.header.logout': 'Cerrar sesión',
+  'layout.drawer.board': 'Tablero Kanban',
   'layout.drawer.dashboard': 'Dashboard',
   'layout.drawer.projects': 'Proyectos',
   'layout.drawer.milestones': 'Hitos',

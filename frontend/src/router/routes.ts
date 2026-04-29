@@ -78,6 +78,12 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: '/board',
+        name: 'board',
+        component: () => import('pages/BoardPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: '/tasks/new',
         name: 'task-create',
         component: () => import('pages/TaskFormPage.vue'),

@@ -56,7 +56,9 @@
               <div class="text-caption" style="color: var(--text-muted)">
                 {{ t('common.status') }}
               </div>
-              <div style="color: var(--text-color)">{{ statusLabel(task.status) }}</div>
+              <div style="color: var(--text-color)">
+                {{ $t(`tasks.form.status.${task.status}`) }}
+              </div>
             </div>
             <div class="col-12 col-md-4">
               <div class="text-caption" style="color: var(--text-muted)">
@@ -242,16 +244,6 @@ const formatDate = (val: string) =>
     timezone: userPreferencesStore.timezone,
     dateFormat: userPreferencesStore.dateFormat,
   });
-
-const statusLabel = (status: TaskStatus) => {
-  const map: Record<string, string> = {
-    todo: 'TODO',
-    in_progress: 'In Progress',
-    review: 'Review',
-    done: 'Done',
-  };
-  return map[status] || status;
-};
 
 const loadTask = async (id: string) => {
   showLoading();
