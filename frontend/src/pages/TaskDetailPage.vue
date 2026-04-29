@@ -197,6 +197,28 @@
             <q-item-section>{{ t('tasks.detail.action.stopTimer') }}</q-item-section>
           </q-item>
 
+          <q-item
+            clickable
+            v-ripple
+            class="q-pa-md"
+            v-if="task && !userPreferencesStore.isPinned(task.id)"
+            @click="pinCurrentTask"
+          >
+            <q-item-section avatar><q-icon name="push_pin" /></q-item-section>
+            <q-item-section>{{ t('tasks.detail.action.pin') }}</q-item-section>
+          </q-item>
+
+          <q-item
+            clickable
+            v-ripple
+            class="q-pa-md"
+            v-if="task && userPreferencesStore.isPinned(task.id)"
+            @click="unpinCurrentTask"
+          >
+            <q-item-section avatar><q-icon name="push_pin" color="primary" /></q-item-section>
+            <q-item-section>{{ t('tasks.detail.action.unpin') }}</q-item-section>
+          </q-item>
+
           <q-item clickable v-ripple class="text-primary q-pa-md" @click="goToEdit" v-if="task">
             <q-item-section avatar><q-icon name="edit" color="primary" /></q-item-section>
             <q-item-section>{{ t('tasks.detail.action.edit') }}</q-item-section>
@@ -226,6 +248,7 @@ import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import { normalizeId } from 'src/utils/normalizeId';
 import type { TaskDetailDto, TaskStatus } from 'src/types/task';
+import type { PinnedTask } from 'src/types/user';
 
 const route = useRoute();
 const router = useRouter();
@@ -286,6 +309,32 @@ const removeTask = async () => {
 
 const goBack = () => router.push('/tasks');
 const goToEdit = () => router.push(`/tasks/${currentTaskId()}/edit`);
+
+const pinCurrentTask = async () => {
+  if (!task.value) return;
+  try {
+    const pinned: PinnedTask = {
+      id: task.value.id,
+      record_number: Number(task.value.record_number),
+      title: task.value.title,
+      project_name: task.value.project_name,
+    };
+    await userPreferencesStore.pinTask(pinned);
+    notify(t('tasks.detail.action.pinSuccess'), 'positive');
+  } catch (err) {
+    notifyError(t('common.error'), err);
+  }
+};
+
+const unpinCurrentTask = async () => {
+  if (!task.value) return;
+  try {
+    await userPreferencesStore.unpinTask(task.value.id);
+    notify(t('tasks.detail.action.unpinSuccess'), 'positive');
+  } catch (err) {
+    notifyError(t('common.error'), err);
+  }
+};
 
 watch(
   () => route.params.id,

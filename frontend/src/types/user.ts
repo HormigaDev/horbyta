@@ -27,6 +27,13 @@ export interface NotificationPreferences {
   work: WorkNotifications;
 }
 
+export interface PinnedTask {
+  id: string;
+  record_number: number;
+  title: string;
+  project_name: string | null;
+}
+
 export interface UserPreferences {
   theme: UserThemePreference;
   timezone: string;
@@ -34,6 +41,14 @@ export interface UserPreferences {
   language: UserLanguagePreference;
   max_daily_hours: number;
   notifications: NotificationPreferences;
+  pinned_tasks: PinnedTask[];
+}
+
+export interface PinTaskDto {
+  id: string;
+  record_number: number;
+  title: string;
+  project_name: string | null;
 }
 
 export interface User {

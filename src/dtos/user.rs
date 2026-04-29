@@ -46,6 +46,13 @@ fn validate_non_empty_preferences_patch(payload: &UpdateUserPreferencesDto) -> R
     Ok(())
 }
 
+fn validate_pin_task_payload(payload: &PinTaskDto) -> Result<(), ValidationError> {
+    if payload.title.trim().is_empty() {
+        return Err(ValidationError::new("title_required"));
+    }
+    Ok(())
+}
+
 fn validate_non_empty_notifications_patch(payload: &UpdateNotificationPreferencesDto) -> Result<(), ValidationError> {
     if payload.group_notifications.is_none()
         && payload.client_portal.is_none()
@@ -182,6 +189,14 @@ impl NotificationPreferences {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PinnedTask {
+    pub id: String,
+    pub record_number: i64,
+    pub title: String,
+    pub project_name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default, deny_unknown_fields)]
 pub struct UserPreferences {
     pub theme: UserThemePreference,
@@ -191,6 +206,8 @@ pub struct UserPreferences {
     #[serde(default = "default_max_daily_hours")]
     pub max_daily_hours: i32,
     pub notifications: NotificationPreferences,
+    #[serde(default)]
+    pub pinned_tasks: Vec<PinnedTask>,
 }
 
 fn default_max_daily_hours() -> i32 {
@@ -206,6 +223,7 @@ impl Default for UserPreferences {
             language: UserLanguagePreference::Es,
             max_daily_hours: default_max_daily_hours(),
             notifications: NotificationPreferences::default(),
+            pinned_tasks: Vec::new(),
         }
     }
 }
@@ -236,6 +254,16 @@ impl UserPreferences {
         if let Some(max_daily_hours) = patch.max_daily_hours {
             self.max_daily_hours = max_daily_hours;
         }
+    }
+
+    pub fn pin_task(&mut self, task: PinnedTask) {
+        self.pinned_tasks.retain(|t| t.id != task.id);
+        self.pinned_tasks.insert(0, task);
+        self.pinned_tasks.truncate(10);
+    }
+
+    pub fn unpin_task(&mut self, task_id: &str) {
+        self.pinned_tasks.retain(|t| t.id != task_id);
     }
 
     pub fn apply_notifications_patch(&mut self, patch: UpdateNotificationPreferencesDto) {
@@ -370,6 +398,18 @@ pub struct UpdateNotificationPreferencesDto {
 
     #[validate(nested)]
     pub work: Option<WorkNotificationsPatch>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+#[validate(schema(function = "validate_pin_task_payload"))]
+pub struct PinTaskDto {
+    #[validate(length(min = 1, max = 255))]
+    pub id: String,
+    pub record_number: i64,
+    #[validate(length(min = 1, max = 255))]
+    pub title: String,
+    pub project_name: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

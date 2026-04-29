@@ -40,7 +40,7 @@
             <q-tooltip>{{ t('layout.header.notifications') }}</q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="push_pin" class="q-mr-md">
+          <q-btn flat round dense icon="push_pin" class="q-mr-md" @click="pinnedTasksOpen = true">
             <q-tooltip>{{ t('layout.header.pinnedTasks') }}</q-tooltip>
           </q-btn>
 
@@ -267,7 +267,7 @@
               </q-item-section>
             </q-item>
 
-            <q-item clickable v-ripple>
+            <q-item clickable v-ripple @click="pinnedTasksOpen = true; drawer = false">
               <q-item-section avatar><q-icon name="push_pin" /></q-item-section>
               <q-item-section>{{ t('layout.header.pinnedTasks') }}</q-item-section>
             </q-item>
@@ -463,6 +463,8 @@
       </q-card>
     </q-dialog>
 
+    <PinnedTasksDialog v-if="pinnedTasksOpen" v-model="pinnedTasksOpen" />
+
     <q-dialog v-model="notificationDetailsOpen">
       <q-card class="notification-detail-card">
         <q-card-section class="row items-start justify-between">
@@ -510,7 +512,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QNotifyCreateOptions } from 'quasar';
@@ -525,12 +527,17 @@ import type { AppNotification } from 'src/types/ui';
 import { apiFetch } from 'src/boot/fetch';
 import TaskSearchComponent from 'src/components/TaskSearchComponent.vue';
 
+const PinnedTasksDialog = defineAsyncComponent(
+  () => import('src/components/PinnedTasksDialog.vue'),
+);
+
 const router = useRouter();
 const authStore = useAuthStore();
 const $q = useQuasar();
 const { t } = useI18n();
 
 const drawer = ref(true);
+const pinnedTasksOpen = ref(false);
 const notificationsCenterOpen = ref(false);
 const notificationDetailsOpen = ref(false);
 const selectedNotification = ref<AppNotification | null>(null);

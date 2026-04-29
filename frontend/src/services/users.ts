@@ -1,5 +1,6 @@
 import { apiFetch } from 'src/boot/fetch';
 import type {
+  PinTaskDto,
   UpdateNotificationPreferencesDto,
   UpdateUserPasswordDto,
   UpdateUserPreferencesDto,
@@ -35,5 +36,16 @@ export const UsersService = {
     apiFetch('/users/me/preferences/notifications', {
       method: 'PATCH',
       body: JSON.stringify(data),
+    }),
+
+  pinTask: (data: PinTaskDto): Promise<UserSettings> =>
+    apiFetch('/users/me/preferences/pinned-tasks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  unpinTask: (taskId: string): Promise<UserSettings> =>
+    apiFetch(`/users/me/preferences/pinned-tasks/${taskId}`, {
+      method: 'DELETE',
     }),
 };
