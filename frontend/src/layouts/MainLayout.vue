@@ -24,7 +24,7 @@
         <q-space v-if="!$q.screen.lt.md" />
 
         <div v-if="!$q.screen.lt.md" class="row items-center">
-          <task-search-component />
+          <task-search-component class="q-mr-md" />
 
           <q-btn
             flat
