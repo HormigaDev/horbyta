@@ -39,6 +39,20 @@ export const messages = {
   'auth.login.passwordLabel': 'Contraseña',
   'auth.login.submit': 'Iniciar sesión',
   'auth.login.unexpectedError': 'Ocurrió un error inesperado. Intente nuevamente más tarde',
+  'auth.login.noAccount': '¿No tienes una cuenta?',
+  'auth.login.registerLink': 'Regístrate',
+
+  'auth.register.brand': 'Horbyta',
+  'auth.register.subtitle': 'Crear cuenta',
+  'auth.register.nameLabel': 'Nombre de usuario',
+  'auth.register.emailLabel': 'Correo electrónico',
+  'auth.register.passwordLabel': 'Contraseña',
+  'auth.register.submit': 'Crear cuenta',
+  'auth.register.alreadyHaveAccount': '¿Ya tienes una cuenta?',
+  'auth.register.loginLink': 'Inicia sesión',
+  'auth.register.unexpectedError': 'Ocurrió un error inesperado. Intente nuevamente más tarde',
+  'auth.register.conflictError': 'El correo o nombre de usuario ya está en uso',
+  'auth.register.lockedError': 'El registro de nuevos usuarios está deshabilitado',
 
   'client.auth.login.brand': 'Portal de Cliente',
   'client.auth.login.subtitle': 'Ingresa con correo y contraseña o con token mágico.',
@@ -1340,6 +1354,15 @@ export const messages = {
   'rules.login.email.required': 'El correo electrónico es obligatorio',
   'rules.login.email.invalid_email': 'Correo electrónico inválido',
   'rules.login.password.required': 'La contraseña es obligatoria',
+
+  'rules.register.name.required': 'El nombre de usuario es obligatorio',
+  'rules.register.name.min': 'El nombre debe tener al menos 2 caracteres',
+  'rules.register.name.max': 'El nombre no puede superar los 100 caracteres',
+  'rules.register.email.required': 'El correo electrónico es obligatorio',
+  'rules.register.email.invalid_email': 'Correo electrónico inválido',
+  'rules.register.password.required': 'La contraseña es obligatoria',
+  'rules.register.password.weak':
+    'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo',
   'rules.project.name.required': 'El nombre es obligatorio',
   'rules.project.name.limit': 'El nombre del proyecto debe tener entre 1 y 255 caracteres',
   'rules.project.description.limit':

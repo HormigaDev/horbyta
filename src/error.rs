@@ -42,6 +42,9 @@ pub enum AppError {
     Unprocessable(String),
 
     #[error("{0}")]
+    Locked(String),
+
+    #[error("{0}")]
     NotImplemented(String),
 
     #[error("{0}")]
@@ -89,6 +92,7 @@ impl IntoResponse for AppError {
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, "not_found", msg),
             AppError::Conflict(msg) => (StatusCode::CONFLICT, "conflict", msg),
             AppError::Unprocessable(msg) => (StatusCode::UNPROCESSABLE_ENTITY, "unprocessable_entity", msg),
+            AppError::Locked(msg) => (StatusCode::from_u16(423).unwrap(), "locked", msg),
             AppError::NotImplemented(msg) => (StatusCode::NOT_IMPLEMENTED, "not_implemented", msg),
             AppError::Unavailable(msg) => (StatusCode::SERVICE_UNAVAILABLE, "service_unavailable", msg),
             AppError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_server_error", msg),

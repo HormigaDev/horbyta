@@ -3,6 +3,16 @@ use serde::Deserialize;
 use validator::Validate;
 
 #[derive(Deserialize, Clone, Validate)]
+pub struct RegisterPayload {
+    #[validate(length(min = 2, max = 100, message = "name must be between 2 and 100 characters"))]
+    pub name: String,
+    #[validate(email(message = "email must be a valid email address"))]
+    pub email: String,
+    #[validate(custom(function = "validate_password"))]
+    pub password: String,
+}
+
+#[derive(Deserialize, Clone, Validate)]
 pub struct LoginPayload {
     #[validate(email(message = "email must be a valid email address"))]
     pub email: String,

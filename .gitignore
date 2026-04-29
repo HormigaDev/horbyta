@@ -7,12 +7,6 @@
 target/
 Cargo.lock   # remove this line if publishing a library (keep for binaries)
  
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-ai_service/generated/   # compiled proto stubs — generated at build time
- 
 # Docker
 *.log
  

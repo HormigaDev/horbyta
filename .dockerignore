@@ -14,8 +14,8 @@ frontend/.quasar
 
 # Python artifacts
 
-**/**pycache**
-**/_.pyc
+**/**pycache\*\*
+\*\*/_.pyc
 \*\*/_.pyo \*_/_.pyd
 
 # Env and local files
@@ -29,7 +29,3 @@ frontend/.quasar
 **/.DS_Store
 **/coverage
 \*\*/.pytest_cache
-
-# Do not include previous compose-generated outputs
-
-horbyta_ai/generated

@@ -60,6 +60,13 @@
               </div>
             </q-form>
           </q-card-section>
+
+          <q-card-section v-if="registrationOpen" class="text-center q-pt-none">
+            <span class="text-caption text-grey-7">{{ t('auth.login.noAccount') }} </span>
+            <router-link to="/register" class="q-ml-sm text-caption text-primary">
+              {{ t('auth.login.registerLink') }}
+            </router-link>
+          </q-card-section>
         </q-card>
       </q-page>
     </q-page-container>
@@ -67,12 +74,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/auth';
 import { apiFetch } from 'src/boot/fetch';
 import { useLoginRules } from 'src/composables/rules/login.rules';
+import { RouterLink } from 'vue-router';
 
 const { t } = useI18n();
 const router = useRouter();
@@ -84,6 +92,16 @@ const email = ref('');
 const password = ref('');
 const isLoading = ref(false);
 const errorMessage = ref('');
+const registrationOpen = ref(false);
+
+onMounted(async () => {
+  try {
+    const status = await apiFetch('/auth/registration-status');
+    registrationOpen.value = status.open === true;
+  } catch {
+    registrationOpen.value = false;
+  }
+});
 
 async function handleLogin() {
   isLoading.value = true;

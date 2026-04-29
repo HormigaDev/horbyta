@@ -18,6 +18,8 @@ pub struct Config {
     pub s3_secret_key: Option<String>,
 
     pub upload_dir: Option<String>,
+
+    pub allow_registration: bool,
 }
 
 impl Config {
@@ -62,6 +64,10 @@ impl Config {
                 Ok(var) => Some(var),
                 Err(_) => None,
             },
+            allow_registration: env::var("ALLOW_REGISTRATION")
+                .unwrap_or_else(|_| "false".to_string())
+                .to_lowercase()
+                == "true",
         }
     }
 }

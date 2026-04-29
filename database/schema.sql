@@ -692,6 +692,53 @@ after update on invoices
 for each row
 execute function fn_release_voided_time_entries();
 
+create or replace function fn_seed_defaults()
+returns trigger
+language plpgsql
+as $$
+begin
+    -- Categories
+    insert into categories (user_id, name)
+    values
+        (new.id, 'General'),
+        (new.id, 'Work'),
+        (new.id, 'Personal'),
+        (new.id, 'Admin')
+    on conflict (user_id, name) do nothing;
+
+    -- Activities
+    insert into activities (user_id, name)
+    values
+        (new.id, 'Development'),
+        (new.id, 'Design'),
+        (new.id, 'Meeting'),
+        (new.id, 'Research'),
+        (new.id, 'Testing'),
+        (new.id, 'Deployment'),
+        (new.id, 'Maintenance'),
+        (new.id, 'Communication'),
+        (new.id, 'Planning')
+    on conflict (user_id, lower(name)) do nothing;
+
+    -- Tags
+    insert into tags (user_id, name, color)
+    values
+        (new.id, 'urgent', '#ef4444'),
+        (new.id, 'bug', '#fb7185'),
+        (new.id, 'feature', '#e7bd30'),
+        (new.id, 'improvement', '#10b981'),
+        (new.id, 'blocked', '#6B7280')
+    on conflict (user_id, name) do nothing;
+
+    return new;
+end;
+$$;
+
+create trigger trg_seed_defaults
+after insert on users
+for each row
+execute function fn_seed_defaults();
+
 -- ---------------------------------
 -- VIEWS
 -- ---------------------------------

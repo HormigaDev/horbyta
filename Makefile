@@ -29,10 +29,6 @@ prod: setup
 down:
 	$(COMPOSE_DEV) down
 
-## logs: Seguir logs en tiempo real
-logs:
-	$(COMPOSE_DEV) logs -f
-
 ## logs-rust: Solo logs de Rust
 logs:
 	$(COMPOSE_DEV) logs -f horbyta_app

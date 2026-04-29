@@ -7,14 +7,15 @@ use axum::{
 };
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use chrono::Utc;
-use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, QueryFilter};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set};
 use serde_json::json;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use uuid::Uuid;
 
 use crate::{
     constants::{CLIENT_AUTH_COOKIE_NAME, USER_AUTH_COOKIE_NAME},
     dtos::{
-        auth::{ClientMagicTokenLogin, LoginPayload},
+        auth::{ClientMagicTokenLogin, LoginPayload, RegisterPayload},
         client::ClientAuthDto,
         user::UserDto,
     },
@@ -22,7 +23,7 @@ use crate::{
     error::AppError,
     middlewares::{auth::Claims, client_auth::ClientClaims, validator::ValidatedJson},
     state::AppState,
-    utils::crypto::{compare_password, generate_jwt, verify_magic_link_token},
+    utils::crypto::{compare_password, generate_jwt, hash_password, verify_magic_link_token},
 };
 
 async fn login(
@@ -100,10 +101,75 @@ async fn login_magic_token(
     Err(AppError::Unauthorized("invalid credentials".to_string()))
 }
 
-async fn register() -> Result<impl IntoResponse, AppError> {
-    Err::<axum::Json<()>, AppError>(AppError::NotImplemented(
-        "registration is disabled, personal-use system".to_string(),
-    ))
+async fn registration_status(State(state): State<AppState>) -> impl IntoResponse {
+    Json(json!({ "open": state.config.allow_registration }))
+}
+
+async fn register(
+    State(state): State<AppState>,
+    ValidatedJson(payload): ValidatedJson<RegisterPayload>,
+) -> Result<impl IntoResponse, AppError> {
+    if !state.config.allow_registration {
+        return Err(AppError::Locked("registration is disabled".to_string()));
+    }
+
+    let normalized_email = payload.email.trim().to_lowercase();
+    let normalized_name = payload.name.trim().to_string();
+
+    let email_taken = users::Entity::find()
+        .filter(users::Column::Email.eq(&normalized_email))
+        .one(state.db.as_ref())
+        .await?;
+
+    if email_taken.is_some() {
+        return Err(AppError::Conflict("email is already registered".to_string()));
+    }
+
+    let name_taken = users::Entity::find()
+        .filter(users::Column::Name.eq(&normalized_name))
+        .one(state.db.as_ref())
+        .await?;
+
+    if name_taken.is_some() {
+        return Err(AppError::Conflict("username is already taken".to_string()));
+    }
+
+    let password_hash = hash_password(payload.password)?;
+    let now = Utc::now().fixed_offset();
+
+    let new_user = users::ActiveModel {
+        id: Set(Uuid::new_v4()),
+        name: Set(normalized_name),
+        email: Set(normalized_email),
+        password_hash: Set(password_hash),
+        preferences: Set(None),
+        created_at: Set(now),
+        updated_at: Set(now),
+    };
+
+    let user_model = new_user.insert(state.db.as_ref()).await?;
+
+    let claims = Claims {
+        sub: user_model.id,
+        exp: get_expiration_time(state.config.time_to_exp)?,
+    };
+
+    let token = generate_jwt(&claims, &state.config.jwt_secret)?;
+    let cookie = build_auth_cookie(USER_AUTH_COOKIE_NAME, token, state.config.is_production);
+
+    let mut headers = HeaderMap::new();
+    headers.insert(SET_COOKIE, cookie.to_string().parse()?);
+
+    let body = Json(json!({
+        "message": "Registro exitoso",
+        "user": {
+            "id": user_model.id,
+            "name": user_model.name,
+            "email": user_model.email,
+        }
+    }));
+
+    Ok((StatusCode::CREATED, headers, body))
 }
 
 async fn logout(_user: UserDto) -> Result<impl IntoResponse, AppError> {
@@ -203,6 +269,7 @@ pub fn auth_controller() -> Router<AppState> {
         .route("/login", post(login))
         .route("/login-client", post(login_client))
         .route("/login-client-token", post(login_magic_token))
+        .route("/registration-status", get(registration_status))
         .route("/register", post(register))
         .route("/logout", post(logout))
         .route("/logout-client", post(logout_client))
