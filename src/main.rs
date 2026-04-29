@@ -19,7 +19,10 @@ use axum::{
     routing::get,
 };
 use sea_orm::Database;
-use tower_http::cors::CorsLayer;
+use tower_http::{
+    cors::CorsLayer,
+    services::{ServeDir, ServeFile},
+};
 use tracing_subscriber;
 
 use crate::{env::Config, state::AppState};
@@ -74,7 +77,13 @@ async fn main() {
         .route("/ws/", get(controllers::websocket::websocket_handler))
         .with_state(state.clone());
 
-    let app = Router::new().nest("/api/v1", api_routes).merge(ws_routes);
+    let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "frontend/dist/pwa".to_string());
+    let serve_dir = ServeDir::new(&static_dir).not_found_service(ServeFile::new(format!("{}/index.html", static_dir)));
+
+    let app = Router::new()
+        .nest("/api/v1", api_routes)
+        .merge(ws_routes)
+        .fallback_service(serve_dir);
     let app = if config.is_production {
         app
     } else {

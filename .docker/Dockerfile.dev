@@ -17,9 +17,6 @@ RUN mkdir -p src && echo 'fn main() {}' > src/main.rs
 RUN cargo build --locked
 RUN rm -rf src
 
-COPY build.rs ./
-COPY proto ./proto
-
 COPY scripts/init-rust.sh ./init.sh
 RUN chmod +x ./init.sh
 

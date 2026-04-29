@@ -1,3 +1,13 @@
+FROM node:22-slim AS frontend-builder
+
+WORKDIR /app/frontend
+
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm install --ignore-scripts
+
+COPY frontend ./
+RUN node_modules/.bin/quasar build -m pwa
+
 FROM rust:1.88-slim-bookworm as deps
 
 WORKDIR /app
@@ -16,9 +26,7 @@ RUN rm -rf src
 
 FROM deps AS builder
 
-COPY build.rs ./
 COPY src ./src
-COPY proto ./proto
 COPY scripts ./scripts
 
 RUN touch src/main.rs
@@ -42,6 +50,7 @@ RUN groupadd -r appgroup \
 WORKDIR /app
 
 COPY --from=builder /app/target/release/${BINARY_NAME} ./server
+COPY --from=frontend-builder /app/frontend/dist/pwa ./frontend/dist/pwa
 COPY scripts/init-rust.sh ./init.sh
 
 RUN chmod +x ./init.sh \
