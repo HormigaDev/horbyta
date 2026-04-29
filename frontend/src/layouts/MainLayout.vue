@@ -179,86 +179,82 @@
 
       <!-- Mobile -->
       <template v-else>
-        <div class="column justify-between full-height">
-          <div>
-            <q-item class="q-py-md bg-transparent">
+        <q-scroll-area class="fit">
+          <q-item class="q-py-md bg-transparent">
+            <q-item-section avatar>
+              <q-avatar size="48px" color="primary" text-color="white">
+                <q-icon name="person" />
+              </q-avatar>
+            </q-item-section>
+            <q-item-section>
+              <q-item-label class="text-weight-bold">{{
+                authStore.user?.name || t('layout.profile.defaultUser')
+              }}</q-item-label>
+              <q-item-label caption>{{
+                authStore.user?.email || t('layout.profile.defaultEmail')
+              }}</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-separator />
+
+          <q-list>
+            <q-item clickable v-ripple to="/">
               <q-item-section avatar>
-                <q-avatar size="48px" color="primary" text-color="white">
-                  <q-icon name="person" />
-                </q-avatar>
+                <q-icon name="bar_chart" />
               </q-item-section>
-              <q-item-section>
-                <q-item-label class="text-weight-bold">{{
-                  authStore.user?.name || t('layout.profile.defaultUser')
-                }}</q-item-label>
-                <q-item-label caption>{{
-                  authStore.user?.email || t('layout.profile.defaultEmail')
-                }}</q-item-label>
-              </q-item-section>
+              <q-item-section>{{ t('layout.drawer.dashboard') }}</q-item-section>
             </q-item>
 
-            <q-separator />
+            <q-item clickable v-ripple to="/board">
+              <q-item-section avatar>
+                <q-icon name="view_kanban" />
+              </q-item-section>
+              <q-item-section>{{ $t('layout.drawer.board') }}</q-item-section>
+            </q-item>
 
-            <q-list>
-              <q-item clickable v-ripple to="/">
-                <q-item-section avatar>
-                  <q-icon name="bar_chart" />
-                </q-item-section>
-                <q-item-section>{{ t('layout.drawer.dashboard') }}</q-item-section>
-              </q-item>
+            <q-item clickable v-ripple to="/projects">
+              <q-item-section avatar>
+                <q-icon name="folder" />
+              </q-item-section>
+              <q-item-section>{{ t('layout.drawer.projects') }}</q-item-section>
+            </q-item>
 
-              <q-item clickable v-ripple to="/board">
-                <q-item-section avatar>
-                  <q-icon name="view_kanban" />
-                </q-item-section>
-                <q-item-section>{{ $t('layout.drawer.board') }}</q-item-section>
-              </q-item>
+            <q-item clickable v-ripple to="/milestones">
+              <q-item-section avatar>
+                <q-icon name="flag" />
+              </q-item-section>
+              <q-item-section>{{ t('layout.drawer.milestones') }}</q-item-section>
+            </q-item>
 
-              <q-item clickable v-ripple to="/projects">
-                <q-item-section avatar>
-                  <q-icon name="folder" />
-                </q-item-section>
-                <q-item-section>{{ t('layout.drawer.projects') }}</q-item-section>
-              </q-item>
+            <q-item clickable v-ripple to="/tasks">
+              <q-item-section avatar>
+                <q-icon name="checklist" />
+              </q-item-section>
+              <q-item-section>{{ t('layout.drawer.tasks') }}</q-item-section>
+            </q-item>
 
-              <q-item clickable v-ripple to="/milestones">
-                <q-item-section avatar>
-                  <q-icon name="flag" />
-                </q-item-section>
-                <q-item-section>{{ t('layout.drawer.milestones') }}</q-item-section>
-              </q-item>
+            <q-item clickable v-ripple to="/change-requests">
+              <q-item-section avatar>
+                <q-icon name="compare_arrows" />
+              </q-item-section>
+              <q-item-section>{{ t('layout.drawer.changeRequests') }}</q-item-section>
+            </q-item>
 
-              <q-item clickable v-ripple to="/tasks">
-                <q-item-section avatar>
-                  <q-icon name="checklist" />
-                </q-item-section>
-                <q-item-section>{{ t('layout.drawer.tasks') }}</q-item-section>
-              </q-item>
+            <q-item clickable v-ripple to="/invoices">
+              <q-item-section avatar>
+                <q-icon name="receipt_long" />
+              </q-item-section>
+              <q-item-section>{{ t('layout.drawer.invoices') }}</q-item-section>
+            </q-item>
 
-              <q-item clickable v-ripple to="/change-requests">
-                <q-item-section avatar>
-                  <q-icon name="compare_arrows" />
-                </q-item-section>
-                <q-item-section>{{ t('layout.drawer.changeRequests') }}</q-item-section>
-              </q-item>
+            <q-item clickable v-ripple to="/clients">
+              <q-item-section avatar>
+                <q-icon name="people" />
+              </q-item-section>
+              <q-item-section>{{ $t('layout.drawer.clients') }}</q-item-section>
+            </q-item>
 
-              <q-item clickable v-ripple to="/invoices">
-                <q-item-section avatar>
-                  <q-icon name="receipt_long" />
-                </q-item-section>
-                <q-item-section>{{ t('layout.drawer.invoices') }}</q-item-section>
-              </q-item>
-
-              <q-item clickable v-ripple to="/clients">
-                <q-item-section avatar>
-                  <q-icon name="people" />
-                </q-item-section>
-                <q-item-section>{{ $t('layout.drawer.clients') }}</q-item-section>
-              </q-item>
-            </q-list>
-          </div>
-
-          <q-list class="q-pb-md">
             <q-separator class="q-my-md" />
 
             <q-item clickable v-ripple>
@@ -310,15 +306,12 @@
               <q-item-section avatar><q-icon name="logout" color="negative" /></q-item-section>
               <q-item-section>{{ t('layout.header.logout') }}</q-item-section>
             </q-item>
-
-            <div
-              class="text-caption text-center q-mt-md"
-              style="font-size: 10px; color: var(--text-muted)"
-            >
-              {{ appVersion }}
-            </div>
           </q-list>
-        </div>
+
+          <div class="text-caption text-center q-my-md" style="font-size: 10px; color: var(--text-muted)">
+            {{ appVersion }}
+          </div>
+        </q-scroll-area>
       </template>
     </q-drawer>
 
