@@ -126,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { defineAsyncComponent, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { DashboardService } from 'src/services/dashboard';
@@ -136,11 +136,22 @@ import type { DashboardDto } from 'src/types/dashboard';
 import DashboardKpiCard from 'src/components/dashboard/DashboardKpiCard.vue';
 import CurrencyAmountValue from 'src/components/dashboard/CurrencyAmountValue.vue';
 import { useChartPalette } from 'src/composables/dashboard/useChartPalette';
-import MonthlyRevenueCard from 'src/components/dashboard/MonthlyRevenueCard.vue';
-import TimeByActivityCard from 'src/components/dashboard/TimeByActivityCard.vue';
-import BillableRatioCard from 'src/components/dashboard/BillableRatioCard.vue';
-import TaskBottlenecksCard from 'src/components/dashboard/TaskBottlenecksCard.vue';
-import AccountsReceivableCard from 'src/components/dashboard/AccountsReceivableCard.vue';
+
+const MonthlyRevenueCard = defineAsyncComponent(
+  () => import('src/components/dashboard/MonthlyRevenueCard.vue'),
+);
+const TimeByActivityCard = defineAsyncComponent(
+  () => import('src/components/dashboard/TimeByActivityCard.vue'),
+);
+const BillableRatioCard = defineAsyncComponent(
+  () => import('src/components/dashboard/BillableRatioCard.vue'),
+);
+const TaskBottlenecksCard = defineAsyncComponent(
+  () => import('src/components/dashboard/TaskBottlenecksCard.vue'),
+);
+const AccountsReceivableCard = defineAsyncComponent(
+  () => import('src/components/dashboard/AccountsReceivableCard.vue'),
+);
 
 const { t } = useI18n();
 const { notifyError } = useUI();
