@@ -81,8 +81,10 @@ import { useAuthStore } from 'src/stores/auth';
 import { apiFetch } from 'src/boot/fetch';
 import { useLoginRules } from 'src/composables/rules/login.rules';
 import { RouterLink } from 'vue-router';
+import { UsersService } from 'src/services/users';
+import { applyQuasarLang, saveLocale } from 'src/utils/locale';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const authStore = useAuthStore();
 
@@ -123,6 +125,19 @@ async function handleLogin() {
     });
 
     authStore.setAuthenticated(true, response.user);
+
+    try {
+      const settings = await UsersService.getMe();
+      const lang = settings.preferences?.language;
+      if (lang) {
+        locale.value = lang;
+        applyQuasarLang(lang);
+        saveLocale(lang);
+      }
+    } catch {
+      // non-blocking: si falla, se usa el locale guardado en localStorage
+    }
+
     await router.push({ name: 'dashboard' });
   } catch {
     errorMessage.value = t('auth.login.unexpectedError');

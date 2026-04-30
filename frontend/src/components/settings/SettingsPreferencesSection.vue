@@ -94,6 +94,7 @@ import { UsersService } from 'src/services/users';
 import { useUI } from 'src/composables/useUI';
 import { COMMON_TIMEZONES } from 'src/data/constants';
 import { useThemeStore } from 'src/stores/theme';
+import { applyQuasarLang, saveLocale } from 'src/utils/locale';
 import type {
   UserDateFormatPreference,
   UpdateUserPreferencesDto,
@@ -118,7 +119,7 @@ const emit = defineEmits<{
   updated: [value: UserSettings];
 }>();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { notify, notifyError } = useUI();
 const themeStore = useThemeStore();
 
@@ -222,15 +223,26 @@ async function savePreferences() {
       isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
     themeStore.setThemePreference(isDarkMode);
+    locale.value = form.language || 'es';
 
     emit('updated', updated);
     notify(t('settings.preferences.success'), 'positive');
+    notify(t('settings.preferences.reloadNotice'), 'info');
   } catch (error: unknown) {
     notifyError(t('settings.preferences.error'), error);
   } finally {
     isSaving.value = false;
   }
 }
+
+watch(
+  () => form.language,
+  (newLang) => {
+    locale.value = newLang;
+    applyQuasarLang(newLang);
+    saveLocale(newLang);
+  },
+);
 
 watch(
   () => props.preferences,

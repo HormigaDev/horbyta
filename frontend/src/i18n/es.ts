@@ -895,6 +895,7 @@ export const messages = {
   'settings.preferences.invalidMaxDailyHours':
     'El máximo diario debe ser un número entero entre 1 y 14.',
   'settings.preferences.success': 'Preferencias actualizadas',
+  'settings.preferences.reloadNotice': 'Algunas traducciones se aplicarán completamente al recargar la página',
   'settings.preferences.error': 'No se pudieron guardar las preferencias',
   'settings.preferences.theme.system': 'Sistema',
   'settings.preferences.theme.light': 'Claro',
@@ -1593,4 +1594,4 @@ export const messages = {
   'columns.payment.amount': 'Monto',
   'columns.payment.payment_date': 'Fecha de pago',
   'columns.payment.created_at': 'Creado',
-};
+} as const;
