@@ -448,7 +448,7 @@ impl InvoiceService {
 
         if !allowed.contains(&next) {
             return Err(AppError::BadRequest(format!(
-                "Transición de estado inválida: '{current}' → '{next}'"
+                "Invalid status transition: '{current}' -> '{next}'"
             )));
         }
 
@@ -491,7 +491,7 @@ impl InvoiceService {
 
         if rows.len() != ids.len() {
             return Err(AppError::BadRequest(
-                "Una o más entradas de tiempo son inválidas, no son facturables, o ya están vinculadas a otra factura"
+                "One or more time entries are invalid, non-billable, or already linked to another invoice"
                     .to_string(),
             ));
         }
@@ -503,7 +503,7 @@ impl InvoiceService {
         let unique_tasks: std::collections::HashSet<Uuid> = entries.iter().map(|e| e.task_id).collect();
         if unique_tasks.len() > MAX_TASKS_PER_INVOICE {
             return Err(AppError::BadRequest(format!(
-                "Una factura puede contener como máximo {MAX_TASKS_PER_INVOICE} tareas"
+                "An invoice can contain at most {MAX_TASKS_PER_INVOICE} tasks"
             )));
         }
         Ok(())

@@ -27,18 +27,18 @@ impl Config {
         let environment = env::var("APP_ENV").unwrap_or_else(|_| "development".to_string());
 
         Self {
-            database_url: env::var("DATABASE_URL").expect("CRÍTICO: Falta DATABASE_URL en las variables de entorno."),
-            jwt_secret: env::var("JWT_SECRET").expect("CRÍTICO: Falta JWT_SECRET en las variables de entorno"),
+            database_url: env::var("DATABASE_URL").expect("CRITICAL: DATABASE_URL is missing from environment variables."),
+            jwt_secret: env::var("JWT_SECRET").expect("CRITICAL: JWT_SECRET is missing from environment variables."),
             jwt_secret_client: env::var("JWT_SECRET_CLIENT")
-                .expect("CRÍTICO: Falta JWT_SECRET_CLIENT en las variables de entorno"),
+                .expect("CRITICAL: JWT_SECRET_CLIENT is missing from environment variables."),
             app_uri: env::var("APP_URI").unwrap_or_else(|_| "127.0.0.1:8890".to_string()),
             frontend_origin: env::var("FRONTEND_ORIGIN").unwrap_or_else(|_| "http://localhost:9000".to_string()),
             is_production: environment == "production",
             time_to_exp: duration_str::parse(
                 env::var("TIME_TO_EXP_SESSION")
-                    .expect("CRÍTICO: Falta TIME_TO_EXP_SESSION en las variables de entorno"),
+                    .expect("CRITICAL: TIME_TO_EXP_SESSION is missing from environment variables."),
             )
-            .expect("CRÍTICO: Formato incorrecto para la variable de entorno TIME_TO_EXP_SESSION"),
+            .expect("CRITICAL: Invalid format for environment variable TIME_TO_EXP_SESSION."),
 
             s3_bucket: match env::var("S3_BUCKET") {
                 Ok(var) => Some(var),

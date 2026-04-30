@@ -104,9 +104,9 @@ impl NotificationService {
         client_id: Uuid,
         change_request: &ClientChangeRequestDetailDto,
     ) -> Result<(), AppError> {
-        let title = "Nueva solicitud de cambio".to_string();
+        let title = "New change request".to_string();
         let body = Some(format!(
-            "El cliente creó la solicitud #{}: {}",
+            "The client created request #{}: {}",
             change_request.record_number, change_request.title
         ));
 
@@ -133,9 +133,9 @@ impl NotificationService {
         client_id: Uuid,
         change_request: &ClientChangeRequestDetailDto,
     ) -> Result<(), AppError> {
-        let title = "Solicitud de cambio actualizada".to_string();
+        let title = "Change request updated".to_string();
         let body = Some(format!(
-            "El cliente actualizó la solicitud #{}: {}",
+            "The client updated request #{}: {}",
             change_request.record_number, change_request.title
         ));
 
@@ -169,14 +169,14 @@ impl NotificationService {
             "client_portal.change_request_declined"
         };
         let title = if approved {
-            "Solicitud de cambio aprobada"
+            "Change request approved"
         } else {
-            "Solicitud de cambio rechazada"
+            "Change request declined"
         }
         .to_string();
         let body = Some(format!(
-            "El cliente {} la solicitud #{}: {}",
-            if approved { "aprobó" } else { "rechazó" },
+            "The client {} request #{}: {}",
+            if approved { "approved" } else { "declined" },
             change_request.record_number,
             change_request.title
         ));
@@ -204,9 +204,9 @@ impl NotificationService {
         client_id: Uuid,
         change_request: &ClientChangeRequestDetailDto,
     ) -> Result<(), AppError> {
-        let title = "Solicitud de cambio cancelada".to_string();
+        let title = "Change request cancelled".to_string();
         let body = Some(format!(
-            "El cliente canceló la solicitud #{}: {}",
+            "The client cancelled request #{}: {}",
             change_request.record_number, change_request.title
         ));
 
@@ -233,9 +233,9 @@ impl NotificationService {
             CreateNotificationInput {
                 user_id: invoice.user_id,
                 preference_key: "billing.invoice_opened",
-                title: format!("Factura #{} emitida", invoice.record_number),
+                title: format!("Invoice #{} issued", invoice.record_number),
                 body: Some(format!(
-                    "La factura de {} {} quedó marcada como abierta.",
+                    "The invoice for {} {} was marked as open.",
                     invoice.amount, invoice.currency_type
                 )),
                 payload: Some(json!({
@@ -262,9 +262,9 @@ impl NotificationService {
             CreateNotificationInput {
                 user_id: invoice.user_id,
                 preference_key: "billing.invoice_paid",
-                title: format!("Factura #{} pagada", invoice.record_number),
+                title: format!("Invoice #{} paid", invoice.record_number),
                 body: Some(format!(
-                    "La factura de {} {} quedó marcada como pagada.",
+                    "The invoice for {} {} was marked as paid.",
                     invoice.amount, invoice.currency_type
                 )),
                 payload: Some(json!({
@@ -295,9 +295,9 @@ impl NotificationService {
             CreateNotificationInput {
                 user_id,
                 preference_key: "billing.payment_received",
-                title: format!("Pago #{} registrado", payment.record_number),
+                title: format!("Payment #{} recorded", payment.record_number),
                 body: Some(format!(
-                    "Se registró un pago de {} {}.",
+                    "A payment of {} {} was recorded.",
                     payment.amount, payment.currency_type
                 )),
                 payload: Some(json!({
@@ -332,9 +332,9 @@ impl NotificationService {
             CreateNotificationInput {
                 user_id,
                 preference_key: "work.milestone_released",
-                title: "Milestone liberado".to_string(),
+                title: "Milestone released".to_string(),
                 body: Some(format!(
-                    "El milestone \"{}\" quedó marcado como liberado.",
+                    "Milestone \"{}\" was marked as released.",
                     milestone.name
                 )),
                 payload: Some(json!({

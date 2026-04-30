@@ -54,7 +54,7 @@ async fn update_password(
     UserService::update_password(state.db.as_ref(), user.id, payload).await?;
 
     Ok(Json(json!({
-        "message": "Contraseña actualizada correctamente"
+        "message": "Password updated successfully"
     })))
 }
 

@@ -17,7 +17,7 @@ macro_rules! string_enum {
                 use std::str::FromStr;
                 let s = String::deserialize(d)?;
                 Self::from_str(&s).map_err(|_| serde::de::Error::custom(
-                    format!("Valor inválido para {}: {}", stringify!($name), s)
+                    format!("Invalid value for {}: {}", stringify!($name), s)
                 ))
             }
         }
@@ -27,7 +27,7 @@ macro_rules! string_enum {
             fn try_from(s: String) -> Result<Self, Self::Error> {
                 use std::str::FromStr;
                 Self::from_str(&s).map_err(|_| {
-                    format!("Valor inválido para {}: '{}'", stringify!($name), s)
+                    format!("Invalid value for {}: '{}'", stringify!($name), s)
                 })
             }
         }
@@ -46,7 +46,7 @@ macro_rules! string_enum {
                 use std::str::FromStr;
                 let raw: String = res.try_get_by(idx).map_err(sea_orm::TryGetError::DbErr)?;
                 Self::from_str(&raw).map_err(|_| sea_orm::TryGetError::DbErr(
-                    sea_orm::DbErr::Type(format!("DB: valor inválido para {}: {}", stringify!($name), raw))
+                    sea_orm::DbErr::Type(format!("DB: invalid value for {}: {}", stringify!($name), raw))
                 ))
             }
         }

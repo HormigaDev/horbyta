@@ -58,7 +58,7 @@ async fn login(
     headers.insert(SET_COOKIE, cookie.to_string().parse()?);
 
     let body = Json(json!({
-        "message": "Autenticación exitosa",
+        "message": "Authentication successful",
         "user": {
             "id": user_model.id,
             "name": user_model.name,
@@ -268,7 +268,7 @@ async fn handle_client_login_success(
     headers.insert(SET_COOKIE, cookie.to_string().parse()?);
 
     let body = Json(json!({
-        "message": "Autenticación exitosa",
+        "message": "Authentication successful",
         "client": {
             "id": client_model.id,
             "client_id": client_model.client_id,

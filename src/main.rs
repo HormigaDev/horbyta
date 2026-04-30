@@ -35,11 +35,11 @@ async fn main() {
 
     let db = Database::connect(&config.database_url)
         .await
-        .expect("CRÍTICO: No se pudo conectar a Postgres. Verifica DATABASE_URL.");
+        .expect("CRITICAL: Could not connect to Postgres. Verify DATABASE_URL.");
 
     let state = AppState::new(db, config.clone())
         .await
-        .expect("CRÍTICO: No se pudo inicializar AppState.");
+        .expect("CRITICAL: Failed to initialize AppState.");
 
     let api_routes = Router::new()
         .route(
@@ -88,7 +88,7 @@ async fn main() {
         app
     } else {
         let allowed_origin =
-            HeaderValue::from_str(&config.frontend_origin).expect("CRÍTICO: FRONTEND_ORIGIN inválido.");
+            HeaderValue::from_str(&config.frontend_origin).expect("CRITICAL: Invalid FRONTEND_ORIGIN.");
 
         app.layer(
             CorsLayer::new()
@@ -108,6 +108,6 @@ async fn main() {
 
     let listener = tokio::net::TcpListener::bind(&config.app_uri).await.unwrap();
 
-    println!("Servidor corriendo en http(s)://{}", config.app_uri);
+    println!("Server running at http(s)://{}", config.app_uri);
     axum::serve(listener, app).await.unwrap();
 }

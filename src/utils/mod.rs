@@ -20,7 +20,7 @@ pub fn validate_password(password: &str) -> Result<(), ValidationError> {
         Ok(())
     } else {
         Err(ValidationError::new(
-            "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo.",
+            "Password must be at least 8 characters long and contain an uppercase letter, a lowercase letter, a number, and a symbol.",
         ))
     }
 }

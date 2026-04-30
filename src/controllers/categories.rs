@@ -69,7 +69,7 @@ async fn delete_category(
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     CategoryService::delete(state.db.as_ref(), user.id, id).await?;
-    Ok(Json(json!({ "message": "Categoría eliminada" })))
+    Ok(Json(json!({ "message": "Category deleted" })))
 }
 
 pub fn categories_controller() -> Router<AppState> {
