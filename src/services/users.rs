@@ -4,8 +4,8 @@ use uuid::Uuid;
 use crate::utils::crypto::{compare_password, hash_password};
 use crate::{
     dtos::user::{
-        PinTaskDto, PinnedTask, UpdateNotificationPreferencesDto, UpdateUserPasswordDto, UpdateUserPreferencesDto,
-        UpdateUserProfileDto, UserPreferences, UserSettingsDto,
+        UpdateNotificationPreferencesDto, UpdateUserPasswordDto, UpdateUserPreferencesDto, UpdateUserProfileDto,
+        UserPreferences, UserSettingsDto,
     },
     entities::{
         prelude::Users,
@@ -127,44 +127,4 @@ impl UserService {
         Ok(updated.into())
     }
 
-    pub async fn pin_task(
-        db: &impl ConnectionTrait,
-        user_id: Uuid,
-        dto: PinTaskDto,
-    ) -> Result<UserSettingsDto, AppError> {
-        let user = Self::get_user_model(db, user_id).await?;
-        let mut preferences = UserPreferences::from_json_value(user.preferences.as_ref());
-
-        preferences.pin_task(PinnedTask {
-            id: dto.id,
-            record_number: dto.record_number,
-            title: dto.title,
-            project_name: dto.project_name,
-        });
-
-        let preferences_json = Self::serialize_preferences(&preferences)?;
-        let mut active_user: users::ActiveModel = user.into();
-        active_user.preferences = Set(Some(preferences_json));
-
-        let updated = active_user.update(db).await?;
-        Ok(updated.into())
-    }
-
-    pub async fn unpin_task(
-        db: &impl ConnectionTrait,
-        user_id: Uuid,
-        task_id: &str,
-    ) -> Result<UserSettingsDto, AppError> {
-        let user = Self::get_user_model(db, user_id).await?;
-        let mut preferences = UserPreferences::from_json_value(user.preferences.as_ref());
-
-        preferences.unpin_task(task_id);
-
-        let preferences_json = Self::serialize_preferences(&preferences)?;
-        let mut active_user: users::ActiveModel = user.into();
-        active_user.preferences = Set(Some(preferences_json));
-
-        let updated = active_user.update(db).await?;
-        Ok(updated.into())
-    }
 }

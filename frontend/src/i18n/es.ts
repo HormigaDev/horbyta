@@ -205,6 +205,7 @@ export const messages = {
   'projects.list.deleteSuccess': 'Proyectos eliminados correctamente',
   'projects.list.deleteError': 'Error al eliminar los proyectos',
   'projects.list.filter.id': 'ID',
+  'projects.list.filter.record_number': 'Número',
   'projects.list.filter.name': 'Nombre',
   'projects.list.filter.status': 'Estado',
   'projects.list.filter.category': 'Categoría',
@@ -910,7 +911,8 @@ export const messages = {
   'settings.preferences.invalidMaxDailyHours':
     'El máximo diario debe ser un número entero entre 1 y 14.',
   'settings.preferences.success': 'Preferencias actualizadas',
-  'settings.preferences.reloadNotice': 'Algunas traducciones se aplicarán completamente al recargar la página',
+  'settings.preferences.reloadNotice':
+    'Algunas traducciones se aplicarán completamente al recargar la página',
   'settings.preferences.error': 'No se pudieron guardar las preferencias',
   'settings.preferences.theme.system': 'Sistema',
   'settings.preferences.theme.light': 'Claro',
@@ -1354,7 +1356,9 @@ export const messages = {
   'datatable.selectedRows.multiple': '{count} registros seleccionados',
   'datatable.tooltip.refresh': 'Actualizar datos',
   'datatable.tooltip.filters': 'Filtros',
+  'datatable.tooltip.columns': 'Configurar columnas',
   'datatable.columnsButton': 'Columnas',
+  'datatable.columnsDialogTitle': 'Columnas visibles',
   'datatable.actions.view': 'Ver',
   'datatable.actions.edit': 'Editar',
   'datatable.actions.delete': 'Eliminar',

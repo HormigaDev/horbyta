@@ -512,7 +512,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
+import { computed, defineAsyncComponent, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QNotifyCreateOptions } from 'quasar';
@@ -591,10 +591,6 @@ websocket.on('notification', (data: unknown) => {
   }
 
   $q.notify(notifyOptions);
-});
-
-onMounted(() => {
-  notificationsStore.init();
 });
 
 async function logout() {

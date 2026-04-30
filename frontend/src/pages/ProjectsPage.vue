@@ -99,6 +99,7 @@ const {
 
 const projectFilterSchema: FilterSchema = {
   id: { type: 'Text', label: t('projects.list.filter.id') },
+  record_number: { type: 'Number', label: t('projects.list.filter.record_number') },
   name: { type: 'Text', label: t('projects.list.filter.name') },
   category_id: { type: 'Text', label: t('projects.list.filter.category'), useSelectByTerm: true },
   client_id: { type: 'Text', label: t('projects.list.filter.client'), useSelectByTerm: true },

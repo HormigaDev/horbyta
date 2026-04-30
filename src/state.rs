@@ -11,8 +11,8 @@ use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use crate::{
-    dtos::client::ClientAuthDto, dtos::user::UserDto, env::Config, error::AppError,
-    services::notifications::NotificationEvent,
+    dtos::client::ClientAuthDto, dtos::ui_state::UiStateEntryDto, dtos::user::UserDto, env::Config,
+    error::AppError, services::notifications::NotificationEvent,
 };
 
 #[derive(Clone)]
@@ -20,6 +20,7 @@ pub struct AppState {
     pub db: Arc<DatabaseConnection>,
     pub user_cache: Cache<Uuid, UserDto>,
     pub client_cache: Cache<Uuid, ClientAuthDto>,
+    pub ui_state_cache: Cache<String, Vec<UiStateEntryDto>>,
     pub config: Config,
     pub storage: Arc<dyn ObjectStore>,
     pub notification_bus: broadcast::Sender<NotificationEvent>,
@@ -43,6 +44,12 @@ impl AppState {
         let client_cache = Cache::builder()
             .time_to_idle(Duration::from_secs(15 * 60))
             .max_capacity(10_000)
+            .build();
+        // UI state cache — keyed by `<user_id>:<scope>`; entries are invalidated on
+        // every write/delete so a generous TTL is fine.
+        let ui_state_cache = Cache::builder()
+            .time_to_live(Duration::from_secs(5 * 60))
+            .max_capacity(20_000)
             .build();
 
         let storage: Arc<dyn ObjectStore> = if let Some(bucket) = &config.s3_bucket {
@@ -112,6 +119,7 @@ impl AppState {
             db,
             user_cache,
             client_cache,
+            ui_state_cache,
             config,
             storage,
             notification_bus,

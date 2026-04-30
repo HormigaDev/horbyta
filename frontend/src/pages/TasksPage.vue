@@ -72,6 +72,7 @@ type TaskTableRequest = {
     descending: boolean;
   };
   filters?: QueryPayload['filters'];
+  force?: boolean;
 };
 
 const router = useRouter();
@@ -193,6 +194,7 @@ const onRequest = (props: TaskTableRequest) => {
   }
 
   const shouldLoadInitialView =
+    !props.force &&
     !hasLoadedInitialView.value &&
     query.page === 1 &&
     query.limit === 10 &&
@@ -204,6 +206,10 @@ const onRequest = (props: TaskTableRequest) => {
     hasLoadedInitialView.value = true;
     void loadView();
     return;
+  }
+
+  if (props.force) {
+    hasLoadedInitialView.value = true;
   }
 
   void fetchTasks();

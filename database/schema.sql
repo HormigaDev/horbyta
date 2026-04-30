@@ -374,6 +374,15 @@ create table conversation_history (
     constraint uq_conversation_user_session unique (user_id, session_id)
 );
 
+create table user_ui_state (
+    user_id uuid not null references users (id) on delete cascade,
+    scope varchar(40) not null,
+    key varchar(120) not null,
+    value jsonb not null,
+    updated_at timestamptz not null default now(),
+    primary key (user_id, scope, key)
+);
+
 create table notifications (
     id uuid primary key default uuidv7(),
     user_id uuid not null references users (id) on delete cascade,
@@ -472,6 +481,7 @@ create index idx_conversation_history_user on conversation_history(user_id);
 create index idx_conversation_history_user_title on conversation_history(user_id, title);
 create index idx_conversation_history_user_created_at on conversation_history(user_id, created_at desc);
 create index idx_conversation_history_user_updated_at on conversation_history(user_id, updated_at desc);
+create index idx_user_ui_state_user_scope on user_ui_state(user_id, scope);
 create index idx_notifications_user_read_created on notifications(user_id, is_read, created_at desc);
 create index idx_notifications_user_preference on notifications(user_id, preference_key);
 create index idx_notifications_user_entity on notifications(user_id, entity_type, entity_id);

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { TasksService } from 'src/services/tasks';
 import { TimeEntriesService } from 'src/services/timeEntries';
 import { useUI } from 'src/composables/useUI';
+import { useUiStateStore } from 'src/stores/uiState';
 import type { Filter, QueryPayload } from 'src/types/query';
 import type { KanbanTask } from 'src/types/kanban';
 import type { TaskStatus } from 'src/types/task';
@@ -15,7 +16,8 @@ export interface KanbanBoardFilters {
 }
 
 const BOARD_TASK_LIMIT = 100;
-const BOARD_FILTERS_STORAGE_KEY = 'kanban_board_filters';
+const BOARD_SCOPE = 'board' as const;
+const BOARD_FILTERS_KEY = 'filters';
 
 const toRfc3339Boundary = (date: string, boundary: 'start' | 'end') => {
   const time = boundary === 'start' ? '00:00:00.000Z' : '23:59:59.999Z';
@@ -32,38 +34,50 @@ const isKanbanBoardFilters = (value: unknown): value is KanbanBoardFilters => {
   return values.every((item) => item === null || typeof item === 'string');
 };
 
-const loadSavedFilters = (): KanbanBoardFilters => {
-  const fallback: KanbanBoardFilters = {
-    projectId: null,
-    createdFrom: null,
-    createdTo: null,
-  };
-
-  try {
-    const raw = localStorage.getItem(BOARD_FILTERS_STORAGE_KEY);
-    if (!raw) return fallback;
-
-    const parsed: unknown = JSON.parse(raw);
-    return isKanbanBoardFilters(parsed) ? parsed : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const saveFilters = (filters: KanbanBoardFilters) => {
-  localStorage.setItem(BOARD_FILTERS_STORAGE_KEY, JSON.stringify(filters));
-};
+const defaultFilters = (): KanbanBoardFilters => ({
+  projectId: null,
+  createdFrom: null,
+  createdTo: null,
+});
 
 export function useKanbanBoard() {
   const $q = useQuasar();
   const { t } = useI18n();
   const { notify, notifyError } = useUI();
+  const uiState = useUiStateStore();
 
-  const filters = reactive<KanbanBoardFilters>(loadSavedFilters());
+  const filters = reactive<KanbanBoardFilters>(defaultFilters());
   const tasks = ref<KanbanTask[]>([]);
   const total = ref(0);
   const isLoading = ref(false);
   const isMovingTask = ref(false);
+  const hasLoadedSavedFilters = ref(false);
+
+  const applyFilters = (next: KanbanBoardFilters) => {
+    filters.projectId = next.projectId;
+    filters.createdFrom = next.createdFrom;
+    filters.createdTo = next.createdTo;
+  };
+
+  const loadSavedUiFilters = async () => {
+    if (hasLoadedSavedFilters.value) return;
+
+    try {
+      await uiState.ensureScopeLoaded(BOARD_SCOPE);
+      const saved = uiState.getValue<KanbanBoardFilters | null>(
+        BOARD_SCOPE,
+        BOARD_FILTERS_KEY,
+        null,
+      );
+      if (saved && isKanbanBoardFilters(saved)) {
+        applyFilters(saved);
+      }
+    } catch (error) {
+      console.error('Error loading remote board filters:', error);
+    }
+
+    hasLoadedSavedFilters.value = true;
+  };
 
   const buildTaskFilters = (): Filter[] => {
     const result: Filter[] = [];
@@ -94,7 +108,8 @@ export function useKanbanBoard() {
   const loadTasks = async () => {
     isLoading.value = true;
     try {
-      saveFilters(filters);
+      await loadSavedUiFilters();
+      void uiState.setValue<KanbanBoardFilters>(BOARD_SCOPE, BOARD_FILTERS_KEY, { ...filters });
 
       const payload: QueryPayload = {
         page: 1,

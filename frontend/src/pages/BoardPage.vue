@@ -107,6 +107,7 @@ const {
 });
 
 const selectedProjectOption = ref<SelectByTermOption | null>(null);
+const resolvedProjectId = ref<string | null>(null);
 
 const displayedProjectOptions = computed(() => {
   const projectId = filters.projectId;
@@ -114,24 +115,29 @@ const displayedProjectOptions = computed(() => {
     return projectOptions.value;
   }
 
-  const fallbackOption =
-    selectedProjectOption.value?.value === projectId
-      ? selectedProjectOption.value
-      : { label: t('common.loading'), value: projectId };
+  if (selectedProjectOption.value?.value === projectId) {
+    return [selectedProjectOption.value, ...projectOptions.value];
+  }
 
-  return [fallbackOption, ...projectOptions.value];
+  if (resolvedProjectId.value === projectId) {
+    return projectOptions.value;
+  }
+
+  return [{ label: t('common.loading'), value: projectId }, ...projectOptions.value];
 });
 
 const syncSelectedProjectOption = async () => {
   const projectId = filters.projectId;
   if (!projectId) {
     selectedProjectOption.value = null;
+    resolvedProjectId.value = null;
     return;
   }
 
   const loadedOption = projectOptions.value.find((option) => option.value === projectId);
   if (loadedOption) {
     selectedProjectOption.value = loadedOption;
+    resolvedProjectId.value = projectId;
     return;
   }
 
@@ -142,10 +148,12 @@ const syncSelectedProjectOption = async () => {
         label: project.name,
         value: project.id,
       };
+      resolvedProjectId.value = projectId;
     }
   } catch {
     if (filters.projectId === projectId) {
       selectedProjectOption.value = null;
+      resolvedProjectId.value = projectId;
     }
   }
 };
@@ -166,7 +174,10 @@ onMounted(() => {
 
 watch(
   () => filters.projectId,
-  () => {
+  (newProjectId) => {
+    if (resolvedProjectId.value !== newProjectId) {
+      resolvedProjectId.value = null;
+    }
     void syncSelectedProjectOption();
   },
 );

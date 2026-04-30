@@ -94,7 +94,7 @@ import { UsersService } from 'src/services/users';
 import { useUI } from 'src/composables/useUI';
 import { COMMON_TIMEZONES } from 'src/data/constants';
 import { useThemeStore } from 'src/stores/theme';
-import { applyQuasarLang, saveLocale } from 'src/utils/locale';
+import { setAppLocale } from 'src/boot/i18n';
 import type {
   UserDateFormatPreference,
   UpdateUserPreferencesDto,
@@ -239,8 +239,7 @@ watch(
   () => form.language,
   (newLang) => {
     locale.value = newLang;
-    applyQuasarLang(newLang);
-    saveLocale(newLang);
+    setAppLocale(newLang);
   },
 );
 

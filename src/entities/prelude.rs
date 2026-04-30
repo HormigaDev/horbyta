@@ -18,4 +18,5 @@ pub use super::tags::Entity as Tags;
 pub use super::task_tags::Entity as TaskTags;
 pub use super::tasks::Entity as Tasks;
 pub use super::time_entries::Entity as TimeEntries;
+pub use super::user_ui_state::Entity as UserUiState;
 pub use super::users::Entity as Users;

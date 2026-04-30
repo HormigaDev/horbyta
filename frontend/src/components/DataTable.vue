@@ -70,37 +70,16 @@
               <q-badge v-if="filters.length > 0" color="red" floating>{{ filters.length }}</q-badge>
             </q-btn>
 
-            <q-select
-              v-model="visibleColumns"
-              multiple
-              outlined
+            <q-btn
+              flat
+              round
               dense
-              options-dense
-              :display-value="$q.screen.gt.xs ? t('datatable.columnsButton') : ''"
-              emit-value
-              map-options
-              :options="columns.filter((c) => c.label !== '')"
-              option-value="name"
-              style="min-width: 130px; max-width: 200px"
-              class="dt-column-select"
+              icon="view_column"
+              style="color: var(--text-muted)"
+              @click="openColumnDialog"
             >
-              <template v-slot:option="{ itemProps, opt, selected, toggleOption }">
-                <q-item
-                  v-bind="itemProps"
-                  @click="toggleOption(opt)"
-                  :style="
-                    selected ? 'color: var(--q-primary); background-color: var(--bg-hover)' : ''
-                  "
-                >
-                  <q-item-section>
-                    <q-item-label>{{ translateLabel(opt.label) }}</q-item-label>
-                  </q-item-section>
-                  <q-item-section side v-if="selected">
-                    <q-icon name="check" color="primary" />
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
+              <q-tooltip>{{ t('datatable.tooltip.columns') }}</q-tooltip>
+            </q-btn>
 
             <q-separator vertical class="q-mx-sm" v-if="selected.length > 0" />
 
@@ -289,6 +268,58 @@
         <slot :name="slotName" v-bind="slotProps || {}" />
       </template>
     </q-table>
+
+    <q-dialog v-model="showColumnDialog">
+      <q-card flat bordered class="dt-columns-dialog">
+        <q-card-section class="row items-center justify-between q-pb-sm">
+          <div class="text-h6">{{ t('datatable.columnsDialogTitle') }}</div>
+          <q-btn flat round dense icon="close" v-close-popup>
+            <q-tooltip>{{ t('common.close') }}</q-tooltip>
+          </q-btn>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section class="dt-columns-list">
+          <q-list separator>
+            <q-item
+              v-for="column in columnOptions"
+              :key="column.value"
+              tag="label"
+              clickable
+              v-ripple
+            >
+              <q-item-section avatar>
+                <q-checkbox
+                  v-model="draftVisibleColumns"
+                  :val="column.value"
+                  :disable="
+                    draftVisibleColumns.length === 1 &&
+                    draftVisibleColumns.includes(column.value)
+                  "
+                />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>{{ column.label }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat :label="t('common.cancel')" v-close-popup />
+          <q-btn
+            unelevated
+            color="primary"
+            icon="save"
+            :label="t('common.save')"
+            :loading="isSavingColumnPreferences"
+            :disable="draftVisibleColumns.length === 0"
+            @click="saveColumnPreferences"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-card>
 </template>
 
@@ -348,6 +379,7 @@ const emit = defineEmits<{
     requestProps: {
       pagination: { page: number; rowsPerPage: number; sortBy: string | null; descending: boolean };
       filters: Filter[];
+      force?: boolean;
     },
   ): void;
   (e: 'create'): void;
@@ -362,9 +394,21 @@ const emit = defineEmits<{
 const store = useDataTableStore();
 const selected = ref<T[]>([]);
 const visibleColumns = ref(props.columns.map((c) => c.name));
+const draftVisibleColumns = ref<string[]>([]);
+const showColumnDialog = ref(false);
+const isSavingColumnPreferences = ref(false);
 
 const showFilters = ref(false);
 const filters = ref<Partial<Filter>[]>([]);
+
+const columnOptions = computed(() =>
+  props.columns
+    .filter((column) => column.label !== '')
+    .map((column) => ({
+      label: translateLabel(column.label),
+      value: column.name,
+    })),
+);
 
 const filterColumnOptions = computed(() => {
   return Object.keys(props.filterSchema).map((key) => {
@@ -385,6 +429,26 @@ const filterColumnOptions = computed(() => {
 const translateLabel = (label: unknown): string => {
   const asString = String(label);
   return asString.includes('.') ? t(asString) : asString;
+};
+
+const openColumnDialog = () => {
+  draftVisibleColumns.value = [...visibleColumns.value];
+  showColumnDialog.value = true;
+};
+
+const saveColumnPreferences = async () => {
+  if (draftVisibleColumns.value.length === 0 || isSavingColumnPreferences.value) return;
+
+  isSavingColumnPreferences.value = true;
+
+  try {
+    const nextVisibleColumns = [...draftVisibleColumns.value];
+    visibleColumns.value = nextVisibleColumns;
+    await store.saveVisibleColumns(props.tableId, nextVisibleColumns);
+    showColumnDialog.value = false;
+  } finally {
+    isSavingColumnPreferences.value = false;
+  }
 };
 
 const isFilterFieldConfig = (value: unknown): value is LocalFilterFieldConfig => {
@@ -521,6 +585,7 @@ const applyFilters = () => {
       descending: pagination.value.descending,
     },
     filters: validFilters,
+    force: true,
   });
 };
 
@@ -539,8 +604,8 @@ const defaultPagination = {
 
 const pagination = ref({ ...defaultPagination });
 
-onMounted(() => {
-  const savedState = store.getTableState(props.tableId);
+onMounted(async () => {
+  const savedState = await store.getTableState(props.tableId);
 
   if (savedState.pagination) {
     pagination.value = {
@@ -582,6 +647,7 @@ watch(selected, (newSel) => {
 const onRequest = (requestProps: {
   pagination: { page: number; rowsPerPage: number; sortBy: string | null; descending: boolean };
   filters?: Filter[];
+  force?: boolean;
 }) => {
   const { page, rowsPerPage, sortBy, descending } = requestProps.pagination;
   const requestFilters = requestProps.filters ?? getValidFilters();
@@ -594,25 +660,25 @@ const onRequest = (requestProps: {
   pagination.value.sortBy = sortBy;
   pagination.value.descending = descending;
 
-  store.saveTableState(props.tableId, {
-    pagination: { page, rowsPerPage, sortBy, descending },
-    visibleColumns: visibleColumns.value,
-    filters: requestFilters,
-  });
+  void store.saveTableState(
+    props.tableId,
+    {
+      pagination: { page, rowsPerPage, sortBy, descending },
+      visibleColumns: visibleColumns.value,
+      filters: requestFilters,
+    },
+  );
 
   emit('request', {
     pagination: { page, rowsPerPage, sortBy, descending },
     filters: requestFilters,
+    ...(requestProps.force ? { force: true } : {}),
   });
 
   if (sortChanged) {
     emit('sort', { sortBy, descending });
   }
 };
-
-watch(visibleColumns, (cols) => {
-  store.saveTableState(props.tableId, { visibleColumns: cols });
-});
 
 const getRowValue = (row: object, key: string): unknown => {
   return (row as Record<string, unknown>)[key];
@@ -709,16 +775,6 @@ const onDelete = () => {
       border-top: 1px solid var(--border-color) !important;
     }
 
-    .dt-column-select {
-      .q-field__control {
-        border-color: var(--border-color);
-        background: var(--q-dark-page);
-        color: var(--text-color);
-        * {
-          color: inherit !important;
-        }
-      }
-    }
   }
 
   @media (max-width: 599px) {
@@ -726,6 +782,22 @@ const onDelete = () => {
       margin-top: 8px;
       justify-content: flex-start !important;
     }
+  }
+}
+
+.dt-columns-dialog {
+  width: min(420px, 92vw);
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+
+  .dt-columns-list {
+    max-height: min(420px, 65vh);
+    overflow: auto;
+  }
+
+  .q-item {
+    color: var(--text-color);
   }
 }
 </style>

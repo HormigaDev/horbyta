@@ -1,15 +1,16 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::State,
     response::IntoResponse,
-    routing::{delete, get, patch, post},
+    routing::{get, patch},
 };
 use serde_json::json;
 
 use crate::{
+    controllers::ui_state::ui_state_controller,
     dtos::user::{
-        PinTaskDto, UpdateNotificationPreferencesDto, UpdateUserPasswordDto, UpdateUserPreferencesDto,
-        UpdateUserProfileDto, UserDto,
+        UpdateNotificationPreferencesDto, UpdateUserPasswordDto, UpdateUserPreferencesDto, UpdateUserProfileDto,
+        UserDto,
     },
     error::AppError,
     middlewares::validator::ValidatedJson,
@@ -76,24 +77,6 @@ async fn update_notifications(
     Ok(Json(updated))
 }
 
-async fn pin_task(
-    State(state): State<AppState>,
-    user: UserDto,
-    ValidatedJson(payload): ValidatedJson<PinTaskDto>,
-) -> Result<impl IntoResponse, AppError> {
-    let updated = UserService::pin_task(state.db.as_ref(), user.id, payload).await?;
-    Ok(Json(updated))
-}
-
-async fn unpin_task(
-    State(state): State<AppState>,
-    user: UserDto,
-    Path(task_id): Path<String>,
-) -> Result<impl IntoResponse, AppError> {
-    let updated = UserService::unpin_task(state.db.as_ref(), user.id, &task_id).await?;
-    Ok(Json(updated))
-}
-
 pub fn users_controller() -> Router<AppState> {
     Router::new()
         .route("/me", get(get_me))
@@ -101,6 +84,5 @@ pub fn users_controller() -> Router<AppState> {
         .route("/me/password", patch(update_password))
         .route("/me/preferences", patch(update_preferences))
         .route("/me/preferences/notifications", patch(update_notifications))
-        .route("/me/preferences/pinned-tasks", post(pin_task))
-        .route("/me/preferences/pinned-tasks/{task_id}", delete(unpin_task))
+        .nest("/me/ui-state", ui_state_controller())
 }

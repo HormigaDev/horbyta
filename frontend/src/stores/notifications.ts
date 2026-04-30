@@ -28,19 +28,6 @@ export const useNotificationsStore = defineStore('notifications', {
     allNotifications: (state) => state.notifications,
   },
   actions: {
-    init() {
-      const stored = localStorage.getItem('app_notifications');
-      if (stored) {
-        try {
-          this.notifications = JSON.parse(stored) as AppNotification[];
-        } catch {
-          this.notifications = [];
-        }
-      }
-    },
-    save() {
-      localStorage.setItem('app_notifications', JSON.stringify(this.notifications));
-    },
     addNotification(notif: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) {
       const newNotif: AppNotification = {
         ...notif,
@@ -50,7 +37,6 @@ export const useNotificationsStore = defineStore('notifications', {
       };
 
       this.notifications.unshift(newNotif);
-      this.save();
       return newNotif;
     },
     addAsyncNotificationFromEvent(event: AsyncNotificationEvent) {
@@ -100,25 +86,21 @@ export const useNotificationsStore = defineStore('notifications', {
       backendId && (newNotification.backendId = backendId);
 
       this.notifications.unshift(newNotification);
-      this.save();
       return newNotification;
     },
     markAsRead(id: string) {
       const target = this.notifications.find((n) => n.id === id);
       if (target) {
         target.read = true;
-        this.save();
       }
     },
     markAllAsRead() {
       this.notifications.forEach((n) => {
         n.read = true;
       });
-      this.save();
     },
     clearAll() {
       this.notifications = [];
-      this.save();
     },
   },
 });

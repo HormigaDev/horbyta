@@ -20,4 +20,5 @@ pub mod tags;
 pub mod task_tags;
 pub mod tasks;
 pub mod time_entries;
+pub mod user_ui_state;
 pub mod users;

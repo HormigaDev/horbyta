@@ -82,7 +82,7 @@ import { apiFetch } from 'src/boot/fetch';
 import { useLoginRules } from 'src/composables/rules/login.rules';
 import { RouterLink } from 'vue-router';
 import { UsersService } from 'src/services/users';
-import { applyQuasarLang, saveLocale } from 'src/utils/locale';
+import { setAppLocale } from 'src/boot/i18n';
 
 const { t, locale } = useI18n();
 const router = useRouter();
@@ -131,11 +131,10 @@ async function handleLogin() {
       const lang = settings.preferences?.language;
       if (lang) {
         locale.value = lang;
-        applyQuasarLang(lang);
-        saveLocale(lang);
+        setAppLocale(lang);
       }
     } catch {
-      // non-blocking: si falla, se usa el locale guardado en localStorage
+      // non-blocking: si falla, se mantiene el locale por defecto.
     }
 
     await router.push({ name: 'dashboard' });

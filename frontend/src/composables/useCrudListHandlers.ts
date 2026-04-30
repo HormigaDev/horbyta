@@ -8,6 +8,7 @@ type TableRequestProps = {
     descending: boolean;
   };
   filters?: Filter[];
+  force?: boolean;
 };
 
 interface UseCrudListHandlersOptions {
@@ -32,7 +33,7 @@ export function useCrudListHandlers(options: UseCrudListHandlersOptions) {
       return;
     }
 
-    let shouldFetch = false;
+    let shouldFetch = requestProps.force === true;
 
     if (pagination.rowsPerPage && pagination.rowsPerPage !== options.query.limit) {
       options.query.limit = pagination.rowsPerPage;

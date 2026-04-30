@@ -15,6 +15,7 @@ pub mod query;
 pub mod tag;
 pub mod task;
 pub mod time_entries;
+pub mod ui_state;
 pub mod user;
 pub mod utils;
 pub mod websocket;
