@@ -20,7 +20,7 @@ use crate::{
         user::UserDto,
     },
     error::AppError,
-    middlewares::validator::ValidatedSearchQuery,
+    middlewares::{rate_limit::{UPLOADS_RATE_LIMIT, check_user_rate_limit}, validator::ValidatedSearchQuery},
     services::attachments::{AttachmentService, MAX_ATTACHMENT_FILE_BYTES},
     state::AppState,
 };
@@ -103,6 +103,8 @@ async fn upload_attachments_to_scope(
     task_id: Option<Uuid>,
     multipart: Multipart,
 ) -> Result<Json<Value>, AppError> {
+    check_user_rate_limit(&state.rate_limit_uploads, user_id, UPLOADS_RATE_LIMIT)?;
+
     let (files, total_upload_bytes) = parse_uploaded_files(multipart).await?;
     AttachmentService::guard_upload_capacity(state.db.as_ref(), user_id, project_id, task_id, total_upload_bytes)
         .await?;

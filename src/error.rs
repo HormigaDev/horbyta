@@ -50,6 +50,9 @@ pub enum AppError {
     #[error("{0}")]
     Unavailable(String),
 
+    #[error("too many requests")]
+    TooManyRequests,
+
     #[error("internal error")]
     InternalError,
 
@@ -95,7 +98,19 @@ impl IntoResponse for AppError {
             AppError::Locked(msg) => (StatusCode::from_u16(423).unwrap(), "locked", msg),
             AppError::NotImplemented(msg) => (StatusCode::NOT_IMPLEMENTED, "not_implemented", msg),
             AppError::Unavailable(msg) => (StatusCode::SERVICE_UNAVAILABLE, "service_unavailable", msg),
-            AppError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_server_error", msg),
+            AppError::TooManyRequests => (
+                StatusCode::TOO_MANY_REQUESTS,
+                "too_many_requests",
+                "too many requests, slow down".to_string(),
+            ),
+            AppError::Internal(msg) => {
+                tracing::error!("{:?}", msg);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal_server_error",
+                    "internal server error".to_string(),
+                )
+            }
         };
 
         (status, Json(json!({ "error": error_message, "type": type_str }))).into_response()

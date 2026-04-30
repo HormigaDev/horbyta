@@ -16,7 +16,10 @@ use crate::{
         user::UserDto,
     },
     error::AppError,
-    middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
+    middlewares::{
+        rate_limit::{MAGIC_TOKEN_RATE_LIMIT, check_user_rate_limit},
+        validator::{ValidatedJson, ValidatedSearchQuery},
+    },
     services::clients::ClientService,
     state::AppState,
 };
@@ -109,6 +112,7 @@ async fn activate_client_magic_token(
     user: UserDto,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
+    check_user_rate_limit(&state.rate_limit_magic_token, user.id, MAGIC_TOKEN_RATE_LIMIT)?;
     let result =
         ClientService::generate_client_magic_token(state.db.as_ref(), state.config.time_to_exp, user.id, id).await?;
     Ok(Json(result))

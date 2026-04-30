@@ -1060,6 +1060,7 @@ export const messages = {
   'error.badRequestDialog.subtitle': 'Corrige los siguientes puntos para continuar:',
   'error.badRequestDialog.accept': 'Entendido',
   'error.badRequestDialog.defaultMessage': 'Hay datos inválidos en la solicitud.',
+  'error.rateLimited': 'Demasiadas solicitudes. Espera un momento antes de volver a intentarlo.',
 
   'backendErrors.password must be at least 8 characters':
     'La contraseña debe tener al menos 8 caracteres.',

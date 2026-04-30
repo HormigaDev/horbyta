@@ -1,3 +1,6 @@
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use axum::{
     extract::{
         State,
@@ -6,10 +9,15 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
 };
+use dashmap::DashMap;
 use futures::StreamExt;
 use uuid::Uuid;
 
-use crate::{services::websocket::WebSocketService, state::AppState};
+use crate::{
+    middlewares::rate_limit::WS_MAX_CONNECTIONS,
+    services::websocket::WebSocketService,
+    state::AppState,
+};
 
 pub async fn websocket_handler(
     ws: WebSocketUpgrade,
@@ -19,13 +27,32 @@ pub async fn websocket_handler(
     let service = WebSocketService::new(state.clone());
     let (user_id, session_id) = service.authenticate_handshake(&headers)?;
 
+    // Increment connection count atomically; reject if limit exceeded
+    {
+        let entry = state.ws_connections.entry(user_id)
+            .or_insert_with(|| AtomicUsize::new(0));
+        let prev = entry.fetch_add(1, Ordering::Relaxed);
+        if prev >= WS_MAX_CONNECTIONS {
+            entry.fetch_sub(1, Ordering::Relaxed);
+            return Err(StatusCode::TOO_MANY_REQUESTS);
+        }
+    }
+
+    let ws_connections = state.ws_connections.clone();
+
     Ok(ws.on_upgrade(move |socket| {
         let service = WebSocketService::new(state);
-        handle_socket(socket, user_id, session_id, service)
+        handle_socket(socket, user_id, session_id, service, ws_connections)
     }))
 }
 
-async fn handle_socket(socket: WebSocket, user_id: Uuid, session_id: String, service: WebSocketService) {
+async fn handle_socket(
+    socket: WebSocket,
+    user_id: Uuid,
+    session_id: String,
+    service: WebSocketService,
+    ws_connections: Arc<DashMap<Uuid, AtomicUsize>>,
+) {
     let (mut sender, mut receiver) = socket.split();
 
     tokio::spawn(async move {
@@ -90,5 +117,10 @@ async fn handle_socket(socket: WebSocket, user_id: Uuid, session_id: String, ser
             session_id = %session_id,
             "WebSocket connection closed"
         );
+
+        // Decrement the connection counter on disconnect
+        if let Some(count) = ws_connections.get(&user_id) {
+            count.fetch_sub(1, Ordering::Relaxed);
+        }
     });
 }

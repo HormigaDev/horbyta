@@ -16,16 +16,19 @@ use crate::{
         user::UserDto,
         utils::AppResult,
     },
+    middlewares::rate_limit::{CHARTS_RATE_LIMIT, check_user_rate_limit},
     services::dashboard::DashboardService,
     state::AppState,
 };
 
 async fn get_dashboard(State(state): State<AppState>, user: UserDto) -> AppResult<impl IntoResponse> {
+    check_user_rate_limit(&state.rate_limit_charts, user.id, CHARTS_RATE_LIMIT)?;
     let overview = DashboardService::get_overview(state.db.as_ref(), user.id).await?;
     Ok(Json(overview))
 }
 
 async fn get_client_dashboard(State(state): State<AppState>, client: ClientAuthDto) -> AppResult<impl IntoResponse> {
+    check_user_rate_limit(&state.rate_limit_charts, client.client_id, CHARTS_RATE_LIMIT)?;
     let overview = DashboardService::get_client_overview(state.db.as_ref(), client.user_id, client.client_id).await?;
     Ok(Json(overview))
 }
@@ -35,6 +38,7 @@ async fn get_monthly_revenue(
     user: UserDto,
     Query(filters): Query<MonthlyRevenueFiltersDto>,
 ) -> AppResult<impl IntoResponse> {
+    check_user_rate_limit(&state.rate_limit_charts, user.id, CHARTS_RATE_LIMIT)?;
     let rows = DashboardService::query_monthly_revenue(state.db.as_ref(), user.id, &filters).await?;
     Ok(Json(rows))
 }
@@ -44,6 +48,7 @@ async fn get_accounts_receivable(
     user: UserDto,
     Query(filters): Query<AccountsReceivableFiltersDto>,
 ) -> AppResult<impl IntoResponse> {
+    check_user_rate_limit(&state.rate_limit_charts, user.id, CHARTS_RATE_LIMIT)?;
     let rows = DashboardService::query_accounts_receivable(state.db.as_ref(), user.id, &filters).await?;
     Ok(Json(rows))
 }
@@ -53,6 +58,7 @@ async fn get_time_by_activity(
     user: UserDto,
     Query(filters): Query<TimeByActivityFiltersDto>,
 ) -> AppResult<impl IntoResponse> {
+    check_user_rate_limit(&state.rate_limit_charts, user.id, CHARTS_RATE_LIMIT)?;
     let rows = DashboardService::query_time_by_activity(state.db.as_ref(), user.id, &filters).await?;
     Ok(Json(rows))
 }
@@ -62,6 +68,7 @@ async fn get_billable_ratio(
     user: UserDto,
     Query(filters): Query<BillableRatioFiltersDto>,
 ) -> AppResult<impl IntoResponse> {
+    check_user_rate_limit(&state.rate_limit_charts, user.id, CHARTS_RATE_LIMIT)?;
     let rows = DashboardService::query_billable_ratio(state.db.as_ref(), user.id, &filters).await?;
     Ok(Json(rows))
 }
@@ -71,6 +78,7 @@ async fn get_task_bottlenecks(
     user: UserDto,
     Query(filters): Query<TaskBottlenecksFiltersDto>,
 ) -> AppResult<impl IntoResponse> {
+    check_user_rate_limit(&state.rate_limit_charts, user.id, CHARTS_RATE_LIMIT)?;
     let rows = DashboardService::query_task_bottlenecks(state.db.as_ref(), user.id, &filters).await?;
     Ok(Json(rows))
 }
@@ -80,6 +88,7 @@ async fn get_client_project_status(
     client: ClientAuthDto,
     Query(filters): Query<ClientProjectStatusFiltersDto>,
 ) -> AppResult<impl IntoResponse> {
+    check_user_rate_limit(&state.rate_limit_charts, client.client_id, CHARTS_RATE_LIMIT)?;
     let rows =
         DashboardService::query_client_project_status(state.db.as_ref(), client.user_id, client.client_id, &filters)
             .await?;
@@ -91,6 +100,7 @@ async fn get_client_milestone_health(
     client: ClientAuthDto,
     Query(filters): Query<ClientMilestoneHealthFiltersDto>,
 ) -> AppResult<impl IntoResponse> {
+    check_user_rate_limit(&state.rate_limit_charts, client.client_id, CHARTS_RATE_LIMIT)?;
     let rows =
         DashboardService::query_client_milestone_health(state.db.as_ref(), client.user_id, client.client_id, &filters)
             .await?;
@@ -102,6 +112,7 @@ async fn get_client_change_request_status(
     client: ClientAuthDto,
     Query(filters): Query<ClientChangeRequestStatusFiltersDto>,
 ) -> AppResult<impl IntoResponse> {
+    check_user_rate_limit(&state.rate_limit_charts, client.client_id, CHARTS_RATE_LIMIT)?;
     let rows = DashboardService::query_client_change_request_status(
         state.db.as_ref(),
         client.user_id,
@@ -117,6 +128,7 @@ async fn get_client_project_portfolio(
     client: ClientAuthDto,
     Query(filters): Query<ClientProjectPortfolioFiltersDto>,
 ) -> AppResult<impl IntoResponse> {
+    check_user_rate_limit(&state.rate_limit_charts, client.client_id, CHARTS_RATE_LIMIT)?;
     let rows =
         DashboardService::query_client_project_portfolio(state.db.as_ref(), client.user_id, client.client_id, &filters)
             .await?;

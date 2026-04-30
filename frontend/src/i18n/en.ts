@@ -1011,6 +1011,7 @@ export const messages: Record<keyof typeof es, string> = {
   'error.badRequestDialog.subtitle': 'Fix the following points to continue:',
   'error.badRequestDialog.accept': 'Got it',
   'error.badRequestDialog.defaultMessage': 'There is invalid data in the request.',
+  'error.rateLimited': 'Too many requests. Please wait a moment before trying again.',
   'backendErrors.password must be at least 8 characters': 'Password must be at least 8 characters.',
   'backendErrors.password must include at least one lowercase letter':
     'Password must include at least one lowercase letter.',

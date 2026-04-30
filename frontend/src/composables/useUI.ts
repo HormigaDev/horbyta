@@ -235,6 +235,11 @@ export function useUI() {
   };
 
   const notifyError = (message: string, payload?: unknown, isAsync = false) => {
+    if (isApiHttpError(payload) && payload.status === 429) {
+      notify(t('error.rateLimited'), 'warning');
+      return;
+    }
+
     if (isApiHttpError(payload) && STRUCTURED_ERROR_STATUSES.has(payload.status)) {
       const technicalPayload = buildTechnicalPayload(payload);
       const summaryMessage = resolveErrorMessage(message, payload);

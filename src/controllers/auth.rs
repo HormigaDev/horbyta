@@ -21,15 +21,23 @@ use crate::{
     },
     entities::{client_auth, clients, users},
     error::AppError,
-    middlewares::{auth::Claims, client_auth::ClientClaims, validator::ValidatedJson},
+    middlewares::{
+        auth::Claims,
+        client_auth::ClientClaims,
+        rate_limit::{AUTH_RATE_LIMIT, check_ip_rate_limit},
+        validator::ValidatedJson,
+    },
     state::AppState,
     utils::crypto::{compare_password, generate_jwt, hash_password, verify_magic_link_token},
 };
 
 async fn login(
     State(state): State<AppState>,
+    headers: HeaderMap,
     ValidatedJson(payload): ValidatedJson<LoginPayload>,
 ) -> Result<impl IntoResponse, AppError> {
+    check_ip_rate_limit(&state.rate_limit_auth, &headers, AUTH_RATE_LIMIT)?;
+
     let user_model = users::Entity::find()
         .filter(users::Column::Email.eq(&payload.email))
         .one(state.db.as_ref())
@@ -63,8 +71,11 @@ async fn login(
 
 async fn login_client(
     State(state): State<AppState>,
+    headers: HeaderMap,
     ValidatedJson(payload): ValidatedJson<LoginPayload>,
 ) -> Result<impl IntoResponse, AppError> {
+    check_ip_rate_limit(&state.rate_limit_auth, &headers, AUTH_RATE_LIMIT)?;
+
     let client_model = client_auth::Entity::find()
         .filter(client_auth::Column::Email.eq(payload.email))
         .one(state.db.as_ref())
@@ -81,8 +92,11 @@ async fn login_client(
 
 async fn login_magic_token(
     State(state): State<AppState>,
+    headers: HeaderMap,
     ValidatedJson(payload): ValidatedJson<ClientMagicTokenLogin>,
 ) -> Result<impl IntoResponse, AppError> {
+    check_ip_rate_limit(&state.rate_limit_auth, &headers, AUTH_RATE_LIMIT)?;
+
     let hash = verify_magic_link_token(&payload.magic_token)?;
 
     let client_model = client_auth::Entity::find()
@@ -107,8 +121,11 @@ async fn registration_status(State(state): State<AppState>) -> impl IntoResponse
 
 async fn register(
     State(state): State<AppState>,
+    headers: HeaderMap,
     ValidatedJson(payload): ValidatedJson<RegisterPayload>,
 ) -> Result<impl IntoResponse, AppError> {
+    check_ip_rate_limit(&state.rate_limit_auth, &headers, AUTH_RATE_LIMIT)?;
+
     if !state.config.allow_registration {
         return Err(AppError::Locked("registration is disabled".to_string()));
     }
