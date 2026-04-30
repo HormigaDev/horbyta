@@ -98,3 +98,52 @@ impl FromRequestParts<AppState> for ClientAuthDto {
         Ok(client_dto)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{constants::USER_AUTH_COOKIE_NAME, env::Config, state::AppState};
+    use axum::body::Body;
+    use axum::extract::FromRequestParts;
+    use axum::http::Request;
+    use sea_orm::{DatabaseBackend, MockDatabase};
+    use std::time::Duration;
+
+    fn test_config() -> Config {
+        Config {
+            database_url: "mock://db".to_string(),
+            jwt_secret: "user-secret".to_string(),
+            jwt_secret_client: "client-secret".to_string(),
+            app_uri: "127.0.0.1:0".to_string(),
+            frontend_origin: "http://localhost:9000".to_string(),
+            is_production: false,
+            time_to_exp: Duration::from_secs(3600),
+            s3_bucket: None,
+            s3_endpoint: None,
+            s3_region: None,
+            s3_access_key: None,
+            s3_secret_key: None,
+            upload_dir: Some("/tmp/horbyta-test-storage".to_string()),
+            allow_registration: true,
+        }
+    }
+
+    async fn test_state() -> AppState {
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        AppState::new(db, test_config()).await.expect("state should build")
+    }
+
+    #[tokio::test]
+    async fn freelancer_cookie_cannot_authenticate_client_endpoint() {
+        let state = test_state().await;
+        let request = Request::builder()
+            .header("cookie", format!("{USER_AUTH_COOKIE_NAME}=user-token"))
+            .body(Body::empty())
+            .expect("valid request");
+        let (mut parts, _) = request.into_parts();
+
+        let result = ClientAuthDto::from_request_parts(&mut parts, &state).await;
+
+        assert!(matches!(result, Err((StatusCode::UNAUTHORIZED, _))));
+    }
+}

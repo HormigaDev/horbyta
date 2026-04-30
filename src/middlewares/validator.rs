@@ -203,6 +203,8 @@ where
 
 pub struct ValidatedSearchQuery<T>(pub T);
 
+pub type ValidatedQueryPayload<T> = ValidatedSearchQuery<T>;
+
 impl<S, T> FromRequestParts<S> for ValidatedSearchQuery<T>
 where
     S: Send + Sync,
@@ -223,5 +225,121 @@ where
             .map_err(|errors| AppError::BadRequest(first_validation_error_message(&errors)))?;
 
         Ok(ValidatedSearchQuery(value))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::Request;
+    use serde::Deserialize;
+
+    #[derive(Debug, Deserialize, Validate)]
+    struct JsonTestDto {
+        #[validate(length(min = 1, message = "Name: Must, Be.Valid;"))]
+        name: String,
+    }
+
+    #[derive(Debug, Deserialize, Validate)]
+    struct ChildDto {
+        #[validate(length(min = 1))]
+        name: String,
+    }
+
+    #[derive(Debug, Deserialize, Validate)]
+    struct ParentDto {
+        #[validate(nested)]
+        child: ChildDto,
+    }
+
+    #[derive(Debug, Deserialize, Validate)]
+    struct QueryTestDto {
+        #[validate(range(min = 1))]
+        page: u64,
+    }
+
+    fn request_with_body(body: &'static str) -> Request<Body> {
+        Request::builder()
+            .header("content-type", "application/json")
+            .body(Body::from(body))
+            .expect("valid request")
+    }
+
+    #[tokio::test]
+    async fn validated_json_invalid_json_returns_unprocessable_entity() {
+        let result = ValidatedJson::<JsonTestDto>::from_request(request_with_body("{"), &()).await;
+
+        assert!(matches!(
+            result,
+            Err(AppError::Unprocessable(message)) if message == "invalid json payload"
+        ));
+    }
+
+    #[tokio::test]
+    async fn validated_json_valid_json_with_invalid_dto_returns_bad_request() {
+        let result = ValidatedJson::<JsonTestDto>::from_request(request_with_body(r#"{"name":""}"#), &()).await;
+
+        assert!(matches!(
+            result,
+            Err(AppError::BadRequest(message)) if message == "name must be valid"
+        ));
+    }
+
+    #[tokio::test]
+    async fn validation_message_is_normalized() {
+        let errors = JsonTestDto {
+            name: "".to_string(),
+        }
+        .validate()
+        .expect_err("dto should be invalid");
+
+        assert_eq!(first_validation_error_message(&errors), "name must be valid");
+    }
+
+    #[tokio::test]
+    async fn nested_validation_uses_nested_field_path() {
+        let result = ValidatedJson::<ParentDto>::from_request(
+            request_with_body(r#"{"child":{"name":""}}"#),
+            &(),
+        )
+        .await;
+
+        assert!(matches!(
+            result,
+            Err(AppError::BadRequest(message)) if message == "child name must be at least 1 characters"
+        ));
+    }
+
+    #[tokio::test]
+    async fn validated_query_payload_invalid_payload_returns_bad_request() {
+        let request = Request::builder()
+            .uri("/?q=not-json")
+            .body(Body::empty())
+            .expect("valid request");
+        let (mut parts, _) = request.into_parts();
+
+        let result = ValidatedQueryPayload::<QueryTestDto>::from_request_parts(&mut parts, &()).await;
+
+        assert!(matches!(
+            result,
+            Err(AppError::BadRequest(message)) if message == "invalid search query payload"
+        ));
+    }
+
+    #[tokio::test]
+    async fn validated_query_payload_valid_payload_with_invalid_dto_returns_bad_request() {
+        let request = Request::builder()
+            .uri("/?q=%7B%22page%22%3A0%7D")
+            .body(Body::empty())
+            .expect("valid request");
+        let (mut parts, _) = request.into_parts();
+
+        let result = ValidatedQueryPayload::<QueryTestDto>::from_request_parts(&mut parts, &()).await;
+
+        assert!(matches!(
+            result,
+            Err(AppError::BadRequest(message)) if message == "page must be at least 1"
+        ));
     }
 }

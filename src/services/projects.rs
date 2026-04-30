@@ -610,3 +610,211 @@ impl ProjectService {
         Ok(project)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dtos::project::ProjectStatus;
+    use sea_orm::{DatabaseBackend, MockDatabase};
+    use std::str::FromStr;
+
+    fn decimal(value: &str) -> Decimal {
+        Decimal::from_str(value).expect("valid decimal")
+    }
+
+    fn billing_payload(
+        billing_type: ProjectBillingType,
+        hourly_rate: Option<Decimal>,
+        fixed_price: Option<Decimal>,
+        retainer_amount: Option<Decimal>,
+        payment_day: Option<i16>,
+    ) -> UpdateProjectBillingDto {
+        UpdateProjectBillingDto {
+            currency_type: "usd".to_string(),
+            billing_type,
+            hourly_rate,
+            fixed_price,
+            retainer_amount,
+            payment_day,
+        }
+    }
+
+    fn assert_bad_request(result: Result<NormalizedProjectBilling, AppError>, expected: &str) {
+        match result {
+            Err(AppError::BadRequest(message)) => assert_eq!(message, expected),
+            Ok(_) => panic!("expected bad request, got ok"),
+            Err(error) => panic!("expected bad request, got {error:?}"),
+        }
+    }
+
+    #[test]
+    fn normalize_billing_payload_fixed_accepts_fixed_price() {
+        let normalized = ProjectService::normalize_billing_payload(billing_payload(
+            ProjectBillingType::Fixed,
+            None,
+            Some(decimal("1000")),
+            None,
+            None,
+        ))
+        .expect("fixed billing should be valid");
+
+        assert_eq!(normalized.billing_type, "fixed");
+        assert_eq!(normalized.fixed_price, Some(decimal("1000")));
+        assert_eq!(normalized.hourly_rate, None);
+        assert_eq!(normalized.retainer_amount, None);
+        assert_eq!(normalized.payment_day, None);
+    }
+
+    #[test]
+    fn normalize_billing_payload_fixed_rejects_hourly_rate() {
+        assert_bad_request(
+            ProjectService::normalize_billing_payload(billing_payload(
+                ProjectBillingType::Fixed,
+                Some(decimal("50")),
+                Some(decimal("1000")),
+                None,
+                None,
+            )),
+            "if billing type is fixed cant send hourly or retainer info",
+        );
+    }
+
+    #[test]
+    fn normalize_billing_payload_fixed_rejects_retainer_amount() {
+        assert_bad_request(
+            ProjectService::normalize_billing_payload(billing_payload(
+                ProjectBillingType::Fixed,
+                None,
+                Some(decimal("1000")),
+                Some(decimal("500")),
+                None,
+            )),
+            "if billing type is fixed cant send hourly or retainer info",
+        );
+    }
+
+    #[test]
+    fn normalize_billing_payload_hourly_accepts_hourly_rate() {
+        let normalized = ProjectService::normalize_billing_payload(billing_payload(
+            ProjectBillingType::Hourly,
+            Some(decimal("50")),
+            None,
+            None,
+            None,
+        ))
+        .expect("hourly billing should be valid");
+
+        assert_eq!(normalized.billing_type, "hourly");
+        assert_eq!(normalized.hourly_rate, Some(decimal("50")));
+        assert_eq!(normalized.fixed_price, None);
+        assert_eq!(normalized.retainer_amount, None);
+        assert_eq!(normalized.payment_day, None);
+    }
+
+    #[test]
+    fn normalize_billing_payload_hourly_rejects_fixed_price() {
+        assert_bad_request(
+            ProjectService::normalize_billing_payload(billing_payload(
+                ProjectBillingType::Hourly,
+                Some(decimal("50")),
+                Some(decimal("1000")),
+                None,
+                None,
+            )),
+            "if billing type is hourly cant send fixed price or retainer info",
+        );
+    }
+
+    #[test]
+    fn normalize_billing_payload_retainer_accepts_amount_and_payment_day() {
+        let normalized = ProjectService::normalize_billing_payload(billing_payload(
+            ProjectBillingType::Retainer,
+            None,
+            None,
+            Some(decimal("500")),
+            Some(15),
+        ))
+        .expect("retainer billing should be valid");
+
+        assert_eq!(normalized.billing_type, "retainer");
+        assert_eq!(normalized.retainer_amount, Some(decimal("500")));
+        assert_eq!(normalized.payment_day, Some(15));
+        assert_eq!(normalized.hourly_rate, None);
+        assert_eq!(normalized.fixed_price, None);
+    }
+
+    #[test]
+    fn normalize_billing_payload_retainer_rejects_fixed_price() {
+        assert_bad_request(
+            ProjectService::normalize_billing_payload(billing_payload(
+                ProjectBillingType::Retainer,
+                None,
+                Some(decimal("1000")),
+                Some(decimal("500")),
+                Some(15),
+            )),
+            "if billing type is retainer cant send hourly or fixed price info",
+        );
+    }
+
+    #[test]
+    fn normalize_billing_payload_uppercases_currency() {
+        let dto = UpdateProjectBillingDto {
+            currency_type: " brl ".to_string(),
+            ..billing_payload(ProjectBillingType::Hourly, Some(decimal("50")), None, None, None)
+        };
+
+        let normalized = ProjectService::normalize_billing_payload(dto).expect("billing should be valid");
+
+        assert_eq!(normalized.currency_type, "BRL");
+    }
+
+    #[tokio::test]
+    async fn user_cannot_get_project_from_another_user() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<ProjectModel>::new()])
+            .into_connection();
+
+        let result = ProjectService::get_by_id(&db, Uuid::now_v7(), Uuid::now_v7()).await;
+
+        assert!(matches!(result, Err(AppError::NotFound(message)) if message == "project not found"));
+    }
+
+    #[tokio::test]
+    async fn user_cannot_update_project_from_another_user() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<ProjectModel>::new()])
+            .into_connection();
+
+        let result = ProjectService::update(
+            &db,
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+            UpdateProjectDto {
+                name: "Updated".to_string(),
+                description: None,
+                status: ProjectStatus::Open,
+                category_id: None,
+                client_id: None,
+                billable: false,
+                new_milestones: None,
+                project_billing: None,
+            },
+        )
+        .await;
+
+        assert!(matches!(result, Err(AppError::NotFound(message)) if message == "project not found"));
+    }
+
+    #[tokio::test]
+    async fn client_cannot_view_project_from_another_client() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<ProjectModel>::new()])
+            .into_connection();
+
+        let result =
+            ProjectService::get_client_project_by_id(&db, Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()).await;
+
+        assert!(matches!(result, Err(AppError::NotFound(message)) if message == "project not found"));
+    }
+}
