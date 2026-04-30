@@ -101,6 +101,18 @@ impl TaskService {
             None
         };
 
+        let (parent_title, parent_record_number) = if let Some(parent_id) = task.parent_id {
+            Tasks::find()
+                .filter(tasks::Column::Id.eq(parent_id))
+                .filter(tasks::Column::UserId.eq(task.user_id))
+                .one(db)
+                .await?
+                .map(|parent| (Some(parent.title), Some(parent.record_number)))
+                .unwrap_or((None, None))
+        } else {
+            (None, None)
+        };
+
         Ok(TaskDetailDto {
             id: task.id,
             record_number: task.record_number,
@@ -117,6 +129,8 @@ impl TaskService {
             due_date: task.due_date,
             project_name,
             milestone_name,
+            parent_title,
+            parent_record_number,
             created_at: task.created_at,
             updated_at: task.updated_at,
             tag_ids,
@@ -148,6 +162,7 @@ impl TaskService {
         db: &impl ConnectionTrait,
         user_id: Uuid,
         parent_id: Option<Uuid>,
+        project_id: Option<Uuid>,
     ) -> Result<(), AppError> {
         if let Some(pid) = parent_id {
             let parent = Tasks::find()
@@ -156,8 +171,14 @@ impl TaskService {
                 .one(db)
                 .await?;
 
-            if parent.is_none() {
+            let Some(parent) = parent else {
                 return Err(AppError::BadRequest("invalid parent task or no permissions".to_string()));
+            };
+
+            if parent.project_id != project_id {
+                return Err(AppError::BadRequest(
+                    "parent task does not belong to the selected project".to_string(),
+                ));
             }
         }
 
@@ -230,7 +251,7 @@ impl TaskService {
         dto: CreateTaskDto,
     ) -> Result<TaskModel, AppError> {
         Self::ensure_project_ownership(db, user_id, dto.project_id).await?;
-        Self::ensure_parent_ownership(db, user_id, dto.parent_id).await?;
+        Self::ensure_parent_ownership(db, user_id, dto.parent_id, dto.project_id).await?;
         Self::ensure_milestone_ownership(db, user_id, dto.milestone_id, dto.project_id).await?;
         let safe_tag_ids = Self::validate_and_dedup_tags(db, user_id, &dto.tag_ids).await?;
 
@@ -311,9 +332,13 @@ impl TaskService {
 
         let task = Self::get_task_model(db, user_id, id).await?;
         Self::ensure_project_ownership(db, user_id, dto.project_id).await?;
-        Self::ensure_parent_ownership(db, user_id, dto.parent_id).await?;
+        Self::ensure_parent_ownership(db, user_id, dto.parent_id, dto.project_id).await?;
         Self::ensure_milestone_ownership(db, user_id, dto.milestone_id, dto.project_id).await?;
         let safe_tag_ids = Self::validate_and_dedup_tags(db, user_id, &dto.tag_ids).await?;
+
+        if dto.status == TaskStatus::Done && task.status != TaskStatus::Done.to_string() {
+            Self::ensure_no_blocking_children(db, id).await?;
+        }
 
         let txn = db.begin().await.map_err(AppError::Database)?;
 
@@ -364,14 +389,40 @@ impl TaskService {
         id: Uuid,
         dto: UpdateTaskStatusDto,
     ) -> Result<(), AppError> {
+        let task = Self::get_task_model(db, user_id, id).await?;
+
+        if dto.status == TaskStatus::Done {
+            Self::ensure_no_blocking_children(db, id).await?;
+        }
+
         let txn = db.begin().await.map_err(AppError::Database)?;
 
-        let task = Self::get_task_model(db, user_id, id).await?;
         let mut active_task: tasks::ActiveModel = task.into();
         active_task.status = Set(dto.status.to_string());
         let _ = active_task.update(&txn).await.map_err(AppError::Database)?;
 
         txn.commit().await.map_err(AppError::Database)?;
+
+        Ok(())
+    }
+
+    async fn ensure_no_blocking_children(
+        db: &impl ConnectionTrait,
+        parent_id: Uuid,
+    ) -> Result<(), AppError> {
+        let blocking_count = Tasks::find()
+            .filter(tasks::Column::ParentId.eq(parent_id))
+            .filter(tasks::Column::BlockParent.eq(true))
+            .filter(tasks::Column::Status.ne(TaskStatus::Done.to_string()))
+            .count(db)
+            .await
+            .map_err(AppError::Database)?;
+
+        if blocking_count > 0 {
+            return Err(AppError::BadRequest(
+                "cannot finish task: it has blocking subtasks that are not done yet".to_string(),
+            ));
+        }
 
         Ok(())
     }

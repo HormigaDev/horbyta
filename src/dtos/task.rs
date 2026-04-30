@@ -208,6 +208,8 @@ pub struct TaskDetailDto {
     pub due_date: Option<DateTime<FixedOffset>>,
     pub project_name: Option<String>,
     pub milestone_name: Option<String>,
+    pub parent_title: Option<String>,
+    pub parent_record_number: Option<i64>,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
     pub tag_ids: Vec<Uuid>,

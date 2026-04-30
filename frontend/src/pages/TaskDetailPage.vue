@@ -42,6 +42,38 @@
       </q-card>
 
       <q-card
+        v-if="task && task.parent_id"
+        class="q-mb-md"
+        flat
+        bordered
+        style="background-color: var(--card-bg); border-color: var(--border-color)"
+      >
+        <q-list>
+          <q-item clickable v-ripple @click="goToParent" class="q-pa-md">
+            <q-item-section avatar>
+              <q-icon name="account_tree" color="primary" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label class="text-caption" style="color: var(--text-muted)">
+                {{ t('tasks.detail.parentTitle') }}
+              </q-item-label>
+              <q-item-label style="color: var(--text-color)">
+                {{
+                  task.parent_record_number !== null
+                    ? `#${normalizeId(task.parent_record_number)} · ${task.parent_title ?? ''}`
+                    : (task.parent_title ?? '')
+                }}
+              </q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-icon name="chevron_right" />
+              <q-tooltip>{{ t('tasks.detail.openParent') }}</q-tooltip>
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </q-card>
+
+      <q-card
         class="q-mb-md"
         flat
         bordered
@@ -119,6 +151,11 @@
           <q-tab name="description" :label="t('tasks.detail.tabs.description')" />
           <q-tab name="attachments" :label="t('tasks.detail.tabs.attachments')" />
           <q-tab name="time_entries" :label="t('tasks.detail.tabs.timeEntries')" />
+          <q-tab
+            v-if="hasSubtasks"
+            name="subtasks"
+            :label="t('tasks.detail.tabs.subtasks')"
+          />
         </q-tabs>
 
         <q-separator />
@@ -137,9 +174,74 @@
           <q-tab-panel name="time_entries">
             <TaskTimeEntriesTab v-if="task" :task="task" ref="timeEntriesTabRef" />
           </q-tab-panel>
+
+          <q-tab-panel name="subtasks" v-if="hasSubtasks">
+            <q-list separator v-if="subtasks.length > 0">
+              <q-item
+                v-for="subtask in subtasks"
+                :key="subtask.id"
+                clickable
+                v-ripple
+                @click="goToSubtask(subtask.id)"
+              >
+                <q-item-section avatar>
+                  <q-icon name="checklist" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label style="color: var(--text-color)">
+                    #{{ normalizeId(subtask.record_number) }} · {{ subtask.title }}
+                  </q-item-label>
+                  <q-item-label caption style="color: var(--text-muted)">
+                    {{ $t(`tasks.form.status.${subtask.status}`) }}
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-icon name="chevron_right" />
+                </q-item-section>
+              </q-item>
+            </q-list>
+            <div v-else class="text-center q-pa-md" style="color: var(--text-muted)">
+              {{ t('tasks.detail.subtasksEmpty') }}
+            </div>
+          </q-tab-panel>
         </q-tab-panels>
       </q-card>
     </div>
+
+    <q-dialog v-model="parentDialogOpen">
+      <q-card
+        style="
+          min-width: 360px;
+          background-color: var(--card-bg);
+          border: 1px solid var(--border-color);
+        "
+      >
+        <q-card-section>
+          <div class="text-h6" style="color: var(--text-color)">
+            {{ t('tasks.detail.action.parentDialogTitle') }}
+          </div>
+        </q-card-section>
+        <q-card-section class="q-pt-none">
+          <SelectByTerm
+            v-model="parentDialogSelection"
+            :label="t('tasks.form.parentTaskLabel')"
+            :options="parentDialogOptions"
+            :loading="isParentDialogLoading"
+            @search="onParentDialogSearch"
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat :label="t('common.cancel')" v-close-popup color="grey" />
+          <q-btn
+            unelevated
+            color="primary"
+            :label="t('tasks.detail.action.parentDialogConfirm')"
+            :disable="!parentDialogSelection"
+            @click="confirmParentSelection"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <div class="col-12 col-md-2" style="position: sticky; top: 80px">
       <q-card
@@ -201,6 +303,50 @@
             clickable
             v-ripple
             class="q-pa-md"
+            v-if="task"
+            @click="goToCreateSubtask"
+          >
+            <q-item-section avatar><q-icon name="subdirectory_arrow_right" /></q-item-section>
+            <q-item-section>{{ t('tasks.detail.action.createSubtask') }}</q-item-section>
+          </q-item>
+
+          <q-item
+            clickable
+            v-ripple
+            class="q-pa-md"
+            v-if="task && task.project_id && !task.parent_id"
+            @click="openParentDialog"
+          >
+            <q-item-section avatar><q-icon name="account_tree" /></q-item-section>
+            <q-item-section>{{ t('tasks.detail.action.assignParent') }}</q-item-section>
+          </q-item>
+
+          <q-item
+            clickable
+            v-ripple
+            class="q-pa-md"
+            v-if="task && task.project_id && task.parent_id"
+            @click="openParentDialog"
+          >
+            <q-item-section avatar><q-icon name="account_tree" /></q-item-section>
+            <q-item-section>{{ t('tasks.detail.action.changeParent') }}</q-item-section>
+          </q-item>
+
+          <q-item
+            clickable
+            v-ripple
+            class="q-pa-md"
+            v-if="task && task.parent_id"
+            @click="removeParent"
+          >
+            <q-item-section avatar><q-icon name="link_off" /></q-item-section>
+            <q-item-section>{{ t('tasks.detail.action.removeParent') }}</q-item-section>
+          </q-item>
+
+          <q-item
+            clickable
+            v-ripple
+            class="q-pa-md"
             v-if="task && !userPreferencesStore.isPinned(task.id)"
             @click="pinCurrentTask"
           >
@@ -235,19 +381,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
+import SelectByTerm from 'src/components/SelectByTerm.vue';
 import TaskAttachmentsTab from 'src/components/TaskAttachmentsTab.vue';
 import TaskTimeEntriesTab from 'src/components/TaskTimeEntriesTab.vue';
 import { useUI } from 'src/composables/useUI';
 import { useCopyClipboard } from 'src/composables/useCopyClipboard';
+import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { TasksService } from 'src/services/tasks';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import { normalizeId } from 'src/utils/normalizeId';
-import type { TaskDetailDto, TaskStatus } from 'src/types/task';
+import type { Filter } from 'src/types';
+import type { TaskDetailDto, TaskStatus, TaskSummaryDto } from 'src/types/task';
 import type { PinnedTask } from 'src/types/user';
 
 const route = useRoute();
@@ -259,8 +408,29 @@ const { isCopied: idCopied, copyToClipboard } = useCopyClipboard();
 
 const task = ref<TaskDetailDto | null>(null);
 const currentTaskId = () => String(route.params.id || '');
-const detailsTab = ref<'description' | 'attachments' | 'time_entries'>('description');
+const detailsTab = ref<'description' | 'attachments' | 'time_entries' | 'subtasks'>('description');
 const timeEntriesTabRef = ref<InstanceType<typeof TaskTimeEntriesTab> | null>(null);
+
+const subtasks = ref<TaskSummaryDto[]>([]);
+const hasSubtasks = computed(() => subtasks.value.length > 0);
+
+const parentDialogOpen = ref(false);
+const parentDialogSelection = ref<string | null>(null);
+
+const {
+  options: parentDialogOptions,
+  isLoading: isParentDialogLoading,
+  load: loadParentDialogTasks,
+  setOptions: setParentDialogOptions,
+} = useSelectByTerm<TaskSummaryDto>(TasksService.search, {
+  termColumn: 'title',
+  orderBy: 'created_at',
+  orderAsc: false,
+  toOption: (item) => ({
+    label: `#${normalizeId(item.record_number)} · ${item.title}`,
+    value: item.id,
+  }),
+});
 
 const formatDate = (val: string) =>
   formatDateByPreferences(val, {
@@ -268,10 +438,30 @@ const formatDate = (val: string) =>
     dateFormat: userPreferencesStore.dateFormat,
   });
 
+const loadSubtasks = async (parentId: string) => {
+  try {
+    const response = await TasksService.search({
+      page: 1,
+      limit: 100,
+      order_by: 'created_at',
+      order_asc: false,
+      filters: [{ column: 'parent_id', operator: '=', value: parentId }],
+    });
+    subtasks.value = response.items;
+  } catch (err) {
+    subtasks.value = [];
+    notifyError(t('tasks.detail.subtasksLoadError'), err);
+  }
+};
+
 const loadTask = async (id: string) => {
   showLoading();
   try {
     task.value = await TasksService.getById(id);
+    await loadSubtasks(id);
+    if (detailsTab.value === 'subtasks' && subtasks.value.length === 0) {
+      detailsTab.value = 'description';
+    }
   } catch (err) {
     notifyError(t('tasks.detail.loadError'), err);
     router.push('/tasks');
@@ -309,6 +499,78 @@ const removeTask = async () => {
 
 const goBack = () => router.push('/tasks');
 const goToEdit = () => router.push(`/tasks/${currentTaskId()}/edit`);
+const goToParent = () => {
+  if (task.value?.parent_id) {
+    void router.push(`/tasks/${task.value.parent_id}`);
+  }
+};
+const goToSubtask = (id: string) => {
+  void router.push(`/tasks/${id}`);
+};
+const goToCreateSubtask = () => {
+  if (!task.value) return;
+  const query: Record<string, string> = { parentId: task.value.id };
+  if (task.value.project_id) {
+    query.projectId = task.value.project_id;
+  }
+  void router.push({ path: '/tasks/new', query });
+};
+
+const onParentDialogSearch = (term: string) => {
+  if (!task.value?.project_id) {
+    setParentDialogOptions([]);
+    return;
+  }
+  const extraFilters: Filter[] = [
+    { column: 'id', operator: '<>', value: currentTaskId() },
+    { column: 'project_id', operator: '=', value: task.value.project_id },
+  ];
+  void loadParentDialogTasks(term, extraFilters);
+};
+
+const openParentDialog = () => {
+  parentDialogSelection.value = task.value?.parent_id ?? null;
+  setParentDialogOptions([]);
+  parentDialogOpen.value = true;
+};
+
+const persistParent = async (parentId: string | null) => {
+  if (!task.value) return;
+  showLoading();
+  try {
+    const updated = await TasksService.update(task.value.id, {
+      project_id: task.value.project_id,
+      parent_id: parentId,
+      milestone_id: task.value.milestone_id,
+      title: task.value.title,
+      description: task.value.description,
+      status: task.value.status,
+      priority: task.value.priority,
+      complexity: task.value.complexity,
+      block_parent: task.value.block_parent,
+      due_date: task.value.due_date,
+      tag_ids: [...task.value.tag_ids],
+    });
+    task.value = updated;
+    notify(
+      parentId ? t('tasks.detail.action.parentAssigned') : t('tasks.detail.action.parentRemoved'),
+      'positive',
+    );
+  } catch (err) {
+    notifyError(t('common.error'), err);
+  } finally {
+    hideLoading();
+  }
+};
+
+const confirmParentSelection = async () => {
+  parentDialogOpen.value = false;
+  await persistParent(parentDialogSelection.value);
+};
+
+const removeParent = async () => {
+  await persistParent(null);
+};
 
 const pinCurrentTask = async () => {
   if (!task.value) return;

@@ -56,6 +56,17 @@
             />
           </div>
 
+          <div class="col-12">
+            <SelectByTerm
+              v-model="form.parent_id"
+              :label="t('tasks.form.parentTaskLabel')"
+              :options="parentTaskOptions"
+              :loading="isParentTasksLoading"
+              :disable="!form.project_id"
+              @search="onParentTaskSearch"
+            />
+          </div>
+
           <div class="col-12 col-md-4">
             <q-select
               dense
@@ -244,7 +255,8 @@ import type { AttachmentListItem } from 'src/types/attachment';
 import type { MilestoneSummaryDto } from 'src/types/milestone';
 import type { ProjectSummaryDto } from 'src/types/project';
 import type { TagSummaryDto } from 'src/types/tag';
-import type { CreateTaskDto, TaskStatus, UpdateTaskDto } from 'src/types/task';
+import type { CreateTaskDto, TaskStatus, TaskSummaryDto, UpdateTaskDto } from 'src/types/task';
+import { normalizeId } from 'src/utils/normalizeId';
 import {
   MAX_ATTACHMENT_FILE_BYTES,
   MAX_ATTACHMENT_TOTAL_BYTES,
@@ -352,6 +364,21 @@ const {
   toOption: (milestone) => ({
     label: milestone.name,
     value: milestone.id,
+  }),
+});
+
+const {
+  options: parentTaskOptions,
+  isLoading: isParentTasksLoading,
+  load: loadParentTasksByTerm,
+  setOptions: setParentTaskOptions,
+} = useSelectByTerm<TaskSummaryDto>(TasksService.search, {
+  termColumn: 'title',
+  orderBy: 'created_at',
+  orderAsc: false,
+  toOption: (task) => ({
+    label: `${normalizeId(task.record_number)} - ${task.title}`,
+    value: task.id,
   }),
 });
 
@@ -484,6 +511,41 @@ const onTagSearch = (term: string) => {
   void loadTagsByTerm(term);
 };
 
+const onParentTaskSearch = (term: string) => {
+  if (!form.project_id) {
+    setParentTaskOptions([]);
+    return;
+  }
+
+  const extraFilters: Filter[] = [
+    { column: 'project_id', operator: '=', value: form.project_id },
+  ];
+  if (!isNew.value && taskId.value) {
+    extraFilters.push({ column: 'id', operator: '<>', value: taskId.value });
+  }
+
+  void loadParentTasksByTerm(term, extraFilters);
+};
+
+const ensureParentTaskOption = async (parentId: string | null) => {
+  if (!parentId) return;
+  const exists = parentTaskOptions.value.some((option) => option.value === parentId);
+  if (exists) return;
+
+  try {
+    const parent = await TasksService.getById(parentId);
+    parentTaskOptions.value = [
+      {
+        value: parent.id,
+        label: `${normalizeId(parent.record_number)} - ${parent.title}`,
+      },
+      ...parentTaskOptions.value,
+    ];
+  } catch {
+    // ignore: parent option will simply not be preloaded
+  }
+};
+
 const ensureProjectOption = async (projectId: string | null) => {
   if (!projectId) return;
   const exists = projectOptions.value.some((option) => option.value === projectId);
@@ -546,6 +608,7 @@ const loadReferenceData = async () => {
     viewPayload.projects.map((project) => ({ value: project.id, label: project.name })),
   );
   setMilestoneOptions([]);
+  setParentTaskOptions([]);
   setTagOptions(
     viewPayload.tags.map((tag) => ({ value: tag.id, label: tag.name, color: tag.color })),
   );
@@ -571,6 +634,7 @@ const loadTask = async () => {
 
   await ensureProjectOption(task.project_id);
   await ensureMilestoneOption(task.milestone_id);
+  await ensureParentTaskOption(task.parent_id);
   await ensureTagOptions(task.tag_ids);
 
   isHydratingTask.value = false;
@@ -582,16 +646,26 @@ watch(
     if (isHydratingTask.value) return;
 
     form.milestone_id = null;
+    form.parent_id = null;
     if (!newProjectId) {
       setMilestoneOptions([]);
+      setParentTaskOptions([]);
       return;
     }
 
-    const extraFilters: Filter[] = newProjectId
-      ? [{ column: 'project_id', operator: '=', value: newProjectId }]
-      : [];
+    const extraFilters: Filter[] = [
+      { column: 'project_id', operator: '=', value: newProjectId },
+    ];
 
     void loadMilestonesByTerm('', extraFilters);
+
+    const parentExtraFilters: Filter[] = [
+      { column: 'project_id', operator: '=', value: newProjectId },
+    ];
+    if (!isNew.value && taskId.value) {
+      parentExtraFilters.push({ column: 'id', operator: '<>', value: taskId.value });
+    }
+    void loadParentTasksByTerm('', parentExtraFilters);
   },
 );
 
@@ -657,14 +731,40 @@ const saveTask = async () => {
 onMounted(async () => {
   try {
     await loadReferenceData();
+
+    if (isNew.value) {
+      const queryProjectId = route.query.projectId;
+      if (typeof queryProjectId === 'string' && queryProjectId.length > 0) {
+        isHydratingTask.value = true;
+        form.project_id = queryProjectId;
+        await ensureProjectOption(queryProjectId);
+        isHydratingTask.value = false;
+      }
+
+      const queryParentId = route.query.parentId;
+      if (typeof queryParentId === 'string' && queryParentId.length > 0 && form.project_id) {
+        form.parent_id = queryParentId;
+        await ensureParentTaskOption(queryParentId);
+      }
+    }
+
     await loadTask();
 
     if (form.project_id) {
-      const extraFilters: Filter[] = [
+      const milestoneFilters: Filter[] = [
         { column: 'project_id', operator: '=', value: form.project_id },
       ];
-      await loadMilestonesByTerm('', extraFilters);
+      await loadMilestonesByTerm('', milestoneFilters);
       await ensureMilestoneOption(form.milestone_id);
+
+      const parentFilters: Filter[] = [
+        { column: 'project_id', operator: '=', value: form.project_id },
+      ];
+      if (!isNew.value && taskId.value) {
+        parentFilters.push({ column: 'id', operator: '<>', value: taskId.value });
+      }
+      await loadParentTasksByTerm('', parentFilters);
+      await ensureParentTaskOption(form.parent_id);
     }
   } catch (err: unknown) {
     notifyError(t('tasks.form.loadError'), err);

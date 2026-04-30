@@ -34,6 +34,8 @@ export interface TaskDetailDto {
   due_date: string | null;
   project_name: string | null;
   milestone_name: string | null;
+  parent_title: string | null;
+  parent_record_number: bigint | null;
   created_at: string;
   updated_at: string;
   tag_ids: string[];
