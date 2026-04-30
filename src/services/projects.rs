@@ -276,15 +276,12 @@ impl ProjectService {
             .ok_or_else(|| AppError::NotFound("project not found".to_string()))?;
 
         let milestones = MilestoneService::list_project_milestones_preview(db, user_id, id).await?;
-        let this_project_billing: Option<project_billing::Model> = match project_billing::Entity::find()
+        let this_project_billing = project_billing::Entity::find()
             .filter(project_billing::Column::UserId.eq(user_id))
             .filter(project_billing::Column::ProjectId.eq(id))
             .one(db)
             .await
-        {
-            Ok(model) => model,
-            Err(_) => None,
-        };
+            .map_err(AppError::Database)?;
 
         let project = ProjectDetailDto {
             id: row.id,
@@ -333,15 +330,12 @@ impl ProjectService {
         let milestones =
             MilestoneService::list_client_project_milestones_preview(db, user_id, client_id, project_id).await?;
 
-        let this_project_billing: Option<project_billing::Model> = match project_billing::Entity::find()
+        let this_project_billing = project_billing::Entity::find()
             .filter(project_billing::Column::UserId.eq(user_id))
             .filter(project_billing::Column::ProjectId.eq(project_id))
             .one(db)
             .await
-        {
-            Ok(model) => model,
-            Err(_) => None,
-        };
+            .map_err(AppError::Database)?;
 
         Ok(ClientProjectDetailDto {
             id: row.id,
