@@ -129,3 +129,11 @@ export const getChangeRequestsDeclineReasons = (t: ComposerTranslation) => {
     },
   ];
 };
+
+export const getProjectStatusOptions = (t: ComposerTranslation) => {
+  return [
+    { label: t('projects.form.status.open'), value: 'open' },
+    { label: t('projects.form.status.closed'), value: 'closed' },
+    { label: t('projects.form.status.cancelled'), value: 'cancelled' },
+  ];
+};

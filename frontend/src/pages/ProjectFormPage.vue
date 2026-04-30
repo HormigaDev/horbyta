@@ -20,7 +20,7 @@
         </q-card-section>
 
         <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 col-md-4">
+          <div class="col-12">
             <q-input
               v-model="project.name"
               :label="t('projects.form.nameLabel')"
@@ -47,6 +47,17 @@
               :options="clientOptions"
               :loading="isClientsLoading"
               @search="onClientSearch"
+            />
+          </div>
+          <div class="col-12 col-md-4" v-if="!isNew">
+            <q-select
+              v-model="project.status"
+              :label="$t('projects.form.statusLabel')"
+              :options="getProjectStatusOptions($t)"
+              emit-value
+              map-options
+              outlined
+              dense
             />
           </div>
         </q-card-section>
@@ -264,7 +275,7 @@ import {
   type QFileModelValue,
 } from 'src/utils/attachments';
 import { normalizeNumericText, parseNumericText } from 'src/utils/numericInput';
-import { CURRENCY_TYPE_OPTIONS } from 'src/data/constants';
+import { CURRENCY_TYPE_OPTIONS, getProjectStatusOptions } from 'src/data/constants';
 
 interface ProjectBillingFormState {
   billing_type: ProjectBillingType;
@@ -633,7 +644,6 @@ const saveProject = async () => {
     const payload: CreateProjectDto = {
       name: project.value.name,
       description: project.value.description || null,
-      status: project.value.status,
       category_id: project.value.category_id || null,
       client_id: project.value.client_id || null,
       billable: project.value.billable,

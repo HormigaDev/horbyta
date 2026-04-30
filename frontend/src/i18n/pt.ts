@@ -223,6 +223,7 @@ export const messages: Record<keyof typeof es, string> = {
   'projects.form.nameLabel': 'Nome do projeto *',
   'projects.form.categoryLabel': 'Categoria',
   'projects.form.clientLabel': 'Cliente',
+  'projects.form.statusLabel': 'Status',
   'projects.form.billingTitle': 'Faturamento do projeto',
   'projects.form.billableLabel': 'Projeto faturável',
   'projects.form.billableHint':
@@ -251,6 +252,9 @@ export const messages: Record<keyof typeof es, string> = {
   'projects.form.createSuccess': 'Projeto criado',
   'projects.form.updateSuccess': 'Projeto atualizado',
   'projects.form.saveError': 'Erro ao salvar o projeto',
+  'projects.form.status.open': 'Aberto',
+  'projects.form.status.closed': 'Fechado',
+  'projects.form.status.cancelled': 'Cancelado',
   'projects.detail.meta': 'ID: {id} | Criado: {created} | Atualizado: {updated}',
   'projects.detail.tab.details': 'Detalhes',
   'projects.detail.tab.milestones': 'Marcos',

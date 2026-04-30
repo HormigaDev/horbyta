@@ -162,8 +162,6 @@ pub struct CreateProjectDto {
     #[validate(length(max = 15000, message = "project description must be at most 15000 characters"))]
     pub description: Option<String>,
 
-    pub status: Option<ProjectStatus>,
-
     pub category_id: Option<Uuid>,
     pub client_id: Option<Uuid>,
     pub billable: bool,
@@ -199,12 +197,12 @@ pub struct UpdateProjectCategoryDto {
     pub category_id: Option<Uuid>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub struct UpdateProjectStatusDto {
     pub status: ProjectStatus,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub struct UpdateProjectBillableDto {
     pub billable: bool,
 }

@@ -74,7 +74,6 @@ export interface CreateMilestoneSubDto {
 export interface CreateProjectDto {
   name: string;
   description?: string | null;
-  status?: ProjectStatus | null;
   category_id?: string | null;
   client_id?: string | null;
   billable: boolean;

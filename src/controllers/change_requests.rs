@@ -222,7 +222,7 @@ async fn client_decline_change_request(
     State(state): State<AppState>,
     client: ClientAuthDto,
     Path(id): Path<Uuid>,
-    Json(payload): Json<ClientDeclineChangeRequestDto>,
+    ValidatedJson(payload): ValidatedJson<ClientDeclineChangeRequestDto>,
 ) -> Result<impl IntoResponse, AppError> {
     let change_request = ChangeRequestService::client_decline(
         state.db.as_ref(),

@@ -225,7 +225,7 @@ async fn update_task_status(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
-    Json(payload): Json<UpdateTaskStatusDto>,
+    ValidatedJson(payload): ValidatedJson<UpdateTaskStatusDto>,
 ) -> Result<impl IntoResponse, AppError> {
     TaskService::change_status(state.db.as_ref(), user.id, id, payload).await?;
     Ok((

@@ -227,6 +227,7 @@ export const messages = {
   'projects.form.nameLabel': 'Nombre del proyecto *',
   'projects.form.categoryLabel': 'Categoría',
   'projects.form.clientLabel': 'Cliente',
+  'projects.form.statusLabel': 'Estado',
   'projects.form.billingTitle': 'Facturación del proyecto',
   'projects.form.billableLabel': 'Proyecto facturable',
   'projects.form.billableHint': 'Si está desactivado, no se enviará configuración de cobro.',
@@ -254,6 +255,9 @@ export const messages = {
   'projects.form.createSuccess': 'Proyecto creado',
   'projects.form.updateSuccess': 'Proyecto actualizado',
   'projects.form.saveError': 'Error al guardar el proyecto',
+  'projects.form.status.open': 'Abierto',
+  'projects.form.status.closed': 'Cerrado',
+  'projects.form.status.cancelled': 'Cancelado',
 
   'projects.detail.meta': 'ID: {id} | Creado: {created} | Actualizado: {updated}',
   'projects.detail.tab.details': 'Detalles',

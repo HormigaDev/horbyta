@@ -129,7 +129,7 @@ pub struct UpdateClientDto {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Validate)]
 pub struct UpdateClientStatusDto {
     pub status: ClientStatus,
 }

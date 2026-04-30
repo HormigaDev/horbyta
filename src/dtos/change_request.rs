@@ -333,7 +333,7 @@ pub struct ClientApproveChangeRequestDto {
     pub client_signature_ip: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct ClientDeclineChangeRequestDto {
     pub decline_reason: ChangeRequestDeclineReason,

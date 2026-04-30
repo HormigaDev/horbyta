@@ -270,7 +270,7 @@ async fn update_project_status(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
-    Json(payload): Json<UpdateProjectStatusDto>,
+    ValidatedJson(payload): ValidatedJson<UpdateProjectStatusDto>,
 ) -> Result<impl IntoResponse, AppError> {
     let project = ProjectService::update_status(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(project))
@@ -280,7 +280,7 @@ async fn update_project_billable(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
-    Json(payload): Json<UpdateProjectBillableDto>,
+    ValidatedJson(payload): ValidatedJson<UpdateProjectBillableDto>,
 ) -> Result<impl IntoResponse, AppError> {
     let project = ProjectService::update_billable(state.db.as_ref(), user.id, id, payload).await?;
     Ok(Json(project))

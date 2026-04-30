@@ -169,7 +169,7 @@ pub struct UpdateTaskDto {
     pub tag_ids: Vec<Uuid>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct UpdateTaskStatusDto {
     pub status: TaskStatus,
 }
