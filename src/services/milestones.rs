@@ -9,6 +9,7 @@ use crate::{
         milestone::{
             CreateMilestoneDto, MilestoneSearchField, MilestoneStatus, ProjectMilestoneSummaryDto, UpdateMilestoneDto,
         },
+        project::ProjectStatus,
         query::QueryPayload,
     },
     entities::{
@@ -36,9 +37,29 @@ impl MilestoneService {
             .one(db)
             .await?;
 
-        if project.is_none() {
-            return Err(AppError::NotFound("project not found or no permission".to_string()));
+        project.ok_or_else(|| AppError::NotFound("project not found or no permission".to_string()))?;
+
+        Ok(())
+    }
+
+    async fn check_project_accepts_new_milestones(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        project_id: Uuid,
+    ) -> Result<(), AppError> {
+        let project = Projects::find()
+            .filter(projects::Column::Id.eq(project_id))
+            .filter(projects::Column::UserId.eq(user_id))
+            .one(db)
+            .await?
+            .ok_or_else(|| AppError::NotFound("project not found or no permission".to_string()))?;
+
+        if project.status == ProjectStatus::Closed.to_string() {
+            return Err(AppError::Conflict(
+                "closed projects cannot accept new milestones".to_string(),
+            ));
         }
+
         Ok(())
     }
 
@@ -90,7 +111,7 @@ impl MilestoneService {
         user_id: Uuid,
         dto: CreateMilestoneDto,
     ) -> Result<MilestoneModel, AppError> {
-        Self::check_project_ownership(db, user_id, dto.project_id).await?;
+        Self::check_project_accepts_new_milestones(db, user_id, dto.project_id).await?;
 
         let status = dto.status.unwrap_or(MilestoneStatus::Open).to_string();
 
@@ -119,7 +140,7 @@ impl MilestoneService {
         let milestone = Self::check_milestone_ownership(db, user_id, id).await?;
 
         if milestone.project_id != dto.project_id {
-            Self::check_project_ownership(db, user_id, dto.project_id).await?;
+            Self::check_project_accepts_new_milestones(db, user_id, dto.project_id).await?;
         }
 
         let mut active_milestone: milestones::ActiveModel = milestone.into();

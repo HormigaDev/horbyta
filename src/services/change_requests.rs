@@ -17,6 +17,7 @@ use crate::{
             ClientChangeRequestSummaryDto, ClientCreateChangeRequestDto, ClientUpdateChangeRequestDto,
             CreateChangeRequestDto, UpdateChangeRequestDto,
         },
+        project::ProjectStatus,
         query::QueryPayload,
     },
     entities::{
@@ -38,6 +39,7 @@ impl ChangeRequestService {
         dto: CreateChangeRequestDto,
     ) -> Result<ChangeRequestDetailDto, AppError> {
         Self::ensure_project_client_pair(db, user_id, dto.project_id, dto.client_id).await?;
+        Self::ensure_project_accepts_new_change_requests(db, user_id, dto.project_id).await?;
         Self::ensure_task_ownership(db, user_id, dto.project_id, dto.task_id).await?;
 
         let change_request = change_requests::ActiveModel {
@@ -63,6 +65,7 @@ impl ChangeRequestService {
         dto: ClientCreateChangeRequestDto,
     ) -> Result<ClientChangeRequestDetailDto, AppError> {
         Self::ensure_client_project_ownership(db, user_id, client_id, dto.project_id).await?;
+        Self::ensure_project_accepts_new_change_requests(db, user_id, dto.project_id).await?;
 
         let change_request = change_requests::ActiveModel {
             user_id: Set(user_id),
@@ -171,9 +174,7 @@ impl ChangeRequestService {
         let origin = Self::parse_origin(&model.origin)?;
 
         if model.version != dto.version {
-            return Err(AppError::Conflict(
-                "the client updated the change record".to_string(),
-            ));
+            return Err(AppError::Conflict("the client updated the change record".to_string()));
         }
 
         if status == ChangeRequestStatus::Approved {
@@ -274,9 +275,7 @@ impl ChangeRequestService {
         let status = Self::parse_status(&model.status)?;
 
         if model.version != dto.version {
-            return Err(AppError::Conflict(
-                "the client updated the change record".to_string(),
-            ));
+            return Err(AppError::Conflict("the client updated the change record".to_string()));
         }
 
         if status != ChangeRequestStatus::Approved {
@@ -303,9 +302,7 @@ impl ChangeRequestService {
         let status = Self::parse_status(&model.status)?;
 
         if status != ChangeRequestStatus::Draft {
-            return Err(AppError::Conflict(
-                "only a draft request can be submitted".to_string(),
-            ));
+            return Err(AppError::Conflict("only a draft request can be submitted".to_string()));
         }
 
         let mut active_model: change_requests::ActiveModel = model.into();
@@ -672,9 +669,7 @@ impl ChangeRequestService {
             .is_some();
 
         if !client_exists {
-            return Err(AppError::NotFound(
-                "client not found or no permission".to_string(),
-            ));
+            return Err(AppError::NotFound("client not found or no permission".to_string()));
         }
 
         if project.client_id != Some(client_id) {
@@ -692,17 +687,32 @@ impl ChangeRequestService {
         client_id: Uuid,
         project_id: Uuid,
     ) -> Result<(), AppError> {
-        let project_exists = Projects::find()
+        Projects::find()
             .filter(projects::Column::Id.eq(project_id))
             .filter(projects::Column::UserId.eq(user_id))
             .filter(projects::Column::ClientId.eq(client_id))
             .one(db)
             .await?
-            .is_some();
+            .ok_or_else(|| AppError::NotFound("project not found or no permission".to_string()))?;
 
-        if !project_exists {
-            return Err(AppError::NotFound(
-                "project not found or no permission".to_string(),
+        Ok(())
+    }
+
+    async fn ensure_project_accepts_new_change_requests(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        project_id: Uuid,
+    ) -> Result<(), AppError> {
+        let project = Projects::find()
+            .filter(projects::Column::Id.eq(project_id))
+            .filter(projects::Column::UserId.eq(user_id))
+            .one(db)
+            .await?
+            .ok_or_else(|| AppError::NotFound("project not found or no permission".to_string()))?;
+
+        if project.status == ProjectStatus::Closed.to_string() {
+            return Err(AppError::Conflict(
+                "closed projects cannot accept new change requests".to_string(),
             ));
         }
 

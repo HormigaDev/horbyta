@@ -14,6 +14,7 @@ use crate::{
             CreateInvoiceDto, InvoiceDetailDto, InvoiceDetailRow, InvoiceSearchField, InvoiceStatus, InvoiceSummaryDto,
             InvoiceTaskGroupDto, InvoiceTimeEntryDto, UpdateInvoiceDto, UpdateInvoiceStatusDto,
         },
+        project::ProjectStatus,
         query::QueryPayload,
     },
     entities::{
@@ -161,6 +162,7 @@ impl InvoiceService {
         dto: CreateInvoiceDto,
     ) -> Result<InvoiceDetailDto, AppError> {
         Self::ensure_project_ownership(db, user_id, dto.project_id).await?;
+        Self::ensure_project_accepts_new_invoices(db, user_id, dto.project_id).await?;
 
         let currency_type = project_billing::Entity::find()
             .filter(project_billing::Column::ProjectId.eq(dto.project_id))
@@ -180,7 +182,10 @@ impl InvoiceService {
 
         let txn = db.begin().await.map_err(AppError::Database)?;
 
-        let normalized_external_id = dto.provider_external_id.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+        let normalized_external_id = dto
+            .provider_external_id
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
         let normalized_payment_link = dto.payment_link.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
 
         let invoice = invoices::ActiveModel {
@@ -229,7 +234,10 @@ impl InvoiceService {
         Self::unlink_time_entries(&txn, id).await?;
         Self::link_time_entries(&txn, &dto.time_entry_ids, id).await?;
 
-        let normalized_external_id = dto.provider_external_id.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+        let normalized_external_id = dto
+            .provider_external_id
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
         let normalized_payment_link = dto.payment_link.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
 
         let mut active: invoices::ActiveModel = invoice.into();
@@ -426,6 +434,27 @@ impl InvoiceService {
         Ok(())
     }
 
+    async fn ensure_project_accepts_new_invoices(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        project_id: Uuid,
+    ) -> Result<(), AppError> {
+        let project = Projects::find()
+            .filter(projects::Column::Id.eq(project_id))
+            .filter(projects::Column::UserId.eq(user_id))
+            .one(db)
+            .await?
+            .ok_or_else(|| AppError::BadRequest("invalid project or no permissions".to_string()))?;
+
+        if project.status == ProjectStatus::Closed.to_string() {
+            return Err(AppError::Conflict(
+                "closed projects cannot accept new invoices".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
     fn ensure_draft(invoice: &InvoiceModel) -> Result<(), AppError> {
         if invoice.status != "draft" {
             return Err(AppError::Conflict(
@@ -491,8 +520,7 @@ impl InvoiceService {
 
         if rows.len() != ids.len() {
             return Err(AppError::BadRequest(
-                "One or more time entries are invalid, non-billable, or already linked to another invoice"
-                    .to_string(),
+                "One or more time entries are invalid, non-billable, or already linked to another invoice".to_string(),
             ));
         }
 

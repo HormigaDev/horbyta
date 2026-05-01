@@ -8,6 +8,7 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         hex_color::HexColor,
+        project::ProjectStatus,
         query::QueryPayload,
         task::{
             CreateTaskDto, MilestoneLookupDto, TaskDetailDto, TaskProjectDto, TaskSearchField, TaskStatus,
@@ -52,8 +53,7 @@ impl TaskService {
     }
 
     fn parse_tag_color_or_internal(color: &str, tag_id: Uuid) -> Result<HexColor, AppError> {
-        HexColor::new(color)
-            .map_err(|_| AppError::Internal(format!("tag {tag_id} has an invalid stored color")))
+        HexColor::new(color).map_err(|_| AppError::Internal(format!("tag {tag_id} has an invalid stored color")))
     }
 
     async fn to_task_detail(db: &impl ConnectionTrait, task: TaskModel) -> Result<TaskDetailDto, AppError> {
@@ -150,8 +150,29 @@ impl TaskService {
                 .one(db)
                 .await?;
 
-            if project.is_none() {
-                return Err(AppError::BadRequest("invalid project or no permissions".to_string()));
+            project.ok_or_else(|| AppError::BadRequest("invalid project or no permissions".to_string()))?;
+        }
+
+        Ok(())
+    }
+
+    async fn ensure_project_accepts_new_tasks(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        project_id: Option<Uuid>,
+    ) -> Result<(), AppError> {
+        if let Some(pid) = project_id {
+            let project = Projects::find()
+                .filter(projects::Column::Id.eq(pid))
+                .filter(projects::Column::UserId.eq(user_id))
+                .one(db)
+                .await?
+                .ok_or_else(|| AppError::BadRequest("invalid project or no permissions".to_string()))?;
+
+            if project.status == ProjectStatus::Closed.to_string() {
+                return Err(AppError::Conflict(
+                    "closed projects cannot accept new tasks".to_string(),
+                ));
             }
         }
 
@@ -172,7 +193,9 @@ impl TaskService {
                 .await?;
 
             let Some(parent) = parent else {
-                return Err(AppError::BadRequest("invalid parent task or no permissions".to_string()));
+                return Err(AppError::BadRequest(
+                    "invalid parent task or no permissions".to_string(),
+                ));
             };
 
             if parent.project_id != project_id {
@@ -221,6 +244,33 @@ impl TaskService {
         Ok(())
     }
 
+    async fn ensure_milestone_project_accepts_new_tasks(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        milestone_id: Option<Uuid>,
+    ) -> Result<(), AppError> {
+        if let Some(mid) = milestone_id {
+            let milestone_join = Milestones::find()
+                .filter(milestones::Column::Id.eq(mid))
+                .find_also_related(Projects)
+                .one(db)
+                .await?;
+
+            match milestone_join {
+                Some((_milestone, Some(project))) if project.user_id == user_id => {
+                    if project.status == ProjectStatus::Closed.to_string() {
+                        return Err(AppError::Conflict(
+                            "closed projects cannot accept new tasks".to_string(),
+                        ));
+                    }
+                }
+                _ => return Err(AppError::BadRequest("invalid milestone".to_string())),
+            }
+        }
+
+        Ok(())
+    }
+
     async fn validate_and_dedup_tags(
         db: &impl ConnectionTrait,
         user_id: Uuid,
@@ -253,6 +303,8 @@ impl TaskService {
         Self::ensure_project_ownership(db, user_id, dto.project_id).await?;
         Self::ensure_parent_ownership(db, user_id, dto.parent_id, dto.project_id).await?;
         Self::ensure_milestone_ownership(db, user_id, dto.milestone_id, dto.project_id).await?;
+        Self::ensure_project_accepts_new_tasks(db, user_id, dto.project_id).await?;
+        Self::ensure_milestone_project_accepts_new_tasks(db, user_id, dto.milestone_id).await?;
         let safe_tag_ids = Self::validate_and_dedup_tags(db, user_id, &dto.tag_ids).await?;
 
         let task = tasks::ActiveModel {
@@ -325,9 +377,7 @@ impl TaskService {
         dto: UpdateTaskDto,
     ) -> Result<TaskDetailDto, AppError> {
         if dto.parent_id == Some(id) {
-            return Err(AppError::BadRequest(
-                "a task cannot be its own parent".to_string(),
-            ));
+            return Err(AppError::BadRequest("a task cannot be its own parent".to_string()));
         }
 
         let task = Self::get_task_model(db, user_id, id).await?;
@@ -406,10 +456,7 @@ impl TaskService {
         Ok(())
     }
 
-    async fn ensure_no_blocking_children(
-        db: &impl ConnectionTrait,
-        parent_id: Uuid,
-    ) -> Result<(), AppError> {
+    async fn ensure_no_blocking_children(db: &impl ConnectionTrait, parent_id: Uuid) -> Result<(), AppError> {
         let blocking_count = Tasks::find()
             .filter(tasks::Column::ParentId.eq(parent_id))
             .filter(tasks::Column::BlockParent.eq(true))

@@ -1,3 +1,4 @@
+use object_store::ObjectStore;
 use sea_orm::prelude::Decimal;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
@@ -7,9 +8,10 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
+        attachment::CreateAttachmentDto,
         project::{
             ClientProjectDetailDto, ClientProjectDetailRow, ClientProjectSearchField, ClientProjectSummaryDto,
-            CreateProjectDto, ProjectDetailDto, ProjectDetailRow, ProjectSearchField, ProjectSummaryDto,
+            CreateProjectDto, ProjectDetailDto, ProjectDetailRow, ProjectSearchField, ProjectStatus, ProjectSummaryDto,
             UpdateProjectBillableDto, UpdateProjectCategoryDto, UpdateProjectDto, UpdateProjectStatusDto,
         },
         project_billing::{CreateProjectBillingDto, ProjectBillingType, UpdateProjectBillingDto},
@@ -22,11 +24,17 @@ use crate::{
         projects::{self, Model as ProjectModel},
     },
     error::AppError,
-    services::milestones::MilestoneService,
+    services::{attachments::AttachmentService, milestones::MilestoneService},
     utils::search::{apply_filters, apply_ordering, apply_pagination},
 };
 
 pub struct ProjectService;
+
+pub struct ProjectAttachmentUpload {
+    pub original_name: String,
+    pub mime_type: Option<String>,
+    pub bytes: Vec<u8>,
+}
 
 struct NormalizedProjectBilling {
     currency_type: String,
@@ -251,6 +259,45 @@ impl ProjectService {
         Ok(created_project)
     }
 
+    pub async fn create_with_attachments(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        storage: &dyn ObjectStore,
+        user_id: Uuid,
+        dto: CreateProjectDto,
+        files: Vec<ProjectAttachmentUpload>,
+    ) -> Result<ProjectModel, AppError> {
+        if files.is_empty() {
+            return Self::create(db, user_id, dto).await;
+        }
+
+        let txn = db.begin().await.map_err(AppError::Database)?;
+        let created_project = match Self::create_with_connection(&txn, user_id, dto).await {
+            Ok(project) => project,
+            Err(error) => {
+                txn.rollback().await.map_err(AppError::Database)?;
+                return Err(error);
+            }
+        };
+
+        for file in files {
+            let attachment = CreateAttachmentDto {
+                project_id: Some(created_project.id),
+                task_id: None,
+                original_name: file.original_name,
+                mime_type: file.mime_type,
+            };
+
+            if let Err(error) = AttachmentService::create_in_tx(&txn, storage, user_id, attachment, file.bytes).await {
+                txn.rollback().await.map_err(AppError::Database)?;
+                return Err(error);
+            }
+        }
+
+        txn.commit().await.map_err(AppError::Database)?;
+
+        Ok(created_project)
+    }
+
     pub async fn get_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<ProjectDetailDto, AppError> {
         let row: ProjectDetailRow = Projects::find()
             .filter(projects::Column::Id.eq(id))
@@ -364,6 +411,20 @@ impl ProjectService {
         }
 
         let project = Self::find_by_id(db, user_id, id).await?;
+        let adds_milestones = dto
+            .new_milestones
+            .as_ref()
+            .map(|milestones| !milestones.is_empty())
+            .unwrap_or(false);
+
+        if adds_milestones
+            && (project.status == ProjectStatus::Closed.to_string() || dto.status == ProjectStatus::Closed)
+        {
+            return Err(AppError::Conflict(
+                "closed projects cannot accept new milestones".to_string(),
+            ));
+        }
+
         let txn = db.begin().await.map_err(AppError::Database)?;
 
         let mut active_project: projects::ActiveModel = project.into();

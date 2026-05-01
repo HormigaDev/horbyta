@@ -1,358 +1,416 @@
 # Horbyta
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Self-Hosted](https://img.shields.io/badge/Self--Hosted-Yes-success)](#installation)
-[![Backend: Rust](https://img.shields.io/badge/Backend-Rust-orange?logo=rust&logoColor=white)](#tech-stack)
+[![Self Hosted](https://img.shields.io/badge/Self--Hosted-Yes-success)](#horbyta)
+[![Backend: Rust](https://img.shields.io/badge/Backend-Rust%202024-orange?logo=rust&logoColor=white)](#tech-stack)
+[![API: Axum](https://img.shields.io/badge/API-Axum%200.8-black)](#tech-stack)
+[![ORM: SeaORM](https://img.shields.io/badge/ORM-SeaORM%201.1-darkgreen)](#tech-stack)
+[![Database: PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2016%2B-336791?logo=postgresql&logoColor=white)](#database)
 [![Frontend: Quasar](https://img.shields.io/badge/Frontend-Quasar%20PWA-1976D2?logo=quasar&logoColor=white)](#tech-stack)
-[![Database: PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-336791?logo=postgresql&logoColor=white)](#requirements)
-[![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](#option-c--docker-maximum-version-safety)
-[![PWA](https://img.shields.io/badge/PWA-Installable-5A0FC8)](#using-horbyta)
-[![i18n](https://img.shields.io/badge/i18n-EN%20%7C%20ES%20%7C%20PT-informational)](#using-horbyta)
-[![API: REST](https://img.shields.io/badge/API-REST%20%2B%20WebSocket-informational)](#tech-stack)
+[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](#quick-start)
+[![Tests](https://img.shields.io/badge/Tests-cargo%20test-informational)](#running-tests)
+[![Storage](https://img.shields.io/badge/Storage-Local%20%7C%20S3-lightgrey)](#s3-and-attachments)
+[![Auth](https://img.shields.io/badge/Auth-JWT%20Cookies-purple)](#authentication)
 
-**Horbyta** is a self-hosted project management platform built specifically for **freelancers and independent professionals**. It brings together everything you need to run your client work from a single place: projects, tasks, milestones, time tracking, invoices, payments, a client portal, and a formal change-request engine designed to stop scope creep before it eats your margin.
+Horbyta is a self-hosted project management and billing platform for freelancers and independent professionals. It combines client/project management, tasks, milestones, time tracking, invoices, payments, file attachments, dashboards, and a client portal with formal change requests.
 
-You own your data, you run it on your own infrastructure, and you only pay for the VPS.
+The core problem it solves is operational fragmentation: freelance work often lives across chat, spreadsheets, timers, file drives, invoice tools, and payment notes. Horbyta keeps the work, billing context, client approvals, and audit-sensitive payment records in one system you can run yourself.
 
----
+## Quick Start
 
-## Table of Contents
-
-- [What you can do with Horbyta](#what-you-can-do-with-horbyta)
-- [Tech stack](#tech-stack)
-- [Requirements](#requirements)
-- [Installation](#installation)
-    - [Option A — Production (recommended): use a release](#option-a--production-recommended-use-a-release)
-    - [Option B — Manual install from source](#option-b--manual-install-from-source)
-    - [Option C — Docker (maximum version safety)](#option-c--docker-maximum-version-safety)
-- [Configuration reference](#configuration-reference)
-- [Putting it behind Nginx (HTTPS + rate limiting)](#putting-it-behind-nginx-https--rate-limiting)
-- [First run](#first-run)
-- [Using Horbyta](#using-horbyta)
-- [Backups](#backups)
-- [Updating](#updating)
-- [Troubleshooting](#troubleshooting)
-- [License](#license)
-
----
-
-## What you can do with Horbyta
-
-[![Projects](https://img.shields.io/badge/Projects-Categories%20%7C%20Status%20%7C%20Billing-blueviolet)](#)
-[![Tasks](https://img.shields.io/badge/Tasks-Hierarchy%20%7C%20Tags%20%7C%20Priority-informational)](#)
-[![Milestones](https://img.shields.io/badge/Milestones-Tracking%20%7C%20Due%20Dates-9cf)](#)
-[![Time Tracking](https://img.shields.io/badge/Time%20Tracking-Per%20Activity%20%7C%20Daily%20Limits-orange)](#)
-[![Invoices](https://img.shields.io/badge/Invoices-Manual%20%7C%20Provider%20Refs-success)](#)
-[![Payments](https://img.shields.io/badge/Payments-Charges%20%2B%20Refunds-success)](#)
-[![Change Requests](https://img.shields.io/badge/Change%20Requests-Anti%20Scope%20Creep-critical)](#)
-[![Client Portal](https://img.shields.io/badge/Client%20Portal-Magic%20Link%20%7C%20Credentials-yellowgreen)](#)
-[![Attachments](https://img.shields.io/badge/Attachments-Local%20%7C%20S3-lightgrey)](#)
-[![Dashboard](https://img.shields.io/badge/Dashboard-Revenue%20%7C%20AR%20%7C%20Bottlenecks-blue)](#)
-
-- **Clients & Projects.** Group your work by client, organize projects in categories, and configure billing per project: fixed price, hourly rate, or monthly retainer.
-- **Tasks with real hierarchy.** Unlimited subtasks, priority and complexity scoring, tags, due dates, and per-task time tracking.
-- **Milestones.** Define checkpoints with due dates, track progress (open / review / approved / released), and surface what is overdue or upcoming.
-- **Time tracking.** Start/stop timers, log entries by activity (Development, Design, Meeting, …), set a daily-hour ceiling per user, and roll up billable vs non-billable hours.
-- **Invoices & Payments.** Issue invoices in any currency, attach time entries, register charges and refunds, and prevent accidental tampering — payment records are protected by database triggers.
-- **Anti-scope-creep change requests.** When a client asks for "just one more thing", turn it into a formal request with technical assessment, cost impact, and schedule impact. The client must explicitly approve before work proceeds. No more arguing over chat history.
-- **Client portal.** Invite clients via email + password or a magic link. They see their projects, milestones, and pending change requests.
-- **Attachments.** Upload files to projects or tasks, stored locally or on any S3-compatible bucket (AWS S3, MinIO, Cloudflare R2, Backblaze B2…).
-- **Real-time updates.** WebSocket-based notifications keep the UI fresh.
-- **Multilingual.** Full UI translation in English, Spanish, and Portuguese.
-- **Dashboards.** Monthly revenue, accounts receivable by client, billable ratio, time by activity, scope-creep value captured, task bottlenecks, and per-client portfolio views.
-
----
-
-## Tech stack
-
-[![Rust](https://img.shields.io/badge/Rust-1.88%2B-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![Axum](https://img.shields.io/badge/Axum-0.8-black)](https://github.com/tokio-rs/axum)
-[![SeaORM](https://img.shields.io/badge/SeaORM-1.1-darkgreen)](https://www.sea-ql.org/SeaORM/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Quasar](https://img.shields.io/badge/Quasar-Vue%203-1976D2?logo=quasar&logoColor=white)](https://quasar.dev/)
-[![JWT](https://img.shields.io/badge/Auth-JWT-purple)](https://jwt.io/)
-[![Argon2](https://img.shields.io/badge/Hashing-Argon2-success)](#)
-
-The backend is a single Rust binary (Axum + SeaORM) that serves the REST API, the WebSocket endpoint, and the compiled frontend (Quasar PWA) as static files. PostgreSQL is the only required external service.
-
----
-
-## Requirements
-
-| Component             | Minimum                  | Notes                                                 |
-| --------------------- | ------------------------ | ----------------------------------------------------- |
-| OS                    | Linux x86_64             | Tested on Debian / Ubuntu                             |
-| RAM                   | 512 MB                   | The binary runs comfortably under a 512 MB cap        |
-| Disk                  | 1 GB + your attachments  | Attachments may be on S3 instead                      |
-| PostgreSQL            | 16 or newer              | Requires the `uuidv7()` function (built-in in PG 16+) |
-| Reverse proxy         | Optional but recommended | Nginx config provided                                 |
-| S3-compatible storage | Optional                 | If unset, files are stored on local disk              |
-
----
-
-## Installation
-
-You have two paths. Pick one.
-
-### Option A — Production (recommended): use a release
-
-The fastest way to deploy Horbyta on a VPS. Each GitHub release ships a tarball with the prebuilt Rust binary plus the compiled frontend. No Rust toolchain, no Node.js, no build step on your server.
-
-**1. Provision PostgreSQL** and create the database:
+The repository is Docker-first. After `.env` is configured and the schema is applied, the one-command app start is:
 
 ```bash
-sudo -u postgres psql <<'SQL'
-CREATE USER horbyta WITH PASSWORD 'change-me-strong-password';
-CREATE DATABASE horbyta OWNER horbyta;
-SQL
+make setup
+# edit .env
+psql "$DATABASE_URL" -f database/schema.sql
+make prod
 ```
 
-**2. Download the latest release** from the [Releases page](https://github.com/HormigaDev/horbyta/releases) and unpack it:
+For development container workflow:
 
 ```bash
-sudo mkdir -p /opt/horbyta
-cd /opt/horbyta
-sudo curl -L -o horbyta.tar.gz https://github.com/HormigaDev/horbyta/releases/latest/download/horbyta-linux-x86_64.tar.gz
-sudo tar -xzf horbyta.tar.gz
-sudo rm horbyta.tar.gz
+make setup
+# edit .env
+make dev
+make shell
+cargo run
 ```
 
-After unpacking you will have, at minimum, the `horbyta` binary, the compiled `frontend/dist/pwa/` directory, and the SQL schema.
-
-**3. Apply the database schema:**
+`make dev` uses the development compose overlay:
 
 ```bash
-psql "postgresql://horbyta:change-me-strong-password@localhost:5432/horbyta" -f database/schema.sql
+docker compose --env-file .env -f .docker/docker-compose.yml -f .docker/docker-compose.dev.yml up --build --no-deps horbyta_app -d
 ```
 
-**4. Create your environment file** (`/opt/horbyta/.env`) — see [Configuration reference](#configuration-reference) for every variable. A minimal file looks like:
+`make prod` uses the production compose file:
+
+```bash
+docker compose --env-file .env -f .docker/docker-compose.yml up --build -d
+```
+
+The compose files live under `.docker/`, so plain `docker compose up` from the repository root is not currently the canonical command. Use the Makefile wrappers unless you intentionally pass the `-f .docker/...` files yourself.
+
+Useful Make targets:
+
+```bash
+make help
+make dev
+make prod
+make logs
+make ps
+make shell
+make down
+make clean
+```
+
+## Tech Stack
+
+Backend:
+
+- Rust 2024
+- Axum 0.8
+- SeaORM 1.1
+- PostgreSQL 16+
+- JWT cookies for freelancer and client sessions
+- Argon2 password hashing
+- object_store for local/S3-compatible attachments
+- WebSocket endpoint for realtime notifications
+
+Frontend:
+
+- Vue 3
+- Quasar PWA
+- TypeScript
+- i18n: English, Spanish, Portuguese
+
+Infrastructure:
+
+- Docker / Docker Compose
+- Makefile wrappers
+- Nginx sample config under `nginx/`
+- Static frontend served by the Rust binary in production
+
+## Architecture
+
+Horbyta is a single Rust binary plus a compiled Quasar PWA.
+
+Runtime shape:
+
+- `src/main.rs` builds an Axum router under `/api/v1`, exposes `/ws`, and serves `STATIC_DIR` as the frontend fallback.
+- Controllers in `src/controllers/` handle HTTP extraction, request parsing, and response shape.
+- Services in `src/services/` own business rules, transactions, multi-tenant scoping, and persistence orchestration.
+- DTOs in `src/dtos/` define API payloads, validation, search fields, and response projections.
+- Middlewares/extractors in `src/middlewares/` handle auth, client auth, validation, and rate limiting helpers.
+- SeaORM entities in `src/entities/` map the PostgreSQL schema.
+- `database/schema.sql` contains tables, constraints, indexes, views, and triggers.
+
+Important flows:
+
+- Freelancer routes authenticate through `UserDto` extractor and `horbyta_user_auth` cookie.
+- Client portal routes authenticate through `ClientAuthDto` extractor and `horbyta_client_auth` cookie.
+- Search endpoints use validated JSON encoded in the `q` query parameter.
+- Attachments are scoped to either a project or a task, never both.
+- Project creation with files is parsed at the controller layer and orchestrated by `ProjectService::create_with_attachments`.
+
+## Technical Decisions
+
+- **Self-hosted single binary.** The backend serves API, WebSocket, and static PWA assets. This keeps deployment simple for a small VPS.
+- **PostgreSQL as the source of truth.** Constraints and triggers protect invariants that must survive application bugs, especially billing/payment rules.
+- **Service-layer authorization.** Queries filter by `user_id` and, for the client portal, by both `user_id` and `client_id`.
+- **Separate freelancer/client JWT secrets.** Freelancer and client sessions cannot be used interchangeably.
+- **Cookie-based sessions.** Auth tokens are stored in HTTP cookies; frontend code does not need to manage bearer tokens manually.
+- **Explicit error conventions.** The API distinguishes malformed payloads, invalid business input, state conflicts, forbidden role actions, and missing scoped resources.
+- **External billing is reference-based.** Horbyta records external provider identifiers and payment links, but does not process card payments itself.
+- **S3-compatible storage is optional.** Local disk is the default; S3/R2/MinIO/etc. can be enabled by environment.
+
+## Error Conventions
+
+Current backend convention:
+
+| Error | Use when |
+| --- | --- |
+| `Unprocessable` | Request body cannot be parsed as the expected transport format, e.g. invalid JSON or multipart. |
+| `BadRequest` | Payload is syntactically valid but violates DTO validation or a business input rule. |
+| `Conflict` | The action is valid in general but conflicts with current state, e.g. editing a non-draft invoice or creating work inside a closed project. |
+| `Forbidden` | The authenticated actor exists but is not allowed to perform that role-specific action. |
+| `NotFound` | The resource does not exist in the caller's tenant scope, or should not reveal cross-tenant existence. |
+| `Unauthorized` | Missing, invalid, or expired session token. |
+
+Responses use:
+
+```json
+{
+  "error": "human readable message",
+  "type": "bad_request"
+}
+```
+
+## State Rules
+
+Project status affects downstream creation:
+
+- Closed projects cannot accept new tasks.
+- Closed projects cannot accept new milestones.
+- Closed projects cannot accept new invoices.
+- Closed projects cannot accept new change requests.
+
+Invoice status rules:
+
+- Only `draft` invoices can be edited or deleted.
+- Allowed status transitions are validated in the invoice service.
+- Payments can only be recorded for invoices in compatible states.
+
+Payment rules:
+
+- Payments are immutable for sensitive fields.
+- Refunds are represented as separate payment records linked to the original charge.
+- Database triggers reject tampering and invalid refund logic.
+
+## Running Locally
+
+1. Create `.env`:
+
+```bash
+make setup
+```
+
+2. Edit at least:
 
 ```env
-DATABASE_URL=postgresql://horbyta:change-me-strong-password@localhost:5432/horbyta
-APP_URI=127.0.0.1:8890
-APP_ENV=production
+DATABASE_URL=postgresql://development:developer123@host.docker.internal:5434/hormigapm_development
 JWT_SECRET=replace-with-32-plus-random-characters
 JWT_SECRET_CLIENT=replace-with-another-32-plus-random-string
 TIME_TO_EXP_SESSION=7d
 ALLOW_REGISTRATION=true
-STATIC_DIR=/opt/horbyta/frontend/dist/pwa
-UPLOAD_DIR=/opt/horbyta/data/storage
-USER_STORAGE_LIMIT_GB=2
 ```
 
-Generate strong secrets with:
+Use `host.docker.internal` when the app runs inside Docker and PostgreSQL runs on the host. If you apply the schema from the host shell, use the equivalent host URL, for example `postgresql://development:developer123@localhost:5434/hormigapm_development`.
+
+3. Apply schema:
 
 ```bash
-openssl rand -hex 32
+psql "$DATABASE_URL" -f database/schema.sql
 ```
 
-**5. Run it as a systemd service.** Create `/etc/systemd/system/horbyta.service`:
-
-```ini
-[Unit]
-Description=Horbyta PM
-After=network.target postgresql.service
-
-[Service]
-Type=simple
-User=horbyta
-WorkingDirectory=/opt/horbyta
-EnvironmentFile=/opt/horbyta/.env
-ExecStart=/opt/horbyta/horbyta
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Then:
+4. Start backend container:
 
 ```bash
-sudo useradd -r -s /bin/false horbyta
-sudo chown -R horbyta:horbyta /opt/horbyta
-sudo systemctl daemon-reload
-sudo systemctl enable --now horbyta
-sudo systemctl status horbyta
+make dev
+make logs
 ```
 
-You should see _"Server running at http://127.0.0.1:8890"_. Set `ALLOW_REGISTRATION=true` long enough to create your first user, then flip it back to `false`.
-
-### Option B — Manual install from source
-
-Use this path if you want to build it yourself, run an unreleased commit, or modify the code.
-
-**Requirements:** Rust 1.88+, Node.js 22+, PostgreSQL 16+.
+Development compose starts the Rust container in manual/sleep mode. Enter it with:
 
 ```bash
-git clone https://github.com/HormigaDev/horbyta.git
-cd horbyta
+make shell
+cargo run
+```
 
-# 1. Build the frontend
+For a production-style container build:
+
+```bash
+make prod
+```
+
+Manual source build:
+
+```bash
 cd frontend
 npm ci
 npx quasar build -m pwa
 cd ..
-
-# 2. Build the backend
-cargo build --release
-
-# 3. Prepare the database
-psql "$DATABASE_URL" -f database/schema.sql
-
-# 4. Configure environment
-cp .env.template .env
-# edit .env with your secrets and DATABASE_URL
-
-# 5. Run
-./target/release/horbyta
+cargo run
 ```
 
-### Option C — Docker (maximum version safety)
+## Running Tests
 
-Pick this path if your VPS ships outdated Rust or Node.js versions and you want the build to be fully reproducible regardless of the host. The included `Dockerfile` pins the exact toolchains used to build Horbyta (Rust 1.88, Node 22, Debian Bookworm runtime), so the only thing your VPS needs is Docker itself. PostgreSQL stays outside the container — point `DATABASE_URL` at any reachable database, managed or self-hosted.
-
-[![Docker Compose](https://img.shields.io/badge/Compose-Multi--Stage%20Build-2496ED?logo=docker&logoColor=white)](#)
-[![Reproducible Build](https://img.shields.io/badge/Build-Reproducible-success)](#)
+Backend tests:
 
 ```bash
-git clone https://github.com/HormigaDev/horbyta.git
-cd horbyta
-
-# 1. Create your .env (uses the same template as Option B)
-make setup
-# edit .env with your DATABASE_URL, JWT secrets, etc.
-
-# 2. Apply the schema against your PostgreSQL instance
-psql "$DATABASE_URL" -f database/schema.sql
-
-# 3. Build and start the container
-make prod        # production: builds image and runs detached
-# or, for development:
-make dev         # rebuilds and starts the dev container
-make logs        # tail backend logs
-make down        # stop everything
+cargo test
 ```
 
-The container exposes `127.0.0.1:${RUST_PORT:-8890}` on the host — put Nginx in front of it the same way you would for Option A. Attachments are mounted from `./data/storage` on the host, so backups and updates do not lose files.
+Compile tests without running:
 
----
+```bash
+cargo test --no-run
+```
 
-## Configuration reference
+Target one module/test:
 
-All configuration is done via environment variables (or an `.env` file in the working directory).
+```bash
+cargo test services::projects
+cargo test normalize_billing_payload
+```
 
-| Variable                | Required | Default                 | Description                                              |
-| ----------------------- | -------- | ----------------------- | -------------------------------------------------------- |
-| `DATABASE_URL`          | yes      | —                       | PostgreSQL connection string                             |
-| `APP_URI`               | no       | `127.0.0.1:8890`        | Address the server binds to                              |
-| `APP_ENV`               | no       | `development`           | Set to `production` to disable permissive CORS           |
-| `JWT_SECRET`            | yes      | —                       | Secret for user JWTs. 32+ random chars                   |
-| `JWT_SECRET_CLIENT`     | yes      | —                       | Separate secret for client-portal JWTs                   |
-| `TIME_TO_EXP_SESSION`   | yes      | —                       | Session lifetime, e.g. `7d`, `12h`, `30m`                |
-| `STATIC_DIR`            | no       | `frontend/dist/pwa`     | Path to the compiled PWA                                 |
-| `FRONTEND_ORIGIN`       | dev only | `http://localhost:9000` | Allowed CORS origin in development                       |
-| `ALLOW_REGISTRATION`    | no       | `false`                 | Enable the public sign-up endpoint                       |
-| `UPLOAD_DIR`            | no       | `./data/storage`        | Local path for attachments (used if S3 is unset)         |
-| `USER_STORAGE_LIMIT_GB` | no       | `2`                     | Per-user storage cap for attachments                     |
-| `S3_BUCKET`             | no       | —                       | Enables S3 storage when set together with the keys below |
-| `S3_REGION`             | no       | —                       | S3 region                                                |
-| `S3_ENDPOINT`           | no       | —                       | Custom S3 endpoint (MinIO, R2, B2…)                      |
-| `S3_ACCESS_KEY`         | no       | —                       | S3 access key                                            |
-| `S3_SECRET_KEY`         | no       | —                       | S3 secret key                                            |
-| `RUST_LOG`              | no       | `info`                  | Log level (e.g. `info`, `debug`, `info,sqlx=warn`)       |
+Frontend static checks depend on the frontend package scripts:
 
-Set `ALLOW_REGISTRATION=false` if you are the only user — registration is the only way to create accounts.
+```bash
+cd frontend
+npm ci
+npm run lint
+```
 
----
+## Environment Variables
 
-## Putting it behind Nginx (HTTPS + rate limiting)
+All runtime configuration is read from environment variables. `Config::init()` requires the critical values at startup.
 
-The repository ships with a production-ready Nginx vhost that adds HTTPS, security headers, request-size limits, and per-IP rate limiting (general + stricter on auth endpoints).
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `DATABASE_URL` | yes | none | PostgreSQL connection string. |
+| `JWT_SECRET` | yes | none | Secret used to sign freelancer/user JWTs. Use 32+ random chars. |
+| `JWT_SECRET_CLIENT` | yes | none | Separate secret for client portal JWTs. Use 32+ random chars. |
+| `TIME_TO_EXP_SESSION` | yes | none | Session duration parsed by `duration-str`, e.g. `7d`, `12h`, `30m`. |
+| `APP_URI` | no | `127.0.0.1:8890` | Address the Rust server binds to. In Docker this is set to `0.0.0.0:8890`. |
+| `APP_ENV` | no | `development` | `production` disables development CORS behavior. |
+| `FRONTEND_ORIGIN` | dev only | `http://localhost:9000` | Allowed CORS origin outside production. |
+| `STATIC_DIR` | no | `frontend/dist/pwa` | Directory served as the PWA. |
+| `ALLOW_REGISTRATION` | no | `false` | Enables public user registration. Turn off after creating the first user. |
+| `UPLOAD_DIR` | no | `./data/storage` | Local attachment storage path when S3 is not configured. |
+| `USER_STORAGE_LIMIT_GB` | no | `2` | Per-user attachment storage cap. |
+| `S3_BUCKET` | no | unset | Enables S3-compatible storage when set. |
+| `S3_REGION` | no | unset | S3 region. |
+| `S3_ENDPOINT` | no | unset | Custom S3 endpoint for MinIO, Cloudflare R2, Backblaze B2, etc. |
+| `S3_ACCESS_KEY` | no | unset | S3 access key. |
+| `S3_SECRET_KEY` | no | unset | S3 secret key. |
+| `RUST_LOG` | no | `info` | Logging filter, e.g. `debug`, `info,sqlx=warn`. |
+| `RUST_PORT` | compose | `8890` | Host port used by Docker Compose. |
+| `APP_VERSION` | compose | `latest` | Docker image tag suffix. |
+| `BINARY_NAME` | compose/build | `horbyta` | Binary copied by the production Dockerfile. |
+
+`.env.template` includes extra helper values used by compose/development. Variables not read by the Rust app may still be used by Docker or scripts.
+
+## Authentication
+
+There are two independent auth flows.
+
+Freelancer/user auth:
+
+- Login endpoint validates email/password.
+- Passwords are hashed with Argon2.
+- JWT claims contain `sub` as the user id and `exp`.
+- Token is stored in `horbyta_user_auth`.
+- Protected freelancer endpoints extract `UserDto` from the cookie.
+- The extractor verifies JWT signature with `JWT_SECRET`, then loads/caches the user.
+
+Client portal auth:
+
+- Clients can authenticate with credentials or magic links.
+- Client JWT claims contain `sub` as the `client_auth.id`.
+- Token is stored in `horbyta_client_auth`.
+- Protected client endpoints extract `ClientAuthDto` from the cookie.
+- The extractor verifies JWT signature with `JWT_SECRET_CLIENT`, then loads/caches the linked client profile.
+
+Security properties:
+
+- User cookies do not authenticate client routes.
+- Client cookies do not authenticate freelancer routes.
+- Invalid or missing cookies return `401 Unauthorized`.
+- Tenant access is enforced by service queries using `user_id` and, for client routes, `client_id`.
+
+## S3 And Attachments
+
+Horbyta uses the `object_store` abstraction.
+
+Default behavior:
+
+- If `S3_BUCKET` is not set, files are stored in `UPLOAD_DIR`.
+- The app creates the local upload directory at startup if needed.
+- Attachments are metadata rows in PostgreSQL plus binary objects in local/S3 storage.
+
+S3-compatible behavior:
+
+- Set `S3_BUCKET` to enable S3 mode.
+- Set `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`.
+- Set `S3_ENDPOINT` for non-AWS providers such as MinIO, Cloudflare R2, or Backblaze B2.
+- The S3 builder uses `with_allow_http(true)`, which is useful for local MinIO but should be treated carefully in production networks.
+
+Attachment safeguards:
+
+- A file must be attached to exactly one scope: project or task.
+- Per-file and per-scope size checks are enforced by the attachment service.
+- Per-user storage is capped by `USER_STORAGE_LIMIT_GB`.
+
+## External Billing
+
+Horbyta does not currently execute payments through Stripe/PayPal/etc. It records billing state and external references.
+
+Project billing:
+
+- `fixed`: requires `fixed_price`.
+- `hourly`: requires `hourly_rate`.
+- `retainer`: requires `retainer_amount` and `payment_day`.
+- Currency is normalized to uppercase.
+
+Invoices:
+
+- Providers: `manual`, `paypal`, `stripe`, `wise`, `mercadopago`, `revolut`, `payoneer`.
+- If provider is not `manual`, `provider_external_id` is required.
+- `payment_link` can store a provider checkout/payment URL.
+- External provider ids are unique per provider when present.
+
+Payments:
+
+- Manual charges and refunds are recorded as internal payment records.
+- Refunds point to their original payment.
+- Provider fields exist for external references, but provider reconciliation/webhooks are not implemented yet.
+
+## Database
+
+Apply schema manually:
+
+```bash
+psql "$DATABASE_URL" -f database/schema.sql
+```
+
+The schema includes:
+
+- UUID primary keys.
+- Record numbers scoped by user/table.
+- Check constraints for enum-like fields.
+- Billing consistency constraints.
+- Immutable payment triggers.
+- Invoice/payment guard triggers.
+- Dashboard views.
+
+## Nginx
+
+Sample config lives in `nginx/`.
 
 ```bash
 sudo cp nginx/http-directives.conf /etc/nginx/conf.d/pm-http-directives.conf
 sudo cp nginx/pm-api.conf /etc/nginx/sites-available/pm-api
 sudo ln -s /etc/nginx/sites-available/pm-api /etc/nginx/sites-enabled/pm-api
-
-# Adjust server_name to your own domain inside pm-api.conf, then:
-sudo nginx -t && sudo systemctl reload nginx
-
-# Issue a TLS certificate
-sudo certbot --nginx -d your.domain.tld
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
-The provided config proxies to `127.0.0.1:8890` and forwards WebSocket upgrades correctly.
+The provided config proxies to `127.0.0.1:8890` and includes WebSocket upgrade headers.
 
----
+## Known Limitations
 
-## First run
+- No root-level `compose.yml`; use `make dev` / `make prod` or pass the `.docker` compose files explicitly.
+- The dev compose service keeps the container alive; it does not automatically run `cargo run`.
+- Database schema is applied manually; there is no migration runner in the app startup path yet.
+- External billing is reference-based only. No Stripe/PayPal/MercadoPago API integration or webhook reconciliation yet.
+- Email delivery for client invites/magic links is not documented as a complete outbound mail pipeline.
+- Local attachment storage requires you to back up `UPLOAD_DIR` yourself.
+- S3 mode depends on provider credentials and bucket policy configured outside Horbyta.
+- Tests currently focus on backend service/extractor behavior; there is no documented frontend unit/e2e suite.
 
-1. Open the app in your browser at the configured domain (or `http://127.0.0.1:8890` if you skipped Nginx).
-2. Set `ALLOW_REGISTRATION=true`, restart, and create your account through the sign-up screen.
-3. Set `ALLOW_REGISTRATION=false` again and restart, so no one else can sign up on your instance.
-4. The first time a user is created, Horbyta seeds default categories (General, Work, Personal, Admin), default activities (Development, Design, Meeting, …), and default tags so you can start working immediately.
+## Roadmap
 
----
-
-## Using Horbyta
-
-Once you are logged in, the typical workflow looks like this:
-
-1. **Add a client.** Clients live independently from projects so you can have multiple projects per client.
-2. **Create a project** under a category, link it to the client, and configure billing (fixed / hourly / retainer).
-3. **Break the project into milestones** with due dates so progress is visible.
-4. **Create tasks** under the project (or under a milestone), nest subtasks as deeply as needed, tag them, and set priority.
-5. **Track your time** as you work. Either start a live timer on a task or add manual entries by activity.
-6. **Issue an invoice** when it is time to bill: select the time entries to consolidate, set the amount and currency, and either keep it as `manual` or attach an external provider reference.
-7. **Register payments** against the invoice. Refunds are first-class — they reference the original charge and never overwrite it.
-8. **Use the change-request engine** whenever a client asks for extra work. Capture the request, add your technical assessment with cost and schedule impact, and let the client formally approve or decline. No approval, no work.
-9. **Invite the client** to the portal (magic link or email + password) so they can review milestones and respond to change requests on their own.
-10. **Read your dashboards** to see monthly revenue, who owes you what, where your billable ratio is leaking, and which projects are bottlenecked.
-
-The frontend is a PWA: install it from your browser to get a desktop-app feel.
-
----
-
-## Backups
-
-Two things to back up: the **PostgreSQL database** and the **attachments directory** (if you use local storage).
-
-```bash
-# Database
-pg_dump "$DATABASE_URL" --format=custom --file=horbyta-$(date +%F).dump
-
-# Attachments (if using local storage)
-tar -czf horbyta-storage-$(date +%F).tar.gz /opt/horbyta/data/storage
-```
-
-If you use S3, your bucket is your backup — just make sure versioning is enabled.
-
----
-
-## Updating
-
-1. Stop the service: `sudo systemctl stop horbyta`.
-2. Back up the database (see above).
-3. Replace the `horbyta` binary and the `frontend/dist/pwa/` directory with the new release.
-4. Apply any new migrations from `database/` against your database.
-5. Start the service: `sudo systemctl start horbyta`.
-
----
-
-## Troubleshooting
-
-| Symptom                                                 | Likely cause                                                   | Fix                                                                   |
-| ------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `CRITICAL: Could not connect to Postgres` on startup    | Wrong `DATABASE_URL`, DB not running, or user lacks permission | Verify the connection string with `psql` first                        |
-| `function uuidv7() does not exist` when applying schema | PostgreSQL older than 16                                       | Upgrade PostgreSQL to 16+                                             |
-| 401 / 403 right after login                             | `JWT_SECRET` changed since the token was issued                | Re-login; never rotate the secret without invalidating sessions       |
-| 429 Too Many Requests                                   | Nginx rate limit hit                                           | Adjust `pm_api` / `pm_api_auth` zones in `nginx/http-directives.conf` |
-| Attachments fail to upload                              | `UPLOAD_DIR` not writable, or S3 keys wrong                    | Check folder ownership, or your S3 credentials                        |
-| `daily_limit_exceeded` when logging time                | Daily-hours ceiling enforced by DB trigger                     | Raise `max_daily_hours` in user preferences (max 14)                  |
-
----
+- Root-level Docker Compose profile for true `docker compose up` from the repository root.
+- First-run bootstrap that can apply migrations/schema safely.
+- Proper migration history instead of a single schema file.
+- External billing provider integrations and webhook reconciliation.
+- Outbound email configuration for invites, magic links, and billing events.
+- Broader authorization and state-machine tests across services.
+- Frontend e2e coverage for core freelancer and client portal workflows.
+- OpenAPI/REST documentation generated from route/DTO definitions.
+- Observability guide for logs, metrics, and production health checks.
 
 ## License
 
-Horbyta is released under the [MIT License](LICENSE). You can self-host it, modify it, and run it for your own freelance practice or for your team — no strings attached.
+Horbyta is released under the [MIT License](LICENSE).

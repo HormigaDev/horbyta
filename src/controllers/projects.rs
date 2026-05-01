@@ -6,14 +6,12 @@ use axum::{
     response::IntoResponse,
     routing::{get, patch, post},
 };
-use sea_orm::TransactionTrait;
 use serde_json::json;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
     dtos::{
-        attachment::CreateAttachmentDto,
         client::ClientAuthDto,
         project::{
             CreateProjectDto, UpdateProjectBillableDto, UpdateProjectCategoryDto, UpdateProjectDto,
@@ -25,7 +23,7 @@ use crate::{
     },
     error::AppError,
     middlewares::validator::{ValidatedJson, ValidatedSearchQuery, first_validation_error_message},
-    services::{attachments::AttachmentService, projects::ProjectService},
+    services::projects::{ProjectAttachmentUpload, ProjectService},
     state::AppState,
 };
 
@@ -38,6 +36,16 @@ struct UploadedFile {
     original_name: String,
     mime_type: Option<String>,
     bytes: Vec<u8>,
+}
+
+impl From<UploadedFile> for ProjectAttachmentUpload {
+    fn from(file: UploadedFile) -> Self {
+        Self {
+            original_name: file.original_name,
+            mime_type: file.mime_type,
+            bytes: file.bytes,
+        }
+    }
 }
 
 fn is_multipart_request(request: &Request) -> bool {
@@ -210,38 +218,10 @@ async fn create_project(
     request: Request,
 ) -> Result<impl IntoResponse, AppError> {
     let (payload, files) = parse_project_create_request(&state, request).await?;
-
-    if files.is_empty() {
-        let project = ProjectService::create(state.db.as_ref(), user.id, payload).await?;
-        return Ok(Json(project));
-    }
-
-    let tx = state.db.begin().await.map_err(AppError::Database)?;
-    let project = match ProjectService::create_in_tx(&tx, user.id, payload).await {
-        Ok(project) => project,
-        Err(error) => {
-            tx.rollback().await.map_err(AppError::Database)?;
-            return Err(error);
-        }
-    };
-
-    for file in files {
-        let attachment = CreateAttachmentDto {
-            project_id: Some(project.id),
-            task_id: None,
-            original_name: file.original_name,
-            mime_type: file.mime_type,
-        };
-
-        if let Err(error) =
-            AttachmentService::create_in_tx(&tx, state.storage.as_ref(), user.id, attachment, file.bytes).await
-        {
-            tx.rollback().await.map_err(AppError::Database)?;
-            return Err(error);
-        }
-    }
-
-    tx.commit().await.map_err(AppError::Database)?;
+    let files = files.into_iter().map(ProjectAttachmentUpload::from).collect();
+    let project =
+        ProjectService::create_with_attachments(state.db.as_ref(), state.storage.as_ref(), user.id, payload, files)
+            .await?;
 
     Ok(Json(project))
 }
