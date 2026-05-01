@@ -78,7 +78,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/auth';
-import { apiFetch } from 'src/boot/fetch';
+import { apiFetch, isApiHttpError } from 'src/boot/fetch';
 import { useLoginRules } from 'src/composables/rules/login.rules';
 import { RouterLink } from 'vue-router';
 import { UsersService } from 'src/services/users';
@@ -138,8 +138,12 @@ async function handleLogin() {
     }
 
     await router.push({ name: 'dashboard' });
-  } catch {
-    errorMessage.value = t('auth.login.unexpectedError');
+  } catch (error) {
+    if (isApiHttpError(error) && error.status === 401) {
+      errorMessage.value = t('auth.login.invalidCredentialsError');
+    } else {
+      errorMessage.value = t('auth.login.unexpectedError');
+    }
   } finally {
     isLoading.value = false;
     password.value = '';

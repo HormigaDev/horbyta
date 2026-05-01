@@ -62,6 +62,22 @@
                 </template>
               </q-input>
 
+              <q-input
+                v-model="confirmPassword"
+                type="password"
+                :label="t('auth.register.confirmPasswordLabel')"
+                outlined
+                dense
+                no-error-icon
+                autocomplete="off"
+                :error="registerRules.confirmPasswordRuleState.value.error"
+                :error-message="registerRules.confirmPasswordRuleState.value.message"
+              >
+                <template #append>
+                  <q-icon name="emergency" style="font-size: 12px" />
+                </template>
+              </q-input>
+
               <div v-if="errorMessage" class="text-negative text-center text-caption">
                 {{ errorMessage }}
               </div>
@@ -97,9 +113,8 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from 'src/stores/auth';
-import { apiFetch } from 'src/boot/fetch';
+import { apiFetch, isApiHttpError } from 'src/boot/fetch';
 import { useRegisterRules } from 'src/composables/rules/register.rules';
-import { isApiHttpError } from 'src/boot/fetch';
 import { RouterLink } from 'vue-router';
 
 const { t } = useI18n();
@@ -111,6 +126,7 @@ const registerRules = useRegisterRules();
 const name = ref('');
 const email = ref('');
 const password = ref('');
+const confirmPassword = ref('');
 const isLoading = ref(false);
 const errorMessage = ref('');
 
@@ -121,11 +137,13 @@ async function handleRegister() {
   const hasErrors =
     registerRules.validateName(name.value) ||
     registerRules.validateEmail(email.value) ||
-    registerRules.validatePassword(password.value);
+    registerRules.validatePassword(password.value) ||
+    registerRules.validateConfirmPassword(password.value, confirmPassword.value);
 
   if (hasErrors) {
     isLoading.value = false;
     password.value = '';
+    confirmPassword.value = '';
     return;
   }
 
@@ -156,6 +174,7 @@ async function handleRegister() {
   } finally {
     isLoading.value = false;
     password.value = '';
+    confirmPassword.value = '';
   }
 }
 </script>

@@ -21,12 +21,20 @@ const PASSWORD_RULES: Rule<string>[] = [
   (prop: string, t) => !CLIENT_PASSWORD_REGEX.test(prop) && t('rules.register.password.weak'),
 ];
 
+const CONFIRM_PASSWORD_RULES: Rule<{ password: string; confirmPassword: string }>[] = [
+  ({ confirmPassword }, t) =>
+    (!confirmPassword || confirmPassword.length < 1) && t('rules.register.confirmPassword.required'),
+  ({ password, confirmPassword }, t) =>
+    password !== confirmPassword && t('rules.register.confirmPassword.mismatch'),
+];
+
 export const useRegisterRules = () => {
   const { t } = useI18n();
 
   const nameRuleState = ref({ error: false, message: '' });
   const emailRuleState = ref({ error: false, message: '' });
   const passwordRuleState = ref({ error: false, message: '' });
+  const confirmPasswordRuleState = ref({ error: false, message: '' });
 
   function validateName(name: string) {
     return executeRules(nameRuleState, NAME_RULES, name, t);
@@ -40,13 +48,24 @@ export const useRegisterRules = () => {
     return executeRules(passwordRuleState, PASSWORD_RULES, password, t);
   }
 
+  function validateConfirmPassword(password: string, confirmPassword: string) {
+    return executeRules(
+      confirmPasswordRuleState,
+      CONFIRM_PASSWORD_RULES,
+      { password, confirmPassword },
+      t,
+    );
+  }
+
   return {
     nameRuleState,
     emailRuleState,
     passwordRuleState,
+    confirmPasswordRuleState,
 
     validateName,
     validateEmail,
     validatePassword,
+    validateConfirmPassword,
   };
 };

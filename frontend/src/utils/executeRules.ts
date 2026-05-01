@@ -23,5 +23,7 @@ export function executeRules<T>(
       return true;
     }
   }
+  state.value.error = false;
+  state.value.message = '';
   return false;
 }

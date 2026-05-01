@@ -38,6 +38,7 @@ export const messages = {
   'auth.login.emailLabel': 'Correo electrónico',
   'auth.login.passwordLabel': 'Contraseña',
   'auth.login.submit': 'Iniciar sesión',
+  'auth.login.invalidCredentialsError': 'Credenciales inválidas',
   'auth.login.unexpectedError': 'Ocurrió un error inesperado. Intente nuevamente más tarde',
   'auth.login.noAccount': '¿No tienes una cuenta?',
   'auth.login.registerLink': 'Regístrate',
@@ -47,11 +48,12 @@ export const messages = {
   'auth.register.nameLabel': 'Nombre de usuario',
   'auth.register.emailLabel': 'Correo electrónico',
   'auth.register.passwordLabel': 'Contraseña',
+  'auth.register.confirmPasswordLabel': 'Confirmar contraseña',
   'auth.register.submit': 'Crear cuenta',
   'auth.register.alreadyHaveAccount': '¿Ya tienes una cuenta?',
   'auth.register.loginLink': 'Inicia sesión',
   'auth.register.unexpectedError': 'Ocurrió un error inesperado. Intente nuevamente más tarde',
-  'auth.register.conflictError': 'El correo o nombre de usuario ya está en uso',
+  'auth.register.conflictError': 'El email ya está registrado',
   'auth.register.lockedError': 'El registro de nuevos usuarios está deshabilitado',
 
   'client.auth.login.brand': 'Portal de Cliente',
@@ -1401,6 +1403,8 @@ export const messages = {
   'rules.register.password.required': 'La contraseña es obligatoria',
   'rules.register.password.weak':
     'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo',
+  'rules.register.confirmPassword.required': 'La confirmación de contraseña es obligatoria',
+  'rules.register.confirmPassword.mismatch': 'La confirmación de contraseña no coincide',
   'rules.project.name.required': 'El nombre es obligatorio',
   'rules.project.name.limit': 'El nombre del proyecto debe tener entre 1 y 255 caracteres',
   'rules.project.description.limit':
