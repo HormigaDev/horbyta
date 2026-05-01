@@ -320,7 +320,12 @@ import { useUI } from 'src/composables/useUI';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { parseNumericText } from 'src/utils/numericInput';
 import type { ProjectSummaryDto } from 'src/types/project';
-import type { BillableTaskDto, BillableTimeEntryDto, InvoiceProvider, InvoiceStatus } from 'src/types/invoice';
+import type {
+  BillableTaskDto,
+  BillableTimeEntryDto,
+  InvoiceProvider,
+  InvoiceStatus,
+} from 'src/types/invoice';
 import {
   formatIsoDateForInput,
   getDateInputMask,
@@ -484,6 +489,7 @@ const {
     label: project.name,
     value: project.id,
   }),
+  additionalFilters: [{ column: 'is_billable', operator: '=', value: true }],
 });
 
 const onProjectSearch = (term: string) => {
@@ -656,7 +662,7 @@ const saveInvoice = async () => {
     const amount = String(Math.max(0, finalTotal.value));
     const dueDate = parseDisplayDateToIso(dueDateDisplay.value, userPreferencesStore.dateFormat);
     const providerExternalId = isExternalProvider.value
-      ? (form.value.provider_external_id?.trim() || null)
+      ? form.value.provider_external_id?.trim() || null
       : null;
     const paymentLink = form.value.payment_link?.trim() || null;
 

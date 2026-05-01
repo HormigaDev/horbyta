@@ -13,6 +13,7 @@ interface UseSelectByTermConfig<T> {
   toOption: (item: T) => SelectByTermOption;
   orderBy?: string | null;
   orderAsc?: boolean;
+  additionalFilters?: Filter[];
 }
 
 export function useSelectByTerm<T>(
