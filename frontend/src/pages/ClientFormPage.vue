@@ -100,6 +100,16 @@
       </q-card>
 
       <div class="row justify-end q-gutter-sm">
+        <q-btn
+          flat
+          round
+          icon="push_pin"
+          :color="pinButtonColor"
+          :aria-pressed="stayOnFormAfterSave"
+          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
+        >
+          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+        </q-btn>
         <q-btn :label="$t('common.cancel')" flat color="grey" @click="goBack" />
         <q-btn
           :label="$t('clients.form.saveButton')"
@@ -115,6 +125,7 @@
 <script setup lang="ts">
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useClientRules } from 'src/composables/rules/client.rules';
+import { usePinnedFormSave } from 'src/composables/usePinnedFormSave';
 import { useUI } from 'src/composables/useUI';
 import { ClientsService } from 'src/services/clients';
 import type { ClientDetailDto, CreateClientDto, UpdateClientDto } from 'src/types/clients';
@@ -130,8 +141,9 @@ const { notify, notifyError, showLoading, hideLoading } = useUI();
 
 const isNew = computed(() => route.name === 'client-create');
 const isSubmitting = ref(false);
+const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
 
-const client = ref<ClientDetailDto>({
+const createEmptyClient = (): ClientDetailDto => ({
   id: '',
   name: '',
   status: 'active',
@@ -143,6 +155,20 @@ const client = ref<ClientDetailDto>({
   created_at: '',
   updated_at: '',
 });
+
+const client = ref<ClientDetailDto>(createEmptyClient());
+
+const resetClientForm = async () => {
+  emailRuleState.value = { error: false, message: '' };
+  phoneRuleState.value = { error: false, message: '' };
+
+  if (isNew.value) {
+    client.value = createEmptyClient();
+    return;
+  }
+
+  await loadClient();
+};
 
 const loadClient = async () => {
   if (isNew.value) return;
@@ -196,7 +222,10 @@ const saveClient = async () => {
     if (isNew.value) {
       const created = await ClientsService.create(payload);
       notify(t('clients.form.createSuccess'), 'positive');
-      router.push(`/clients/${created.id}`);
+      await handlePinnedSaveSuccess({
+        reset: resetClientForm,
+        redirect: () => router.push(`/clients/${created.id}`),
+      });
     } else {
       const updatedPayload: UpdateClientDto = {
         name: payload.name,
@@ -209,7 +238,10 @@ const saveClient = async () => {
       };
       await ClientsService.update(client.value.id, updatedPayload);
       notify(t('clients.form.updateSuccess'), 'positive');
-      router.push(`/clients/${client.value.id}`);
+      await handlePinnedSaveSuccess({
+        reset: resetClientForm,
+        redirect: () => router.push(`/clients/${client.value.id}`),
+      });
     }
   } catch (err: unknown) {
     notifyError(t('clients.form.saveError'), err);

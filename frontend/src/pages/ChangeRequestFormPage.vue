@@ -159,6 +159,17 @@
       </q-card>
 
       <div class="row justify-end q-gutter-sm">
+        <q-btn
+          v-if="!isFormLocked"
+          flat
+          round
+          icon="push_pin"
+          :color="pinButtonColor"
+          :aria-pressed="stayOnFormAfterSave"
+          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
+        >
+          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+        </q-btn>
         <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
         <q-btn
           v-if="!isFormLocked"
@@ -180,6 +191,7 @@ import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import NumericTextInput from 'src/components/NumericTextInput.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
+import { usePinnedFormSave } from 'src/composables/usePinnedFormSave';
 import { useUI } from 'src/composables/useUI';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { ChangeRequestsService } from 'src/services/changeRequests';
@@ -223,8 +235,9 @@ const isNew = computed(() => route.name === 'change-request-create');
 const changeRequestId = computed(() => String(route.params.id || ''));
 const isSubmitting = ref(false);
 const hasAttemptedSubmit = ref(false);
+const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
 
-const form = reactive<ChangeRequestFormState>({
+const createEmptyChangeRequestForm = (): ChangeRequestFormState => ({
   id: '',
   version: 1,
   project_id: null,
@@ -239,6 +252,20 @@ const form = reactive<ChangeRequestFormState>({
   status: 'draft',
   origin: 'freelancer_dashboard',
 });
+
+const form = reactive<ChangeRequestFormState>(createEmptyChangeRequestForm());
+
+const resetChangeRequestForm = async () => {
+  hasAttemptedSubmit.value = false;
+
+  if (isNew.value) {
+    Object.assign(form, createEmptyChangeRequestForm());
+    setTaskOptions([]);
+    return;
+  }
+
+  await loadChangeRequest();
+};
 
 const isTaskOnlyMode = computed(() => !isNew.value && form.status === 'approved');
 const isFormLocked = computed(
@@ -475,7 +502,10 @@ const saveChangeRequest = async () => {
       });
 
       notify(t('changeRequests.form.updateSuccess'), 'positive');
-      void router.push(`/change-requests/${changeRequestId.value}`);
+      await handlePinnedSaveSuccess({
+        reset: resetChangeRequestForm,
+        redirect: () => router.push(`/change-requests/${changeRequestId.value}`),
+      });
     } catch (err: unknown) {
       notifyError(t('changeRequests.form.saveError'), err);
     } finally {
@@ -505,7 +535,10 @@ const saveChangeRequest = async () => {
 
       const created = await ChangeRequestsService.create(payload);
       notify(t('changeRequests.form.createSuccess'), 'positive');
-      void router.push(`/change-requests/${created.id}`);
+      await handlePinnedSaveSuccess({
+        reset: resetChangeRequestForm,
+        redirect: () => router.push(`/change-requests/${created.id}`),
+      });
     } else {
       const payload: UpdateChangeRequestDto = {
         project_id: form.project_id,
@@ -524,7 +557,10 @@ const saveChangeRequest = async () => {
 
       await ChangeRequestsService.update(changeRequestId.value, payload);
       notify(t('changeRequests.form.updateSuccess'), 'positive');
-      void router.push(`/change-requests/${changeRequestId.value}`);
+      await handlePinnedSaveSuccess({
+        reset: resetChangeRequestForm,
+        redirect: () => router.push(`/change-requests/${changeRequestId.value}`),
+      });
     }
   } catch (err: unknown) {
     notifyError(t('changeRequests.form.saveError'), err);

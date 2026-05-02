@@ -222,6 +222,16 @@
       </q-card>
 
       <div class="row justify-end q-gutter-sm">
+        <q-btn
+          flat
+          round
+          icon="push_pin"
+          :color="pinButtonColor"
+          :aria-pressed="stayOnFormAfterSave"
+          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
+        >
+          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+        </q-btn>
         <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
         <q-btn
           :label="t('tasks.form.saveButton')"
@@ -242,6 +252,7 @@ import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import AttachmentItemsList from 'src/components/AttachmentItemsList.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
+import { usePinnedFormSave } from 'src/composables/usePinnedFormSave';
 import { useUI } from 'src/composables/useUI';
 import { useTasksRules } from 'src/composables/rules/tasks.rules';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
@@ -285,6 +296,7 @@ const isNew = computed(() => route.name === 'task-create');
 const taskId = computed(() => String(route.params.id || ''));
 const isSubmitting = ref(false);
 const isHydratingTask = ref(false);
+const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
 const HEX_COLOR_REGEX = /^#(?:[0-9A-F]{3}|[0-9A-F]{6})$/i;
 const selectedFiles = ref<File[]>([]);
 
@@ -316,7 +328,7 @@ const dueDateDisplay = ref('');
 const dateInputMask = computed(() => getDateInputMask(userPreferencesStore.dateFormat));
 const qDateMask = computed(() => getQDateMask(userPreferencesStore.dateFormat));
 
-const form = reactive<CreateTaskDto>({
+const createEmptyTaskForm = (): CreateTaskDto => ({
   project_id: null,
   parent_id: null,
   milestone_id: null,
@@ -329,6 +341,25 @@ const form = reactive<CreateTaskDto>({
   due_date: null,
   tag_ids: [],
 });
+
+const form = reactive<CreateTaskDto>(createEmptyTaskForm());
+
+const resetTaskForm = async () => {
+  titleRuleState.value = { error: false, message: '' };
+
+  if (isNew.value) {
+    isHydratingTask.value = true;
+    Object.assign(form, createEmptyTaskForm());
+    dueDateDisplay.value = '';
+    selectedFiles.value = [];
+    setMilestoneOptions([]);
+    setParentTaskOptions([]);
+    isHydratingTask.value = false;
+    return;
+  }
+
+  await loadTask();
+};
 
 const taskDescription = computed({
   get: () => form.description || '',
@@ -697,7 +728,10 @@ const saveTask = async () => {
     if (isNew.value) {
       const created = await TasksService.create(payload, selectedFiles.value);
       notify(t('tasks.form.createSuccess'), 'positive');
-      void router.push(`/tasks/${created.id}`);
+      await handlePinnedSaveSuccess({
+        reset: resetTaskForm,
+        redirect: () => router.push(`/tasks/${created.id}`),
+      });
     } else {
       const updatePayload: UpdateTaskDto = {
         project_id: payload.project_id,
@@ -714,7 +748,10 @@ const saveTask = async () => {
       };
       await TasksService.update(taskId.value, updatePayload);
       notify(t('tasks.form.updateSuccess'), 'positive');
-      void router.push(`/tasks/${taskId.value}`);
+      await handlePinnedSaveSuccess({
+        reset: resetTaskForm,
+        redirect: () => router.push(`/tasks/${taskId.value}`),
+      });
     }
   } catch (err: unknown) {
     notifyError(t('tasks.form.saveError'), err);

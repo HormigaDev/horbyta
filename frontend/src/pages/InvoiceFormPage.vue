@@ -294,6 +294,16 @@
       </q-card>
 
       <div class="row justify-end q-gutter-sm">
+        <q-btn
+          flat
+          round
+          icon="push_pin"
+          :color="pinButtonColor"
+          :aria-pressed="stayOnFormAfterSave"
+          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
+        >
+          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+        </q-btn>
         <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
         <q-btn
           :label="t('invoices.form.saveButton')"
@@ -316,6 +326,7 @@ import SelectByTerm from 'src/components/SelectByTerm.vue';
 import NumericTextInput from 'src/components/NumericTextInput.vue';
 import { InvoicesService } from 'src/services/invoices';
 import { ProjectsService } from 'src/services/projects';
+import { usePinnedFormSave } from 'src/composables/usePinnedFormSave';
 import { useUI } from 'src/composables/useUI';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { parseNumericText } from 'src/utils/numericInput';
@@ -352,6 +363,7 @@ const isDraft = computed(() => isNew.value || invoiceStatus.value === 'draft');
 
 const isSubmitting = ref(false);
 const hasAttemptedSubmit = ref(false);
+const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
 const isTasksLoading = ref(false);
 const taskGroups = ref<BillableTaskDto[]>([]);
 const totalTasks = ref(0);
@@ -375,13 +387,35 @@ const PROVIDER_OPTIONS: { value: InvoiceProvider; label: string }[] = [
   { value: 'payoneer', label: t('invoices.provider.payoneer') },
 ];
 
-const form = ref({
+const createEmptyInvoiceForm = () => ({
   project_id: null as string | null,
   freelancer_notes: null as string | null,
   provider: 'manual' as InvoiceProvider,
   provider_external_id: null as string | null,
   payment_link: null as string | null,
 });
+
+const form = ref(createEmptyInvoiceForm());
+
+const resetInvoiceForm = async () => {
+  hasAttemptedSubmit.value = false;
+
+  if (isNew.value) {
+    form.value = createEmptyInvoiceForm();
+    invoiceStatus.value = null;
+    dueDateDisplay.value = '';
+    taskGroups.value = [];
+    totalTasks.value = 0;
+    currentPage.value = 1;
+    currencyType.value = '';
+    manualAmount.value = '';
+    discount.value = '';
+    selectedEntryIds.value = new Set();
+    return;
+  }
+
+  await loadInvoice();
+};
 
 const isExternalProvider = computed(() => form.value.provider !== 'manual');
 const hasProviderExternalIdError = computed(
@@ -678,7 +712,10 @@ const saveInvoice = async () => {
         payment_link: paymentLink,
       });
       notify(t('invoices.form.createSuccess'), 'positive');
-      void router.push(`/invoices/${created.id}`);
+      await handlePinnedSaveSuccess({
+        reset: resetInvoiceForm,
+        redirect: () => router.push(`/invoices/${created.id}`),
+      });
     } else {
       await InvoicesService.update(invoiceId.value, {
         amount,
@@ -690,7 +727,10 @@ const saveInvoice = async () => {
         payment_link: paymentLink,
       });
       notify(t('invoices.form.updateSuccess'), 'positive');
-      void router.push(`/invoices/${invoiceId.value}`);
+      await handlePinnedSaveSuccess({
+        reset: resetInvoiceForm,
+        redirect: () => router.push(`/invoices/${invoiceId.value}`),
+      });
     }
   } catch (err) {
     notifyError(t('invoices.form.saveError'), err);

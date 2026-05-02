@@ -9,6 +9,7 @@ export const messages: Record<keyof typeof es, string> = {
   'common.delete': 'Delete',
   'common.create': 'Create',
   'common.refresh': 'Refresh',
+  'common.keepFormOpen': 'Keep open and reset after saving',
   'common.backToList': 'Back to list',
   'common.id': 'ID',
   'common.created': 'Created',

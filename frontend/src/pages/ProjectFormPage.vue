@@ -228,6 +228,16 @@
       </q-card>
 
       <div class="row justify-end q-gutter-sm">
+        <q-btn
+          flat
+          round
+          icon="push_pin"
+          :color="pinButtonColor"
+          :aria-pressed="stayOnFormAfterSave"
+          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
+        >
+          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+        </q-btn>
         <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
         <q-btn
           :label="t('projects.form.saveButton')"
@@ -249,6 +259,7 @@ import AttachmentItemsList from 'src/components/AttachmentItemsList.vue';
 import NumericTextInput from 'src/components/NumericTextInput.vue';
 import { ProjectsService } from 'src/services/projects';
 import { CategoriesService } from 'src/services/categories';
+import { usePinnedFormSave } from 'src/composables/usePinnedFormSave';
 import { useUI } from 'src/composables/useUI';
 import { useProjectsRules } from 'src/composables/rules/projects.rules';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
@@ -296,13 +307,14 @@ const { nameRuleState, descriptionRuleState, validateName, validateDescription }
 const isNew = computed(() => route.name === 'project-create');
 const isSubmitting = ref(false);
 const hasAttemptedSubmit = ref(false);
+const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
 const selectedFiles = ref<File[]>([]);
 const selectedFilesTotalBytes = computed(() => sumFileSizes(selectedFiles.value));
 const filesBytesExceeded = computed(
   () => selectedFilesTotalBytes.value > MAX_ATTACHMENT_TOTAL_BYTES,
 );
 
-const billingForm = ref<ProjectBillingFormState>({
+const createDefaultBillingForm = (): ProjectBillingFormState => ({
   billing_type: 'fixed',
   currency_type: 'USD',
   hourly_rate: '',
@@ -310,6 +322,8 @@ const billingForm = ref<ProjectBillingFormState>({
   retainer_amount: '',
   payment_day: '',
 });
+
+const billingForm = ref<ProjectBillingFormState>(createDefaultBillingForm());
 
 const billingTypeOptions = computed(() => {
   return [
@@ -432,7 +446,7 @@ const onClientSearch = (term: string) => {
   loadClientsByTerm(term);
 };
 
-const project = ref<ProjectFormStateDto>({
+const createEmptyProjectForm = (): ProjectFormStateDto => ({
   id: '',
   name: '',
   description: '',
@@ -441,6 +455,24 @@ const project = ref<ProjectFormStateDto>({
   category_id: null,
   client_id: null,
 });
+
+const project = ref<ProjectFormStateDto>(createEmptyProjectForm());
+
+const resetProjectForm = async () => {
+  hasAttemptedSubmit.value = false;
+  nameRuleState.value = { error: false, message: '' };
+  descriptionRuleState.value = { error: false, message: '' };
+
+  if (isNew.value) {
+    project.value = createEmptyProjectForm();
+    billingForm.value = createDefaultBillingForm();
+    selectedFiles.value = [];
+    return;
+  }
+
+  await loadProject();
+};
+
 const projectDescription = computed({
   get: () => project.value.description || '',
   set: (val: string) => {
@@ -594,6 +626,8 @@ const loadProject = async () => {
             ? ''
             : String(data.project_billing.payment_day),
       };
+    } else {
+      billingForm.value = createDefaultBillingForm();
     }
 
     if (data.category_id) {
@@ -653,7 +687,10 @@ const saveProject = async () => {
     if (isNew.value) {
       const created = await ProjectsService.create(payload, selectedFiles.value);
       notify(t('projects.form.createSuccess'), 'positive');
-      void router.push(`/projects/${created.id}`);
+      await handlePinnedSaveSuccess({
+        reset: resetProjectForm,
+        redirect: () => router.push(`/projects/${created.id}`),
+      });
     } else {
       const updatePayload: UpdateProjectDto = {
         name: payload.name,
@@ -666,7 +703,10 @@ const saveProject = async () => {
       };
       await ProjectsService.update(project.value.id, updatePayload);
       notify(t('projects.form.updateSuccess'), 'positive');
-      void router.push(`/projects/${project.value.id}`);
+      await handlePinnedSaveSuccess({
+        reset: resetProjectForm,
+        redirect: () => router.push(`/projects/${project.value.id}`),
+      });
     }
   } catch (err: unknown) {
     notifyError(t('projects.form.saveError'), err);

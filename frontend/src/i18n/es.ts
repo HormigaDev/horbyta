@@ -7,6 +7,7 @@ export const messages = {
   'common.delete': 'Eliminar',
   'common.create': 'Crear',
   'common.refresh': 'Recargar',
+  'common.keepFormOpen': 'Mantener abierto y limpiar tras guardar',
   'common.backToList': 'Volver a lista',
   'common.id': 'ID',
   'common.created': 'Creado',

@@ -90,6 +90,16 @@
       </q-card>
 
       <div class="row justify-end q-gutter-sm">
+        <q-btn
+          flat
+          round
+          icon="push_pin"
+          :color="pinButtonColor"
+          :aria-pressed="stayOnFormAfterSave"
+          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
+        >
+          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+        </q-btn>
         <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
         <q-btn
           :label="t('milestones.form.saveButton')"
@@ -109,6 +119,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
+import { usePinnedFormSave } from 'src/composables/usePinnedFormSave';
 import { useUI } from 'src/composables/useUI';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { MilestonesService } from 'src/services/milestones';
@@ -137,6 +148,7 @@ const isNew = computed(() => route.name === 'milestone-create');
 const milestoneId = computed(() => String(route.params.id || ''));
 const isSubmitting = ref(false);
 const hasAttemptedSubmit = ref(false);
+const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
 const dueDateDisplay = ref('');
 const dateInputMask = computed(() => getDateInputMask(userPreferencesStore.dateFormat));
 const qDateMask = computed(() => getQDateMask(userPreferencesStore.dateFormat));
@@ -149,13 +161,27 @@ const statusOptions: Array<{ label: string; value: MilestoneStatus }> = [
   { label: t('milestones.status.cancelled'), value: 'cancelled' },
 ];
 
-const form = reactive<MilestoneFormState>({
+const createEmptyMilestoneForm = (): MilestoneFormState => ({
   project_id: null,
   name: '',
   description: null,
   status: 'open',
   due_date: null,
 });
+
+const form = reactive<MilestoneFormState>(createEmptyMilestoneForm());
+
+const resetMilestoneForm = async () => {
+  hasAttemptedSubmit.value = false;
+
+  if (isNew.value) {
+    Object.assign(form, createEmptyMilestoneForm());
+    dueDateDisplay.value = '';
+    return;
+  }
+
+  await loadMilestone();
+};
 
 const milestoneDescription = computed({
   get: () => form.description || '',
@@ -260,7 +286,10 @@ const saveMilestone = async () => {
     if (isNew.value) {
       const created = await MilestonesService.create(payload);
       notify(t('milestones.form.createSuccess'), 'positive');
-      void router.push(`/milestones/${created.id}`);
+      await handlePinnedSaveSuccess({
+        reset: resetMilestoneForm,
+        redirect: () => router.push(`/milestones/${created.id}`),
+      });
     } else {
       const updatePayload: UpdateMilestoneDto = {
         project_id: payload.project_id,
@@ -271,7 +300,10 @@ const saveMilestone = async () => {
       };
       await MilestonesService.update(milestoneId.value, updatePayload);
       notify(t('milestones.form.updateSuccess'), 'positive');
-      void router.push(`/milestones/${milestoneId.value}`);
+      await handlePinnedSaveSuccess({
+        reset: resetMilestoneForm,
+        redirect: () => router.push(`/milestones/${milestoneId.value}`),
+      });
     }
   } catch (err: unknown) {
     notifyError(t('milestones.form.saveError'), err);

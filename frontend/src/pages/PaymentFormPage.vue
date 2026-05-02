@@ -124,6 +124,16 @@
       </q-card>
 
       <div class="row justify-end q-gutter-sm">
+        <q-btn
+          flat
+          round
+          icon="push_pin"
+          :color="pinButtonColor"
+          :aria-pressed="stayOnFormAfterSave"
+          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
+        >
+          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+        </q-btn>
         <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
         <q-btn
           :label="t('payments.form.saveButton')"
@@ -147,6 +157,7 @@ import NumericTextInput from 'src/components/NumericTextInput.vue';
 import { PaymentsService } from 'src/services/payments';
 import { ProjectsService } from 'src/services/projects';
 import { InvoicesService } from 'src/services/invoices';
+import { usePinnedFormSave } from 'src/composables/usePinnedFormSave';
 import { useUI } from 'src/composables/useUI';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { parseNumericText } from 'src/utils/numericInput';
@@ -175,8 +186,9 @@ const qDateMask = computed(() => getQDateMask(userPreferencesStore.dateFormat));
 
 const isSubmitting = ref(false);
 const hasAttemptedSubmit = ref(false);
+const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
 
-const form = ref({
+const createEmptyPaymentForm = () => ({
   project_id: null as string | null,
   invoice_id: null as string | null,
   amount: '',
@@ -185,6 +197,21 @@ const form = ref({
   reference_code: null as string | null,
   notes: null as string | null,
 });
+
+const form = ref(createEmptyPaymentForm());
+
+const resetPaymentForm = async () => {
+  hasAttemptedSubmit.value = false;
+
+  if (isNew.value) {
+    form.value = createEmptyPaymentForm();
+    paymentDateDisplay.value = '';
+    invoiceOptions.value = [];
+    return;
+  }
+
+  await loadPayment();
+};
 
 const parsedAmount = computed(() => {
   const v = parseNumericText(form.value.amount, { decimalPlaces: 4 });
@@ -361,7 +388,10 @@ const savePayment = async () => {
         notes: form.value.notes || null,
       });
       notify(t('payments.form.createSuccess'), 'positive');
-      void router.push(`/payments/${created.id}`);
+      await handlePinnedSaveSuccess({
+        reset: resetPaymentForm,
+        redirect: () => router.push(`/payments/${created.id}`),
+      });
     } else {
       await PaymentsService.update(paymentId.value, {
         payment_method: form.value.payment_method || null,
@@ -369,7 +399,10 @@ const savePayment = async () => {
         notes: form.value.notes || null,
       });
       notify(t('payments.form.updateSuccess'), 'positive');
-      void router.push(`/payments/${paymentId.value}`);
+      await handlePinnedSaveSuccess({
+        reset: resetPaymentForm,
+        redirect: () => router.push(`/payments/${paymentId.value}`),
+      });
     }
   } catch (err) {
     notifyError(t('payments.form.saveError'), err);
