@@ -1,6 +1,7 @@
+use object_store::ObjectStore;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-    QuerySelect, Set,
+    QuerySelect, Set, TransactionTrait,
 };
 use uuid::Uuid;
 
@@ -18,7 +19,11 @@ use crate::{
         projects,
     },
     error::AppError,
-    utils::search::{apply_filters, apply_ordering, apply_pagination},
+    services::attachments::AttachmentService,
+    utils::{
+        multipart::{MarkdownUploadedFile, replace_markdown_attachment_urls},
+        search::{apply_filters, apply_ordering, apply_pagination},
+    },
 };
 
 pub struct MilestoneService;
@@ -127,6 +132,40 @@ impl MilestoneService {
         milestone.insert(db).await.map_err(AppError::Database)
     }
 
+    pub async fn create_with_markdown_files(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        storage: &dyn ObjectStore,
+        user_id: Uuid,
+        dto: CreateMilestoneDto,
+        files: Vec<MarkdownUploadedFile>,
+    ) -> Result<MilestoneModel, AppError> {
+        if files.is_empty() {
+            return Self::create(db, user_id, dto).await;
+        }
+
+        let txn = db.begin().await.map_err(AppError::Database)?;
+        let milestone = Self::create(&txn, user_id, dto).await?;
+        let replacements = AttachmentService::create_markdown_files_in_tx(
+            &txn,
+            storage,
+            user_id,
+            Some(milestone.project_id),
+            None,
+            Some(milestone.id),
+            None,
+            files,
+        )
+        .await?;
+
+        let next_description = replace_markdown_attachment_urls(milestone.description.clone(), &replacements);
+        let mut active_milestone: milestones::ActiveModel = milestone.into();
+        active_milestone.description = Set(next_description);
+        let updated = active_milestone.update(&txn).await.map_err(AppError::Database)?;
+
+        txn.commit().await.map_err(AppError::Database)?;
+        Ok(updated)
+    }
+
     pub async fn get_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<MilestoneModel, AppError> {
         Self::check_milestone_ownership(db, user_id, id).await
     }
@@ -151,6 +190,37 @@ impl MilestoneService {
         active_milestone.due_date = Set(dto.due_date);
 
         active_milestone.update(db).await.map_err(AppError::Database)
+    }
+
+    pub async fn update_with_markdown_files(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        storage: &dyn ObjectStore,
+        user_id: Uuid,
+        id: Uuid,
+        mut dto: UpdateMilestoneDto,
+        files: Vec<MarkdownUploadedFile>,
+    ) -> Result<MilestoneModel, AppError> {
+        if files.is_empty() {
+            return Self::update(db, user_id, id, dto).await;
+        }
+
+        let milestone = Self::check_milestone_ownership(db, user_id, id).await?;
+        let txn = db.begin().await.map_err(AppError::Database)?;
+        let replacements = AttachmentService::create_markdown_files_in_tx(
+            &txn,
+            storage,
+            user_id,
+            Some(milestone.project_id),
+            None,
+            Some(milestone.id),
+            None,
+            files,
+        )
+        .await?;
+        txn.commit().await.map_err(AppError::Database)?;
+
+        dto.description = replace_markdown_attachment_urls(dto.description, &replacements);
+        Self::update(db, user_id, id, dto).await
     }
 
     pub async fn delete(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<(), AppError> {

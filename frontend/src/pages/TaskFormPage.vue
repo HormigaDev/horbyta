@@ -170,53 +170,13 @@
             <div class="col-12" style="display: flex; flex-direction: column">
               <MarkdownRenderer
                 v-model="taskDescription"
+                v-model:pending-files="markdownFiles"
                 edit-mode
                 enable-preview-toggle
+                enable-attachments
                 class="full-height"
               />
             </div>
-          </div>
-
-          <div v-if="isNew" class="q-mt-lg">
-            <q-separator spaced />
-
-            <div class="row items-center justify-between q-mb-sm">
-              <div class="text-subtitle2">{{ t('attachments.form.sectionTitle') }}</div>
-              <div
-                class="text-caption"
-                :class="filesBytesExceeded ? 'text-negative' : 'text-grey-7'"
-              >
-                {{
-                  t('attachments.form.totalSize', {
-                    used: formatStorageBytes(selectedFilesTotalBytes),
-                    max: formatStorageBytes(MAX_ATTACHMENT_TOTAL_BYTES),
-                  })
-                }}
-              </div>
-            </div>
-
-            <q-file
-              :model-value="selectedFiles"
-              multiple
-              clearable
-              dense
-              outlined
-              use-chips
-              counter
-              :label="t('attachments.form.inputLabel')"
-              :hint="t('attachments.form.inputHint')"
-              @update:model-value="onFilesSelected"
-            />
-
-            <AttachmentItemsList
-              v-if="selectedFileItems.length > 0"
-              class="q-mt-sm"
-              :items="selectedFileItems"
-              :empty-text="t('attachments.list.empty')"
-              item-action-icon="close"
-              :item-action-aria-label="t('attachments.form.removeFile')"
-              @item-action="removeFileById"
-            />
           </div>
         </q-card-section>
       </q-card>
@@ -250,7 +210,6 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
-import AttachmentItemsList from 'src/components/AttachmentItemsList.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
 import { usePinnedFormSave } from 'src/composables/usePinnedFormSave';
 import { useUI } from 'src/composables/useUI';
@@ -262,21 +221,12 @@ import { MilestonesService } from 'src/services/milestones';
 import { TagsService } from 'src/services/tags';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import type { Filter, QueryPayload } from 'src/types';
-import type { AttachmentListItem } from 'src/types/attachment';
 import type { MilestoneSummaryDto } from 'src/types/milestone';
+import type { MarkdownPendingFile } from 'src/types/markdown';
 import type { ProjectSummaryDto } from 'src/types/project';
 import type { TagSummaryDto } from 'src/types/tag';
 import type { CreateTaskDto, TaskStatus, TaskSummaryDto, UpdateTaskDto } from 'src/types/task';
 import { normalizeId } from 'src/utils/normalizeId';
-import {
-  MAX_ATTACHMENT_FILE_BYTES,
-  MAX_ATTACHMENT_TOTAL_BYTES,
-  formatStorageBytes,
-  resolveFileIcon,
-  sumFileSizes,
-  toFileArray,
-  type QFileModelValue,
-} from 'src/utils/attachments';
 import { getTagTextContrastColor } from 'src/utils/tagColorContrast';
 import {
   formatIsoDateForInput,
@@ -298,12 +248,7 @@ const isSubmitting = ref(false);
 const isHydratingTask = ref(false);
 const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
 const HEX_COLOR_REGEX = /^#(?:[0-9A-F]{3}|[0-9A-F]{6})$/i;
-const selectedFiles = ref<File[]>([]);
-
-const selectedFilesTotalBytes = computed(() => sumFileSizes(selectedFiles.value));
-const filesBytesExceeded = computed(
-  () => selectedFilesTotalBytes.value > MAX_ATTACHMENT_TOTAL_BYTES,
-);
+const markdownFiles = ref<MarkdownPendingFile[]>([]);
 
 const statusOptions: Array<{ label: string; value: TaskStatus }> = [
   { label: t('tasks.form.status.todo'), value: 'todo' },
@@ -351,7 +296,7 @@ const resetTaskForm = async () => {
     isHydratingTask.value = true;
     Object.assign(form, createEmptyTaskForm());
     dueDateDisplay.value = '';
-    selectedFiles.value = [];
+    markdownFiles.value = [];
     setMilestoneOptions([]);
     setParentTaskOptions([]);
     isHydratingTask.value = false;
@@ -464,54 +409,6 @@ const toDisplayDateFromIso = (value: string | null): string => {
   return formatIsoDateForInput(value, {
     timezone: userPreferencesStore.timezone,
     dateFormat: userPreferencesStore.dateFormat,
-  });
-};
-
-const buildSelectedFileId = (file: File, index: number): string => {
-  return `${file.name}-${file.lastModified}-${index}`;
-};
-
-const selectedFileItems = computed<AttachmentListItem[]>(() => {
-  return selectedFiles.value.map((file, index) => ({
-    id: buildSelectedFileId(file, index),
-    name: file.name,
-    sizeLabel: formatStorageBytes(file.size),
-    icon: resolveFileIcon(file),
-  }));
-});
-
-const onFilesSelected = (modelValue: QFileModelValue) => {
-  const incomingFiles = toFileArray(modelValue);
-
-  const oversizedFile = incomingFiles.find((file) => file.size > MAX_ATTACHMENT_FILE_BYTES);
-  if (oversizedFile) {
-    notify(
-      t('attachments.form.singleFileLimitExceeded', {
-        file: oversizedFile.name,
-        max: formatStorageBytes(MAX_ATTACHMENT_FILE_BYTES),
-      }),
-      'warning',
-    );
-    return;
-  }
-
-  const nextTotal = sumFileSizes(incomingFiles);
-  if (nextTotal > MAX_ATTACHMENT_TOTAL_BYTES) {
-    notify(
-      t('attachments.form.totalLimitExceeded', {
-        max: formatStorageBytes(MAX_ATTACHMENT_TOTAL_BYTES),
-      }),
-      'warning',
-    );
-    return;
-  }
-
-  selectedFiles.value = incomingFiles;
-};
-
-const removeFileById = (itemId: string) => {
-  selectedFiles.value = selectedFiles.value.filter((file, index) => {
-    return buildSelectedFileId(file, index) !== itemId;
   });
 };
 
@@ -666,6 +563,7 @@ const loadTask = async () => {
   await ensureParentTaskOption(task.parent_id);
   await ensureTagOptions(task.tag_ids);
 
+  markdownFiles.value = [];
   isHydratingTask.value = false;
 };
 
@@ -726,7 +624,7 @@ const saveTask = async () => {
     };
 
     if (isNew.value) {
-      const created = await TasksService.create(payload, selectedFiles.value);
+      const created = await TasksService.create(payload, markdownFiles.value);
       notify(t('tasks.form.createSuccess'), 'positive');
       await handlePinnedSaveSuccess({
         reset: resetTaskForm,
@@ -746,7 +644,7 @@ const saveTask = async () => {
         due_date: payload.due_date,
         tag_ids: payload.tag_ids,
       };
-      await TasksService.update(taskId.value, updatePayload);
+      await TasksService.update(taskId.value, updatePayload, markdownFiles.value);
       notify(t('tasks.form.updateSuccess'), 'positive');
       await handlePinnedSaveSuccess({
         reset: resetTaskForm,

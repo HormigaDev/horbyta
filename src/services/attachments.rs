@@ -16,11 +16,15 @@ use crate::{
     },
     entities::{
         attachments::{self, Model as AttachmentModel},
-        prelude::{Attachments, Projects, Tasks},
+        change_requests, milestones,
+        prelude::{Attachments, ChangeRequests, Milestones, Projects, Tasks},
         projects, tasks,
     },
     error::AppError,
-    utils::search::{apply_filters, apply_ordering, apply_pagination},
+    utils::{
+        multipart::MarkdownUploadedFile,
+        search::{apply_filters, apply_ordering, apply_pagination},
+    },
 };
 
 pub const MAX_ATTACHMENT_FILE_BYTES: i64 = 50 * 1024 * 1024;
@@ -33,6 +37,36 @@ const DEFAULT_USER_STORAGE_LIMIT_GB: u64 = 2;
 pub struct AttachmentService;
 
 impl AttachmentService {
+    pub async fn create_markdown_files_in_tx(
+        tx: &impl ConnectionTrait,
+        storage: &dyn ObjectStore,
+        user_id: Uuid,
+        project_id: Option<Uuid>,
+        task_id: Option<Uuid>,
+        milestone_id: Option<Uuid>,
+        change_request_id: Option<Uuid>,
+        files: Vec<MarkdownUploadedFile>,
+    ) -> Result<Vec<(String, String)>, AppError> {
+        let mut replacements = Vec::with_capacity(files.len());
+
+        for file in files {
+            let local_id = file.local_id;
+            let attachment = CreateAttachmentDto {
+                project_id,
+                task_id,
+                milestone_id,
+                change_request_id,
+                original_name: file.original_name,
+                mime_type: file.mime_type,
+            };
+
+            let created = Self::create_in_tx(tx, storage, user_id, attachment, file.bytes).await?;
+            replacements.push((local_id, format!("/api/v1/attachments/{}/raw", created.id)));
+        }
+
+        Ok(replacements)
+    }
+
     pub async fn create(
         db: &(impl ConnectionTrait + TransactionTrait),
         active_tx: Option<&impl ConnectionTrait>,
@@ -83,6 +117,8 @@ impl AttachmentService {
         user_id: Uuid,
         project_id: Option<Uuid>,
         task_id: Option<Uuid>,
+        milestone_id: Option<Uuid>,
+        change_request_id: Option<Uuid>,
         upload_bytes: i64,
     ) -> Result<(), AppError> {
         if upload_bytes <= 0 {
@@ -93,11 +129,15 @@ impl AttachmentService {
 
         let scope_name = if task_id.is_some() {
             "task"
+        } else if milestone_id.is_some() {
+            "milestone"
+        } else if change_request_id.is_some() {
+            "change request"
         } else if project_id.is_some() {
             "project"
         } else {
             return Err(AppError::BadRequest(
-                "file must be associated with a project or a task".to_string(),
+                "file must be associated with a markdown resource".to_string(),
             ));
         };
 
@@ -108,7 +148,8 @@ impl AttachmentService {
             )));
         }
 
-        let current_scope_usage = Self::sum_scope_size_bytes(db, user_id, project_id, task_id).await?;
+        let current_scope_usage =
+            Self::sum_scope_size_bytes(db, user_id, project_id, task_id, milestone_id, change_request_id).await?;
         let next_scope_usage = i128::from(current_scope_usage) + i128::from(upload_bytes);
         if next_scope_usage > i128::from(MAX_ATTACHMENT_SCOPE_BYTES) {
             return Err(AppError::BadRequest(format!(
@@ -136,13 +177,19 @@ impl AttachmentService {
         dto: CreateAttachmentDto,
         file_bytes: Vec<u8>,
     ) -> Result<AttachmentModel, AppError> {
-        let (project_id, task_id) = Self::resolve_targets(conn, user_id, dto.project_id, dto.task_id).await?;
+        let (project_id, task_id, milestone_id, change_request_id) = Self::resolve_targets(
+            conn,
+            user_id,
+            dto.project_id,
+            dto.task_id,
+            dto.milestone_id,
+            dto.change_request_id,
+        )
+        .await?;
 
         let original_name = dto.original_name.trim().to_string();
         if original_name.is_empty() {
-            return Err(AppError::BadRequest(
-                "original file name cannot be empty".to_string(),
-            ));
+            return Err(AppError::BadRequest("original file name cannot be empty".to_string()));
         }
 
         if file_bytes.is_empty() {
@@ -153,12 +200,19 @@ impl AttachmentService {
             .map_err(|_| AppError::BadRequest("file exceeds the supported size".to_string()))?;
 
         if size_bytes > MAX_ATTACHMENT_FILE_BYTES {
-            return Err(AppError::BadRequest(
-                "each file cannot exceed 50mb".to_string(),
-            ));
+            return Err(AppError::BadRequest("each file cannot exceed 50mb".to_string()));
         }
 
-        Self::guard_upload_capacity(conn, user_id, project_id, task_id, size_bytes).await?;
+        Self::guard_upload_capacity(
+            conn,
+            user_id,
+            project_id,
+            task_id,
+            milestone_id,
+            change_request_id,
+            size_bytes,
+        )
+        .await?;
 
         let mime_type = dto
             .mime_type
@@ -167,7 +221,14 @@ impl AttachmentService {
             .filter(|value| !value.is_empty())
             .unwrap_or_else(|| DEFAULT_ATTACHMENT_MIME.to_string());
 
-        let storage_key = Self::build_storage_key(user_id, project_id, task_id, &original_name);
+        let storage_key = Self::build_storage_key(
+            user_id,
+            project_id,
+            task_id,
+            milestone_id,
+            change_request_id,
+            &original_name,
+        );
         let location = ObjectPath::parse(storage_key.as_str())
             .map_err(|error| AppError::Internal(format!("invalid storage key: {}", error)))?;
 
@@ -180,6 +241,8 @@ impl AttachmentService {
             user_id: Set(user_id),
             project_id: Set(project_id),
             task_id: Set(task_id),
+            milestone_id: Set(milestone_id),
+            change_request_id: Set(change_request_id),
             original_name: Set(original_name),
             storage_key: Set(storage_key.clone()),
             mime_type: Set(mime_type),
@@ -279,6 +342,8 @@ impl AttachmentService {
                 .column(attachments::Column::Id)
                 .column(attachments::Column::ProjectId)
                 .column(attachments::Column::TaskId)
+                .column(attachments::Column::MilestoneId)
+                .column(attachments::Column::ChangeRequestId)
                 .column(attachments::Column::OriginalName)
                 .column(attachments::Column::MimeType)
                 .column(attachments::Column::SizeBytes)
@@ -320,19 +385,31 @@ impl AttachmentService {
         user_id: Uuid,
         project_id: Option<Uuid>,
         task_id: Option<Uuid>,
+        milestone_id: Option<Uuid>,
+        change_request_id: Option<Uuid>,
     ) -> Result<i64, AppError> {
         let condition = if let Some(tid) = task_id {
             Condition::all()
                 .add(attachments::Column::UserId.eq(user_id))
                 .add(attachments::Column::TaskId.eq(tid))
+        } else if let Some(mid) = milestone_id {
+            Condition::all()
+                .add(attachments::Column::UserId.eq(user_id))
+                .add(attachments::Column::MilestoneId.eq(mid))
+        } else if let Some(cid) = change_request_id {
+            Condition::all()
+                .add(attachments::Column::UserId.eq(user_id))
+                .add(attachments::Column::ChangeRequestId.eq(cid))
         } else if let Some(pid) = project_id {
             Condition::all()
                 .add(attachments::Column::UserId.eq(user_id))
                 .add(attachments::Column::ProjectId.eq(pid))
                 .add(attachments::Column::TaskId.is_null())
+                .add(attachments::Column::MilestoneId.is_null())
+                .add(attachments::Column::ChangeRequestId.is_null())
         } else {
             return Err(AppError::BadRequest(
-                "file must be associated with a project or a task".to_string(),
+                "file must be associated with a markdown resource".to_string(),
             ));
         };
 
@@ -363,10 +440,12 @@ impl AttachmentService {
         user_id: Uuid,
         project_id: Option<Uuid>,
         task_id: Option<Uuid>,
-    ) -> Result<(Option<Uuid>, Option<Uuid>), AppError> {
-        if project_id.is_none() && task_id.is_none() {
+        milestone_id: Option<Uuid>,
+        change_request_id: Option<Uuid>,
+    ) -> Result<(Option<Uuid>, Option<Uuid>, Option<Uuid>, Option<Uuid>), AppError> {
+        if project_id.is_none() && task_id.is_none() && milestone_id.is_none() && change_request_id.is_none() {
             return Err(AppError::BadRequest(
-                "file must be associated with a project or a task".to_string(),
+                "file must be associated with a markdown resource".to_string(),
             ));
         }
 
@@ -413,7 +492,52 @@ impl AttachmentService {
         let resolved_project_id = owned_project_id.or_else(|| owned_task.as_ref().and_then(|task| task.project_id));
         let resolved_task_id = owned_task.as_ref().map(|task| task.id);
 
-        Ok((resolved_project_id, resolved_task_id))
+        let owned_milestone = if let Some(mid) = milestone_id {
+            let milestone = Milestones::find()
+                .filter(milestones::Column::Id.eq(mid))
+                .find_also_related(Projects)
+                .one(db)
+                .await
+                .map_err(AppError::Database)?;
+
+            match milestone {
+                Some((milestone, Some(project))) if project.user_id == user_id => Some(milestone),
+                _ => return Err(AppError::BadRequest("invalid milestone or no permissions".to_string())),
+            }
+        } else {
+            None
+        };
+
+        let owned_change_request = if let Some(cid) = change_request_id {
+            let change_request = ChangeRequests::find()
+                .filter(change_requests::Column::Id.eq(cid))
+                .filter(change_requests::Column::UserId.eq(user_id))
+                .one(db)
+                .await
+                .map_err(AppError::Database)?
+                .ok_or_else(|| AppError::BadRequest("invalid change request or no permissions".to_string()))?;
+
+            Some(change_request)
+        } else {
+            None
+        };
+
+        let resolved_project_id = resolved_project_id
+            .or_else(|| owned_milestone.as_ref().map(|milestone| milestone.project_id))
+            .or_else(|| {
+                owned_change_request
+                    .as_ref()
+                    .map(|change_request| change_request.project_id)
+            });
+        let resolved_milestone_id = owned_milestone.as_ref().map(|milestone| milestone.id);
+        let resolved_change_request_id = owned_change_request.as_ref().map(|change_request| change_request.id);
+
+        Ok((
+            resolved_project_id,
+            resolved_task_id,
+            resolved_milestone_id,
+            resolved_change_request_id,
+        ))
     }
 
     async fn find_by_id(
@@ -436,6 +560,8 @@ impl AttachmentService {
         user_id: Uuid,
         project_id: Option<Uuid>,
         task_id: Option<Uuid>,
+        milestone_id: Option<Uuid>,
+        change_request_id: Option<Uuid>,
         original_name: &str,
     ) -> String {
         let mut segments = vec!["attachments".to_string(), user_id.to_string()];
@@ -448,6 +574,16 @@ impl AttachmentService {
         if let Some(tid) = task_id {
             segments.push("tasks".to_string());
             segments.push(tid.to_string());
+        }
+
+        if let Some(mid) = milestone_id {
+            segments.push("milestones".to_string());
+            segments.push(mid.to_string());
+        }
+
+        if let Some(cid) = change_request_id {
+            segments.push("change-requests".to_string());
+            segments.push(cid.to_string());
         }
 
         let extension = std::path::Path::new(original_name)
@@ -472,6 +608,8 @@ impl AttachmentService {
             user_id: model.user_id,
             project_id: model.project_id,
             task_id: model.task_id,
+            milestone_id: model.milestone_id,
+            change_request_id: model.change_request_id,
             original_name: model.original_name,
             storage_key: model.storage_key,
             mime_type: model.mime_type,

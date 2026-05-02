@@ -8,10 +8,11 @@ import type {
   ProjectDetailDto,
 } from '../types/project';
 import { apiFetch } from '../boot/fetch';
+import type { MarkdownPendingFile } from 'src/types/markdown';
 
-const buildProjectCreateBody = (
-  data: CreateProjectDto,
-  files: readonly File[],
+const buildProjectBody = (
+  data: CreateProjectDto | UpdateProjectDto,
+  files: readonly MarkdownPendingFile[],
 ): string | FormData => {
   if (files.length === 0) {
     return JSON.stringify(data);
@@ -21,7 +22,7 @@ const buildProjectCreateBody = (
   formData.append('payload', JSON.stringify(data));
 
   files.forEach((file) => {
-    formData.append('files', file);
+    formData.append(`markdown_file:${file.id}`, file.file);
   });
 
   return formData;
@@ -37,11 +38,11 @@ export const ProjectsService = {
 
   create: (
     data: CreateProjectDto,
-    files: readonly File[] = [],
+    files: readonly MarkdownPendingFile[] = [],
   ): Promise<ProjectMutationResultDto> =>
     apiFetch('/projects', {
       method: 'POST',
-      body: buildProjectCreateBody(data, files),
+      body: buildProjectBody(data, files),
     }),
 
   getById: (id: string): Promise<ProjectDetailDto> =>
@@ -49,10 +50,14 @@ export const ProjectsService = {
       method: 'GET',
     }),
 
-  update: (id: string, data: UpdateProjectDto): Promise<ProjectMutationResultDto> =>
+  update: (
+    id: string,
+    data: UpdateProjectDto,
+    files: readonly MarkdownPendingFile[] = [],
+  ): Promise<ProjectMutationResultDto> =>
     apiFetch(`/projects/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: buildProjectBody(data, files),
     }),
 
   updateCategory: (id: string, data: UpdateProjectCategoryDto): Promise<ProjectMutationResultDto> =>

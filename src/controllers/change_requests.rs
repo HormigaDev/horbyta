@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Request, State},
     response::IntoResponse,
     routing::{get, post},
 };
@@ -81,9 +81,22 @@ async fn client_get_change_request(
 async fn create_change_request(
     State(state): State<AppState>,
     user: UserDto,
-    ValidatedJson(payload): ValidatedJson<CreateChangeRequestDto>,
+    request: Request,
 ) -> Result<impl IntoResponse, AppError> {
-    let change_request = ChangeRequestService::create(state.db.as_ref(), user.id, payload).await?;
+    let (payload, files) = crate::utils::multipart::parse_payload_request::<CreateChangeRequestDto>(
+        &state,
+        request,
+        "multipart request must include a payload field with change request json",
+    )
+    .await?;
+    let change_request = ChangeRequestService::create_with_markdown_files(
+        state.db.as_ref(),
+        state.storage.as_ref(),
+        user.id,
+        payload,
+        files,
+    )
+    .await?;
     Ok(Json(change_request))
 }
 
@@ -133,9 +146,23 @@ async fn update_change_request(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
-    ValidatedJson(payload): ValidatedJson<UpdateChangeRequestDto>,
+    request: Request,
 ) -> Result<impl IntoResponse, AppError> {
-    let change_request = ChangeRequestService::update(state.db.as_ref(), user.id, id, payload).await?;
+    let (payload, files) = crate::utils::multipart::parse_payload_request::<UpdateChangeRequestDto>(
+        &state,
+        request,
+        "multipart request must include a payload field with change request json",
+    )
+    .await?;
+    let change_request = ChangeRequestService::update_with_markdown_files(
+        state.db.as_ref(),
+        state.storage.as_ref(),
+        user.id,
+        id,
+        payload,
+        files,
+    )
+    .await?;
     Ok(Json(change_request))
 }
 

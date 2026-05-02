@@ -11,6 +11,8 @@ pub struct Model {
     pub user_id: Uuid,
     pub project_id: Option<Uuid>,
     pub task_id: Option<Uuid>,
+    pub milestone_id: Option<Uuid>,
+    pub change_request_id: Option<Uuid>,
     pub original_name: String,
     #[sea_orm(unique)]
     pub storage_key: String,
@@ -39,6 +41,22 @@ pub enum Relation {
     )]
     Tasks,
     #[sea_orm(
+        belongs_to = "super::milestones::Entity",
+        from = "Column::MilestoneId",
+        to = "super::milestones::Column::Id",
+        on_update = "NoAction",
+        on_delete = "Cascade"
+    )]
+    Milestones,
+    #[sea_orm(
+        belongs_to = "super::change_requests::Entity",
+        from = "Column::ChangeRequestId",
+        to = "super::change_requests::Column::Id",
+        on_update = "NoAction",
+        on_delete = "Cascade"
+    )]
+    ChangeRequests,
+    #[sea_orm(
         belongs_to = "super::users::Entity",
         from = "Column::UserId",
         to = "super::users::Column::Id",
@@ -57,6 +75,18 @@ impl Related<super::projects::Entity> for Entity {
 impl Related<super::tasks::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Tasks.def()
+    }
+}
+
+impl Related<super::milestones::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Milestones.def()
+    }
+}
+
+impl Related<super::change_requests::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::ChangeRequests.def()
     }
 }
 

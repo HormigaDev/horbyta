@@ -23,7 +23,11 @@ use crate::{
         tasks::{self, Model as TaskModel},
     },
     error::AppError,
-    utils::search::{apply_filters, apply_ordering, apply_pagination},
+    services::attachments::AttachmentService,
+    utils::{
+        multipart::{MarkdownUploadedFile, replace_markdown_attachment_urls},
+        search::{apply_filters, apply_ordering, apply_pagination},
+    },
 };
 
 pub struct TaskService;
@@ -365,6 +369,41 @@ impl TaskService {
         Self::get_by_id(db, user_id, created_task.id).await
     }
 
+    pub async fn create_with_markdown_files(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        storage: &dyn object_store::ObjectStore,
+        user_id: Uuid,
+        dto: CreateTaskDto,
+        files: Vec<MarkdownUploadedFile>,
+    ) -> Result<TaskDetailDto, AppError> {
+        if files.is_empty() {
+            return Self::create(db, user_id, dto).await;
+        }
+
+        let txn = db.begin().await.map_err(AppError::Database)?;
+        let created_task = Self::create_with_connection(&txn, user_id, dto).await?;
+        let replacements = AttachmentService::create_markdown_files_in_tx(
+            &txn,
+            storage,
+            user_id,
+            created_task.project_id,
+            Some(created_task.id),
+            None,
+            None,
+            files,
+        )
+        .await?;
+
+        let next_description = replace_markdown_attachment_urls(created_task.description.clone(), &replacements);
+        let mut active_task: tasks::ActiveModel = created_task.into();
+        active_task.description = Set(next_description);
+        let updated_task = active_task.update(&txn).await.map_err(AppError::Database)?;
+
+        txn.commit().await.map_err(AppError::Database)?;
+
+        Self::get_by_id(db, user_id, updated_task.id).await
+    }
+
     pub async fn get_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<TaskDetailDto, AppError> {
         let task = Self::get_task_model(db, user_id, id).await?;
         Self::to_task_detail(db, task).await
@@ -431,6 +470,37 @@ impl TaskService {
         txn.commit().await.map_err(AppError::Database)?;
 
         Self::get_by_id(db, user_id, updated_task.id).await
+    }
+
+    pub async fn update_with_markdown_files(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        storage: &dyn object_store::ObjectStore,
+        user_id: Uuid,
+        id: Uuid,
+        mut dto: UpdateTaskDto,
+        files: Vec<MarkdownUploadedFile>,
+    ) -> Result<TaskDetailDto, AppError> {
+        if files.is_empty() {
+            return Self::update(db, user_id, id, dto).await;
+        }
+
+        let task = Self::get_task_model(db, user_id, id).await?;
+        let txn = db.begin().await.map_err(AppError::Database)?;
+        let replacements = AttachmentService::create_markdown_files_in_tx(
+            &txn,
+            storage,
+            user_id,
+            task.project_id,
+            Some(task.id),
+            None,
+            None,
+            files,
+        )
+        .await?;
+        txn.commit().await.map_err(AppError::Database)?;
+
+        dto.description = replace_markdown_attachment_urls(dto.description, &replacements);
+        Self::update(db, user_id, id, dto).await
     }
 
     pub async fn change_status(

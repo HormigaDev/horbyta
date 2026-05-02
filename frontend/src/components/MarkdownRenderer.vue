@@ -1,187 +1,132 @@
 <template>
   <div class="markdown-container">
-    <div class="markdown-toolbar q-pa-sm row items-center no-wrap" v-if="editMode">
-      <template v-if="!isPreviewMode">
-        <q-btn
-          flat
-          round
-          dense
-          icon="format_bold"
-          @click="applyFormat('bold')"
-          :title="t('markdown.toolbar.bold')"
-        >
-          <q-tooltip>{{ t('markdown.toolbar.bold') }}</q-tooltip>
-        </q-btn>
-        <q-btn
-          flat
-          round
-          dense
-          icon="format_italic"
-          @click="applyFormat('italic')"
-          :title="t('markdown.toolbar.italic')"
-        >
-          <q-tooltip>{{ t('markdown.toolbar.italic') }}</q-tooltip>
-        </q-btn>
-        <q-btn
-          flat
-          round
-          dense
-          icon="title"
-          @click="applyFormat('heading')"
-          :title="t('markdown.toolbar.heading')"
-        >
-          <q-tooltip>{{ t('markdown.toolbar.heading') }}</q-tooltip>
-        </q-btn>
-        <q-btn
-          flat
-          round
-          dense
-          icon="format_quote"
-          @click="applyFormat('quote')"
-          :title="t('markdown.toolbar.quote')"
-        >
-          <q-tooltip>{{ t('markdown.toolbar.quote') }}</q-tooltip>
-        </q-btn>
-        <q-btn
-          flat
-          round
-          dense
-          icon="code"
-          @click="applyFormat('code')"
-          :title="t('markdown.toolbar.code')"
-        >
-          <q-tooltip>{{ t('markdown.toolbar.code') }}</q-tooltip>
-        </q-btn>
-      </template>
-      <template v-else>
-        <span
-          class="text-subtitle1 font-weight-bold flex items-center"
-          style="color: var(--text-muted)"
-        >
-          <q-icon name="visibility" size="sm" class="q-mr-md" />
-          {{ $t('common.preview') }}
-        </span>
-      </template>
+    <MarkdownToolbar
+      v-if="editMode"
+      :preview-mode="isPreviewMode"
+      :enable-preview-toggle="enablePreviewToggle"
+      :enable-attachments="enableAttachments"
+      @format="applyFormat"
+      @attach="openFilePicker"
+      @toggle-preview="togglePreviewMode"
+    />
 
-      <q-space />
-
-      <q-btn
-        v-if="enablePreviewToggle"
-        flat
-        round
-        dense
-        :icon="isPreviewMode ? 'edit' : 'visibility'"
-        @click="togglePreviewMode"
-        :title="isPreviewMode ? t('markdown.toolbar.edit') : t('markdown.toolbar.preview')"
-      >
-        <q-tooltip>
-          {{ isPreviewMode ? t('markdown.toolbar.edit') : t('markdown.toolbar.preview') }}
-        </q-tooltip>
-      </q-btn>
-    </div>
-
-    <q-input
+    <MarkdownEditor
       v-if="showEditor"
       ref="editorRef"
       v-model="rawContent"
-      type="textarea"
-      outlined
-      class="markdown-editor"
-      :input-style="editorInputStyle"
+      @paste="handlePaste"
       @keydown="handleKeydown"
     />
 
-    <div v-else class="markdown-preview" v-html="renderedContent"></div>
+    <MarkdownPreview v-else :html="renderedContent" />
+
+    <input
+      v-if="editMode && enableAttachments"
+      ref="fileInputRef"
+      class="markdown-file-input"
+      type="file"
+      multiple
+      @change="handleFileInputChange"
+    />
+
+    <MarkdownAttachments
+      v-if="editMode && enableAttachments"
+      :items="pendingFileItems"
+      :used-label="formatStorageBytes(selectedFilesTotalBytes)"
+      :max-label="formatStorageBytes(MAX_ATTACHMENT_TOTAL_BYTES)"
+      :exceeded="filesBytesExceeded"
+      @remove="removePendingFile"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
-import hljs from 'highlight.js/lib/core';
-import javascript from 'highlight.js/lib/languages/javascript';
-import typescript from 'highlight.js/lib/languages/typescript';
-import rust from 'highlight.js/lib/languages/rust';
-import shell from 'highlight.js/lib/languages/shell';
-import bash from 'highlight.js/lib/languages/bash';
-import python from 'highlight.js/lib/languages/python';
-import type { QInput } from 'quasar';
+import type { AttachmentListItem } from 'src/types/attachment';
+import type { MarkdownPendingFile } from 'src/types/markdown';
+import { useUI } from 'src/composables/useUI';
+import { useMarkdownRendering } from 'src/composables/useMarkdownRendering';
+import {
+  MAX_ATTACHMENT_FILE_BYTES,
+  MAX_ATTACHMENT_TOTAL_BYTES,
+  formatStorageBytes,
+  resolveFileIcon,
+  sumFileSizes,
+} from 'src/utils/attachments';
+import MarkdownAttachments from 'src/components/markdown/MarkdownAttachments.vue';
+import MarkdownEditor from 'src/components/markdown/MarkdownEditor.vue';
+import MarkdownPreview from 'src/components/markdown/MarkdownPreview.vue';
+import MarkdownToolbar, { type MarkdownFormat } from 'src/components/markdown/MarkdownToolbar.vue';
+import 'src/css/markdown-renderer.scss';
+
+interface Props {
+  modelValue?: string;
+  editMode?: boolean;
+  enablePreviewToggle?: boolean;
+  enableAttachments?: boolean;
+  pendingFiles?: MarkdownPendingFile[];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: '',
+  editMode: false,
+  enablePreviewToggle: false,
+  enableAttachments: false,
+  pendingFiles: () => [],
+});
+
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: string): void;
+  (e: 'update:pendingFiles', value: MarkdownPendingFile[]): void;
+}>();
+
+type MarkdownEditorExpose = {
+  getNativeElement: () => HTMLTextAreaElement | undefined;
+};
 
 const { t } = useI18n();
-
-hljs.registerLanguage('javascript', javascript);
-hljs.registerLanguage('typescript', typescript);
-hljs.registerLanguage('rust', rust);
-hljs.registerLanguage('shell', shell);
-hljs.registerLanguage('bash', bash);
-hljs.registerLanguage('python', python);
-hljs.registerLanguage('js', javascript);
-hljs.registerLanguage('ts', typescript);
-hljs.registerLanguage('sh', shell);
-
-const langNames: Record<string, string> = {
-  javascript: 'javascript',
-  ts: 'typescript',
-  typescript: 'typescript',
-  rust: 'rust',
-  shell: 'shell',
-  sh: 'shell',
-  bash: 'bash',
-  python: 'python',
-};
-
-const renderer = new marked.Renderer();
-
-renderer.code = function ({ text, lang }) {
-  const language = lang || '';
-  const validLang = !!(language && hljs.getLanguage(language));
-
-  const highlighted = validLang
-    ? hljs.highlight(text, { language }).value
-    : hljs.highlightAuto(text).value;
-
-  const displayLang = langNames[language.toLowerCase()] || language || 'code';
-
-  return `<div class="code-block-wrapper">
-            <div class="code-block-header">
-              <div class="mac-buttons">
-                <span class="mac-btn close"></span>
-                <span class="mac-btn minimize"></span>
-                <span class="mac-btn maximize"></span>
-              </div>
-              <span class="lang-title">${displayLang}</span>
-            </div>
-            <pre><code class="hljs ${language}">${highlighted}</code></pre>
-          </div>`;
-};
-
-marked.use({
-  renderer,
-  gfm: true,
-  breaks: true,
-});
-
-const props = defineProps({
-  modelValue: {
-    type: String,
-    default: '',
-  },
-  editMode: {
-    type: Boolean,
-    default: false,
-  },
-  enablePreviewToggle: {
-    type: Boolean,
-    default: false,
-  },
-});
-
-const emit = defineEmits(['update:modelValue']);
-const editorRef = ref<QInput | null>(null);
+const { notify } = useUI();
+const editorRef = ref<MarkdownEditorExpose | null>(null);
+const fileInputRef = ref<HTMLInputElement | null>(null);
 const rawContent = ref(props.modelValue);
 const isPreviewMode = ref(false);
+const localPendingFiles = ref<MarkdownPendingFile[]>([...props.pendingFiles]);
+const objectUrls = ref<Record<string, string>>({});
+const { renderedContent } = useMarkdownRendering(rawContent, objectUrls);
+
+const showEditor = computed(() => {
+  if (!props.editMode) return false;
+  if (!props.enablePreviewToggle) return true;
+  return !isPreviewMode.value;
+});
+
+const selectedFilesTotalBytes = computed(() =>
+  sumFileSizes(localPendingFiles.value.map((entry) => entry.file)),
+);
+const filesBytesExceeded = computed(
+  () => selectedFilesTotalBytes.value > MAX_ATTACHMENT_TOTAL_BYTES,
+);
+const pendingFileItems = computed<AttachmentListItem[]>(() =>
+  localPendingFiles.value.map((entry) => ({
+    id: entry.id,
+    name: entry.file.name,
+    sizeLabel: formatStorageBytes(entry.file.size),
+    icon: resolveFileIcon(entry.file),
+  })),
+);
+
+const haveSamePendingFiles = (
+  left: readonly MarkdownPendingFile[],
+  right: readonly MarkdownPendingFile[],
+) => {
+  if (left.length !== right.length) return false;
+
+  return left.every((entry, index) => {
+    const other = right[index];
+    return other !== undefined && entry.id === other.id && entry.file === other.file;
+  });
+};
 
 watch(
   () => props.modelValue,
@@ -193,8 +138,27 @@ watch(
 );
 
 watch(rawContent, (val) => {
+  if (val === props.modelValue) return;
   emit('update:modelValue', val);
 });
+
+watch(
+  () => props.pendingFiles,
+  (files) => {
+    if (haveSamePendingFiles(files, localPendingFiles.value)) return;
+    localPendingFiles.value = [...files];
+  },
+);
+
+watch(
+  localPendingFiles,
+  (files) => {
+    syncObjectUrls(files);
+    if (haveSamePendingFiles(files, props.pendingFiles)) return;
+    emit('update:pendingFiles', [...files]);
+  },
+  { immediate: true },
+);
 
 watch(
   () => props.editMode,
@@ -205,59 +169,7 @@ watch(
   },
 );
 
-const showEditor = computed(() => {
-  if (!props.editMode) return false;
-  if (!props.enablePreviewToggle) return true;
-  return !isPreviewMode.value;
-});
-
-const editorInputStyle = {
-  height: '100%',
-  minHeight: '100%',
-  resize: 'none',
-};
-
-const renderedContent = computed(() => {
-  const html = marked.parse(rawContent.value || '');
-  return DOMPurify.sanitize(html as string, {
-    ALLOWED_TAGS: [
-      'h1',
-      'h2',
-      'h3',
-      'h4',
-      'h5',
-      'h6',
-      'h7',
-      'h8',
-      'p',
-      'a',
-      'br',
-      'hr',
-      'ul',
-      'ol',
-      'li',
-      'b',
-      'strong',
-      'i',
-      'em',
-      'del',
-      'blockquote',
-      'pre',
-      'code',
-      'table',
-      'span',
-      'th',
-      'tr',
-      'td',
-      'thead',
-      'tbody',
-      'div',
-    ],
-    ALLOWED_ATTR: ['href', 'title', 'class', 'target', 'rel'],
-  });
-});
-
-const insertTextAtCursor = (prefix: string, suffix: string = '') => {
+const insertTextAtCursor = (prefix: string, suffix = '') => {
   const textarea = editorRef.value?.getNativeElement();
   if (!textarea) return;
 
@@ -266,11 +178,9 @@ const insertTextAtCursor = (prefix: string, suffix: string = '') => {
   const text = rawContent.value || '';
   const selectedText = text.substring(start, end);
 
-  const newText = text.substring(0, start) + prefix + selectedText + suffix + text.substring(end);
-  rawContent.value = newText;
+  rawContent.value = text.substring(0, start) + prefix + selectedText + suffix + text.substring(end);
 
-  // Use nextTick equivalent to set selection after v-model updates
-  setTimeout(() => {
+  window.setTimeout(() => {
     const newCursorPos = start + prefix.length + selectedText.length + suffix.length;
     textarea.focus();
     if (selectedText.length === 0) {
@@ -281,306 +191,140 @@ const insertTextAtCursor = (prefix: string, suffix: string = '') => {
   }, 0);
 };
 
-const applyFormat = (type: string) => {
-  switch (type) {
-    case 'bold':
-      insertTextAtCursor('**', '**');
-      break;
-    case 'italic':
-      insertTextAtCursor('*', '*');
-      break;
-    case 'heading':
-      insertTextAtCursor('\n### ', '');
-      break;
-    case 'quote':
-      insertTextAtCursor('\n> ', '');
-      break;
-    case 'code':
-      insertTextAtCursor('`', '`');
-      break;
+const applyFormat = (type: MarkdownFormat) => {
+  const formats: Record<MarkdownFormat, [string, string]> = {
+    bold: ['**', '**'],
+    italic: ['*', '*'],
+    heading: ['\n### ', ''],
+    quote: ['\n> ', ''],
+    code: ['`', '`'],
+  };
+
+  const [prefix, suffix] = formats[type];
+  insertTextAtCursor(prefix, suffix);
+};
+
+const handleKeydown = (event: KeyboardEvent) => {
+  if (!event.ctrlKey && !event.metaKey) return;
+
+  const key = event.key.toLowerCase();
+  if (key === 'b' || key === 'i') {
+    event.preventDefault();
+    applyFormat(key === 'b' ? 'bold' : 'italic');
   }
 };
 
-const handleKeydown = (e: KeyboardEvent) => {
-  if (e.ctrlKey || e.metaKey) {
-    switch (e.key.toLowerCase()) {
-      case 'b':
-        e.preventDefault();
-        applyFormat('bold');
-        break;
-      case 'i':
-        e.preventDefault();
-        applyFormat('italic');
-        break;
+const buildPendingFileId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
+
+const insertImageMarker = (file: File, id: string) => {
+  const altText = file.name.replace(/\]/g, '');
+  insertTextAtCursor(`![${altText}](attachment://local/${id})`);
+};
+
+const addPendingFiles = (files: File[], insertImages: boolean) => {
+  const accepted: MarkdownPendingFile[] = [];
+  let nextTotal = selectedFilesTotalBytes.value;
+
+  for (const file of files) {
+    if (file.size > MAX_ATTACHMENT_FILE_BYTES) {
+      notify(
+        t('attachments.form.singleFileLimitExceeded', {
+          file: file.name,
+          max: formatStorageBytes(MAX_ATTACHMENT_FILE_BYTES),
+        }),
+        'warning',
+      );
+      continue;
     }
+
+    nextTotal += file.size;
+    if (nextTotal > MAX_ATTACHMENT_TOTAL_BYTES) {
+      notify(
+        t('attachments.form.totalLimitExceeded', {
+          max: formatStorageBytes(MAX_ATTACHMENT_TOTAL_BYTES),
+        }),
+        'warning',
+      );
+      break;
+    }
+
+    accepted.push({ id: buildPendingFileId(), file });
+  }
+
+  if (accepted.length === 0) return;
+
+  localPendingFiles.value = [...localPendingFiles.value, ...accepted];
+
+  if (insertImages) {
+    accepted
+      .filter((entry) => entry.file.type.startsWith('image/'))
+      .forEach((entry) => insertImageMarker(entry.file, entry.id));
   }
 };
+
+const openFilePicker = () => {
+  if (!props.enableAttachments) return;
+  fileInputRef.value?.click();
+};
+
+const handleFileInputChange = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  addPendingFiles(Array.from(input.files || []), true);
+  input.value = '';
+};
+
+const handlePaste = (event: ClipboardEvent) => {
+  if (!props.enableAttachments) return;
+
+  const files = Array.from(event.clipboardData?.files || []).filter((file) =>
+    file.type.startsWith('image/'),
+  );
+  if (files.length === 0) return;
+
+  event.preventDefault();
+  addPendingFiles(files, true);
+};
+
+const removePendingFile = (id: string) => {
+  localPendingFiles.value = localPendingFiles.value.filter((entry) => entry.id !== id);
+  rawContent.value = rawContent.value.replace(
+    new RegExp(`!?\\[[^\\]]*\\]\\(attachment://local/${id}\\)`, 'g'),
+    '',
+  );
+};
+
+function syncObjectUrls(files: MarkdownPendingFile[]) {
+  const nextIds = new Set(files.map((entry) => entry.id));
+  const nextUrls = { ...objectUrls.value };
+
+  Object.entries(nextUrls).forEach(([id, url]) => {
+    if (!nextIds.has(id)) {
+      URL.revokeObjectURL(url);
+      delete nextUrls[id];
+    }
+  });
+
+  files.forEach((entry) => {
+    if (!nextUrls[entry.id] && entry.file.type.startsWith('image/')) {
+      nextUrls[entry.id] = URL.createObjectURL(entry.file);
+    }
+  });
+
+  objectUrls.value = nextUrls;
+}
 
 const togglePreviewMode = () => {
   if (!props.enablePreviewToggle) return;
   isPreviewMode.value = !isPreviewMode.value;
 };
+
+onBeforeUnmount(() => {
+  Object.values(objectUrls.value).forEach((url) => URL.revokeObjectURL(url));
+});
 </script>
-
-<style lang="scss">
-/* Variables locales con soporte para temas claro/oscuro (integrado con Quasar variables) */
-.markdown-container {
-  --md-color-text: var(--md-text);
-  --md-color-bg: var(--md-bg);
-  --md-color-border: var(--md-border);
-  --md-color-link: var(--md-link);
-  --md-color-code-bg: var(--md-code-bg);
-  --md-color-quote-border: var(--md-quote-border);
-  --md-color-quote-text: var(--md-quote-text);
-  --md-color-pre-bg: var(--md-pre-bg);
-  --md-color-pre-header: var(--md-pre-header-bg);
-  --md-color-table-stripe: var(--md-table-stripe);
-  --md-color-toolbar: var(--md-toolbar-bg);
-
-  --md-font-family: var(
-    --q-font-family,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Helvetica,
-    Arial,
-    sans-serif
-  );
-  --md-font-code: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-
-  border: none;
-  border-radius: 4px;
-  overflow: hidden;
-  background-color: var(--md-color-bg);
-  display: flex;
-  flex-direction: column;
-  min-height: 12rem;
-  height: 100%;
-
-  .markdown-toolbar {
-    border-bottom: 1px solid var(--md-color-border);
-    background-color: var(--md-color-toolbar);
-    flex-shrink: 0;
-  }
-
-  .markdown-editor {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-
-    .q-field__inner,
-    .q-field__control {
-      height: 100%;
-      min-height: 100%;
-      border: none !important;
-
-      &:before,
-      &:after {
-        border: none !important;
-      }
-    }
-
-    .q-field__control-container,
-    .q-field__native {
-      height: 100%;
-      min-height: 100%;
-    }
-
-    textarea {
-      font-family: var(--md-font-code);
-      font-size: 14px;
-      line-height: 1.5;
-      height: 100% !important;
-      min-height: 100% !important;
-    }
-  }
-
-  .markdown-preview {
-    flex: 1 1 auto;
-    min-height: 0;
-    padding: 16px;
-    font-family: var(--md-font-family);
-    color: var(--md-color-text);
-    background-color: var(--md-color-bg);
-    line-height: 1.6;
-    word-wrap: break-word;
-
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-      margin-top: 24px;
-      margin-bottom: 16px;
-      font-weight: 600;
-      line-height: 1.25;
-      padding-bottom: 0.3em;
-    }
-
-    h1,
-    h2 {
-      border-bottom: 1px solid var(--md-color-border);
-    }
-
-    h1 {
-      font-size: 2em;
-      margin-top: 0;
-    }
-    h2 {
-      font-size: 1.5em;
-    }
-    h3 {
-      font-size: 1.25em;
-    }
-    h4 {
-      font-size: 1.15em;
-    }
-    h5 {
-      font-size: 1em;
-    }
-    h6 {
-      font-size: 0.75em;
-    }
-
-    a {
-      color: var(--md-color-link);
-      text-decoration: none;
-      &:hover {
-        text-decoration: underline;
-      }
-    }
-
-    p,
-    blockquote,
-    ul,
-    ol,
-    dl,
-    table,
-    details {
-      margin-top: 0;
-      margin-bottom: 16px;
-    }
-
-    hr {
-      height: 0.25em;
-      padding: 0;
-      margin: 24px 0;
-      background-color: var(--md-color-border);
-      border: 0;
-    }
-
-    blockquote {
-      padding: 0 1em;
-      color: var(--md-color-quote-text);
-      border-left: 0.25em solid var(--md-color-quote-border);
-    }
-
-    code,
-    tt {
-      padding: 0.2em 0.4em;
-      margin: 0;
-      font-size: 85%;
-      background-color: var(--md-color-code-bg);
-      border-radius: 3px;
-      font-family: var(--md-font-code);
-    }
-
-    .code-block-wrapper {
-      margin-top: 0;
-      margin-bottom: 16px;
-      border-radius: 4px;
-      box-shadow: inset 0 0 0 1px var(--md-color-border);
-      overflow: hidden;
-    }
-
-    .code-block-header {
-      background-color: var(--md-color-pre-header);
-      padding: 6px 12px;
-      font-size: 12px;
-      font-family: var(--md-font-family);
-      color: var(--md-color-text);
-      font-weight: 500;
-      box-shadow: inset 0 -1px 0 var(--md-color-border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-
-      .mac-buttons {
-        display: flex;
-        gap: 6px;
-        position: absolute;
-        left: 12px;
-
-        .mac-btn {
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          display: inline-block;
-        }
-        .close {
-          background-color: #ff5f56;
-        }
-        .minimize {
-          background-color: #ffbd2e;
-        }
-        .maximize {
-          background-color: #27c93f;
-        }
-      }
-
-      .lang-title {
-        text-transform: lowercase;
-        opacity: 0.8;
-      }
-    }
-
-    pre {
-      padding: 16px;
-      overflow: auto;
-      font-size: 85%;
-      line-height: 1.45;
-      background-color: var(--md-color-pre-bg);
-      border-bottom-left-radius: 4px;
-      border-bottom-right-radius: 4px;
-      margin-bottom: 0;
-      margin-top: 0;
-
-      code {
-        display: inline;
-        max-width: auto;
-        padding: 0;
-        margin: 0;
-        overflow: visible;
-        line-height: inherit;
-        word-wrap: normal;
-        background-color: transparent;
-        border: 0;
-      }
-    }
-
-    table {
-      border-spacing: 0;
-      border-collapse: collapse;
-      width: 100%;
-
-      th,
-      td {
-        padding: 6px 13px;
-        border: 1px solid var(--md-color-border);
-      }
-
-      tr:nth-child(2n) {
-        background-color: var(--md-color-table-stripe);
-      }
-    }
-
-    ul,
-    ol {
-      padding-left: 2em;
-    }
-  }
-}
-</style>

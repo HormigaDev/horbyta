@@ -290,6 +290,8 @@ create table attachments (
     user_id uuid not null references users (id) on delete cascade,
     project_id uuid references projects (id) on delete cascade,
     task_id uuid references tasks (id) on delete cascade,
+    milestone_id uuid references milestones (id) on delete cascade,
+    change_request_id uuid,
 
     original_name varchar(255) not null,
     storage_key varchar(512) not null unique,
@@ -300,7 +302,10 @@ create table attachments (
     updated_at timestamptz not null default now(),
 
     constraint chk_attachments_linked check (
-        project_id is not null or task_id is not null
+        project_id is not null
+        or task_id is not null
+        or milestone_id is not null
+        or change_request_id is not null
     )
 );
 

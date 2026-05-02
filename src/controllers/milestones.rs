@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Request, State},
     response::IntoResponse,
     routing::{get, post},
 };
@@ -18,7 +18,7 @@ use crate::{
         user::UserDto,
     },
     error::AppError,
-    middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
+    middlewares::validator::ValidatedSearchQuery,
     services::{milestones::MilestoneService, notifications::NotificationService},
     state::AppState,
 };
@@ -66,9 +66,22 @@ async fn client_search_milestones(
 async fn create_milestone(
     State(state): State<AppState>,
     user: UserDto,
-    ValidatedJson(payload): ValidatedJson<CreateMilestoneDto>,
+    request: Request,
 ) -> Result<impl IntoResponse, AppError> {
-    let milestone = MilestoneService::create(state.db.as_ref(), user.id, payload).await?;
+    let (payload, files) = crate::utils::multipart::parse_payload_request::<CreateMilestoneDto>(
+        &state,
+        request,
+        "multipart request must include a payload field with milestone json",
+    )
+    .await?;
+    let milestone = MilestoneService::create_with_markdown_files(
+        state.db.as_ref(),
+        state.storage.as_ref(),
+        user.id,
+        payload,
+        files,
+    )
+    .await?;
     Ok(Json(milestone))
 }
 
@@ -76,11 +89,25 @@ async fn update_milestone(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
-    ValidatedJson(payload): ValidatedJson<UpdateMilestoneDto>,
+    request: Request,
 ) -> Result<impl IntoResponse, AppError> {
+    let (payload, files) = crate::utils::multipart::parse_payload_request::<UpdateMilestoneDto>(
+        &state,
+        request,
+        "multipart request must include a payload field with milestone json",
+    )
+    .await?;
     let requested_status = payload.status.clone();
     let previous = MilestoneService::get_by_id(state.db.as_ref(), user.id, id).await?;
-    let milestone = MilestoneService::update(state.db.as_ref(), user.id, id, payload).await?;
+    let milestone = MilestoneService::update_with_markdown_files(
+        state.db.as_ref(),
+        state.storage.as_ref(),
+        user.id,
+        id,
+        payload,
+        files,
+    )
+    .await?;
     if previous.status != MilestoneStatus::Released.to_string() && requested_status == MilestoneStatus::Released {
         if let Err(error) = NotificationService::notify_milestone_released(&state, user.id, &milestone).await {
             tracing::error!("Failed to create milestone notification: {}", error);

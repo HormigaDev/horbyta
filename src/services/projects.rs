@@ -25,7 +25,10 @@ use crate::{
     },
     error::AppError,
     services::{attachments::AttachmentService, milestones::MilestoneService},
-    utils::search::{apply_filters, apply_ordering, apply_pagination},
+    utils::{
+        multipart::{MarkdownUploadedFile, replace_markdown_attachment_urls},
+        search::{apply_filters, apply_ordering, apply_pagination},
+    },
 };
 
 pub struct ProjectService;
@@ -283,6 +286,8 @@ impl ProjectService {
             let attachment = CreateAttachmentDto {
                 project_id: Some(created_project.id),
                 task_id: None,
+                milestone_id: None,
+                change_request_id: None,
                 original_name: file.original_name,
                 mime_type: file.mime_type,
             };
@@ -296,6 +301,42 @@ impl ProjectService {
         txn.commit().await.map_err(AppError::Database)?;
 
         Ok(created_project)
+    }
+
+    pub async fn create_with_markdown_files(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        storage: &dyn ObjectStore,
+        user_id: Uuid,
+        dto: CreateProjectDto,
+        files: Vec<MarkdownUploadedFile>,
+    ) -> Result<ProjectModel, AppError> {
+        if files.is_empty() {
+            return Self::create(db, user_id, dto).await;
+        }
+
+        let txn = db.begin().await.map_err(AppError::Database)?;
+        let created_project = Self::create_with_connection(&txn, user_id, dto).await?;
+
+        let replacements = AttachmentService::create_markdown_files_in_tx(
+            &txn,
+            storage,
+            user_id,
+            Some(created_project.id),
+            None,
+            None,
+            None,
+            files,
+        )
+        .await?;
+
+        let next_description = replace_markdown_attachment_urls(created_project.description.clone(), &replacements);
+        let mut active_project: projects::ActiveModel = created_project.into();
+        active_project.description = Set(next_description);
+        let updated_project = active_project.update(&txn).await.map_err(AppError::Database)?;
+
+        txn.commit().await.map_err(AppError::Database)?;
+
+        Ok(updated_project)
     }
 
     pub async fn get_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<ProjectDetailDto, AppError> {
@@ -466,6 +507,38 @@ impl ProjectService {
         txn.commit().await.map_err(AppError::Database)?;
 
         Ok(updated_project)
+    }
+
+    pub async fn update_with_markdown_files(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        storage: &dyn ObjectStore,
+        user_id: Uuid,
+        id: Uuid,
+        mut dto: UpdateProjectDto,
+        files: Vec<MarkdownUploadedFile>,
+    ) -> Result<ProjectModel, AppError> {
+        if files.is_empty() {
+            return Self::update(db, user_id, id, dto).await;
+        }
+
+        let project = Self::find_by_id(db, user_id, id).await?;
+        let txn = db.begin().await.map_err(AppError::Database)?;
+
+        let replacements = AttachmentService::create_markdown_files_in_tx(
+            &txn,
+            storage,
+            user_id,
+            Some(project.id),
+            None,
+            None,
+            None,
+            files,
+        )
+        .await?;
+
+        dto.description = replace_markdown_attachment_urls(dto.description, &replacements);
+        txn.commit().await.map_err(AppError::Database)?;
+        Self::update(db, user_id, id, dto).await
     }
 
     pub async fn update_billable(

@@ -172,8 +172,10 @@
             <div class="col-12" style="display: flex; flex-direction: column">
               <MarkdownRenderer
                 v-model="projectDescription"
+                v-model:pending-files="markdownFiles"
                 edit-mode
                 enable-preview-toggle
+                enable-attachments
                 class="full-height"
                 @update:model-value="(val) => validateDescription(val ? val : null)"
               />
@@ -181,48 +183,6 @@
                 {{ descriptionRuleState.message }}
               </div>
             </div>
-          </div>
-
-          <div v-if="isNew" class="q-mt-lg">
-            <q-separator spaced />
-
-            <div class="row items-center justify-between q-mb-sm">
-              <div class="text-subtitle2">{{ t('attachments.form.sectionTitle') }}</div>
-              <div
-                class="text-caption"
-                :class="filesBytesExceeded ? 'text-negative' : 'text-grey-7'"
-              >
-                {{
-                  t('attachments.form.totalSize', {
-                    used: formatStorageBytes(selectedFilesTotalBytes),
-                    max: formatStorageBytes(MAX_ATTACHMENT_TOTAL_BYTES),
-                  })
-                }}
-              </div>
-            </div>
-
-            <q-file
-              :model-value="selectedFiles"
-              multiple
-              clearable
-              dense
-              outlined
-              use-chips
-              counter
-              :label="t('attachments.form.inputLabel')"
-              :hint="t('attachments.form.inputHint')"
-              @update:model-value="onFilesSelected"
-            />
-
-            <AttachmentItemsList
-              v-if="selectedFileItems.length > 0"
-              class="q-mt-sm"
-              :items="selectedFileItems"
-              :empty-text="t('attachments.list.empty')"
-              item-action-icon="close"
-              :item-action-aria-label="t('attachments.form.removeFile')"
-              @item-action="removeFileById"
-            />
           </div>
         </q-card-section>
       </q-card>
@@ -255,7 +215,6 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import AttachmentItemsList from 'src/components/AttachmentItemsList.vue';
 import NumericTextInput from 'src/components/NumericTextInput.vue';
 import { ProjectsService } from 'src/services/projects';
 import { CategoriesService } from 'src/services/categories';
@@ -265,7 +224,7 @@ import { useProjectsRules } from 'src/composables/rules/projects.rules';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
-import type { AttachmentListItem } from 'src/types/attachment';
+import type { MarkdownPendingFile } from 'src/types/markdown';
 import type {
   CreateProjectDto,
   ProjectBillingType,
@@ -276,15 +235,6 @@ import type {
 import type { CategorySummaryDto } from 'src/types/category';
 import type { ClientSummaryDto } from 'src/types/clients';
 import { ClientsService } from 'src/services/clients';
-import {
-  MAX_ATTACHMENT_FILE_BYTES,
-  MAX_ATTACHMENT_TOTAL_BYTES,
-  formatStorageBytes,
-  resolveFileIcon,
-  sumFileSizes,
-  toFileArray,
-  type QFileModelValue,
-} from 'src/utils/attachments';
 import { normalizeNumericText, parseNumericText } from 'src/utils/numericInput';
 import { CURRENCY_TYPE_OPTIONS, getProjectStatusOptions } from 'src/data/constants';
 
@@ -308,11 +258,7 @@ const isNew = computed(() => route.name === 'project-create');
 const isSubmitting = ref(false);
 const hasAttemptedSubmit = ref(false);
 const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
-const selectedFiles = ref<File[]>([]);
-const selectedFilesTotalBytes = computed(() => sumFileSizes(selectedFiles.value));
-const filesBytesExceeded = computed(
-  () => selectedFilesTotalBytes.value > MAX_ATTACHMENT_TOTAL_BYTES,
-);
+const markdownFiles = ref<MarkdownPendingFile[]>([]);
 
 const createDefaultBillingForm = (): ProjectBillingFormState => ({
   billing_type: 'fixed',
@@ -397,19 +343,6 @@ const hasPaymentDayError = computed(() => {
   return parsedPaymentDay.value < 1 || parsedPaymentDay.value > 28;
 });
 
-const buildSelectedFileId = (file: File, index: number): string => {
-  return `${file.name}-${file.lastModified}-${index}`;
-};
-
-const selectedFileItems = computed<AttachmentListItem[]>(() => {
-  return selectedFiles.value.map((file, index) => ({
-    id: buildSelectedFileId(file, index),
-    name: file.name,
-    sizeLabel: formatStorageBytes(file.size),
-    icon: resolveFileIcon(file),
-  }));
-});
-
 const {
   options: categoryOptions,
   isLoading: isCategoriesLoading,
@@ -466,7 +399,7 @@ const resetProjectForm = async () => {
   if (isNew.value) {
     project.value = createEmptyProjectForm();
     billingForm.value = createDefaultBillingForm();
-    selectedFiles.value = [];
+    markdownFiles.value = [];
     return;
   }
 
@@ -479,41 +412,6 @@ const projectDescription = computed({
     project.value.description = val ? val : null;
   },
 });
-
-const onFilesSelected = (modelValue: QFileModelValue) => {
-  const incomingFiles = toFileArray(modelValue);
-
-  const oversizedFile = incomingFiles.find((file) => file.size > MAX_ATTACHMENT_FILE_BYTES);
-  if (oversizedFile) {
-    notify(
-      t('attachments.form.singleFileLimitExceeded', {
-        file: oversizedFile.name,
-        max: formatStorageBytes(MAX_ATTACHMENT_FILE_BYTES),
-      }),
-      'warning',
-    );
-    return;
-  }
-
-  const nextTotal = sumFileSizes(incomingFiles);
-  if (nextTotal > MAX_ATTACHMENT_TOTAL_BYTES) {
-    notify(
-      t('attachments.form.totalLimitExceeded', {
-        max: formatStorageBytes(MAX_ATTACHMENT_TOTAL_BYTES),
-      }),
-      'warning',
-    );
-    return;
-  }
-
-  selectedFiles.value = incomingFiles;
-};
-
-const removeFileById = (itemId: string) => {
-  selectedFiles.value = selectedFiles.value.filter((file, index) => {
-    return buildSelectedFileId(file, index) !== itemId;
-  });
-};
 
 const onCurrencyTypeInput = (value: string | number | null) => {
   billingForm.value.currency_type = String(value || '')
@@ -644,6 +542,8 @@ const loadProject = async () => {
         }
       }
     }
+
+    markdownFiles.value = [];
   } catch (err: unknown) {
     notifyError(t('projects.form.loadError'), err);
     void router.push('/projects');
@@ -685,7 +585,7 @@ const saveProject = async () => {
     };
 
     if (isNew.value) {
-      const created = await ProjectsService.create(payload, selectedFiles.value);
+      const created = await ProjectsService.create(payload, markdownFiles.value);
       notify(t('projects.form.createSuccess'), 'positive');
       await handlePinnedSaveSuccess({
         reset: resetProjectForm,
@@ -701,7 +601,7 @@ const saveProject = async () => {
         billable: project.value.billable,
         project_billing: projectBillingPayload,
       };
-      await ProjectsService.update(project.value.id, updatePayload);
+      await ProjectsService.update(project.value.id, updatePayload, markdownFiles.value);
       notify(t('projects.form.updateSuccess'), 'positive');
       await handlePinnedSaveSuccess({
         reset: resetProjectForm,

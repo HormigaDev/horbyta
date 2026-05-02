@@ -1,5 +1,7 @@
 import { apiFetch } from 'src/boot/fetch';
+import { buildMultipartPayload } from 'src/services/attachments';
 import type { PaginatedResponse, QueryPayload } from 'src/types';
+import type { MarkdownPendingFile } from 'src/types/markdown';
 import type {
   AssessChangeRequestDto,
   AssignChangeRequestTaskDto,
@@ -17,10 +19,13 @@ export const ChangeRequestsService = {
     });
   },
 
-  create: (data: CreateChangeRequestDto): Promise<ChangeRequestDetailDto> =>
+  create: (
+    data: CreateChangeRequestDto,
+    files: readonly MarkdownPendingFile[] = [],
+  ): Promise<ChangeRequestDetailDto> =>
     apiFetch('/change-requests', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: buildMultipartPayload(data, files),
     }),
 
   getById: (id: string): Promise<ChangeRequestDetailDto> =>
@@ -28,10 +33,14 @@ export const ChangeRequestsService = {
       method: 'GET',
     }),
 
-  update: (id: string, data: UpdateChangeRequestDto): Promise<ChangeRequestDetailDto> =>
+  update: (
+    id: string,
+    data: UpdateChangeRequestDto,
+    files: readonly MarkdownPendingFile[] = [],
+  ): Promise<ChangeRequestDetailDto> =>
     apiFetch(`/change-requests/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: buildMultipartPayload(data, files),
     }),
 
   assignTask: (id: string, data: AssignChangeRequestTaskDto): Promise<ChangeRequestDetailDto> =>

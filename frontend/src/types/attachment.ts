@@ -2,6 +2,8 @@ export interface AttachmentSummaryDto {
   id: string;
   project_id: string | null;
   task_id: string | null;
+  milestone_id: string | null;
+  change_request_id: string | null;
   original_name: string;
   mime_type: string;
   size_bytes: number;
@@ -14,6 +16,8 @@ export interface AttachmentDetailDto {
   user_id: string;
   project_id: string | null;
   task_id: string | null;
+  milestone_id: string | null;
+  change_request_id: string | null;
   original_name: string;
   storage_key: string;
   mime_type: string;

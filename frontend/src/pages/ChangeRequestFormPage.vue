@@ -95,8 +95,10 @@
             <div class="col-12" style="display: flex; flex-direction: column">
               <MarkdownRenderer
                 v-model="clientRequestMarkdown"
+                v-model:pending-files="clientRequestMarkdownFiles"
                 :edit-mode="!isReadOnlyForm"
                 :enable-preview-toggle="true"
+                enable-attachments
                 class="full-height"
               />
               <div v-if="hasClientRequestError" class="text-negative text-caption q-mt-xs">
@@ -149,8 +151,10 @@
             <div class="col-12" style="display: flex; flex-direction: column">
               <MarkdownRenderer
                 v-model="technicalAssessmentMarkdown"
+                v-model:pending-files="technicalAssessmentMarkdownFiles"
                 :edit-mode="!isReadOnlyForm"
                 :enable-preview-toggle="true"
+                enable-attachments
                 class="full-height"
               />
             </div>
@@ -200,6 +204,7 @@ import { ClientsService } from 'src/services/clients';
 import { TasksService } from 'src/services/tasks';
 import { normalizeNumericText, parseNumericText } from 'src/utils/numericInput';
 import type { Filter } from 'src/types/query';
+import type { MarkdownPendingFile } from 'src/types/markdown';
 import type {
   ChangeRequestOrigin,
   ChangeRequestStatus,
@@ -236,6 +241,8 @@ const changeRequestId = computed(() => String(route.params.id || ''));
 const isSubmitting = ref(false);
 const hasAttemptedSubmit = ref(false);
 const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
+const clientRequestMarkdownFiles = ref<MarkdownPendingFile[]>([]);
+const technicalAssessmentMarkdownFiles = ref<MarkdownPendingFile[]>([]);
 
 const createEmptyChangeRequestForm = (): ChangeRequestFormState => ({
   id: '',
@@ -261,6 +268,8 @@ const resetChangeRequestForm = async () => {
   if (isNew.value) {
     Object.assign(form, createEmptyChangeRequestForm());
     setTaskOptions([]);
+    clientRequestMarkdownFiles.value = [];
+    technicalAssessmentMarkdownFiles.value = [];
     return;
   }
 
@@ -459,6 +468,9 @@ const loadChangeRequest = async () => {
     if (detail.task_id) {
       await ensureTaskOption(detail.task_id);
     }
+
+    clientRequestMarkdownFiles.value = [];
+    technicalAssessmentMarkdownFiles.value = [];
   } catch (err: unknown) {
     notifyError(t('changeRequests.form.loadError'), err);
     void router.push('/change-requests');
@@ -523,6 +535,11 @@ const saveChangeRequest = async () => {
   isSubmitting.value = true;
   showLoading(t('changeRequests.form.saving'));
 
+  const markdownFiles = [
+    ...clientRequestMarkdownFiles.value,
+    ...technicalAssessmentMarkdownFiles.value,
+  ];
+
   try {
     if (isNew.value) {
       const payload: CreateChangeRequestDto = {
@@ -533,7 +550,7 @@ const saveChangeRequest = async () => {
         client_request_description: form.client_request_description.trim(),
       };
 
-      const created = await ChangeRequestsService.create(payload);
+      const created = await ChangeRequestsService.create(payload, markdownFiles);
       notify(t('changeRequests.form.createSuccess'), 'positive');
       await handlePinnedSaveSuccess({
         reset: resetChangeRequestForm,
@@ -555,7 +572,7 @@ const saveChangeRequest = async () => {
         version: form.version,
       };
 
-      await ChangeRequestsService.update(changeRequestId.value, payload);
+      await ChangeRequestsService.update(changeRequestId.value, payload, markdownFiles);
       notify(t('changeRequests.form.updateSuccess'), 'positive');
       await handlePinnedSaveSuccess({
         reset: resetChangeRequestForm,

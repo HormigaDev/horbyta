@@ -8,8 +8,12 @@ import type {
   TasksViewResponse,
   UpdateTaskDto,
 } from 'src/types/task';
+import type { MarkdownPendingFile } from 'src/types/markdown';
 
-const buildTaskCreateBody = (data: CreateTaskDto, files: readonly File[]): string | FormData => {
+const buildTaskBody = (
+  data: CreateTaskDto | UpdateTaskDto,
+  files: readonly MarkdownPendingFile[],
+): string | FormData => {
   if (files.length === 0) {
     return JSON.stringify(data);
   }
@@ -18,7 +22,7 @@ const buildTaskCreateBody = (data: CreateTaskDto, files: readonly File[]): strin
   formData.append('payload', JSON.stringify(data));
 
   files.forEach((file) => {
-    formData.append('files', file);
+    formData.append(`markdown_file:${file.id}`, file.file);
   });
 
   return formData;
@@ -37,10 +41,10 @@ export const TasksService = {
     });
   },
 
-  create: (data: CreateTaskDto, files: readonly File[] = []): Promise<TaskDetailDto> =>
+  create: (data: CreateTaskDto, files: readonly MarkdownPendingFile[] = []): Promise<TaskDetailDto> =>
     apiFetch('/tasks', {
       method: 'POST',
-      body: buildTaskCreateBody(data, files),
+      body: buildTaskBody(data, files),
     }),
 
   getById: (id: string): Promise<TaskDetailDto> =>
@@ -48,10 +52,14 @@ export const TasksService = {
       method: 'GET',
     }),
 
-  update: (id: string, data: UpdateTaskDto): Promise<TaskDetailDto> =>
+  update: (
+    id: string,
+    data: UpdateTaskDto,
+    files: readonly MarkdownPendingFile[] = [],
+  ): Promise<TaskDetailDto> =>
     apiFetch(`/tasks/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: buildTaskBody(data, files),
     }),
 
   changeStatus: (id: string, status: TaskStatus): Promise<void> =>

@@ -8,19 +8,28 @@ use axum::{
     response::IntoResponse,
     routing::{get, post},
 };
+use axum_extra::extract::CookieJar;
+use jsonwebtoken::{DecodingKey, Validation, decode};
 use object_store::{ObjectStore, ObjectStoreExt, path::Path as ObjectPath};
-use sea_orm::TransactionTrait;
+use sea_orm::{EntityTrait, TransactionTrait};
 use serde_json::{Value, json};
 use uuid::Uuid;
 
 use crate::{
+    constants::{CLIENT_AUTH_COOKIE_NAME, USER_AUTH_COOKIE_NAME},
     dtos::{
         attachment::{CreateAttachmentDto, UploadedFile, attachment_filter_schema},
         query::{Filter, FilterOperator, QueryPayload},
         user::UserDto,
     },
+    entities::client_auth,
     error::AppError,
-    middlewares::{rate_limit::{UPLOADS_RATE_LIMIT, check_user_rate_limit}, validator::ValidatedSearchQuery},
+    middlewares::{
+        auth::Claims,
+        client_auth::ClientClaims,
+        rate_limit::{UPLOADS_RATE_LIMIT, check_user_rate_limit},
+        validator::ValidatedSearchQuery,
+    },
     services::attachments::{AttachmentService, MAX_ATTACHMENT_FILE_BYTES},
     state::AppState,
 };
@@ -55,14 +64,12 @@ async fn parse_uploaded_files(mut multipart: Multipart) -> Result<(Vec<UploadedF
             .map_err(|_| AppError::BadRequest("file exceeds the supported size".to_string()))?;
 
         if file_size > MAX_ATTACHMENT_FILE_BYTES {
-            return Err(AppError::BadRequest(
-                "each file cannot exceed 50mb".to_string(),
-            ));
+            return Err(AppError::BadRequest("each file cannot exceed 50mb".to_string()));
         }
 
-        total_upload_bytes = total_upload_bytes.checked_add(file_size).ok_or_else(|| {
-            AppError::BadRequest("total file size exceeds the allowed limit".to_string())
-        })?;
+        total_upload_bytes = total_upload_bytes
+            .checked_add(file_size)
+            .ok_or_else(|| AppError::BadRequest("total file size exceeds the allowed limit".to_string()))?;
 
         files.push(UploadedFile {
             original_name,
@@ -106,8 +113,16 @@ async fn upload_attachments_to_scope(
     check_user_rate_limit(&state.rate_limit_uploads, user_id, UPLOADS_RATE_LIMIT)?;
 
     let (files, total_upload_bytes) = parse_uploaded_files(multipart).await?;
-    AttachmentService::guard_upload_capacity(state.db.as_ref(), user_id, project_id, task_id, total_upload_bytes)
-        .await?;
+    AttachmentService::guard_upload_capacity(
+        state.db.as_ref(),
+        user_id,
+        project_id,
+        task_id,
+        None,
+        None,
+        total_upload_bytes,
+    )
+    .await?;
 
     let tx = state.db.begin().await.map_err(AppError::Database)?;
     let mut created_attachments = Vec::with_capacity(files.len());
@@ -117,6 +132,8 @@ async fn upload_attachments_to_scope(
         let dto = CreateAttachmentDto {
             project_id,
             task_id,
+            milestone_id: None,
+            change_request_id: None,
             original_name: file.original_name,
             mime_type: file.mime_type,
         };
@@ -199,10 +216,11 @@ async fn search_task_attachments(
 
 async fn get_attachment_raw(
     State(state): State<AppState>,
-    user: UserDto,
+    jar: CookieJar,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let attachment = AttachmentService::get_by_id(state.db.as_ref(), user.id, id).await?;
+    let user_id = resolve_attachment_viewer_user_id(&state, &jar).await?;
+    let attachment = AttachmentService::get_by_id(state.db.as_ref(), user_id, id).await?;
 
     let storage_path = ObjectPath::parse(attachment.storage_key.as_str())
         .map_err(|error| AppError::Internal(format!("invalid storage key: {}", error)))?;
@@ -226,6 +244,38 @@ async fn get_attachment_raw(
     headers.insert(CONTENT_DISPOSITION, HeaderValue::from_str(&disposition)?);
 
     Ok((headers, bytes))
+}
+
+async fn resolve_attachment_viewer_user_id(state: &AppState, jar: &CookieJar) -> Result<Uuid, AppError> {
+    if let Some(cookie) = jar.get(USER_AUTH_COOKIE_NAME) {
+        let token = decode::<Claims>(
+            cookie.value(),
+            &DecodingKey::from_secret(state.config.jwt_secret.as_bytes()),
+            &Validation::default(),
+        )
+        .map_err(|_| AppError::Unauthorized("invalid user session".to_string()))?;
+
+        return Ok(token.claims.sub);
+    }
+
+    if let Some(cookie) = jar.get(CLIENT_AUTH_COOKIE_NAME) {
+        let token = decode::<ClientClaims>(
+            cookie.value(),
+            &DecodingKey::from_secret(state.config.jwt_secret_client.as_bytes()),
+            &Validation::default(),
+        )
+        .map_err(|_| AppError::Unauthorized("invalid client session".to_string()))?;
+
+        let client_auth = client_auth::Entity::find_by_id(token.claims.sub)
+            .one(state.db.as_ref())
+            .await
+            .map_err(AppError::Database)?
+            .ok_or_else(|| AppError::Unauthorized("invalid client session".to_string()))?;
+
+        return Ok(client_auth.user_id);
+    }
+
+    Err(AppError::Unauthorized("no session".to_string()))
 }
 
 async fn delete_attachment(

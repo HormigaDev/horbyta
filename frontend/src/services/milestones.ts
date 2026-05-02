@@ -1,5 +1,7 @@
 import { apiFetch } from 'src/boot/fetch';
+import { buildMultipartPayload } from 'src/services/attachments';
 import type { PaginatedResponse, QueryPayload } from 'src/types';
+import type { MarkdownPendingFile } from 'src/types/markdown';
 import type {
   CreateMilestoneDto,
   MilestoneDetailDto,
@@ -34,16 +36,23 @@ export const MilestonesService = {
     return milestone;
   },
 
-  create: (data: CreateMilestoneDto): Promise<MilestoneDetailDto> =>
+  create: (
+    data: CreateMilestoneDto,
+    files: readonly MarkdownPendingFile[] = [],
+  ): Promise<MilestoneDetailDto> =>
     apiFetch('/milestones', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: buildMultipartPayload(data, files),
     }),
 
-  update: (id: string, data: UpdateMilestoneDto): Promise<MilestoneDetailDto> =>
+  update: (
+    id: string,
+    data: UpdateMilestoneDto,
+    files: readonly MarkdownPendingFile[] = [],
+  ): Promise<MilestoneDetailDto> =>
     apiFetch(`/milestones/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: buildMultipartPayload(data, files),
     }),
 
   delete: (id: string): Promise<{ message: string }> =>

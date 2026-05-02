@@ -21,6 +21,26 @@ const buildFilesFormData = (files: readonly File[]): FormData => {
   return formData;
 };
 
+const appendMarkdownFiles = (formData: FormData, files: readonly { id: string; file: File }[]) => {
+  files.forEach((file) => {
+    formData.append(`markdown_file:${file.id}`, file.file);
+  });
+};
+
+export const buildMultipartPayload = (
+  payload: object,
+  files: readonly { id: string; file: File }[],
+): string | FormData => {
+  if (files.length === 0) {
+    return JSON.stringify(payload);
+  }
+
+  const formData = new FormData();
+  formData.append('payload', JSON.stringify(payload));
+  appendMarkdownFiles(formData, files);
+  return formData;
+};
+
 export const AttachmentsService = {
   searchByProject: (
     projectId: string,

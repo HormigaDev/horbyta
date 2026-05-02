@@ -1,9 +1,10 @@
 use std::str::FromStr;
 
 use chrono::{DateTime, FixedOffset, Utc};
+use object_store::ObjectStore;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    Set,
+    Set, TransactionTrait,
 };
 use uuid::Uuid;
 
@@ -27,7 +28,13 @@ use crate::{
         projects, tasks,
     },
     error::AppError,
-    utils::search::{apply_filters, apply_ordering, apply_pagination},
+    services::attachments::AttachmentService,
+    utils::{
+        multipart::{
+            MarkdownUploadedFile, replace_markdown_attachment_urls, replace_markdown_attachment_urls_required,
+        },
+        search::{apply_filters, apply_ordering, apply_pagination},
+    },
 };
 
 pub struct ChangeRequestService;
@@ -56,6 +63,57 @@ impl ChangeRequestService {
 
         let created = change_request.insert(db).await.map_err(AppError::Database)?;
         Self::get_by_id(db, user_id, created.id).await
+    }
+
+    pub async fn create_with_markdown_files(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        storage: &dyn ObjectStore,
+        user_id: Uuid,
+        dto: CreateChangeRequestDto,
+        files: Vec<MarkdownUploadedFile>,
+    ) -> Result<ChangeRequestDetailDto, AppError> {
+        if files.is_empty() {
+            return Self::create(db, user_id, dto).await;
+        }
+
+        Self::ensure_project_client_pair(db, user_id, dto.project_id, dto.client_id).await?;
+        Self::ensure_project_accepts_new_change_requests(db, user_id, dto.project_id).await?;
+        Self::ensure_task_ownership(db, user_id, dto.project_id, dto.task_id).await?;
+
+        let txn = db.begin().await.map_err(AppError::Database)?;
+        let change_request = change_requests::ActiveModel {
+            user_id: Set(user_id),
+            project_id: Set(dto.project_id),
+            client_id: Set(dto.client_id),
+            task_id: Set(dto.task_id),
+            origin: Set(ChangeRequestOrigin::FreelancerDashboard.to_string()),
+            title: Set(dto.title),
+            client_request_description: Set(dto.client_request_description),
+            status: Set(ChangeRequestStatus::Draft.to_string()),
+            ..Default::default()
+        };
+
+        let created = change_request.insert(&txn).await.map_err(AppError::Database)?;
+        let replacements = AttachmentService::create_markdown_files_in_tx(
+            &txn,
+            storage,
+            user_id,
+            Some(created.project_id),
+            None,
+            None,
+            Some(created.id),
+            files,
+        )
+        .await?;
+
+        let next_description =
+            replace_markdown_attachment_urls_required(created.client_request_description.clone(), &replacements);
+        let mut active_model: change_requests::ActiveModel = created.into();
+        active_model.client_request_description = Set(next_description);
+        let updated = active_model.update(&txn).await.map_err(AppError::Database)?;
+
+        txn.commit().await.map_err(AppError::Database)?;
+        Self::get_by_id(db, user_id, updated.id).await
     }
 
     pub async fn create_by_client(
@@ -233,6 +291,39 @@ impl ChangeRequestService {
 
         let updated = active_model.update(db).await.map_err(AppError::Database)?;
         Self::get_by_id(db, user_id, updated.id).await
+    }
+
+    pub async fn update_with_markdown_files(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        storage: &dyn ObjectStore,
+        user_id: Uuid,
+        id: Uuid,
+        mut dto: UpdateChangeRequestDto,
+        files: Vec<MarkdownUploadedFile>,
+    ) -> Result<ChangeRequestDetailDto, AppError> {
+        if files.is_empty() {
+            return Self::update(db, user_id, id, dto).await;
+        }
+
+        let model = Self::get_model_by_user(db, user_id, id).await?;
+        let txn = db.begin().await.map_err(AppError::Database)?;
+        let replacements = AttachmentService::create_markdown_files_in_tx(
+            &txn,
+            storage,
+            user_id,
+            Some(model.project_id),
+            None,
+            None,
+            Some(model.id),
+            files,
+        )
+        .await?;
+        txn.commit().await.map_err(AppError::Database)?;
+
+        dto.client_request_description =
+            replace_markdown_attachment_urls_required(dto.client_request_description, &replacements);
+        dto.technical_assessment = replace_markdown_attachment_urls(dto.technical_assessment, &replacements);
+        Self::update(db, user_id, id, dto).await
     }
 
     pub async fn client_update_spec(

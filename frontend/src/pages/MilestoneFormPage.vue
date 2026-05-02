@@ -80,8 +80,10 @@
             <div class="col-12" style="display: flex; flex-direction: column">
               <MarkdownRenderer
                 v-model="milestoneDescription"
+                v-model:pending-files="markdownFiles"
                 edit-mode
                 enable-preview-toggle
+                enable-attachments
                 class="full-height"
               />
             </div>
@@ -126,6 +128,7 @@ import { MilestonesService } from 'src/services/milestones';
 import { ProjectsService } from 'src/services/projects';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import type { CreateMilestoneDto, MilestoneStatus, UpdateMilestoneDto } from 'src/types/milestone';
+import type { MarkdownPendingFile } from 'src/types/markdown';
 import type { ProjectSummaryDto } from 'src/types/project';
 import {
   formatIsoDateForInput,
@@ -149,6 +152,7 @@ const milestoneId = computed(() => String(route.params.id || ''));
 const isSubmitting = ref(false);
 const hasAttemptedSubmit = ref(false);
 const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
+const markdownFiles = ref<MarkdownPendingFile[]>([]);
 const dueDateDisplay = ref('');
 const dateInputMask = computed(() => getDateInputMask(userPreferencesStore.dateFormat));
 const qDateMask = computed(() => getQDateMask(userPreferencesStore.dateFormat));
@@ -177,6 +181,7 @@ const resetMilestoneForm = async () => {
   if (isNew.value) {
     Object.assign(form, createEmptyMilestoneForm());
     dueDateDisplay.value = '';
+    markdownFiles.value = [];
     return;
   }
 
@@ -247,6 +252,7 @@ const loadMilestone = async () => {
     dueDateDisplay.value = toDisplayDateFromIso(milestone.due_date);
 
     await ensureProjectOption(milestone.project_id);
+    markdownFiles.value = [];
   } catch (err: unknown) {
     notifyError(t('milestones.form.loadError'), err);
     void router.push('/milestones');
@@ -284,7 +290,7 @@ const saveMilestone = async () => {
 
   try {
     if (isNew.value) {
-      const created = await MilestonesService.create(payload);
+      const created = await MilestonesService.create(payload, markdownFiles.value);
       notify(t('milestones.form.createSuccess'), 'positive');
       await handlePinnedSaveSuccess({
         reset: resetMilestoneForm,
@@ -298,7 +304,7 @@ const saveMilestone = async () => {
         status: payload.status,
         due_date: payload.due_date,
       };
-      await MilestonesService.update(milestoneId.value, updatePayload);
+      await MilestonesService.update(milestoneId.value, updatePayload, markdownFiles.value);
       notify(t('milestones.form.updateSuccess'), 'positive');
       await handlePinnedSaveSuccess({
         reset: resetMilestoneForm,
