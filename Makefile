@@ -21,6 +21,9 @@ dev: setup
 up: setup
 	$(COMPOSE_DEV) up --no-deps horbyta_app -d
 
+up-prod: setup
+	$(COMPOSE_PROD) up --no-deps horbyta_app -d
+	
 ## prod: Levanta en producción (detached)
 prod: setup
 	$(COMPOSE_PROD) up --build -d

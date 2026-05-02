@@ -1,13 +1,3 @@
-FROM node:22-slim AS frontend-builder
-
-WORKDIR /app/frontend
-
-COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm install --ignore-scripts
-
-COPY frontend ./
-RUN node_modules/.bin/quasar build -m pwa
-
 FROM rust:1.88-slim-bookworm as deps
 
 WORKDIR /app
