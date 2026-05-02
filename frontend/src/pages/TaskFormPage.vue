@@ -517,11 +517,9 @@ const onParentTaskSearch = (term: string) => {
     return;
   }
 
-  const extraFilters: Filter[] = [
-    { column: 'project_id', operator: '=', value: form.project_id },
-  ];
+  const extraFilters: Filter[] = [{ column: 'project_id', operator: '=', value: form.project_id }];
   if (!isNew.value && taskId.value) {
-    extraFilters.push({ column: 'id', operator: '<>', value: taskId.value });
+    extraFilters.push({ column: 'id', operator: '=', value: taskId.value });
   }
 
   void loadParentTasksByTerm(term, extraFilters);
@@ -653,9 +651,7 @@ watch(
       return;
     }
 
-    const extraFilters: Filter[] = [
-      { column: 'project_id', operator: '=', value: newProjectId },
-    ];
+    const extraFilters: Filter[] = [{ column: 'project_id', operator: '=', value: newProjectId }];
 
     void loadMilestonesByTerm('', extraFilters);
 
@@ -663,7 +659,7 @@ watch(
       { column: 'project_id', operator: '=', value: newProjectId },
     ];
     if (!isNew.value && taskId.value) {
-      parentExtraFilters.push({ column: 'id', operator: '<>', value: taskId.value });
+      parentExtraFilters.push({ column: 'id', operator: '=', value: taskId.value });
     }
     void loadParentTasksByTerm('', parentExtraFilters);
   },
@@ -761,7 +757,7 @@ onMounted(async () => {
         { column: 'project_id', operator: '=', value: form.project_id },
       ];
       if (!isNew.value && taskId.value) {
-        parentFilters.push({ column: 'id', operator: '<>', value: taskId.value });
+        parentFilters.push({ column: 'id', operator: '=', value: taskId.value });
       }
       await loadParentTasksByTerm('', parentFilters);
       await ensureParentTaskOption(form.parent_id);
