@@ -40,7 +40,6 @@ RUN groupadd -r appgroup \
 WORKDIR /app
 
 COPY --from=builder /app/target/release/${BINARY_NAME} ./server
-COPY --from=frontend-builder /app/frontend/dist/pwa ./frontend/dist/pwa
 COPY scripts/init-rust.sh ./init.sh
 
 RUN chmod +x ./init.sh \
