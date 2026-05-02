@@ -519,7 +519,7 @@ const onParentTaskSearch = (term: string) => {
 
   const extraFilters: Filter[] = [{ column: 'project_id', operator: '=', value: form.project_id }];
   if (!isNew.value && taskId.value) {
-    extraFilters.push({ column: 'id', operator: '=', value: taskId.value });
+    extraFilters.push({ column: 'id', operator: '!=', value: taskId.value });
   }
 
   void loadParentTasksByTerm(term, extraFilters);
@@ -659,7 +659,7 @@ watch(
       { column: 'project_id', operator: '=', value: newProjectId },
     ];
     if (!isNew.value && taskId.value) {
-      parentExtraFilters.push({ column: 'id', operator: '=', value: taskId.value });
+      parentExtraFilters.push({ column: 'id', operator: '!=', value: taskId.value });
     }
     void loadParentTasksByTerm('', parentExtraFilters);
   },
