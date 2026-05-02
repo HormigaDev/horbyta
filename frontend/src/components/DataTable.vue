@@ -747,7 +747,33 @@ const onDelete = () => {
 
     .dt-fixed-layout {
       table-layout: fixed;
-      width: 100%;
+      width: max-content;
+      min-width: 100%;
+
+      th,
+      td {
+        box-sizing: border-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      th > *,
+      td > * {
+        min-width: 0;
+        max-width: 100%;
+      }
+
+      .q-chip {
+        max-width: 100%;
+
+        .q-chip__content {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
     }
 
     thead tr th {

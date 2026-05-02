@@ -73,7 +73,12 @@ const appendHeaderStyle = (style: TableColumn['headerStyle'], fixedStyle: string
 };
 
 const buildFixedWidthStyle = (width: number, ellipsis: boolean): string => {
-  const rules = [`width: ${width}px`, `min-width: ${width}px`, `max-width: ${width}px`];
+  const rules = [
+    `width: ${width}px`,
+    `min-width: ${width}px`,
+    `max-width: ${width}px`,
+    'box-sizing: border-box',
+  ];
 
   if (ellipsis) {
     rules.push('overflow: hidden', 'white-space: nowrap', 'text-overflow: ellipsis');
