@@ -11,16 +11,8 @@ pub mod state;
 pub mod swagger;
 pub mod utils;
 
-use axum::{
-    Router,
-    http::{
-        HeaderValue, Method,
-        header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
-    },
-    routing::get,
-};
+use axum::{Router, middleware, routing::get};
 use sea_orm::Database;
-use tower_http::cors::CorsLayer;
 use tracing_subscriber;
 
 use crate::{env::Config, state::AppState};
@@ -79,24 +71,14 @@ async fn main() {
     let app = if config.is_production {
         app
     } else {
-        let allowed_origin =
-            HeaderValue::from_str(&config.frontend_origin).expect("CRITICAL: Invalid FRONTEND_ORIGIN.");
-
-        app.merge(swagger::docs_router()).layer(
-            CorsLayer::new()
-                .allow_origin(allowed_origin)
-                .allow_methods([
-                    Method::GET,
-                    Method::POST,
-                    Method::PATCH,
-                    Method::PUT,
-                    Method::DELETE,
-                    Method::OPTIONS,
-                ])
-                .allow_headers([ACCEPT, AUTHORIZATION, CONTENT_TYPE])
-                .allow_credentials(true),
-        )
+        app.merge(swagger::docs_router())
     };
+    let app = app
+        .layer(middlewares::origin::cors_layer(&config))
+        .layer(middleware::from_fn_with_state(
+            config.clone(),
+            middlewares::origin::enforce_origin_policy,
+        ));
 
     let listener = tokio::net::TcpListener::bind(&config.app_uri).await.unwrap();
 

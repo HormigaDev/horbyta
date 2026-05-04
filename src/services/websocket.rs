@@ -17,7 +17,7 @@ use crate::{
     dtos::websocket::WsMessage,
     entities::{notifications, prelude::Notifications},
     error::AppError,
-    middlewares::auth::Claims,
+    middlewares::{auth::Claims, origin::is_allowed_request_origin},
     services::notifications::{NotificationEvent, NotificationService},
     state::AppState,
 };
@@ -181,15 +181,8 @@ impl WebSocketService {
     }
 
     fn validate_origin(&self, headers: &HeaderMap) -> Result<(), StatusCode> {
-        if let (Some(origin), Some(host)) = (headers.get("origin"), headers.get("host")) {
-            let origin = origin.to_str().map_err(|_| StatusCode::BAD_REQUEST)?;
-            let host = host.to_str().map_err(|_| StatusCode::BAD_REQUEST)?;
-            let same_origin = origin.contains(&format!("//{host}"));
-            let allowed_dev_origin = !self.state.config.is_production && origin == self.state.config.frontend_origin;
-
-            if !same_origin && !allowed_dev_origin {
-                return Err(StatusCode::FORBIDDEN);
-            }
+        if !is_allowed_request_origin(headers, &self.state.config) {
+            return Err(StatusCode::FORBIDDEN);
         }
 
         Ok(())
