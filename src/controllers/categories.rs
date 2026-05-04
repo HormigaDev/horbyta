@@ -19,7 +19,18 @@ use crate::{
     state::AppState,
 };
 
-async fn search_categories(
+#[utoipa::path(
+    get,
+    path = "/api/v1/categories/search",
+    tag = "Categories",
+    params(QueryPayload),
+    responses(
+        (status = 200, description = "Paginated list of categories"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn search_categories(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -35,7 +46,18 @@ async fn search_categories(
     })))
 }
 
-async fn get_category(
+#[utoipa::path(
+    get,
+    path = "/api/v1/categories/{id}",
+    tag = "Categories",
+    params(("id" = Uuid, Path, description = "Category id")),
+    responses(
+        (status = 200, description = "Category detail", body = crate::dtos::category::CategoryDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found")
+    )
+)]
+pub(crate) async fn get_category(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -44,7 +66,18 @@ async fn get_category(
     Ok(Json(category))
 }
 
-async fn create_category(
+#[utoipa::path(
+    post,
+    path = "/api/v1/categories/",
+    tag = "Categories",
+    request_body = CreateCategoryDto,
+    responses(
+        (status = 200, description = "Category created", body = crate::dtos::category::CategoryDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn create_category(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<CreateCategoryDto>,
@@ -53,7 +86,20 @@ async fn create_category(
     Ok(Json(category))
 }
 
-async fn update_category(
+#[utoipa::path(
+    put,
+    path = "/api/v1/categories/{id}",
+    tag = "Categories",
+    params(("id" = Uuid, Path, description = "Category id")),
+    request_body = UpdateCategoryDto,
+    responses(
+        (status = 200, description = "Category updated", body = crate::dtos::category::CategoryDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found")
+    )
+)]
+pub(crate) async fn update_category(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -63,7 +109,18 @@ async fn update_category(
     Ok(Json(category))
 }
 
-async fn delete_category(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/categories/{id}",
+    tag = "Categories",
+    params(("id" = Uuid, Path, description = "Category id")),
+    responses(
+        (status = 200, description = "Category deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found")
+    )
+)]
+pub(crate) async fn delete_category(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,

@@ -39,9 +39,9 @@ fn ensure_valid_key(key: &str) -> Result<(), AppError> {
         return Err(AppError::BadRequest("invalid ui state key".to_string()));
     }
 
-    let is_valid = key.chars().all(|c| {
-        c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.' || c == ':'
-    });
+    let is_valid = key
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.' || c == ':');
 
     if !is_valid {
         return Err(AppError::BadRequest("invalid ui state key".to_string()));
@@ -50,12 +50,23 @@ fn ensure_valid_key(key: &str) -> Result<(), AppError> {
     Ok(())
 }
 
-#[derive(Debug, Deserialize)]
-struct ListScopeQuery {
-    scope: String,
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+pub(crate) struct ListScopeQuery {
+    pub scope: String,
 }
 
-async fn list_scope(
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/me/ui-state/",
+    tag = "UI State",
+    params(ListScopeQuery),
+    responses(
+        (status = 200, description = "UI state entries for scope"),
+        (status = 400, description = "Invalid scope"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn list_scope(
     State(state): State<AppState>,
     user: UserDto,
     axum::extract::Query(query): axum::extract::Query<ListScopeQuery>,
@@ -65,7 +76,22 @@ async fn list_scope(
     Ok(Json(json!({ "items": entries })))
 }
 
-async fn get_one(
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/me/ui-state/{scope}/{key}",
+    tag = "UI State",
+    params(
+        ("scope" = String, Path, description = "UI state scope"),
+        ("key" = String, Path, description = "UI state key")
+    ),
+    responses(
+        (status = 200, description = "UI state entry", body = crate::dtos::ui_state::UiStateEntryDto),
+        (status = 400, description = "Invalid scope or key"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "UI state entry not found")
+    )
+)]
+pub(crate) async fn get_one(
     State(state): State<AppState>,
     user: UserDto,
     Path((scope, key)): Path<(String, String)>,
@@ -79,7 +105,22 @@ async fn get_one(
     }
 }
 
-async fn upsert(
+#[utoipa::path(
+    put,
+    path = "/api/v1/users/me/ui-state/{scope}/{key}",
+    tag = "UI State",
+    params(
+        ("scope" = String, Path, description = "UI state scope"),
+        ("key" = String, Path, description = "UI state key")
+    ),
+    request_body = UpsertUiStateDto,
+    responses(
+        (status = 200, description = "UI state entry upserted", body = crate::dtos::ui_state::UiStateEntryDto),
+        (status = 400, description = "Invalid scope, key, or payload"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn upsert(
     State(state): State<AppState>,
     user: UserDto,
     Path((scope, key)): Path<(String, String)>,
@@ -92,7 +133,21 @@ async fn upsert(
     Ok(Json(entry))
 }
 
-async fn delete_one(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/users/me/ui-state/{scope}/{key}",
+    tag = "UI State",
+    params(
+        ("scope" = String, Path, description = "UI state scope"),
+        ("key" = String, Path, description = "UI state key")
+    ),
+    responses(
+        (status = 200, description = "UI state entry deleted"),
+        (status = 400, description = "Invalid scope or key"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn delete_one(
     State(state): State<AppState>,
     user: UserDto,
     Path((scope, key)): Path<(String, String)>,
@@ -104,7 +159,18 @@ async fn delete_one(
     Ok(Json(json!({ "message": "Entry deleted" })))
 }
 
-async fn delete_scope(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/users/me/ui-state/{scope}",
+    tag = "UI State",
+    params(("scope" = String, Path, description = "UI state scope")),
+    responses(
+        (status = 200, description = "UI state scope cleared"),
+        (status = 400, description = "Invalid scope"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn delete_scope(
     State(state): State<AppState>,
     user: UserDto,
     Path(scope): Path<String>,

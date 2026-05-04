@@ -1,10 +1,11 @@
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, ToSchema)]
 pub struct UserDto {
     pub id: Uuid,
     pub name: String,
@@ -58,7 +59,7 @@ fn validate_non_empty_notifications_patch(payload: &UpdateNotificationPreference
     Ok(())
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum UserThemePreference {
     System,
@@ -66,7 +67,7 @@ pub enum UserThemePreference {
     Dark,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum UserLanguagePreference {
     En,
@@ -74,7 +75,7 @@ pub enum UserLanguagePreference {
     Pt,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, ToSchema)]
 pub enum UserDateFormatPreference {
     #[serde(rename = "DD/MM/YYYY")]
     DdMmYyyy,
@@ -90,7 +91,7 @@ impl Default for UserDateFormatPreference {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(default)]
 pub struct ClientPortalNotifications {
     pub change_request_created: bool,
@@ -112,7 +113,7 @@ impl Default for ClientPortalNotifications {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(default)]
 pub struct BillingNotifications {
     pub invoice_opened: bool,
@@ -130,7 +131,7 @@ impl Default for BillingNotifications {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(default)]
 pub struct WorkNotifications {
     pub milestone_released: bool,
@@ -144,7 +145,7 @@ impl Default for WorkNotifications {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(default)]
 pub struct NotificationPreferences {
     pub group_notifications: bool,
@@ -181,8 +182,9 @@ impl NotificationPreferences {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(default)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct UserPreferences {
     pub theme: UserThemePreference,
     pub timezone: String,
@@ -281,7 +283,7 @@ impl UserPreferences {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate)]
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UpdateUserProfileDto {
     #[validate(length(min = 2, max = 100, message = "name must be between 2 and 100 characters"))]
@@ -292,7 +294,7 @@ pub struct UpdateUserProfileDto {
     pub email: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate)]
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 #[serde(deny_unknown_fields)]
 #[validate(schema(function = "validate_password_confirmation"))]
 pub struct UpdateUserPasswordDto {
@@ -314,7 +316,7 @@ pub struct UpdateUserPasswordDto {
     pub confirm_password: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate)]
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 #[serde(deny_unknown_fields)]
 #[validate(schema(function = "validate_non_empty_preferences_patch"))]
 pub struct UpdateUserPreferencesDto {
@@ -332,7 +334,7 @@ pub struct UpdateUserPreferencesDto {
     pub max_daily_hours: Option<i32>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, Default)]
+#[derive(Debug, Serialize, Deserialize, Validate, Default, ToSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct ClientPortalNotificationsPatch {
     pub change_request_created: Option<bool>,
@@ -342,7 +344,7 @@ pub struct ClientPortalNotificationsPatch {
     pub change_request_cancelled: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, Default)]
+#[derive(Debug, Serialize, Deserialize, Validate, Default, ToSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct BillingNotificationsPatch {
     pub invoice_opened: Option<bool>,
@@ -350,13 +352,13 @@ pub struct BillingNotificationsPatch {
     pub payment_received: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, Default)]
+#[derive(Debug, Serialize, Deserialize, Validate, Default, ToSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct WorkNotificationsPatch {
     pub milestone_released: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate)]
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 #[serde(deny_unknown_fields)]
 #[validate(schema(function = "validate_non_empty_notifications_patch"))]
 pub struct UpdateNotificationPreferencesDto {
@@ -372,7 +374,7 @@ pub struct UpdateNotificationPreferencesDto {
     pub work: Option<WorkNotificationsPatch>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct UserSettingsDto {
     pub id: Uuid,
     pub name: String,

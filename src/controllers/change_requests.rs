@@ -25,7 +25,18 @@ use crate::{
     state::AppState,
 };
 
-async fn search_change_requests(
+#[utoipa::path(
+    get,
+    path = "/api/v1/change-requests/search",
+    tag = "Change Requests",
+    params(QueryPayload),
+    responses(
+        (status = 200, description = "Paginated list of change requests"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn search_change_requests(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -41,7 +52,18 @@ async fn search_change_requests(
     })))
 }
 
-async fn client_search_change_requests(
+#[utoipa::path(
+    get,
+    path = "/api/v1/change-requests/client/search",
+    tag = "Change Requests",
+    params(QueryPayload),
+    responses(
+        (status = 200, description = "Paginated list of client-visible change requests"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn client_search_change_requests(
     State(state): State<AppState>,
     client: ClientAuthDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -59,7 +81,18 @@ async fn client_search_change_requests(
     })))
 }
 
-async fn get_change_request(
+#[utoipa::path(
+    get,
+    path = "/api/v1/change-requests/{id}",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    responses(
+        (status = 200, description = "Change request detail", body = crate::dtos::change_request::ChangeRequestDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found")
+    )
+)]
+pub(crate) async fn get_change_request(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -68,7 +101,18 @@ async fn get_change_request(
     Ok(Json(change_request))
 }
 
-async fn client_get_change_request(
+#[utoipa::path(
+    get,
+    path = "/api/v1/change-requests/client/{id}",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    responses(
+        (status = 200, description = "Client-visible change request detail", body = crate::dtos::change_request::ClientChangeRequestDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found")
+    )
+)]
+pub(crate) async fn client_get_change_request(
     State(state): State<AppState>,
     client: ClientAuthDto,
     Path(id): Path<Uuid>,
@@ -78,7 +122,18 @@ async fn client_get_change_request(
     Ok(Json(change_request))
 }
 
-async fn create_change_request(
+#[utoipa::path(
+    post,
+    path = "/api/v1/change-requests/",
+    tag = "Change Requests",
+    request_body(content_type = "multipart/form-data", description = "Multipart form with a `payload` JSON field and optional files"),
+    responses(
+        (status = 200, description = "Change request created", body = crate::dtos::change_request::ChangeRequestDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn create_change_request(
     State(state): State<AppState>,
     user: UserDto,
     request: Request,
@@ -100,7 +155,18 @@ async fn create_change_request(
     Ok(Json(change_request))
 }
 
-async fn client_create_change_request(
+#[utoipa::path(
+    post,
+    path = "/api/v1/change-requests/client",
+    tag = "Change Requests",
+    request_body = ClientCreateChangeRequestDto,
+    responses(
+        (status = 200, description = "Client change request created", body = crate::dtos::change_request::ClientChangeRequestDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn client_create_change_request(
     State(state): State<AppState>,
     client: ClientAuthDto,
     ValidatedJson(payload): ValidatedJson<ClientCreateChangeRequestDto>,
@@ -120,7 +186,20 @@ async fn client_create_change_request(
     Ok(Json(change_request))
 }
 
-async fn client_update_change_request(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/change-requests/client/{id}",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    request_body = ClientUpdateChangeRequestDto,
+    responses(
+        (status = 200, description = "Client change request updated", body = crate::dtos::change_request::ClientChangeRequestDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found")
+    )
+)]
+pub(crate) async fn client_update_change_request(
     State(state): State<AppState>,
     client: ClientAuthDto,
     Path(id): Path<Uuid>,
@@ -142,7 +221,20 @@ async fn client_update_change_request(
     Ok(Json(change_request))
 }
 
-async fn update_change_request(
+#[utoipa::path(
+    put,
+    path = "/api/v1/change-requests/{id}",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    request_body(content_type = "multipart/form-data", description = "Multipart form with a `payload` JSON field and optional files"),
+    responses(
+        (status = 200, description = "Change request updated", body = crate::dtos::change_request::ChangeRequestDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found")
+    )
+)]
+pub(crate) async fn update_change_request(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -166,7 +258,20 @@ async fn update_change_request(
     Ok(Json(change_request))
 }
 
-async fn assign_change_request_task(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/change-requests/{id}/task",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    request_body = AssignChangeRequestTaskDto,
+    responses(
+        (status = 200, description = "Change request task assigned", body = crate::dtos::change_request::ChangeRequestDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found")
+    )
+)]
+pub(crate) async fn assign_change_request_task(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -177,7 +282,18 @@ async fn assign_change_request_task(
     Ok(Json(change_request))
 }
 
-async fn submit_change_request(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/change-requests/{id}/submit",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    responses(
+        (status = 200, description = "Change request submitted", body = crate::dtos::change_request::ChangeRequestDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found")
+    )
+)]
+pub(crate) async fn submit_change_request(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -186,7 +302,20 @@ async fn submit_change_request(
     Ok(Json(change_request))
 }
 
-async fn assess_change_request(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/change-requests/{id}/assess",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    request_body = AssessChangeRequestDto,
+    responses(
+        (status = 200, description = "Change request assessed", body = crate::dtos::change_request::ChangeRequestDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found")
+    )
+)]
+pub(crate) async fn assess_change_request(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -196,7 +325,18 @@ async fn assess_change_request(
     Ok(Json(change_request))
 }
 
-async fn mark_change_request_implemented(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/change-requests/{id}/implemented",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    responses(
+        (status = 200, description = "Change request marked implemented", body = crate::dtos::change_request::ChangeRequestDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found")
+    )
+)]
+pub(crate) async fn mark_change_request_implemented(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -205,7 +345,18 @@ async fn mark_change_request_implemented(
     Ok(Json(change_request))
 }
 
-async fn cancel_change_request(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/change-requests/{id}/cancel",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    responses(
+        (status = 200, description = "Change request cancelled", body = crate::dtos::change_request::ChangeRequestDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found")
+    )
+)]
+pub(crate) async fn cancel_change_request(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -214,7 +365,18 @@ async fn cancel_change_request(
     Ok(Json(change_request))
 }
 
-async fn delete_change_request(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/change-requests/{id}",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    responses(
+        (status = 200, description = "Change request deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found")
+    )
+)]
+pub(crate) async fn delete_change_request(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -223,7 +385,20 @@ async fn delete_change_request(
     Ok(Json(json!({ "message": "Solicitud de cambio eliminada" })))
 }
 
-async fn client_approve_change_request(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/change-requests/client/{id}/approve",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    request_body = ClientApproveChangeRequestDto,
+    responses(
+        (status = 200, description = "Client approved change request", body = crate::dtos::change_request::ClientChangeRequestDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found")
+    )
+)]
+pub(crate) async fn client_approve_change_request(
     State(state): State<AppState>,
     client: ClientAuthDto,
     Path(id): Path<Uuid>,
@@ -245,7 +420,20 @@ async fn client_approve_change_request(
     Ok(Json(change_request))
 }
 
-async fn client_decline_change_request(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/change-requests/client/{id}/decline",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    request_body = ClientDeclineChangeRequestDto,
+    responses(
+        (status = 200, description = "Client declined change request", body = crate::dtos::change_request::ClientChangeRequestDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found")
+    )
+)]
+pub(crate) async fn client_decline_change_request(
     State(state): State<AppState>,
     client: ClientAuthDto,
     Path(id): Path<Uuid>,
@@ -273,7 +461,20 @@ async fn client_decline_change_request(
     Ok(Json(change_request))
 }
 
-async fn client_cancel_change_request(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/change-requests/client/{id}/cancel",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    request_body = ClientCancelChangeRequestDto,
+    responses(
+        (status = 200, description = "Client cancelled change request", body = crate::dtos::change_request::ClientChangeRequestDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found")
+    )
+)]
+pub(crate) async fn client_cancel_change_request(
     State(state): State<AppState>,
     client: ClientAuthDto,
     Path(id): Path<Uuid>,

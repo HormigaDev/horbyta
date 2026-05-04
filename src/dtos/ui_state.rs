@@ -1,5 +1,6 @@
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::entities::user_ui_state::Model as UiStateModel;
@@ -29,9 +30,9 @@ fn validate_key(key: &str) -> Result<(), validator::ValidationError> {
         return Err(validator::ValidationError::new("key cannot be empty"));
     }
 
-    let is_valid = key.chars().all(|c| {
-        c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.' || c == ':'
-    });
+    let is_valid = key
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.' || c == ':');
 
     if !is_valid {
         return Err(validator::ValidationError::new(
@@ -55,10 +56,11 @@ pub fn assert_value_within_limit(value: &serde_json::Value) -> Result<(), crate:
     Ok(())
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct UiStateEntryDto {
     pub scope: String,
     pub key: String,
+    #[schema(value_type = Object)]
     pub value: serde_json::Value,
     pub updated_at: DateTime<FixedOffset>,
 }
@@ -74,13 +76,14 @@ impl From<UiStateModel> for UiStateEntryDto {
     }
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UpsertUiStateDto {
+    #[schema(value_type = Object)]
     pub value: serde_json::Value,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct UiStatePathParams {
     #[validate(length(min = 1, max = 40))]
     #[validate(custom(function = "validate_scope_param"))]
@@ -91,7 +94,7 @@ pub struct UiStatePathParams {
     pub key: String,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct UiStateScopeParam {
     #[validate(length(min = 1, max = 40))]
     #[validate(custom(function = "validate_scope_param"))]

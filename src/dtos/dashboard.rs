@@ -1,11 +1,12 @@
 use chrono::NaiveDate;
 use sea_orm::{FromQueryResult, prelude::Decimal};
 use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use super::{change_request::ChangeRequestStatus, project::ProjectStatus, project_billing::ProjectBillingType};
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, IntoParams)]
 pub struct MonthlyRevenueFiltersDto {
     pub date_from: Option<NaiveDate>,
     pub date_to: Option<NaiveDate>,
@@ -14,7 +15,7 @@ pub struct MonthlyRevenueFiltersDto {
     pub project_id: Option<Uuid>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, IntoParams)]
 pub struct AccountsReceivableFiltersDto {
     pub client_id: Option<Uuid>,
     pub currency_type: Option<String>,
@@ -24,7 +25,7 @@ pub struct AccountsReceivableFiltersDto {
     pub min_outstanding_balance: Option<Decimal>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, IntoParams)]
 pub struct TimeByActivityFiltersDto {
     pub date_from: Option<NaiveDate>,
     pub date_to: Option<NaiveDate>,
@@ -34,7 +35,7 @@ pub struct TimeByActivityFiltersDto {
     pub project_id: Option<Uuid>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, IntoParams)]
 pub struct BillableRatioFiltersDto {
     pub date_from: Option<NaiveDate>,
     pub date_to: Option<NaiveDate>,
@@ -43,7 +44,7 @@ pub struct BillableRatioFiltersDto {
     pub activity_id: Option<Uuid>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, IntoParams)]
 pub struct TaskBottlenecksFiltersDto {
     pub client_id: Option<Uuid>,
     pub project_id: Option<Uuid>,
@@ -52,14 +53,14 @@ pub struct TaskBottlenecksFiltersDto {
     pub overdue_only: Option<bool>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, IntoParams)]
 pub struct ClientProjectStatusFiltersDto {
     pub project_status: Option<String>,
     pub billable: Option<bool>,
     pub category_id: Option<Uuid>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, IntoParams)]
 pub struct ClientMilestoneHealthFiltersDto {
     pub project_id: Option<Uuid>,
     pub milestone_status: Option<String>,
@@ -69,7 +70,7 @@ pub struct ClientMilestoneHealthFiltersDto {
     pub upcoming_only: Option<bool>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, IntoParams)]
 pub struct ClientChangeRequestStatusFiltersDto {
     pub project_id: Option<Uuid>,
     pub status: Option<String>,
@@ -77,7 +78,7 @@ pub struct ClientChangeRequestStatusFiltersDto {
     pub date_to: Option<NaiveDate>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, IntoParams)]
 pub struct ClientProjectPortfolioFiltersDto {
     pub project_status: Option<String>,
     pub billable: Option<bool>,
@@ -87,14 +88,14 @@ pub struct ClientProjectPortfolioFiltersDto {
     pub upcoming_milestones_only: Option<bool>,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct MonthlyRevenueRow {
     pub currency_type: String,
     pub month_date: NaiveDate,
     pub total_revenue: Decimal,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct AccountsReceivableRow {
     pub client_name: String,
     pub currency_type: String,
@@ -102,7 +103,7 @@ pub struct AccountsReceivableRow {
     pub oldest_due_date: Option<NaiveDate>,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct TimeByActivityRow {
     pub activity_name: String,
     pub billable: bool,
@@ -110,7 +111,7 @@ pub struct TimeByActivityRow {
     pub total_hours: Decimal,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct BillableRatioDailyRow {
     pub work_date: NaiveDate,
     pub billable_hours: Decimal,
@@ -118,7 +119,7 @@ pub struct BillableRatioDailyRow {
     pub total_hours: Decimal,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct ScopeCreepValueRow {
     pub currency_type: String,
     pub total_approved_changes: i64,
@@ -126,7 +127,7 @@ pub struct ScopeCreepValueRow {
     pub total_days_extended: i64,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct TaskBottleneckRow {
     pub project_id: Uuid,
     pub project_name: String,
@@ -137,20 +138,20 @@ pub struct TaskBottleneckRow {
     pub overdue_tasks: i64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CurrencyAmountDto {
     pub currency_type: String,
     pub amount: Decimal,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct DashboardKpisDto {
     pub scope_creep_recovered: Vec<CurrencyAmountDto>,
     pub accounts_receivable_total: Vec<CurrencyAmountDto>,
     pub overdue_tasks_total: i64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct DashboardDto {
     pub kpis: DashboardKpisDto,
     pub monthly_revenue: Vec<MonthlyRevenueRow>,
@@ -161,13 +162,13 @@ pub struct DashboardDto {
     pub task_bottlenecks: Vec<TaskBottleneckRow>,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct ClientProjectStatusRow {
     pub status: ProjectStatus,
     pub total_projects: i64,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct ClientMilestoneHealthRow {
     pub project_id: Uuid,
     pub project_name: String,
@@ -178,20 +179,20 @@ pub struct ClientMilestoneHealthRow {
     pub next_due_date: Option<NaiveDate>,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct ClientChangeRequestStatusRow {
     pub status: ChangeRequestStatus,
     pub total_requests: i64,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct ClientApprovedChangeValueRow {
     pub currency_type: String,
     pub total_approved_changes: i64,
     pub total_approved_value: Decimal,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct ClientProjectPortfolioRow {
     pub project_id: Uuid,
     pub project_name: String,
@@ -211,7 +212,7 @@ pub struct ClientProjectPortfolioRow {
     pub next_milestone_due_date: Option<NaiveDate>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ClientDashboardKpisDto {
     pub active_projects_total: i64,
     pub overdue_milestones_total: i64,
@@ -219,7 +220,7 @@ pub struct ClientDashboardKpisDto {
     pub approved_change_value: Vec<CurrencyAmountDto>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ClientDashboardDto {
     pub kpis: ClientDashboardKpisDto,
     pub project_status: Vec<ClientProjectStatusRow>,

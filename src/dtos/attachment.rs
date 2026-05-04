@@ -1,6 +1,7 @@
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -93,7 +94,7 @@ pub fn attachment_filter_schema() -> FilterSchema {
     })
 }
 
-#[derive(Debug, Deserialize, Serialize, Validate, Clone)]
+#[derive(Debug, Deserialize, Serialize, Validate, Clone, ToSchema)]
 pub struct CreateAttachmentDto {
     pub project_id: Option<Uuid>,
     pub task_id: Option<Uuid>,
@@ -111,7 +112,7 @@ pub struct CreateAttachmentDto {
     pub mime_type: Option<String>,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct AttachmentSummaryDto {
     pub id: Uuid,
     pub project_id: Option<Uuid>,
@@ -125,7 +126,7 @@ pub struct AttachmentSummaryDto {
     pub updated_at: chrono::DateTime<chrono::FixedOffset>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct AttachmentDetailDto {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -141,7 +142,7 @@ pub struct AttachmentDetailDto {
     pub updated_at: chrono::DateTime<chrono::FixedOffset>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct AttachmentStorageUsageDto {
     pub used_bytes: i64,
     pub limit_bytes: i64,

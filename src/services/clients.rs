@@ -280,9 +280,7 @@ impl ClientService {
         let has_magic_token = client_auth.magic_link_hash.is_some() && client_auth.magic_link_exp.is_some();
 
         if has_credentials && has_magic_token {
-            return Err(AppError::Internal(
-                "invalid client authentication state".to_string(),
-            ));
+            return Err(AppError::Internal("invalid client authentication state".to_string()));
         }
 
         if has_credentials {

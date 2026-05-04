@@ -3,6 +3,7 @@ use chrono::FixedOffset;
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -144,7 +145,7 @@ pub fn client_milestone_filter_schema() -> FilterSchema {
     })
 }
 
-#[derive(Validate, Deserialize)]
+#[derive(Validate, Deserialize, ToSchema)]
 pub struct CreateMilestoneDto {
     pub project_id: Uuid,
     #[validate(length(min = 1, max = 100, message = "milestone name must be between 1 and 100 characters"))]
@@ -155,7 +156,7 @@ pub struct CreateMilestoneDto {
     pub due_date: Option<DateTime<FixedOffset>>,
 }
 
-#[derive(Validate, Deserialize)]
+#[derive(Validate, Deserialize, ToSchema)]
 pub struct UpdateMilestoneDto {
     pub project_id: Uuid,
     #[validate(length(min = 1, max = 100, message = "milestone name must be between 1 and 100 characters"))]
@@ -166,7 +167,7 @@ pub struct UpdateMilestoneDto {
     pub due_date: Option<DateTime<FixedOffset>>,
 }
 
-#[derive(Serialize, FromQueryResult)]
+#[derive(Serialize, FromQueryResult, ToSchema)]
 pub struct ProjectMilestoneSummaryDto {
     pub id: Uuid,
     pub name: String,

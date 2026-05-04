@@ -2,6 +2,7 @@ use chrono::{DateTime, FixedOffset, NaiveDate};
 use sea_orm::{FromQueryResult, prelude::Decimal};
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
@@ -120,7 +121,7 @@ pub fn invoice_filter_schema() -> FilterSchema {
     })
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 #[validate(schema(function = "validate_provider_fields"))]
 pub struct CreateInvoiceDto {
     pub project_id: Uuid,
@@ -145,7 +146,7 @@ pub struct CreateInvoiceDto {
     pub payment_link: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 #[validate(schema(function = "validate_provider_fields_update"))]
 pub struct UpdateInvoiceDto {
     #[validate(custom(function = "is_non_negative_decimal"))]
@@ -168,12 +169,12 @@ pub struct UpdateInvoiceDto {
     pub payment_link: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct UpdateInvoiceStatusDto {
     pub status: InvoiceStatus,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct InvoiceSummaryDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -189,7 +190,7 @@ pub struct InvoiceSummaryDto {
     pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct InvoiceDetailDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -215,7 +216,7 @@ pub struct InvoiceDetailDto {
     pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct InvoiceTaskGroupDto {
     pub task_id: Uuid,
     pub task_record_number: i64,
@@ -224,7 +225,7 @@ pub struct InvoiceTaskGroupDto {
     pub time_entries: Vec<InvoiceTimeEntryDto>,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct InvoiceTimeEntryDto {
     pub id: Uuid,
     pub task_id: Uuid,
@@ -260,7 +261,7 @@ pub struct InvoiceDetailRow {
     pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct BillableTasksResponse {
     pub tasks: Vec<BillableTaskDto>,
     pub total_tasks: u64,
@@ -268,7 +269,7 @@ pub struct BillableTasksResponse {
     pub per_page: u64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct BillableTaskDto {
     pub task_id: Uuid,
     pub task_record_number: i64,
@@ -277,7 +278,7 @@ pub struct BillableTaskDto {
     pub time_entries: Vec<BillableTimeEntryDto>,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct BillableTimeEntryDto {
     pub id: Uuid,
     pub task_id: Uuid,
@@ -316,7 +317,7 @@ string_enum!(
     }
 );
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum InvoiceProvider {
     #[default]

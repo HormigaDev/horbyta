@@ -22,7 +22,18 @@ use crate::{
     state::AppState,
 };
 
-async fn search_time_entries(
+#[utoipa::path(
+    get,
+    path = "/api/v1/time-entries/search",
+    tag = "Time Entries",
+    params(QueryPayload),
+    responses(
+        (status = 200, description = "Paginated list of time entries"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn search_time_entries(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -41,7 +52,18 @@ async fn search_time_entries(
     })))
 }
 
-async fn get_time_entry(
+#[utoipa::path(
+    get,
+    path = "/api/v1/time-entries/{id}",
+    tag = "Time Entries",
+    params(("id" = Uuid, Path, description = "Time entry id")),
+    responses(
+        (status = 200, description = "Time entry detail", body = crate::dtos::time_entries::TimeEntryDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Time entry not found")
+    )
+)]
+pub(crate) async fn get_time_entry(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -51,7 +73,18 @@ async fn get_time_entry(
     Ok(Json(entry))
 }
 
-async fn create_manual_time_entry(
+#[utoipa::path(
+    post,
+    path = "/api/v1/time-entries/",
+    tag = "Time Entries",
+    request_body = CreateTimeEntryDto,
+    responses(
+        (status = 200, description = "Time entry created", body = crate::dtos::time_entries::TimeEntryDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn create_manual_time_entry(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<CreateTimeEntryDto>,
@@ -61,7 +94,20 @@ async fn create_manual_time_entry(
     Ok(Json(entry))
 }
 
-async fn update_time_entry(
+#[utoipa::path(
+    put,
+    path = "/api/v1/time-entries/{id}",
+    tag = "Time Entries",
+    params(("id" = Uuid, Path, description = "Time entry id")),
+    request_body = UpdateTimeEntryDto,
+    responses(
+        (status = 200, description = "Time entry updated", body = crate::dtos::time_entries::TimeEntryDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Time entry not found")
+    )
+)]
+pub(crate) async fn update_time_entry(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -72,7 +118,18 @@ async fn update_time_entry(
     Ok(Json(entry))
 }
 
-async fn start_time_entry_timer(
+#[utoipa::path(
+    post,
+    path = "/api/v1/time-entries/timer/start",
+    tag = "Time Entries",
+    request_body = StartTimeEntryTimerDto,
+    responses(
+        (status = 200, description = "Timer started", body = crate::dtos::time_entries::TimeEntryDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn start_time_entry_timer(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<StartTimeEntryTimerDto>,
@@ -82,7 +139,20 @@ async fn start_time_entry_timer(
     Ok(Json(entry))
 }
 
-async fn stop_time_entry_timer(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/time-entries/{id}/timer/stop",
+    tag = "Time Entries",
+    params(("id" = Uuid, Path, description = "Time entry id")),
+    request_body = StopTimeEntryTimerDto,
+    responses(
+        (status = 200, description = "Timer stopped", body = crate::dtos::time_entries::TimeEntryDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Time entry not found")
+    )
+)]
+pub(crate) async fn stop_time_entry_timer(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -93,13 +163,36 @@ async fn stop_time_entry_timer(
     Ok(Json(entry))
 }
 
-async fn get_active_time_entry_timer(State(state): State<AppState>, user: UserDto) -> AppResult<impl IntoResponse> {
+#[utoipa::path(
+    get,
+    path = "/api/v1/time-entries/timer/active",
+    tag = "Time Entries",
+    responses(
+        (status = 200, description = "Current active timer"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn get_active_time_entry_timer(
+    State(state): State<AppState>,
+    user: UserDto,
+) -> AppResult<impl IntoResponse> {
     let active = TimeEntryService::get_active_timer(state.db.as_ref(), user.id).await?;
 
     Ok(Json(json!({ "item": active })))
 }
 
-async fn delete_time_entry(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/time-entries/{id}",
+    tag = "Time Entries",
+    params(("id" = Uuid, Path, description = "Time entry id")),
+    responses(
+        (status = 200, description = "Time entry deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Time entry not found")
+    )
+)]
+pub(crate) async fn delete_time_entry(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,

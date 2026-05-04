@@ -2,9 +2,10 @@ use crate::error::AppError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, ToSchema)]
 pub enum FilterOperator {
     #[serde(rename = "=")]
     Eq,
@@ -26,14 +27,16 @@ pub enum FilterOperator {
     Between,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]
 pub struct Filter {
     pub column: String,
     pub operator: FilterOperator,
+    #[schema(value_type = Object)]
     pub value: Value,
 }
 
-#[derive(Debug, Deserialize, Serialize, Validate, Clone)]
+#[derive(Debug, Deserialize, Serialize, Validate, Clone, ToSchema, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct QueryPayload {
     #[validate(range(min = 1))]
     #[serde(default = "default_page")]
@@ -53,7 +56,7 @@ pub struct QueryPayload {
     pub filters: Vec<Filter>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct SearchQuery {
     pub q: String,
 }

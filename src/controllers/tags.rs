@@ -19,7 +19,18 @@ use crate::{
     state::AppState,
 };
 
-async fn search_tags(
+#[utoipa::path(
+    get,
+    path = "/api/v1/tags/search",
+    tag = "Tags",
+    params(QueryPayload),
+    responses(
+        (status = 200, description = "Paginated list of tags"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn search_tags(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -35,7 +46,18 @@ async fn search_tags(
     })))
 }
 
-async fn get_tag(
+#[utoipa::path(
+    get,
+    path = "/api/v1/tags/{id}",
+    tag = "Tags",
+    params(("id" = Uuid, Path, description = "Tag id")),
+    responses(
+        (status = 200, description = "Tag detail", body = crate::dtos::tag::TagDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Tag not found")
+    )
+)]
+pub(crate) async fn get_tag(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -44,7 +66,18 @@ async fn get_tag(
     Ok(Json(tag))
 }
 
-async fn create_tag(
+#[utoipa::path(
+    post,
+    path = "/api/v1/tags/",
+    tag = "Tags",
+    request_body = CreateTagDto,
+    responses(
+        (status = 200, description = "Tag created", body = crate::dtos::tag::TagDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn create_tag(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<CreateTagDto>,
@@ -53,7 +86,20 @@ async fn create_tag(
     Ok(Json(tag))
 }
 
-async fn update_tag(
+#[utoipa::path(
+    put,
+    path = "/api/v1/tags/{id}",
+    tag = "Tags",
+    params(("id" = Uuid, Path, description = "Tag id")),
+    request_body = UpdateTagDto,
+    responses(
+        (status = 200, description = "Tag updated", body = crate::dtos::tag::TagDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Tag not found")
+    )
+)]
+pub(crate) async fn update_tag(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -63,7 +109,18 @@ async fn update_tag(
     Ok(Json(tag))
 }
 
-async fn delete_tag(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/tags/{id}",
+    tag = "Tags",
+    params(("id" = Uuid, Path, description = "Tag id")),
+    responses(
+        (status = 200, description = "Tag deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Tag not found")
+    )
+)]
+pub(crate) async fn delete_tag(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,

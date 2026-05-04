@@ -18,12 +18,32 @@ use crate::{
     state::AppState,
 };
 
-async fn get_me(State(state): State<AppState>, user: UserDto) -> Result<impl IntoResponse, AppError> {
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/me",
+    tag = "Users",
+    responses(
+        (status = 200, description = "Current user settings", body = crate::dtos::user::UserSettingsDto),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn get_me(State(state): State<AppState>, user: UserDto) -> Result<impl IntoResponse, AppError> {
     let me = UserService::get_me(state.db.as_ref(), user.id).await?;
     Ok(Json(me))
 }
 
-async fn update_profile(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/users/me/profile",
+    tag = "Users",
+    request_body = UpdateUserProfileDto,
+    responses(
+        (status = 200, description = "User profile updated", body = crate::dtos::user::UserSettingsDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn update_profile(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<UpdateUserProfileDto>,
@@ -47,7 +67,18 @@ async fn update_profile(
     Ok(Json(updated))
 }
 
-async fn update_password(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/users/me/password",
+    tag = "Users",
+    request_body = UpdateUserPasswordDto,
+    responses(
+        (status = 200, description = "Password updated"),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn update_password(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<UpdateUserPasswordDto>,
@@ -59,7 +90,18 @@ async fn update_password(
     })))
 }
 
-async fn update_preferences(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/users/me/preferences",
+    tag = "Users",
+    request_body = UpdateUserPreferencesDto,
+    responses(
+        (status = 200, description = "User preferences updated", body = crate::dtos::user::UserSettingsDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn update_preferences(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<UpdateUserPreferencesDto>,
@@ -68,7 +110,18 @@ async fn update_preferences(
     Ok(Json(updated))
 }
 
-async fn update_notifications(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/users/me/preferences/notifications",
+    tag = "Users",
+    request_body = UpdateNotificationPreferencesDto,
+    responses(
+        (status = 200, description = "Notification preferences updated", body = crate::dtos::user::UserSettingsDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn update_notifications(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<UpdateNotificationPreferencesDto>,

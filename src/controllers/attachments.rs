@@ -166,7 +166,20 @@ async fn upload_attachments_to_scope(
     })))
 }
 
-async fn search_project_attachments(
+#[utoipa::path(
+    get,
+    path = "/api/v1/attachments/project/{project_id}/search",
+    tag = "Attachments",
+    params(
+        ("project_id" = Uuid, Path, description = "Project id"),
+        QueryPayload
+    ),
+    responses(
+        (status = 200, description = "Paginated attachments for project"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn search_project_attachments(
     State(state): State<AppState>,
     user: UserDto,
     Path(project_id): Path<Uuid>,
@@ -190,7 +203,20 @@ async fn search_project_attachments(
     })))
 }
 
-async fn search_task_attachments(
+#[utoipa::path(
+    get,
+    path = "/api/v1/attachments/task/{task_id}/search",
+    tag = "Attachments",
+    params(
+        ("task_id" = Uuid, Path, description = "Task id"),
+        QueryPayload
+    ),
+    responses(
+        (status = 200, description = "Paginated attachments for task"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn search_task_attachments(
     State(state): State<AppState>,
     user: UserDto,
     Path(task_id): Path<Uuid>,
@@ -214,7 +240,18 @@ async fn search_task_attachments(
     })))
 }
 
-async fn get_attachment_raw(
+#[utoipa::path(
+    get,
+    path = "/api/v1/attachments/{id}/raw",
+    tag = "Attachments",
+    params(("id" = Uuid, Path, description = "Attachment id")),
+    responses(
+        (status = 200, description = "Returns raw bytes of the attached file"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Attachment not found")
+    )
+)]
+pub(crate) async fn get_attachment_raw(
     State(state): State<AppState>,
     jar: CookieJar,
     Path(id): Path<Uuid>,
@@ -278,7 +315,18 @@ async fn resolve_attachment_viewer_user_id(state: &AppState, jar: &CookieJar) ->
     Err(AppError::Unauthorized("no session".to_string()))
 }
 
-async fn delete_attachment(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/attachments/{id}",
+    tag = "Attachments",
+    params(("id" = Uuid, Path, description = "Attachment id")),
+    responses(
+        (status = 200, description = "Attachment deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Attachment not found")
+    )
+)]
+pub(crate) async fn delete_attachment(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -287,7 +335,20 @@ async fn delete_attachment(
     Ok(Json(json!({ "message": "Adjunto eliminado" })))
 }
 
-async fn add_files_to_task(
+#[utoipa::path(
+    post,
+    path = "/api/v1/attachments/task/{task_id}/files",
+    tag = "Attachments",
+    params(("task_id" = Uuid, Path, description = "Task id")),
+    request_body(content_type = "multipart/form-data", description = "Multipart form with one or more `files` parts"),
+    responses(
+        (status = 200, description = "Files attached to task"),
+        (status = 400, description = "Invalid multipart payload or file too big"),
+        (status = 401, description = "Unauthorized"),
+        (status = 429, description = "Rate limited")
+    )
+)]
+pub(crate) async fn add_files_to_task(
     State(state): State<AppState>,
     user: UserDto,
     Path(task_id): Path<Uuid>,
@@ -296,7 +357,20 @@ async fn add_files_to_task(
     upload_attachments_to_scope(&state, user.id, None, Some(task_id), multipart).await
 }
 
-async fn add_files_to_project(
+#[utoipa::path(
+    post,
+    path = "/api/v1/attachments/project/{project_id}/files",
+    tag = "Attachments",
+    params(("project_id" = Uuid, Path, description = "Project id")),
+    request_body(content_type = "multipart/form-data", description = "Multipart form with one or more `files` parts"),
+    responses(
+        (status = 200, description = "Files attached to project"),
+        (status = 400, description = "Invalid multipart payload or file too big"),
+        (status = 401, description = "Unauthorized"),
+        (status = 429, description = "Rate limited")
+    )
+)]
+pub(crate) async fn add_files_to_project(
     State(state): State<AppState>,
     user: UserDto,
     Path(project_id): Path<Uuid>,
@@ -305,7 +379,19 @@ async fn add_files_to_project(
     upload_attachments_to_scope(&state, user.id, Some(project_id), None, multipart).await
 }
 
-async fn get_storage_usage(State(state): State<AppState>, user: UserDto) -> Result<impl IntoResponse, AppError> {
+#[utoipa::path(
+    get,
+    path = "/api/v1/attachments/usage",
+    tag = "Attachments",
+    responses(
+        (status = 200, description = "Current storage usage", body = crate::dtos::attachment::AttachmentStorageUsageDto),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn get_storage_usage(
+    State(state): State<AppState>,
+    user: UserDto,
+) -> Result<impl IntoResponse, AppError> {
     let usage = AttachmentService::get_user_storage_usage(state.db.as_ref(), user.id).await?;
     Ok(Json(usage))
 }

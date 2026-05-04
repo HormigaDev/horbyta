@@ -1,6 +1,8 @@
-use sea_orm::{FromQueryResult, prelude::DateTimeWithTimeZone};
+use chrono::{DateTime, FixedOffset};
+use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -63,27 +65,27 @@ pub fn category_filter_schema() -> FilterSchema {
     })
 }
 
-#[derive(Validate, Serialize, Deserialize, Debug)]
+#[derive(Validate, Serialize, Deserialize, Debug, ToSchema)]
 pub struct CreateCategoryDto {
     #[validate(length(min = 1, max = 100, message = "category name must be between 1 and 100 characters"))]
     pub name: String,
 }
 
-#[derive(Validate, Serialize, Deserialize, Debug)]
+#[derive(Validate, Serialize, Deserialize, Debug, ToSchema)]
 pub struct UpdateCategoryDto {
     #[validate(length(min = 1, max = 100, message = "category name must be between 1 and 100 characters"))]
     pub name: String,
 }
 
-#[derive(Serialize, FromQueryResult)]
+#[derive(Serialize, FromQueryResult, ToSchema)]
 pub struct CategorySummaryDto {
     pub id: Uuid,
     pub name: String,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct CategoryDetailDto {
     pub id: Uuid,
     pub name: String,

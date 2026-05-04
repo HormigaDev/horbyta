@@ -1,8 +1,10 @@
+use chrono::{DateTime, FixedOffset};
 use sea_orm::FromQueryResult;
-use sea_orm::prelude::{DateTimeWithTimeZone, Decimal};
+use sea_orm::prelude::Decimal;
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use strum::IntoEnumIterator;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
@@ -193,7 +195,7 @@ fn validate_signature_ip(ip_raw: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct CreateChangeRequestDto {
     pub project_id: Uuid,
     pub client_id: Uuid,
@@ -214,7 +216,7 @@ pub struct CreateChangeRequestDto {
     pub client_request_description: String,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct UpdateChangeRequestDto {
     pub project_id: Uuid,
     pub client_id: Uuid,
@@ -250,7 +252,7 @@ pub struct UpdateChangeRequestDto {
     pub version: i32,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct AssessChangeRequestDto {
     #[validate(length(
         min = 1,
@@ -269,7 +271,7 @@ pub struct AssessChangeRequestDto {
     pub schedule_impact_days: i32,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AssignChangeRequestTaskDto {
     pub task_id: Option<Uuid>,
@@ -278,7 +280,7 @@ pub struct AssignChangeRequestTaskDto {
     pub version: i32,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ClientCreateChangeRequestDto {
     pub project_id: Uuid,
@@ -298,7 +300,7 @@ pub struct ClientCreateChangeRequestDto {
     pub client_request_description: String,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ClientUpdateChangeRequestDto {
     #[validate(length(
@@ -319,27 +321,27 @@ pub struct ClientUpdateChangeRequestDto {
     pub version: i32,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ClientCancelChangeRequestDto {
     #[validate(range(min = 1, message = "version must be at least 1"))]
     pub version: i32,
 }
 
-#[derive(Deserialize, Validate, Default)]
+#[derive(Deserialize, Validate, Default, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ClientApproveChangeRequestDto {
     #[validate(custom(function = "validate_signature_ip"))]
     pub client_signature_ip: Option<String>,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ClientDeclineChangeRequestDto {
     pub decline_reason: ChangeRequestDeclineReason,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct ChangeRequestSummaryDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -351,11 +353,11 @@ pub struct ChangeRequestSummaryDto {
     pub title: String,
     pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ChangeRequestDetailDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -374,14 +376,14 @@ pub struct ChangeRequestDetailDto {
     pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
     pub decline_reason: Option<ChangeRequestDeclineReason>,
-    pub client_approved_at: Option<DateTimeWithTimeZone>,
+    pub client_approved_at: Option<DateTime<FixedOffset>>,
     pub client_signature_ip: Option<String>,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
     pub version: i32,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct ClientChangeRequestSummaryDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -390,11 +392,11 @@ pub struct ClientChangeRequestSummaryDto {
     pub task_id: Option<Uuid>,
     pub title: String,
     pub status: ChangeRequestStatus,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ClientChangeRequestDetailDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -410,10 +412,10 @@ pub struct ClientChangeRequestDetailDto {
     pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
     pub decline_reason: Option<ChangeRequestDeclineReason>,
-    pub client_approved_at: Option<DateTimeWithTimeZone>,
+    pub client_approved_at: Option<DateTime<FixedOffset>>,
     pub client_signature_ip: Option<String>,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
     pub version: i32,
 }
 
@@ -436,10 +438,10 @@ pub struct ChangeRequestDetailRow {
     pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
     pub decline_reason: Option<String>,
-    pub client_approved_at: Option<DateTimeWithTimeZone>,
+    pub client_approved_at: Option<DateTime<FixedOffset>>,
     pub client_signature_ip: Option<String>,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
     pub version: i32,
 }
 
@@ -459,10 +461,10 @@ pub struct ClientChangeRequestDetailRow {
     pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
     pub decline_reason: Option<String>,
-    pub client_approved_at: Option<DateTimeWithTimeZone>,
+    pub client_approved_at: Option<DateTime<FixedOffset>>,
     pub client_signature_ip: Option<String>,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
     pub version: i32,
 }
 

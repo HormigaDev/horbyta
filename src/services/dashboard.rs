@@ -293,22 +293,14 @@ pub struct DashboardService;
 
 impl DashboardService {
     pub async fn get_overview(db: &impl ConnectionTrait, user_id: Uuid) -> Result<DashboardDto, AppError> {
-        let monthly_revenue =
-            Self::query_monthly_revenue(db, user_id, &MonthlyRevenueFiltersDto::default()).await?;
+        let monthly_revenue = Self::query_monthly_revenue(db, user_id, &MonthlyRevenueFiltersDto::default()).await?;
         let accounts_receivable =
             Self::query_accounts_receivable(db, user_id, &AccountsReceivableFiltersDto::default()).await?;
-        let time_by_activity =
-            Self::query_time_by_activity(db, user_id, &TimeByActivityFiltersDto::default()).await?;
-        let billable_ratio_daily =
-            Self::query_billable_ratio(db, user_id, &BillableRatioFiltersDto::default()).await?;
-        let scope_creep_value = Self::query_simple::<ScopeCreepValueRow>(
-            db,
-            SCOPE_CREEP_VALUE_SQL,
-            vec![Value::from(user_id)],
-        )
-        .await?;
-        let task_bottlenecks =
-            Self::query_task_bottlenecks(db, user_id, &TaskBottlenecksFiltersDto::default()).await?;
+        let time_by_activity = Self::query_time_by_activity(db, user_id, &TimeByActivityFiltersDto::default()).await?;
+        let billable_ratio_daily = Self::query_billable_ratio(db, user_id, &BillableRatioFiltersDto::default()).await?;
+        let scope_creep_value =
+            Self::query_simple::<ScopeCreepValueRow>(db, SCOPE_CREEP_VALUE_SQL, vec![Value::from(user_id)]).await?;
+        let task_bottlenecks = Self::query_task_bottlenecks(db, user_id, &TaskBottlenecksFiltersDto::default()).await?;
 
         let kpis = DashboardKpisDto {
             scope_creep_recovered: scope_creep_value
@@ -341,13 +333,9 @@ impl DashboardService {
         let project_status =
             Self::query_client_project_status(db, user_id, client_id, &ClientProjectStatusFiltersDto::default())
                 .await?;
-        let milestone_health = Self::query_client_milestone_health(
-            db,
-            user_id,
-            client_id,
-            &ClientMilestoneHealthFiltersDto::default(),
-        )
-        .await?;
+        let milestone_health =
+            Self::query_client_milestone_health(db, user_id, client_id, &ClientMilestoneHealthFiltersDto::default())
+                .await?;
         let change_request_status = Self::query_client_change_request_status(
             db,
             user_id,
@@ -361,13 +349,9 @@ impl DashboardService {
             vec![Value::from(user_id), Value::from(client_id)],
         )
         .await?;
-        let project_portfolio = Self::query_client_project_portfolio(
-            db,
-            user_id,
-            client_id,
-            &ClientProjectPortfolioFiltersDto::default(),
-        )
-        .await?;
+        let project_portfolio =
+            Self::query_client_project_portfolio(db, user_id, client_id, &ClientProjectPortfolioFiltersDto::default())
+                .await?;
 
         let active_projects_total = project_status
             .iter()
@@ -561,11 +545,7 @@ impl DashboardService {
         Self::query_simple::<ClientProjectPortfolioRow>(db, CLIENT_PROJECT_PORTFOLIO_SQL, values).await
     }
 
-    async fn query_simple<T>(
-        db: &impl ConnectionTrait,
-        sql: &str,
-        values: Vec<Value>,
-    ) -> Result<Vec<T>, AppError>
+    async fn query_simple<T>(db: &impl ConnectionTrait, sql: &str, values: Vec<Value>) -> Result<Vec<T>, AppError>
     where
         T: FromQueryResult,
     {

@@ -24,7 +24,18 @@ use crate::{
     state::AppState,
 };
 
-async fn search_projects(
+#[utoipa::path(
+    get,
+    path = "/api/v1/projects/search",
+    tag = "Projects",
+    params(QueryPayload),
+    responses(
+        (status = 200, description = "Paginated list of projects"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn search_projects(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -40,7 +51,18 @@ async fn search_projects(
     })))
 }
 
-async fn get_project(
+#[utoipa::path(
+    get,
+    path = "/api/v1/projects/{id}",
+    tag = "Projects",
+    params(("id" = Uuid, Path, description = "Project id")),
+    responses(
+        (status = 200, description = "Project detail", body = crate::dtos::project::ProjectDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Project not found")
+    )
+)]
+pub(crate) async fn get_project(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -49,7 +71,18 @@ async fn get_project(
     Ok(Json(project))
 }
 
-async fn client_search_projects(
+#[utoipa::path(
+    get,
+    path = "/api/v1/projects/client-search",
+    tag = "Projects",
+    params(QueryPayload),
+    responses(
+        (status = 200, description = "Paginated list of client-visible projects"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn client_search_projects(
     State(state): State<AppState>,
     client: ClientAuthDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -67,7 +100,18 @@ async fn client_search_projects(
     })))
 }
 
-async fn client_get_project(
+#[utoipa::path(
+    get,
+    path = "/api/v1/projects/{id}/client",
+    tag = "Projects",
+    params(("id" = Uuid, Path, description = "Project id")),
+    responses(
+        (status = 200, description = "Client-visible project detail", body = crate::dtos::project::ClientProjectDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Project not found")
+    )
+)]
+pub(crate) async fn client_get_project(
     State(state): State<AppState>,
     client: ClientAuthDto,
     Path(id): Path<Uuid>,
@@ -78,7 +122,18 @@ async fn client_get_project(
     Ok(Json(project))
 }
 
-async fn create_project(
+#[utoipa::path(
+    post,
+    path = "/api/v1/projects/",
+    tag = "Projects",
+    request_body(content_type = "multipart/form-data", description = "Multipart form with a `payload` JSON field and optional files"),
+    responses(
+        (status = 200, description = "Project created", body = crate::dtos::project::ProjectDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn create_project(
     State(state): State<AppState>,
     user: UserDto,
     request: Request,
@@ -96,7 +151,20 @@ async fn create_project(
     Ok(Json(project))
 }
 
-async fn update_project(
+#[utoipa::path(
+    put,
+    path = "/api/v1/projects/{id}",
+    tag = "Projects",
+    params(("id" = Uuid, Path, description = "Project id")),
+    request_body(content_type = "multipart/form-data", description = "Multipart form with a `payload` JSON field and optional files"),
+    responses(
+        (status = 200, description = "Project updated", body = crate::dtos::project::ProjectDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Project not found")
+    )
+)]
+pub(crate) async fn update_project(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -120,7 +188,20 @@ async fn update_project(
     Ok(Json(project))
 }
 
-async fn update_project_category(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/projects/{id}/category",
+    tag = "Projects",
+    params(("id" = Uuid, Path, description = "Project id")),
+    request_body = UpdateProjectCategoryDto,
+    responses(
+        (status = 200, description = "Project category updated", body = crate::dtos::project::ProjectDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Project not found")
+    )
+)]
+pub(crate) async fn update_project_category(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -130,7 +211,20 @@ async fn update_project_category(
     Ok(Json(project))
 }
 
-async fn update_project_status(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/projects/{id}/status",
+    tag = "Projects",
+    params(("id" = Uuid, Path, description = "Project id")),
+    request_body = UpdateProjectStatusDto,
+    responses(
+        (status = 200, description = "Project status updated", body = crate::dtos::project::ProjectDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Project not found")
+    )
+)]
+pub(crate) async fn update_project_status(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -140,7 +234,20 @@ async fn update_project_status(
     Ok(Json(project))
 }
 
-async fn update_project_billable(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/projects/{id}/billable",
+    tag = "Projects",
+    params(("id" = Uuid, Path, description = "Project id")),
+    request_body = UpdateProjectBillableDto,
+    responses(
+        (status = 200, description = "Project billable flag updated", body = crate::dtos::project::ProjectDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Project not found")
+    )
+)]
+pub(crate) async fn update_project_billable(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -150,7 +257,20 @@ async fn update_project_billable(
     Ok(Json(project))
 }
 
-async fn upsert_project_billing(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/projects/{id}/billing",
+    tag = "Projects",
+    params(("id" = Uuid, Path, description = "Project id")),
+    request_body = UpdateProjectBillingDto,
+    responses(
+        (status = 200, description = "Project billing upserted"),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Project not found")
+    )
+)]
+pub(crate) async fn upsert_project_billing(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -160,7 +280,18 @@ async fn upsert_project_billing(
     Ok(Json(billing))
 }
 
-async fn delete_project(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/projects/{id}",
+    tag = "Projects",
+    params(("id" = Uuid, Path, description = "Project id")),
+    responses(
+        (status = 200, description = "Project deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Project not found")
+    )
+)]
+pub(crate) async fn delete_project(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,

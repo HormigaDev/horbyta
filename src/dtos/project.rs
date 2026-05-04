@@ -2,6 +2,7 @@ use chrono::{DateTime, FixedOffset};
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -152,14 +153,14 @@ pub fn client_project_filter_schema() -> FilterSchema {
     })
 }
 
-#[derive(Deserialize, Validate, Clone)]
+#[derive(Deserialize, Validate, Clone, ToSchema)]
 pub struct CreateMilestoneSubDto {
     #[validate(length(min = 1, max = 100, message = "milestone name must be between 1 and 100 characters"))]
     pub name: String,
     pub due_date: Option<DateTime<FixedOffset>>,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct CreateProjectDto {
     #[validate(length(min = 1, max = 255, message = "project name must be between 1 and 255 characters"))]
     pub name: String,
@@ -177,7 +178,7 @@ pub struct CreateProjectDto {
     pub project_billing: Option<CreateProjectBillingDto>,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct UpdateProjectDto {
     #[validate(length(min = 1, max = 255, message = "project name must be between 1 and 255 characters"))]
     pub name: String,
@@ -197,22 +198,22 @@ pub struct UpdateProjectDto {
     pub project_billing: Option<UpdateProjectBillingDto>,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct UpdateProjectCategoryDto {
     pub category_id: Option<Uuid>,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct UpdateProjectStatusDto {
     pub status: ProjectStatus,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct UpdateProjectBillableDto {
     pub billable: bool,
 }
 
-#[derive(Serialize, FromQueryResult)]
+#[derive(Serialize, FromQueryResult, ToSchema)]
 pub struct ProjectSummaryDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -225,7 +226,7 @@ pub struct ProjectSummaryDto {
     pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct ProjectDetailDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -238,6 +239,7 @@ pub struct ProjectDetailDto {
     pub status: ProjectStatus,
     pub billable: bool,
     pub milestones: Vec<ProjectMilestoneSummaryDto>,
+    #[schema(value_type = Option<Object>)]
     pub project_billing: Option<project_billing::Model>,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
@@ -251,7 +253,7 @@ string_enum!(
     }
 );
 
-#[derive(Serialize, FromQueryResult)]
+#[derive(Serialize, FromQueryResult, ToSchema)]
 pub struct ClientProjectSummaryDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -261,7 +263,7 @@ pub struct ClientProjectSummaryDto {
     pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct ClientProjectDetailDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -269,6 +271,7 @@ pub struct ClientProjectDetailDto {
     pub description: Option<String>,
     pub status: ProjectStatus,
     pub billable: bool,
+    #[schema(value_type = Option<Object>)]
     pub project_billing: Option<project_billing::Model>,
     pub milestones: Vec<ProjectMilestoneSummaryDto>,
     pub created_at: DateTime<FixedOffset>,

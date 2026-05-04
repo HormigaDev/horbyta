@@ -1,6 +1,7 @@
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -66,28 +67,28 @@ pub fn tag_filter_schema() -> FilterSchema {
     })
 }
 
-#[derive(Validate, Serialize, Deserialize, Debug)]
+#[derive(Validate, Serialize, Deserialize, Debug, ToSchema)]
 pub struct CreateTagDto {
     #[validate(length(min = 1, max = 50, message = "tag name must be between 1 and 50 characters"))]
     pub name: String,
     pub color: HexColor,
 }
 
-#[derive(Validate, Serialize, Deserialize, Debug)]
+#[derive(Validate, Serialize, Deserialize, Debug, ToSchema)]
 pub struct UpdateTagDto {
     #[validate(length(min = 1, max = 50, message = "tag name must be between 1 and 50 characters"))]
     pub name: String,
     pub color: HexColor,
 }
 
-#[derive(Serialize, FromQueryResult)]
+#[derive(Serialize, FromQueryResult, ToSchema)]
 pub struct TagSummaryDto {
     pub id: Uuid,
     pub name: String,
     pub color: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct TagDetailDto {
     pub id: Uuid,
     pub name: String,

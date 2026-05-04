@@ -24,7 +24,18 @@ use crate::{
     state::AppState,
 };
 
-async fn search_clients(
+#[utoipa::path(
+    get,
+    path = "/api/v1/clients/search",
+    tag = "Clients",
+    params(QueryPayload),
+    responses(
+        (status = 200, description = "Paginated list of clients"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn search_clients(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -40,7 +51,18 @@ async fn search_clients(
     })))
 }
 
-async fn get_client(
+#[utoipa::path(
+    get,
+    path = "/api/v1/clients/{id}",
+    tag = "Clients",
+    params(("id" = Uuid, Path, description = "Client id")),
+    responses(
+        (status = 200, description = "Client detail"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found")
+    )
+)]
+pub(crate) async fn get_client(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -49,7 +71,18 @@ async fn get_client(
     Ok(Json(client))
 }
 
-async fn create_client(
+#[utoipa::path(
+    post,
+    path = "/api/v1/clients/",
+    tag = "Clients",
+    request_body = CreateClientDto,
+    responses(
+        (status = 200, description = "Client created"),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn create_client(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<CreateClientDto>,
@@ -58,7 +91,20 @@ async fn create_client(
     Ok(Json(client))
 }
 
-async fn update_client(
+#[utoipa::path(
+    put,
+    path = "/api/v1/clients/{id}",
+    tag = "Clients",
+    params(("id" = Uuid, Path, description = "Client id")),
+    request_body = UpdateClientDto,
+    responses(
+        (status = 200, description = "Client updated"),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found")
+    )
+)]
+pub(crate) async fn update_client(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -68,7 +114,20 @@ async fn update_client(
     Ok(Json(client))
 }
 
-async fn update_client_status(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/clients/{id}",
+    tag = "Clients",
+    params(("id" = Uuid, Path, description = "Client id")),
+    request_body = UpdateClientStatusDto,
+    responses(
+        (status = 200, description = "Client status updated"),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found")
+    )
+)]
+pub(crate) async fn update_client_status(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -78,7 +137,18 @@ async fn update_client_status(
     Ok(Json(client))
 }
 
-async fn delete_client(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/clients/{id}",
+    tag = "Clients",
+    params(("id" = Uuid, Path, description = "Client id")),
+    responses(
+        (status = 200, description = "Client deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found")
+    )
+)]
+pub(crate) async fn delete_client(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -87,7 +157,18 @@ async fn delete_client(
     Ok(Json(json!({"message": "Cliente eliminado"})))
 }
 
-async fn get_client_auth_status(
+#[utoipa::path(
+    get,
+    path = "/api/v1/clients/{id}/auth",
+    tag = "Clients",
+    params(("id" = Uuid, Path, description = "Client id")),
+    responses(
+        (status = 200, description = "Client auth status", body = crate::dtos::client::ClientAuthStatusDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found")
+    )
+)]
+pub(crate) async fn get_client_auth_status(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -96,7 +177,20 @@ async fn get_client_auth_status(
     Ok(Json(auth_status))
 }
 
-async fn activate_client_credentials(
+#[utoipa::path(
+    post,
+    path = "/api/v1/clients/{id}/auth/credentials",
+    tag = "Clients",
+    params(("id" = Uuid, Path, description = "Client id")),
+    request_body = SaveClientCredentialsDto,
+    responses(
+        (status = 200, description = "Client credentials enabled", body = crate::dtos::client::ClientAuthStatusDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found")
+    )
+)]
+pub(crate) async fn activate_client_credentials(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -107,7 +201,19 @@ async fn activate_client_credentials(
     Ok(Json(auth_status))
 }
 
-async fn activate_client_magic_token(
+#[utoipa::path(
+    post,
+    path = "/api/v1/clients/{id}/auth/magic-token",
+    tag = "Clients",
+    params(("id" = Uuid, Path, description = "Client id")),
+    responses(
+        (status = 200, description = "Generated magic link token", body = crate::dtos::client::ClientMagicLinkDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+        (status = 429, description = "Rate limited")
+    )
+)]
+pub(crate) async fn activate_client_magic_token(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,

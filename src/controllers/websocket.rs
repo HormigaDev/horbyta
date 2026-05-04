@@ -13,12 +13,18 @@ use dashmap::DashMap;
 use futures::StreamExt;
 use uuid::Uuid;
 
-use crate::{
-    middlewares::rate_limit::WS_MAX_CONNECTIONS,
-    services::websocket::WebSocketService,
-    state::AppState,
-};
+use crate::{middlewares::rate_limit::WS_MAX_CONNECTIONS, services::websocket::WebSocketService, state::AppState};
 
+#[utoipa::path(
+    get,
+    path = "/ws",
+    tag = "WebSocket",
+    responses(
+        (status = 101, description = "Switching protocols (WebSocket upgrade)"),
+        (status = 401, description = "Unauthorized"),
+        (status = 429, description = "Too many WebSocket connections")
+    )
+)]
 pub async fn websocket_handler(
     ws: WebSocketUpgrade,
     headers: HeaderMap,
@@ -29,7 +35,9 @@ pub async fn websocket_handler(
 
     // Increment connection count atomically; reject if limit exceeded
     {
-        let entry = state.ws_connections.entry(user_id)
+        let entry = state
+            .ws_connections
+            .entry(user_id)
             .or_insert_with(|| AtomicUsize::new(0));
         let prev = entry.fetch_add(1, Ordering::Relaxed);
         if prev >= WS_MAX_CONNECTIONS {

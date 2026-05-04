@@ -10,7 +10,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::{constants::CLIENT_AUTH_COOKIE_NAME, entities::{client_auth, clients}};
+use crate::{
+    constants::CLIENT_AUTH_COOKIE_NAME,
+    entities::{client_auth, clients},
+};
 use crate::{dtos::client::ClientAuthDto, state::AppState};
 
 #[derive(Debug, Deserialize, Serialize)]

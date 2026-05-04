@@ -333,10 +333,7 @@ impl NotificationService {
                 user_id,
                 preference_key: "work.milestone_released",
                 title: "Milestone released".to_string(),
-                body: Some(format!(
-                    "Milestone \"{}\" was marked as released.",
-                    milestone.name
-                )),
+                body: Some(format!("Milestone \"{}\" was marked as released.", milestone.name)),
                 payload: Some(json!({
                     "route": format!("/milestones/{}", milestone.id),
                     "milestoneId": milestone.id,

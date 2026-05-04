@@ -1,9 +1,30 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::str::FromStr;
+use utoipa::{
+    PartialSchema, ToSchema,
+    openapi::{RefOr, Schema, schema::SchemaType},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct HexColor(String);
+
+impl PartialSchema for HexColor {
+    fn schema() -> RefOr<Schema> {
+        utoipa::openapi::ObjectBuilder::new()
+            .schema_type(SchemaType::new(utoipa::openapi::Type::String))
+            .description(Some("Hex color string (e.g. #ff00aa or #f0a)"))
+            .pattern(Some("^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"))
+            .examples([serde_json::Value::String("#ff00aa".to_string())])
+            .into()
+    }
+}
+
+impl ToSchema for HexColor {
+    fn name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("HexColor")
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum HexColorError {

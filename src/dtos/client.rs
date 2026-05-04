@@ -1,7 +1,8 @@
+use chrono::{DateTime, FixedOffset};
 use sea_orm::FromQueryResult;
-use sea_orm::prelude::DateTimeWithTimeZone;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -73,7 +74,7 @@ pub fn client_filter_schema() -> FilterSchema {
     })
 }
 
-#[derive(Serialize, Deserialize, Validate, Debug, Clone)]
+#[derive(Serialize, Deserialize, Validate, Debug, Clone, ToSchema)]
 pub struct CreateClientDto {
     #[validate(length(min = 1, max = 255, message = "client name must be between 1 and 255 characters"))]
     pub name: String,
@@ -100,7 +101,7 @@ pub struct CreateClientDto {
     pub notes: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Validate, Debug, Clone)]
+#[derive(Serialize, Deserialize, Validate, Debug, Clone, ToSchema)]
 pub struct UpdateClientDto {
     #[validate(length(min = 1, max = 255, message = "client name must be between 1 and 255 characters"))]
     pub name: String,
@@ -129,45 +130,45 @@ pub struct UpdateClientDto {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct UpdateClientStatusDto {
     pub status: ClientStatus,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct ClientSummary {
     pub id: Uuid,
     pub name: String,
     pub status: ClientStatus,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, ToSchema)]
 pub struct ClientAuthDto {
     pub id: Uuid,
     pub user_id: Uuid,
     pub client_id: Uuid,
     pub name: String,
     pub email: Option<String>,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct ClientAuthStatusDto {
     pub method: ClientAuthMethod,
     pub email: Option<String>,
     pub magic_client_token_exp: Option<i64>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct ClientMagicLinkDto {
     pub magic_client_token: String,
     pub magic_client_token_exp: i64,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct SaveClientCredentialsDto {
     #[validate(email(message = "client auth email must be a valid email address"))]
     pub email: String,

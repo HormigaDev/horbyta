@@ -19,7 +19,18 @@ use crate::{
     state::AppState,
 };
 
-async fn search_activities(
+#[utoipa::path(
+    get,
+    path = "/api/v1/activities/search",
+    tag = "Activities",
+    params(QueryPayload),
+    responses(
+        (status = 200, description = "Paginated list of activities", body = serde_json::Value),
+        (status = 400, description = "Invalid search payload"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn search_activities(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -35,7 +46,18 @@ async fn search_activities(
     })))
 }
 
-async fn get_activity(
+#[utoipa::path(
+    get,
+    path = "/api/v1/activities/{id}",
+    tag = "Activities",
+    params(("id" = Uuid, Path, description = "Activity id")),
+    responses(
+        (status = 200, description = "Activity detail", body = crate::dtos::activity::ActivityDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Activity not found")
+    )
+)]
+pub(crate) async fn get_activity(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -45,7 +67,18 @@ async fn get_activity(
     Ok(Json(activity))
 }
 
-async fn create_activity(
+#[utoipa::path(
+    post,
+    path = "/api/v1/activities/",
+    tag = "Activities",
+    request_body = CreateActivityDto,
+    responses(
+        (status = 200, description = "Activity created", body = crate::dtos::activity::ActivityDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn create_activity(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<CreateActivityDto>,
@@ -54,7 +87,20 @@ async fn create_activity(
     Ok(Json(activity))
 }
 
-async fn update_activity(
+#[utoipa::path(
+    put,
+    path = "/api/v1/activities/{id}",
+    tag = "Activities",
+    params(("id" = Uuid, Path, description = "Activity id")),
+    request_body = UpdateActivityDto,
+    responses(
+        (status = 200, description = "Activity updated", body = crate::dtos::activity::ActivityDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Activity not found")
+    )
+)]
+pub(crate) async fn update_activity(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -64,7 +110,18 @@ async fn update_activity(
     Ok(Json(activity))
 }
 
-async fn delete_activity(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/activities/{id}",
+    tag = "Activities",
+    params(("id" = Uuid, Path, description = "Activity id")),
+    responses(
+        (status = 200, description = "Activity deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Activity not found")
+    )
+)]
+pub(crate) async fn delete_activity(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,

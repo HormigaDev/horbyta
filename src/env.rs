@@ -27,7 +27,8 @@ impl Config {
         let environment = env::var("APP_ENV").unwrap_or_else(|_| "development".to_string());
 
         Self {
-            database_url: env::var("DATABASE_URL").expect("CRITICAL: DATABASE_URL is missing from environment variables."),
+            database_url: env::var("DATABASE_URL")
+                .expect("CRITICAL: DATABASE_URL is missing from environment variables."),
             jwt_secret: env::var("JWT_SECRET").expect("CRITICAL: JWT_SECRET is missing from environment variables."),
             jwt_secret_client: env::var("JWT_SECRET_CLIENT")
                 .expect("CRITICAL: JWT_SECRET_CLIENT is missing from environment variables."),

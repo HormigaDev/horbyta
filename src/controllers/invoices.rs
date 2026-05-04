@@ -20,14 +20,25 @@ use crate::{
     state::AppState,
 };
 
-#[derive(Debug, Deserialize)]
-struct BillableTasksQuery {
-    page: Option<u64>,
-    per_page: Option<u64>,
-    invoice_id: Option<Uuid>,
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+pub(crate) struct BillableTasksQuery {
+    pub page: Option<u64>,
+    pub per_page: Option<u64>,
+    pub invoice_id: Option<Uuid>,
 }
 
-async fn search_invoices(
+#[utoipa::path(
+    get,
+    path = "/api/v1/invoices/search",
+    tag = "Invoices",
+    params(QueryPayload),
+    responses(
+        (status = 200, description = "Paginated list of invoices"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn search_invoices(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -43,7 +54,18 @@ async fn search_invoices(
     })))
 }
 
-async fn get_invoice(
+#[utoipa::path(
+    get,
+    path = "/api/v1/invoices/{id}",
+    tag = "Invoices",
+    params(("id" = Uuid, Path, description = "Invoice id")),
+    responses(
+        (status = 200, description = "Invoice detail", body = crate::dtos::invoice::InvoiceDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Invoice not found")
+    )
+)]
+pub(crate) async fn get_invoice(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -52,7 +74,18 @@ async fn get_invoice(
     Ok(Json(invoice))
 }
 
-async fn create_invoice(
+#[utoipa::path(
+    post,
+    path = "/api/v1/invoices/",
+    tag = "Invoices",
+    request_body = CreateInvoiceDto,
+    responses(
+        (status = 200, description = "Invoice created", body = crate::dtos::invoice::InvoiceDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn create_invoice(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<CreateInvoiceDto>,
@@ -61,7 +94,20 @@ async fn create_invoice(
     Ok(Json(invoice))
 }
 
-async fn update_invoice(
+#[utoipa::path(
+    put,
+    path = "/api/v1/invoices/{id}",
+    tag = "Invoices",
+    params(("id" = Uuid, Path, description = "Invoice id")),
+    request_body = UpdateInvoiceDto,
+    responses(
+        (status = 200, description = "Invoice updated", body = crate::dtos::invoice::InvoiceDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Invoice not found")
+    )
+)]
+pub(crate) async fn update_invoice(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -71,7 +117,20 @@ async fn update_invoice(
     Ok(Json(invoice))
 }
 
-async fn update_invoice_status(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/invoices/{id}/status",
+    tag = "Invoices",
+    params(("id" = Uuid, Path, description = "Invoice id")),
+    request_body = UpdateInvoiceStatusDto,
+    responses(
+        (status = 200, description = "Invoice status updated", body = crate::dtos::invoice::InvoiceDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Invoice not found")
+    )
+)]
+pub(crate) async fn update_invoice_status(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -93,7 +152,18 @@ async fn update_invoice_status(
     Ok(Json(invoice))
 }
 
-async fn delete_invoice(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/invoices/{id}",
+    tag = "Invoices",
+    params(("id" = Uuid, Path, description = "Invoice id")),
+    responses(
+        (status = 200, description = "Invoice deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Invoice not found")
+    )
+)]
+pub(crate) async fn delete_invoice(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -102,7 +172,21 @@ async fn delete_invoice(
     Ok(Json(json!({ "message": "Factura eliminada correctamente" })))
 }
 
-async fn get_billable_tasks(
+#[utoipa::path(
+    get,
+    path = "/api/v1/invoices/project/{project_id}/billable-tasks",
+    tag = "Invoices",
+    params(
+        ("project_id" = Uuid, Path, description = "Project id"),
+        BillableTasksQuery
+    ),
+    responses(
+        (status = 200, description = "Billable tasks for invoice creation", body = crate::dtos::invoice::BillableTasksResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Project not found")
+    )
+)]
+pub(crate) async fn get_billable_tasks(
     State(state): State<AppState>,
     user: UserDto,
     Path(project_id): Path<Uuid>,

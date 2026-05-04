@@ -4,7 +4,7 @@ macro_rules! string_enum {
         $(#[$meta:meta])*
         $vis:vis enum $name:ident { $($variant:ident),* $(,)? }
     ) => {
-        #[derive(Debug, Clone, PartialEq, Eq, strum::Display, strum::EnumString, serde::Serialize)]
+        #[derive(Debug, Clone, PartialEq, Eq, strum::Display, strum::EnumString, serde::Serialize, utoipa::ToSchema)]
         #[strum(serialize_all = "snake_case")]
         #[serde(rename_all = "snake_case")]
         $(#[$meta])*

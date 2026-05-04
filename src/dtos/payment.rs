@@ -1,10 +1,8 @@
 use chrono::{DateTime, FixedOffset, NaiveDate};
-use sea_orm::{
-    FromQueryResult,
-    prelude::{DateTimeWithTimeZone, Decimal},
-};
+use sea_orm::{FromQueryResult, prelude::Decimal};
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -99,7 +97,7 @@ pub fn payment_filter_schema() -> FilterSchema {
     })
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct CreatePaymentDto {
     pub project_id: Uuid,
     pub invoice_id: Option<Uuid>,
@@ -123,7 +121,7 @@ pub struct CreatePaymentDto {
     pub notes: Option<String>,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct CreateRefundDto {
     pub parent_payment_id: Uuid,
 
@@ -140,7 +138,7 @@ pub struct CreateRefundDto {
     pub notes: Option<String>,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct UpdatePaymentDto {
     #[validate(length(max = 50, message = "payment_method must be at most 50 characters"))]
     pub payment_method: Option<String>,
@@ -152,7 +150,7 @@ pub struct UpdatePaymentDto {
     pub notes: Option<String>,
 }
 
-#[derive(Serialize, FromQueryResult)]
+#[derive(Serialize, FromQueryResult, ToSchema)]
 pub struct PaymentSummaryDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -170,11 +168,11 @@ pub struct PaymentSummaryDto {
     pub payment_method: Option<String>,
     pub provider: String,
 
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct PaymentDetailDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -201,18 +199,18 @@ pub struct PaymentDetailDto {
     pub provider_external_id: Option<String>,
     pub notes: Option<String>,
 
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct PaymentInvoiceReferenceDto {
     pub id: Uuid,
     pub record_number: i64,
     pub status: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct RelatedRefundDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -221,7 +219,7 @@ pub struct RelatedRefundDto {
     pub notes: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct ParentPaymentReferenceDto {
     pub id: Uuid,
     pub record_number: i64,

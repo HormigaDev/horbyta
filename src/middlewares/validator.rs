@@ -288,22 +288,16 @@ mod tests {
 
     #[tokio::test]
     async fn validation_message_is_normalized() {
-        let errors = JsonTestDto {
-            name: "".to_string(),
-        }
-        .validate()
-        .expect_err("dto should be invalid");
+        let errors = JsonTestDto { name: "".to_string() }
+            .validate()
+            .expect_err("dto should be invalid");
 
         assert_eq!(first_validation_error_message(&errors), "name must be valid");
     }
 
     #[tokio::test]
     async fn nested_validation_uses_nested_field_path() {
-        let result = ValidatedJson::<ParentDto>::from_request(
-            request_with_body(r#"{"child":{"name":""}}"#),
-            &(),
-        )
-        .await;
+        let result = ValidatedJson::<ParentDto>::from_request(request_with_body(r#"{"child":{"name":""}}"#), &()).await;
 
         assert!(matches!(
             result,

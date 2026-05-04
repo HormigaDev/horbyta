@@ -31,7 +31,19 @@ use crate::{
     utils::crypto::{compare_password, generate_jwt, hash_password, verify_magic_link_token},
 };
 
-async fn login(
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/login",
+    tag = "Auth",
+    request_body = LoginPayload,
+    responses(
+        (status = 200, description = "User authenticated, sets auth cookie"),
+        (status = 400, description = "Invalid payload"),
+        (status = 401, description = "Invalid credentials"),
+        (status = 429, description = "Too many login attempts")
+    )
+)]
+pub(crate) async fn login(
     State(state): State<AppState>,
     headers: HeaderMap,
     ValidatedJson(payload): ValidatedJson<LoginPayload>,
@@ -69,7 +81,18 @@ async fn login(
     Ok((StatusCode::OK, headers, body))
 }
 
-async fn login_client(
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/login-client",
+    tag = "Auth",
+    request_body = LoginPayload,
+    responses(
+        (status = 200, description = "Client authenticated, sets client auth cookie"),
+        (status = 401, description = "Invalid credentials"),
+        (status = 429, description = "Too many login attempts")
+    )
+)]
+pub(crate) async fn login_client(
     State(state): State<AppState>,
     headers: HeaderMap,
     ValidatedJson(payload): ValidatedJson<LoginPayload>,
@@ -90,7 +113,18 @@ async fn login_client(
     Err(AppError::Unauthorized("invalid credentials".to_string()))
 }
 
-async fn login_magic_token(
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/login-client-token",
+    tag = "Auth",
+    request_body = ClientMagicTokenLogin,
+    responses(
+        (status = 200, description = "Client authenticated via magic token"),
+        (status = 401, description = "Invalid or expired magic token"),
+        (status = 429, description = "Too many attempts")
+    )
+)]
+pub(crate) async fn login_magic_token(
     State(state): State<AppState>,
     headers: HeaderMap,
     ValidatedJson(payload): ValidatedJson<ClientMagicTokenLogin>,
@@ -115,11 +149,32 @@ async fn login_magic_token(
     Err(AppError::Unauthorized("invalid credentials".to_string()))
 }
 
-async fn registration_status(State(state): State<AppState>) -> impl IntoResponse {
+#[utoipa::path(
+    get,
+    path = "/api/v1/auth/registration-status",
+    tag = "Auth",
+    responses(
+        (status = 200, description = "Whether public registration is open")
+    )
+)]
+pub(crate) async fn registration_status(State(state): State<AppState>) -> impl IntoResponse {
     Json(json!({ "open": state.config.allow_registration }))
 }
 
-async fn register(
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/register",
+    tag = "Auth",
+    request_body = RegisterPayload,
+    responses(
+        (status = 201, description = "User registered, sets auth cookie"),
+        (status = 400, description = "Invalid payload"),
+        (status = 409, description = "Email or username already taken"),
+        (status = 423, description = "Registration is disabled"),
+        (status = 429, description = "Too many attempts")
+    )
+)]
+pub(crate) async fn register(
     State(state): State<AppState>,
     headers: HeaderMap,
     ValidatedJson(payload): ValidatedJson<RegisterPayload>,
@@ -189,7 +244,16 @@ async fn register(
     Ok((StatusCode::CREATED, headers, body))
 }
 
-async fn logout(_user: UserDto) -> Result<impl IntoResponse, AppError> {
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/logout",
+    tag = "Auth",
+    responses(
+        (status = 200, description = "User logged out, clears auth cookie"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn logout(_user: UserDto) -> Result<impl IntoResponse, AppError> {
     let cookie = Cookie::build((USER_AUTH_COOKIE_NAME, ""))
         .path("/")
         .http_only(true)
@@ -205,7 +269,16 @@ async fn logout(_user: UserDto) -> Result<impl IntoResponse, AppError> {
     Ok((StatusCode::OK, headers, body))
 }
 
-async fn logout_client(_client: ClientAuthDto) -> Result<impl IntoResponse, AppError> {
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/logout-client",
+    tag = "Auth",
+    responses(
+        (status = 200, description = "Client logged out, clears client cookie"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn logout_client(_client: ClientAuthDto) -> Result<impl IntoResponse, AppError> {
     let cookie = Cookie::build((CLIENT_AUTH_COOKIE_NAME, ""))
         .path("/")
         .http_only(true)
@@ -235,7 +308,16 @@ fn build_auth_cookie<'a>(name: &'a str, token: String, is_production: bool) -> C
         .build()
 }
 
-async fn client_me(client: ClientAuthDto) -> Result<impl IntoResponse, AppError> {
+#[utoipa::path(
+    get,
+    path = "/api/v1/auth/client-me",
+    tag = "Auth",
+    responses(
+        (status = 200, description = "Returns current authenticated client"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn client_me(client: ClientAuthDto) -> Result<impl IntoResponse, AppError> {
     Ok(Json(json!({
         "id": client.id,
         "client_id": client.client_id,
@@ -245,7 +327,7 @@ async fn client_me(client: ClientAuthDto) -> Result<impl IntoResponse, AppError>
     })))
 }
 
-async fn handle_client_login_success(
+pub(crate) async fn handle_client_login_success(
     client_model: client_auth::Model,
     state: &AppState,
 ) -> Result<(StatusCode, HeaderMap, Json<serde_json::Value>), AppError> {

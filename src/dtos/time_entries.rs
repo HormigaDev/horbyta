@@ -2,6 +2,7 @@ use chrono::{DateTime, FixedOffset, NaiveDate};
 use sea_orm::{FromQueryResult, prelude::Decimal};
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -103,7 +104,7 @@ const fn default_billable() -> bool {
     true
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct CreateTimeEntryDto {
     pub task_id: Uuid,
     pub activity: Uuid,
@@ -119,7 +120,7 @@ pub struct CreateTimeEntryDto {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct StartTimeEntryTimerDto {
     pub task_id: Uuid,
     pub activity: Uuid,
@@ -132,7 +133,7 @@ pub struct StartTimeEntryTimerDto {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct UpdateTimeEntryDto {
     pub task_id: Uuid,
     pub activity: Uuid,
@@ -148,12 +149,12 @@ pub struct UpdateTimeEntryDto {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct StopTimeEntryTimerDto {
     pub end_time: Option<DateTime<FixedOffset>>,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct TimeEntrySummaryDto {
     pub id: Uuid,
     pub task_id: Uuid,
@@ -172,7 +173,7 @@ pub struct TimeEntrySummaryDto {
     pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct TimeEntryDetailDto {
     pub id: Uuid,
     pub user_id: Uuid,

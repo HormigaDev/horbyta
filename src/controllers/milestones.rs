@@ -23,7 +23,18 @@ use crate::{
     state::AppState,
 };
 
-async fn search_milestones(
+#[utoipa::path(
+    get,
+    path = "/api/v1/milestones/search",
+    tag = "Milestones",
+    params(QueryPayload),
+    responses(
+        (status = 200, description = "Paginated list of milestones"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn search_milestones(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -39,7 +50,21 @@ async fn search_milestones(
     })))
 }
 
-async fn client_search_milestones(
+#[utoipa::path(
+    get,
+    path = "/api/v1/milestones/client/search-by-project/{id}",
+    tag = "Milestones",
+    params(
+        ("id" = Uuid, Path, description = "Project id"),
+        QueryPayload
+    ),
+    responses(
+        (status = 200, description = "Paginated list of client-visible milestones"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn client_search_milestones(
     State(state): State<AppState>,
     client: ClientAuthDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -63,7 +88,18 @@ async fn client_search_milestones(
     })))
 }
 
-async fn create_milestone(
+#[utoipa::path(
+    post,
+    path = "/api/v1/milestones/",
+    tag = "Milestones",
+    request_body(content_type = "multipart/form-data", description = "Multipart form with a `payload` JSON field and optional files"),
+    responses(
+        (status = 200, description = "Milestone created", body = crate::dtos::milestone::ProjectMilestoneSummaryDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn create_milestone(
     State(state): State<AppState>,
     user: UserDto,
     request: Request,
@@ -85,7 +121,20 @@ async fn create_milestone(
     Ok(Json(milestone))
 }
 
-async fn update_milestone(
+#[utoipa::path(
+    put,
+    path = "/api/v1/milestones/{id}",
+    tag = "Milestones",
+    params(("id" = Uuid, Path, description = "Milestone id")),
+    request_body(content_type = "multipart/form-data", description = "Multipart form with a `payload` JSON field and optional files"),
+    responses(
+        (status = 200, description = "Milestone updated", body = crate::dtos::milestone::ProjectMilestoneSummaryDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Milestone not found")
+    )
+)]
+pub(crate) async fn update_milestone(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -116,7 +165,18 @@ async fn update_milestone(
     Ok(Json(milestone))
 }
 
-async fn delete_milestone(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/milestones/{id}",
+    tag = "Milestones",
+    params(("id" = Uuid, Path, description = "Milestone id")),
+    responses(
+        (status = 200, description = "Milestone deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Milestone not found")
+    )
+)]
+pub(crate) async fn delete_milestone(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,

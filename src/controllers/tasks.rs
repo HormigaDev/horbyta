@@ -20,12 +20,32 @@ use crate::{
     state::AppState,
 };
 
-async fn view_tasks(State(state): State<AppState>, user: UserDto) -> Result<impl IntoResponse, AppError> {
+#[utoipa::path(
+    get,
+    path = "/api/v1/tasks/view",
+    tag = "Tasks",
+    responses(
+        (status = 200, description = "Task view summary", body = crate::dtos::task::TaskViewDto),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn view_tasks(State(state): State<AppState>, user: UserDto) -> Result<impl IntoResponse, AppError> {
     let view_payload = TaskService::view(state.db.as_ref(), user.id).await?;
     Ok(Json(view_payload))
 }
 
-async fn search_tasks(
+#[utoipa::path(
+    get,
+    path = "/api/v1/tasks/search",
+    tag = "Tasks",
+    params(QueryPayload),
+    responses(
+        (status = 200, description = "Paginated list of tasks"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn search_tasks(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -41,7 +61,18 @@ async fn search_tasks(
     })))
 }
 
-async fn get_task(
+#[utoipa::path(
+    get,
+    path = "/api/v1/tasks/{id}",
+    tag = "Tasks",
+    params(("id" = Uuid, Path, description = "Task id")),
+    responses(
+        (status = 200, description = "Task detail", body = crate::dtos::task::TaskDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Task not found")
+    )
+)]
+pub(crate) async fn get_task(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -50,7 +81,18 @@ async fn get_task(
     Ok(Json(task))
 }
 
-async fn create_task(
+#[utoipa::path(
+    post,
+    path = "/api/v1/tasks/",
+    tag = "Tasks",
+    request_body(content_type = "multipart/form-data", description = "Multipart form with a `payload` JSON field and optional files"),
+    responses(
+        (status = 200, description = "Task created", body = crate::dtos::task::TaskDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn create_task(
     State(state): State<AppState>,
     user: UserDto,
     request: Request,
@@ -68,7 +110,20 @@ async fn create_task(
     Ok(Json(task))
 }
 
-async fn update_task(
+#[utoipa::path(
+    put,
+    path = "/api/v1/tasks/{id}",
+    tag = "Tasks",
+    params(("id" = Uuid, Path, description = "Task id")),
+    request_body(content_type = "multipart/form-data", description = "Multipart form with a `payload` JSON field and optional files"),
+    responses(
+        (status = 200, description = "Task updated", body = crate::dtos::task::TaskDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Task not found")
+    )
+)]
+pub(crate) async fn update_task(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -86,7 +141,20 @@ async fn update_task(
     Ok(Json(task))
 }
 
-async fn update_task_status(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/tasks/{id}",
+    tag = "Tasks",
+    params(("id" = Uuid, Path, description = "Task id")),
+    request_body = UpdateTaskStatusDto,
+    responses(
+        (status = 200, description = "Task status updated"),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Task not found")
+    )
+)]
+pub(crate) async fn update_task_status(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -99,7 +167,18 @@ async fn update_task_status(
     ))
 }
 
-async fn delete_task(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/tasks/{id}",
+    tag = "Tasks",
+    params(("id" = Uuid, Path, description = "Task id")),
+    responses(
+        (status = 200, description = "Task deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Task not found")
+    )
+)]
+pub(crate) async fn delete_task(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,

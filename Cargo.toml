@@ -37,6 +37,8 @@ hex = "0.4.3"
 duration-str = "0.21.0"
 object_store = { version = "0.13.2", features = ["aws"] }
 dashmap = "6"
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid", "decimal", "preserve_order"] }
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
 
 [profile.dev]
 debug = 0

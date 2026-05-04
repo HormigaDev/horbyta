@@ -126,5 +126,4 @@ impl UserService {
         let updated = active_user.update(db).await?;
         Ok(updated.into())
     }
-
 }

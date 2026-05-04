@@ -8,6 +8,7 @@ pub mod macros;
 pub mod middlewares;
 pub mod services;
 pub mod state;
+pub mod swagger;
 pub mod utils;
 
 use axum::{
@@ -81,7 +82,7 @@ async fn main() {
         let allowed_origin =
             HeaderValue::from_str(&config.frontend_origin).expect("CRITICAL: Invalid FRONTEND_ORIGIN.");
 
-        app.layer(
+        app.merge(swagger::docs_router()).layer(
             CorsLayer::new()
                 .allow_origin(allowed_origin)
                 .allow_methods([

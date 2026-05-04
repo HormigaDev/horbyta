@@ -3,9 +3,11 @@ use crate::{
     entities::activities,
     utils::search::FilterField,
 };
-use sea_orm::{FromQueryResult, prelude::DateTimeWithTimeZone};
+use chrono::{DateTime, FixedOffset};
+use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -57,30 +59,30 @@ pub fn activity_filter_schema() -> FilterSchema {
     })
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct CreateActivityDto {
     #[validate(length(min = 1, max = 100, message = "activity name must be between 1 and 100 characters"))]
     pub name: String,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct UpdateActivityDto {
     #[validate(length(min = 1, max = 100, message = "activity name must be between 1 and 100 characters"))]
     pub name: String,
 }
 
-#[derive(Serialize, FromQueryResult)]
+#[derive(Serialize, FromQueryResult, ToSchema)]
 pub struct ActivitySummaryDto {
     pub id: Uuid,
     pub name: String,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct ActivityDetailDto {
     pub id: Uuid,
     pub name: String,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
 }

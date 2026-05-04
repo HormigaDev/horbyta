@@ -20,7 +20,18 @@ use crate::{
     state::AppState,
 };
 
-async fn search_payments(
+#[utoipa::path(
+    get,
+    path = "/api/v1/payments/search",
+    tag = "Payments",
+    params(QueryPayload),
+    responses(
+        (status = 200, description = "Paginated list of payments"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn search_payments(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
@@ -36,7 +47,18 @@ async fn search_payments(
     })))
 }
 
-async fn get_payment(
+#[utoipa::path(
+    get,
+    path = "/api/v1/payments/{id}",
+    tag = "Payments",
+    params(("id" = Uuid, Path, description = "Payment id")),
+    responses(
+        (status = 200, description = "Payment detail", body = crate::dtos::payment::PaymentDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Payment not found")
+    )
+)]
+pub(crate) async fn get_payment(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -45,7 +67,18 @@ async fn get_payment(
     Ok(Json(payment))
 }
 
-async fn create_payment(
+#[utoipa::path(
+    post,
+    path = "/api/v1/payments/",
+    tag = "Payments",
+    request_body = CreatePaymentDto,
+    responses(
+        (status = 200, description = "Payment created", body = crate::dtos::payment::PaymentDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn create_payment(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<CreatePaymentDto>,
@@ -62,7 +95,18 @@ async fn create_payment(
     Ok(Json(payment))
 }
 
-async fn create_refund(
+#[utoipa::path(
+    post,
+    path = "/api/v1/payments/refund",
+    tag = "Payments",
+    request_body = CreateRefundDto,
+    responses(
+        (status = 200, description = "Refund created", body = crate::dtos::payment::PaymentDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn create_refund(
     State(state): State<AppState>,
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<CreateRefundDto>,
@@ -71,7 +115,20 @@ async fn create_refund(
     Ok(Json(payment))
 }
 
-async fn update_payment(
+#[utoipa::path(
+    put,
+    path = "/api/v1/payments/{id}",
+    tag = "Payments",
+    params(("id" = Uuid, Path, description = "Payment id")),
+    request_body = UpdatePaymentDto,
+    responses(
+        (status = 200, description = "Payment updated", body = crate::dtos::payment::PaymentDetailDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Payment not found")
+    )
+)]
+pub(crate) async fn update_payment(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
@@ -81,7 +138,18 @@ async fn update_payment(
     Ok(Json(payment))
 }
 
-async fn delete_payment(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/payments/{id}",
+    tag = "Payments",
+    params(("id" = Uuid, Path, description = "Payment id")),
+    responses(
+        (status = 200, description = "Payment deleted"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Payment not found")
+    )
+)]
+pub(crate) async fn delete_payment(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,

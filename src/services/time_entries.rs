@@ -111,14 +111,12 @@ impl TimeEntryService {
         let entry_id = entry.id;
         let entry_work_date = entry.work_date;
 
-        let start_time = entry.start_time.ok_or_else(|| {
-            AppError::Conflict("time entry does not correspond to a started timer".to_string())
-        })?;
+        let start_time = entry
+            .start_time
+            .ok_or_else(|| AppError::Conflict("time entry does not correspond to a started timer".to_string()))?;
 
         if entry.end_time.is_some() {
-            return Err(AppError::Conflict(
-                "timer was already stopped previously".to_string(),
-            ));
+            return Err(AppError::Conflict("timer was already stopped previously".to_string()));
         }
 
         let end_time = dto.end_time.unwrap_or_else(|| Utc::now().fixed_offset());
@@ -164,9 +162,7 @@ impl TimeEntryService {
         let entry = Self::find_by_id(db, user_id, id).await?;
 
         if entry.start_time.is_some() && entry.end_time.is_none() {
-            return Err(AppError::Conflict(
-                "an active timer cannot be edited".to_string(),
-            ));
+            return Err(AppError::Conflict("an active timer cannot be edited".to_string()));
         }
 
         let task = Self::find_owned_task(db, user_id, dto.task_id).await?;
@@ -507,9 +503,7 @@ impl TimeEntryService {
         daily_limit_minutes: i64,
     ) -> Result<(), AppError> {
         if current_total >= daily_limit_minutes {
-            return Err(AppError::Conflict(
-                "you cannot log more hours on this day".to_string(),
-            ));
+            return Err(AppError::Conflict("you cannot log more hours on this day".to_string()));
         }
 
         if current_total + new_duration > daily_limit_minutes {

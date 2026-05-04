@@ -2,6 +2,7 @@ use chrono::{DateTime, FixedOffset};
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -113,7 +114,7 @@ pub fn task_filter_schema() -> FilterSchema {
     })
 }
 
-#[derive(Debug, Deserialize, Serialize, Validate)]
+#[derive(Debug, Deserialize, Serialize, Validate, ToSchema)]
 pub struct CreateTaskDto {
     pub project_id: Option<Uuid>,
     pub parent_id: Option<Uuid>,
@@ -141,7 +142,7 @@ pub struct CreateTaskDto {
     pub tag_ids: Vec<Uuid>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Validate)]
+#[derive(Debug, Deserialize, Serialize, Validate, ToSchema)]
 pub struct UpdateTaskDto {
     pub project_id: Option<Uuid>,
     pub parent_id: Option<Uuid>,
@@ -169,12 +170,12 @@ pub struct UpdateTaskDto {
     pub tag_ids: Vec<Uuid>,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct UpdateTaskStatusDto {
     pub status: TaskStatus,
 }
 
-#[derive(Debug, Serialize, FromQueryResult)]
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
 pub struct TaskSummaryDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -191,7 +192,7 @@ pub struct TaskSummaryDto {
     pub updated_at: DateTime<FixedOffset>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct TaskDetailDto {
     pub id: Uuid,
     pub record_number: i64,
@@ -216,20 +217,20 @@ pub struct TaskDetailDto {
     pub tags: Vec<TaskTagDto>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct TaskProjectDto {
     pub id: Uuid,
     pub name: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct TaskTagDto {
     pub id: Uuid,
     pub name: String,
     pub color: HexColor,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct MilestoneLookupDto {
     pub id: Uuid,
     pub project_id: Uuid,
@@ -237,7 +238,7 @@ pub struct MilestoneLookupDto {
     pub due_date: Option<DateTime<FixedOffset>>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct TaskViewDto {
     pub items: Vec<TaskSummaryDto>,
     pub total: u64,
