@@ -516,8 +516,14 @@ impl TimeEntryService {
     }
 
     fn map_time_entry_write_error(error: sea_orm::DbErr) -> AppError {
-        if error.to_string().contains("daily_limit_exceeded") {
+        let message = error.to_string();
+
+        if message.contains("daily_limit_exceeded") {
             return AppError::Conflict("time entry exceeds the configured daily limit".to_string());
+        }
+
+        if message.contains("idx_uq_time_entries_active_timer_per_user") {
+            return AppError::Conflict("there is already an active timer for this user".to_string());
         }
 
         AppError::Database(error)

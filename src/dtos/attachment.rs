@@ -163,6 +163,12 @@ pub struct AttachmentUploadResponseDto {
     pub uploaded_count: usize,
 }
 
+#[derive(Debug)]
+pub struct MarkdownAttachmentUploadResult {
+    pub replacements: Vec<(String, String)>,
+    pub storage_keys: Vec<String>,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct AttachmentUploadScope {
     pub project_id: Option<Uuid>,

@@ -382,7 +382,7 @@ impl TaskService {
 
         let txn = db.begin().await.map_err(AppError::Database)?;
         let created_task = Self::create_with_connection(&txn, user_id, dto).await?;
-        let replacements = AttachmentService::create_markdown_files_in_tx(
+        let upload = AttachmentService::create_markdown_files_with_tracking_in_tx(
             &txn,
             storage,
             user_id,
@@ -394,12 +394,24 @@ impl TaskService {
         )
         .await?;
 
-        let next_description = replace_markdown_attachment_urls(created_task.description.clone(), &replacements);
+        let next_description = replace_markdown_attachment_urls(created_task.description.clone(), &upload.replacements);
         let mut active_task: tasks::ActiveModel = created_task.into();
         active_task.description = Set(next_description);
-        let updated_task = active_task.update(&txn).await.map_err(AppError::Database)?;
+        let updated_task = match active_task.update(&txn).await.map_err(AppError::Database) {
+            Ok(updated_task) => updated_task,
+            Err(error) => {
+                if let Err(rollback_error) = txn.rollback().await {
+                    tracing::warn!(error = %rollback_error, "Task markdown create rollback failed");
+                }
+                AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
+                return Err(error);
+            }
+        };
 
-        txn.commit().await.map_err(AppError::Database)?;
+        if let Err(error) = txn.commit().await {
+            AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
+            return Err(AppError::Database(error));
+        }
 
         Self::get_by_id(db, user_id, updated_task.id).await
     }
@@ -409,12 +421,12 @@ impl TaskService {
         Self::to_task_detail(db, task).await
     }
 
-    pub async fn update(
-        db: &(impl ConnectionTrait + TransactionTrait),
+    async fn update_with_connection(
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         id: Uuid,
         dto: UpdateTaskDto,
-    ) -> Result<TaskDetailDto, AppError> {
+    ) -> Result<TaskModel, AppError> {
         if dto.parent_id == Some(id) {
             return Err(AppError::BadRequest("a task cannot be its own parent".to_string()));
         }
@@ -429,8 +441,6 @@ impl TaskService {
             Self::ensure_no_blocking_children(db, id).await?;
         }
 
-        let txn = db.begin().await.map_err(AppError::Database)?;
-
         let mut active_task: tasks::ActiveModel = task.into();
         active_task.project_id = Set(dto.project_id);
         active_task.parent_id = Set(dto.parent_id);
@@ -443,11 +453,11 @@ impl TaskService {
         active_task.block_parent = Set(dto.block_parent);
         active_task.due_date = Set(dto.due_date);
 
-        let updated_task = active_task.update(&txn).await.map_err(AppError::Database)?;
+        let updated_task = active_task.update(db).await.map_err(AppError::Database)?;
 
         TaskTags::delete_many()
             .filter(task_tags::Column::TaskId.eq(updated_task.id))
-            .exec(&txn)
+            .exec(db)
             .await
             .map_err(AppError::Database)?;
 
@@ -462,11 +472,22 @@ impl TaskService {
                 .collect();
 
             TaskTags::insert_many(links)
-                .exec(&txn)
+                .exec(db)
                 .await
                 .map_err(AppError::Database)?;
         }
 
+        Ok(updated_task)
+    }
+
+    pub async fn update(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        user_id: Uuid,
+        id: Uuid,
+        dto: UpdateTaskDto,
+    ) -> Result<TaskDetailDto, AppError> {
+        let txn = db.begin().await.map_err(AppError::Database)?;
+        let updated_task = Self::update_with_connection(&txn, user_id, id, dto).await?;
         txn.commit().await.map_err(AppError::Database)?;
 
         Self::get_by_id(db, user_id, updated_task.id).await
@@ -484,9 +505,9 @@ impl TaskService {
             return Self::update(db, user_id, id, dto).await;
         }
 
-        let task = Self::get_task_model(db, user_id, id).await?;
         let txn = db.begin().await.map_err(AppError::Database)?;
-        let replacements = AttachmentService::create_markdown_files_in_tx(
+        let task = Self::get_task_model(&txn, user_id, id).await?;
+        let upload = AttachmentService::create_markdown_files_with_tracking_in_tx(
             &txn,
             storage,
             user_id,
@@ -497,10 +518,25 @@ impl TaskService {
             files,
         )
         .await?;
-        txn.commit().await.map_err(AppError::Database)?;
 
-        dto.description = replace_markdown_attachment_urls(dto.description, &replacements);
-        Self::update(db, user_id, id, dto).await
+        dto.description = replace_markdown_attachment_urls(dto.description, &upload.replacements);
+        let updated_task = match Self::update_with_connection(&txn, user_id, id, dto).await {
+            Ok(updated_task) => updated_task,
+            Err(error) => {
+                if let Err(rollback_error) = txn.rollback().await {
+                    tracing::warn!(error = %rollback_error, "Task markdown update rollback failed");
+                }
+                AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
+                return Err(error);
+            }
+        };
+
+        if let Err(error) = txn.commit().await {
+            AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
+            return Err(AppError::Database(error));
+        }
+
+        Self::get_by_id(db, user_id, updated_task.id).await
     }
 
     pub async fn change_status(

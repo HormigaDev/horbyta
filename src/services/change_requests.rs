@@ -94,7 +94,7 @@ impl ChangeRequestService {
         };
 
         let created = change_request.insert(&txn).await.map_err(AppError::Database)?;
-        let replacements = AttachmentService::create_markdown_files_in_tx(
+        let upload = AttachmentService::create_markdown_files_with_tracking_in_tx(
             &txn,
             storage,
             user_id,
@@ -107,12 +107,24 @@ impl ChangeRequestService {
         .await?;
 
         let next_description =
-            replace_markdown_attachment_urls_required(created.client_request_description.clone(), &replacements);
+            replace_markdown_attachment_urls_required(created.client_request_description.clone(), &upload.replacements);
         let mut active_model: change_requests::ActiveModel = created.into();
         active_model.client_request_description = Set(next_description);
-        let updated = active_model.update(&txn).await.map_err(AppError::Database)?;
+        let updated = match active_model.update(&txn).await.map_err(AppError::Database) {
+            Ok(updated) => updated,
+            Err(error) => {
+                if let Err(rollback_error) = txn.rollback().await {
+                    tracing::warn!(error = %rollback_error, "Change request markdown create rollback failed");
+                }
+                AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
+                return Err(error);
+            }
+        };
 
-        txn.commit().await.map_err(AppError::Database)?;
+        if let Err(error) = txn.commit().await {
+            AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
+            return Err(AppError::Database(error));
+        }
         Self::get_by_id(db, user_id, updated.id).await
     }
 
@@ -221,12 +233,12 @@ impl ChangeRequestService {
         Ok(Self::map_client_detail_row(row)?)
     }
 
-    pub async fn update(
+    async fn update_with_connection(
         db: &impl ConnectionTrait,
         user_id: Uuid,
         id: Uuid,
         dto: UpdateChangeRequestDto,
-    ) -> Result<ChangeRequestDetailDto, AppError> {
+    ) -> Result<Uuid, AppError> {
         let model = Self::get_model_by_user(db, user_id, id).await?;
         let status = Self::parse_status(&model.status)?;
         let origin = Self::parse_origin(&model.origin)?;
@@ -257,7 +269,7 @@ impl ChangeRequestService {
             active_model.task_id = Set(dto.task_id);
 
             let updated = active_model.update(db).await.map_err(AppError::Database)?;
-            return Self::get_by_id(db, user_id, updated.id).await;
+            return Ok(updated.id);
         }
 
         if origin == ChangeRequestOrigin::ClientPortal {
@@ -290,7 +302,17 @@ impl ChangeRequestService {
         active_model.schedule_impact_days = Set(dto.schedule_impact_days);
 
         let updated = active_model.update(db).await.map_err(AppError::Database)?;
-        Self::get_by_id(db, user_id, updated.id).await
+        Ok(updated.id)
+    }
+
+    pub async fn update(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        id: Uuid,
+        dto: UpdateChangeRequestDto,
+    ) -> Result<ChangeRequestDetailDto, AppError> {
+        let updated_id = Self::update_with_connection(db, user_id, id, dto).await?;
+        Self::get_by_id(db, user_id, updated_id).await
     }
 
     pub async fn update_with_markdown_files(
@@ -305,9 +327,9 @@ impl ChangeRequestService {
             return Self::update(db, user_id, id, dto).await;
         }
 
-        let model = Self::get_model_by_user(db, user_id, id).await?;
         let txn = db.begin().await.map_err(AppError::Database)?;
-        let replacements = AttachmentService::create_markdown_files_in_tx(
+        let model = Self::get_model_by_user(&txn, user_id, id).await?;
+        let upload = AttachmentService::create_markdown_files_with_tracking_in_tx(
             &txn,
             storage,
             user_id,
@@ -318,12 +340,27 @@ impl ChangeRequestService {
             files,
         )
         .await?;
-        txn.commit().await.map_err(AppError::Database)?;
 
         dto.client_request_description =
-            replace_markdown_attachment_urls_required(dto.client_request_description, &replacements);
-        dto.technical_assessment = replace_markdown_attachment_urls(dto.technical_assessment, &replacements);
-        Self::update(db, user_id, id, dto).await
+            replace_markdown_attachment_urls_required(dto.client_request_description, &upload.replacements);
+        dto.technical_assessment = replace_markdown_attachment_urls(dto.technical_assessment, &upload.replacements);
+        let updated_id = match Self::update_with_connection(&txn, user_id, id, dto).await {
+            Ok(updated_id) => updated_id,
+            Err(error) => {
+                if let Err(rollback_error) = txn.rollback().await {
+                    tracing::warn!(error = %rollback_error, "Change request markdown update rollback failed");
+                }
+                AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
+                return Err(error);
+            }
+        };
+
+        if let Err(error) = txn.commit().await {
+            AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
+            return Err(AppError::Database(error));
+        }
+
+        Self::get_by_id(db, user_id, updated_id).await
     }
 
     pub async fn client_update_spec(

@@ -318,7 +318,7 @@ impl ProjectService {
         let txn = db.begin().await.map_err(AppError::Database)?;
         let created_project = Self::create_with_connection(&txn, user_id, dto).await?;
 
-        let replacements = AttachmentService::create_markdown_files_in_tx(
+        let upload = AttachmentService::create_markdown_files_with_tracking_in_tx(
             &txn,
             storage,
             user_id,
@@ -330,12 +330,25 @@ impl ProjectService {
         )
         .await?;
 
-        let next_description = replace_markdown_attachment_urls(created_project.description.clone(), &replacements);
+        let next_description =
+            replace_markdown_attachment_urls(created_project.description.clone(), &upload.replacements);
         let mut active_project: projects::ActiveModel = created_project.into();
         active_project.description = Set(next_description);
-        let updated_project = active_project.update(&txn).await.map_err(AppError::Database)?;
+        let updated_project = match active_project.update(&txn).await.map_err(AppError::Database) {
+            Ok(updated_project) => updated_project,
+            Err(error) => {
+                if let Err(rollback_error) = txn.rollback().await {
+                    tracing::warn!(error = %rollback_error, "Project markdown create rollback failed");
+                }
+                AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
+                return Err(error);
+            }
+        };
 
-        txn.commit().await.map_err(AppError::Database)?;
+        if let Err(error) = txn.commit().await {
+            AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
+            return Err(AppError::Database(error));
+        }
 
         Ok(updated_project)
     }
@@ -440,8 +453,8 @@ impl ProjectService {
         })
     }
 
-    pub async fn update(
-        db: &(impl ConnectionTrait + TransactionTrait),
+    async fn update_with_connection(
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         id: Uuid,
         dto: UpdateProjectDto,
@@ -468,8 +481,6 @@ impl ProjectService {
         }
         Self::ensure_project_references_ownership(db, user_id, dto.category_id, dto.client_id).await?;
 
-        let txn = db.begin().await.map_err(AppError::Database)?;
-
         let mut active_project: projects::ActiveModel = project.into();
         active_project.name = Set(dto.name);
         active_project.description = Set(dto.description);
@@ -478,7 +489,7 @@ impl ProjectService {
         active_project.status = Set(dto.status.to_string());
         active_project.billable = Set(dto.billable);
 
-        let updated_project = active_project.update(&txn).await.map_err(AppError::Database)?;
+        let updated_project = active_project.update(db).await.map_err(AppError::Database)?;
 
         if let Some(milestones_dto) = dto.new_milestones {
             if !milestones_dto.is_empty() {
@@ -493,19 +504,30 @@ impl ProjectService {
                     .collect();
 
                 crate::entities::prelude::Milestones::insert_many(new_milestones)
-                    .exec(&txn)
+                    .exec(db)
                     .await
                     .map_err(AppError::Database)?;
             }
         }
 
         if !dto.billable {
-            Self::delete_billing_with_connection(&txn, user_id, updated_project.id).await?;
+            Self::delete_billing_with_connection(db, user_id, updated_project.id).await?;
         } else if let Some(billing) = dto.project_billing {
             let normalized = Self::normalize_billing_payload(billing)?;
-            let _ = Self::upsert_billing_with_connection(&txn, user_id, updated_project.id, normalized).await?;
+            let _ = Self::upsert_billing_with_connection(db, user_id, updated_project.id, normalized).await?;
         }
 
+        Ok(updated_project)
+    }
+
+    pub async fn update(
+        db: &(impl ConnectionTrait + TransactionTrait),
+        user_id: Uuid,
+        id: Uuid,
+        dto: UpdateProjectDto,
+    ) -> Result<ProjectModel, AppError> {
+        let txn = db.begin().await.map_err(AppError::Database)?;
+        let updated_project = Self::update_with_connection(&txn, user_id, id, dto).await?;
         txn.commit().await.map_err(AppError::Database)?;
 
         Ok(updated_project)
@@ -523,10 +545,10 @@ impl ProjectService {
             return Self::update(db, user_id, id, dto).await;
         }
 
-        let project = Self::find_by_id(db, user_id, id).await?;
         let txn = db.begin().await.map_err(AppError::Database)?;
+        let project = Self::find_by_id(&txn, user_id, id).await?;
 
-        let replacements = AttachmentService::create_markdown_files_in_tx(
+        let upload = AttachmentService::create_markdown_files_with_tracking_in_tx(
             &txn,
             storage,
             user_id,
@@ -538,9 +560,24 @@ impl ProjectService {
         )
         .await?;
 
-        dto.description = replace_markdown_attachment_urls(dto.description, &replacements);
-        txn.commit().await.map_err(AppError::Database)?;
-        Self::update(db, user_id, id, dto).await
+        dto.description = replace_markdown_attachment_urls(dto.description, &upload.replacements);
+        let updated_project = match Self::update_with_connection(&txn, user_id, id, dto).await {
+            Ok(updated_project) => updated_project,
+            Err(error) => {
+                if let Err(rollback_error) = txn.rollback().await {
+                    tracing::warn!(error = %rollback_error, "Project markdown update rollback failed");
+                }
+                AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
+                return Err(error);
+            }
+        };
+
+        if let Err(error) = txn.commit().await {
+            AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
+            return Err(AppError::Database(error));
+        }
+
+        Ok(updated_project)
     }
 
     pub async fn update_billable(

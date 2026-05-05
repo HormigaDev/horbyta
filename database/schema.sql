@@ -490,6 +490,9 @@ create index idx_time_entries_task on time_entries(task_id);
 create index idx_time_entries_user on time_entries(user_id);
 create index idx_time_entries_invoice on time_entries(invoice_id);
 create index idx_time_entries_created_at on time_entries(user_id, created_at desc);
+create unique index idx_uq_time_entries_active_timer_per_user
+    on time_entries(user_id)
+    where start_time is not null and end_time is null;
 create index idx_conversation_history_user on conversation_history(user_id);
 create index idx_conversation_history_user_title on conversation_history(user_id, title);
 create index idx_conversation_history_user_created_at on conversation_history(user_id, created_at desc);

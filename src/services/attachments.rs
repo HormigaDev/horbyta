@@ -16,7 +16,8 @@ use crate::{
         attachment::{
             AttachmentDeleteResponseDto, AttachmentDetailDto, AttachmentRawFileDto, AttachmentSearchField,
             AttachmentSearchResponseDto, AttachmentStorageUsageDto, AttachmentSummaryDto, AttachmentUploadResponseDto,
-            AttachmentUploadScope, AttachmentViewer, CreateAttachmentDto, UploadedFile, attachment_filter_schema,
+            AttachmentUploadScope, AttachmentViewer, CreateAttachmentDto, MarkdownAttachmentUploadResult, UploadedFile,
+            attachment_filter_schema,
         },
         query::{Filter, FilterOperator, QueryPayload},
     },
@@ -179,7 +180,32 @@ impl AttachmentService {
         change_request_id: Option<Uuid>,
         files: Vec<MarkdownUploadedFile>,
     ) -> Result<Vec<(String, String)>, AppError> {
+        Ok(Self::create_markdown_files_with_tracking_in_tx(
+            tx,
+            storage,
+            user_id,
+            project_id,
+            task_id,
+            milestone_id,
+            change_request_id,
+            files,
+        )
+        .await?
+        .replacements)
+    }
+
+    pub async fn create_markdown_files_with_tracking_in_tx(
+        tx: &impl ConnectionTrait,
+        storage: &dyn ObjectStore,
+        user_id: Uuid,
+        project_id: Option<Uuid>,
+        task_id: Option<Uuid>,
+        milestone_id: Option<Uuid>,
+        change_request_id: Option<Uuid>,
+        files: Vec<MarkdownUploadedFile>,
+    ) -> Result<MarkdownAttachmentUploadResult, AppError> {
         let mut replacements = Vec::with_capacity(files.len());
+        let mut storage_keys = Vec::with_capacity(files.len());
 
         for file in files {
             let local_id = file.local_id;
@@ -192,11 +218,21 @@ impl AttachmentService {
                 mime_type: file.mime_type,
             };
 
-            let created = Self::create_in_tx(tx, storage, user_id, attachment, file.bytes).await?;
+            let created = match Self::create_in_tx(tx, storage, user_id, attachment, file.bytes).await {
+                Ok(created) => created,
+                Err(error) => {
+                    Self::cleanup_storage_objects(storage, &storage_keys).await;
+                    return Err(error);
+                }
+            };
+            storage_keys.push(created.storage_key.clone());
             replacements.push((local_id, format!("/api/v1/attachments/{}/raw", created.id)));
         }
 
-        Ok(replacements)
+        Ok(MarkdownAttachmentUploadResult {
+            replacements,
+            storage_keys,
+        })
     }
 
     pub async fn create(
@@ -568,7 +604,7 @@ impl AttachmentService {
         Ok((files, total_upload_bytes))
     }
 
-    async fn cleanup_storage_objects(storage: &dyn ObjectStore, storage_keys: &[String]) {
+    pub async fn cleanup_storage_objects(storage: &dyn ObjectStore, storage_keys: &[String]) {
         for storage_key in storage_keys {
             let location = match ObjectPath::parse(storage_key.as_str()) {
                 Ok(location) => location,
