@@ -579,19 +579,22 @@ websocket.on('notification', (data: unknown) => {
 
   const event = localizeAsyncNotificationEvent(data);
   const notification = notificationsStore.addAsyncNotificationFromEvent(event);
-  const notifyOptions: QNotifyCreateOptions = {
-    message: notification.title || notification.message,
-    type: notification.type,
-    position: 'top-right',
-    timeout: 3500,
-    actions: [{ icon: 'close', color: 'white', round: true, size: 'sm' }],
-  };
 
-  if (notification.body) {
-    notifyOptions.caption = notification.body;
+  if (!event.silent) {
+    const notifyOptions: QNotifyCreateOptions = {
+      message: notification.title || notification.message,
+      type: notification.type,
+      position: 'top-right',
+      timeout: 3500,
+      actions: [{ icon: 'close', color: 'white', round: true, size: 'sm' }],
+    };
+
+    if (notification.body) {
+      notifyOptions.caption = notification.body;
+    }
+
+    $q.notify(notifyOptions);
   }
-
-  $q.notify(notifyOptions);
 });
 
 websocket.on('notification.unread_count', (data: unknown) => {
@@ -755,6 +758,7 @@ function isAsyncNotificationEvent(data: unknown): data is AsyncNotificationEvent
     (candidate.title === undefined || typeof candidate.title === 'string') &&
     (candidate.body === undefined || candidate.body === null || typeof candidate.body === 'string') &&
     (candidate.summaryType === undefined || candidate.summaryType === 'unread_notifications') &&
+    (candidate.silent === undefined || typeof candidate.silent === 'boolean') &&
     (candidate.unreadCount === undefined || typeof candidate.unreadCount === 'number')
   );
 }

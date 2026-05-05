@@ -15,6 +15,7 @@ export interface AsyncNotificationEvent {
   entityType?: string | null;
   entityId?: string | null;
   summaryType?: 'unread_notifications';
+  silent?: boolean;
   unreadCount?: number;
 }
 

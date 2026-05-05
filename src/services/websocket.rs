@@ -84,6 +84,21 @@ impl WebSocketService {
             .await
             .map_err(AppError::Database)?;
 
+        let unread_notifications = Notifications::find()
+            .filter(notifications::Column::UserId.eq(user_id))
+            .filter(notifications::Column::IsRead.eq(false))
+            .order_by_asc(notifications::Column::CreatedAt)
+            .all(self.state.db.as_ref())
+            .await
+            .map_err(AppError::Database)?;
+
+        for notification in unread_notifications
+            .iter()
+            .filter(|notification| notification.received_at.is_some())
+        {
+            self.send_silent_notification_event(sender, notification).await?;
+        }
+
         if pending_count > UNREAD_NOTIFICATION_SUMMARY_THRESHOLD {
             self.send_notification_summary_event(sender, unread_count).await?;
             NotificationService::mark_unread_as_received(self.state.db.as_ref(), user_id).await?;
@@ -178,6 +193,25 @@ impl WebSocketService {
         sender: &mut futures::stream::SplitSink<WebSocket, Message>,
         notification: &notifications::Model,
     ) -> Result<(), AppError> {
+        self.send_notification_event_with_options(sender, notification, false)
+            .await
+    }
+
+    async fn send_silent_notification_event(
+        &self,
+        sender: &mut futures::stream::SplitSink<WebSocket, Message>,
+        notification: &notifications::Model,
+    ) -> Result<(), AppError> {
+        self.send_notification_event_with_options(sender, notification, true)
+            .await
+    }
+
+    async fn send_notification_event_with_options(
+        &self,
+        sender: &mut futures::stream::SplitSink<WebSocket, Message>,
+        notification: &notifications::Model,
+        silent: bool,
+    ) -> Result<(), AppError> {
         let event = WsMessage {
             msg_type: "notification".to_string(),
             data: Some(json!({
@@ -192,6 +226,7 @@ impl WebSocketService {
                 "entityType": notification.entity_type,
                 "entityId": notification.entity_id,
                 "payload": notification.payload,
+                "silent": silent,
                 "createdAt": notification.created_at
             })),
             id: Some(notification.id.to_string()),
