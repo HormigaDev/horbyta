@@ -172,7 +172,17 @@
           </q-tab-panel>
 
           <q-tab-panel name="time_entries">
-            <TaskTimeEntriesTab v-if="task" :task="task" ref="timeEntriesTabRef" />
+            <TaskTimeEntriesTab
+              v-if="task"
+              :task="task"
+              :active-timer-entry="activeTimerEntry"
+              :active-timer-belongs-to-current-task="activeTimerBelongsToCurrentTask"
+              ref="timeEntriesTabRef"
+              @open-manual="openManualTimeEntryDialog"
+              @open-timer="openStartTimerDialog"
+              @edit-entry="openEditDialog"
+              @view-entry="openViewDialog"
+            />
           </q-tab-panel>
 
           <q-tab-panel name="subtasks" v-if="hasSubtasks">
@@ -243,6 +253,154 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="isTimeEntryDialogOpen" persistent>
+      <q-card
+        flat
+        bordered
+        style="
+          width: min(560px, 92vw);
+          background-color: var(--card-bg);
+          border-color: var(--border-color);
+        "
+      >
+        <q-card-section>
+          <div class="text-h6" style="color: var(--text-color)">
+            {{ timeEntryDialogTitle }}
+          </div>
+          <div
+            class="text-caption"
+            style="color: var(--text-muted)"
+            v-if="timeEntryDialogMode !== 'view'"
+          >
+            {{ t('tasks.timeEntries.dialog.notesHint') }}
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-gutter-md">
+          <SelectByTerm
+            v-if="timeEntryDialogMode !== 'view'"
+            v-model="timeEntryForm.activity"
+            :label="t('tasks.timeEntries.dialog.activityLabel')"
+            :options="activityOptions"
+            :loading="isActivitiesLoading"
+            @search="onActivitySearch"
+          />
+          <q-input
+            v-else
+            :model-value="timeEntryForm.activity_name"
+            dense
+            outlined
+            readonly
+            :label="t('tasks.timeEntries.dialog.activityLabel')"
+          />
+
+          <q-toggle
+            v-if="timeEntryDialogMode !== 'view'"
+            v-model="timeEntryForm.billable"
+            :label="t('tasks.timeEntries.dialog.billableLabel')"
+            color="primary"
+          />
+          <q-input
+            v-else
+            :model-value="timeEntryForm.billable ? t('common.yes') : t('common.no')"
+            dense
+            outlined
+            readonly
+            :label="t('tasks.timeEntries.dialog.billableLabel')"
+          />
+
+          <q-input
+            v-if="timeEntryDialogMode === 'manual' || timeEntryDialogMode === 'edit'"
+            v-model="timeEntryForm.work_date"
+            dense
+            outlined
+            :mask="dateInputMask"
+            :label="t('tasks.timeEntries.dialog.workDateLabel')"
+          >
+            <template #append>
+              <q-icon name="event" class="cursor-pointer">
+                <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                  <q-date v-model="timeEntryForm.work_date" :mask="qDateMask">
+                    <div class="row items-center justify-end">
+                      <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
+                    </div>
+                  </q-date>
+                </q-popup-proxy>
+              </q-icon>
+            </template>
+          </q-input>
+          <q-input
+            v-else-if="timeEntryDialogMode === 'view'"
+            :model-value="timeEntryForm.work_date"
+            dense
+            outlined
+            readonly
+            :label="t('tasks.timeEntries.dialog.workDateLabel')"
+          />
+
+          <DurationInput
+            v-if="timeEntryDialogMode === 'manual' || timeEntryDialogMode === 'edit'"
+            v-model="timeEntryForm.duration_minutes"
+          />
+          <q-input
+            v-else-if="timeEntryDialogMode === 'view'"
+            :model-value="timeEntryForm.duration_minutes"
+            dense
+            outlined
+            readonly
+            :label="t('tasks.timeEntries.dialog.durationLabel')"
+          />
+
+          <q-input
+            v-model="timeEntryForm.notes"
+            dense
+            outlined
+            type="textarea"
+            autogrow
+            :readonly="timeEntryDialogMode === 'view'"
+            :counter="timeEntryDialogMode !== 'view'"
+            maxlength="1000"
+            :label="t('tasks.timeEntries.dialog.notesLabel')"
+          />
+
+          <q-input
+            v-if="timeEntryDialogMode === 'view'"
+            :model-value="timeEntryForm.invoice_id || t('common.empty')"
+            dense
+            outlined
+            readonly
+            :label="t('tasks.timeEntries.dialog.invoiceIdLabel')"
+          />
+
+          <q-input
+            v-if="timeEntryDialogMode === 'view'"
+            :model-value="timeEntryForm.applied_rate || t('common.empty')"
+            dense
+            outlined
+            readonly
+            :label="t('tasks.timeEntries.dialog.appliedRateLabel')"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            flat
+            :label="timeEntryDialogMode === 'view' ? t('common.close') : t('common.cancel')"
+            @click="closeTimeEntryDialog"
+          />
+          <q-btn
+            v-if="timeEntryDialogMode !== 'view'"
+            unelevated
+            color="primary"
+            :label="timeEntryDialogSubmitLabel"
+            :loading="isSavingTimeEntry"
+            :disable="!canSubmitTimeEntry"
+            @click="saveTimeEntry"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <div class="col-12 col-md-2" style="position: sticky; top: 80px">
       <q-card
         flat
@@ -271,7 +429,7 @@
             v-ripple
             class="q-pa-md"
             v-if="task"
-            @click="timeEntriesTabRef?.openManualTimeEntryDialog()"
+            @click="openManualTimeEntryDialog"
           >
             <q-item-section avatar><q-icon name="edit_note" /></q-item-section>
             <q-item-section>{{ $t('tasks.detail.action.logManualTime') }}</q-item-section>
@@ -281,8 +439,8 @@
             clickable
             v-ripple
             class="q-pa-md"
-            v-if="task && !timeEntriesTabRef?.activeTimerEntry"
-            @click="timeEntriesTabRef?.openStartTimerDialog()"
+            v-if="task && !activeTimerEntry"
+            @click="openStartTimerDialog"
           >
             <q-item-section avatar><q-icon name="timer" /></q-item-section>
             <q-item-section>{{ $t('tasks.detail.action.startTimer') }}</q-item-section>
@@ -292,8 +450,8 @@
             clickable
             v-ripple
             class="q-pa-md"
-            v-if="timeEntriesTabRef?.activeTimerBelongsToCurrentTask"
-            @click="timeEntriesTabRef?.stopActiveTimerForCurrentTask()"
+            v-if="activeTimerBelongsToCurrentTask"
+            @click="stopActiveTimerForCurrentTask"
           >
             <q-item-section avatar><q-icon name="stop_circle" /></q-item-section>
             <q-item-section>{{ t('tasks.detail.action.stopTimer') }}</q-item-section>
@@ -386,11 +544,13 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
+import DurationInput from 'src/components/DurationInput.vue';
 import TaskAttachmentsTab from 'src/components/TaskAttachmentsTab.vue';
 import TaskTimeEntriesTab from 'src/components/TaskTimeEntriesTab.vue';
 import { useUI } from 'src/composables/useUI';
 import { useCopyClipboard } from 'src/composables/useCopyClipboard';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
+import { useTimeEntryDialog } from 'src/composables/useTimeEntryDialog';
 import { TasksService } from 'src/services/tasks';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
@@ -409,7 +569,37 @@ const { isCopied: idCopied, copyToClipboard } = useCopyClipboard();
 const task = ref<TaskDetailDto | null>(null);
 const currentTaskId = () => String(route.params.id || '');
 const detailsTab = ref<'description' | 'attachments' | 'time_entries' | 'subtasks'>('description');
-const timeEntriesTabRef = ref<InstanceType<typeof TaskTimeEntriesTab> | null>(null);
+const timeEntriesTabRef = ref<{ fetchTimeEntries: () => Promise<void> } | null>(null);
+
+const {
+  isTimeEntryDialogOpen,
+  isSavingTimeEntry,
+  timeEntryDialogMode,
+  timeEntryForm,
+  dateInputMask,
+  qDateMask,
+  activityOptions,
+  isActivitiesLoading,
+  activeTimerEntry,
+  activeTimerBelongsToCurrentTask,
+  timeEntryDialogTitle,
+  timeEntryDialogSubmitLabel,
+  canSubmitTimeEntry,
+  openManualTimeEntryDialog,
+  openStartTimerDialog,
+  openEditDialog,
+  openViewDialog,
+  saveTimeEntry,
+  stopActiveTimerForCurrentTask,
+  fetchActiveTimer,
+  onActivitySearch,
+  closeTimeEntryDialog,
+} = useTimeEntryDialog({
+  getTask: () => task.value,
+  onSaved: async () => {
+    await timeEntriesTabRef.value?.fetchTimeEntries();
+  },
+});
 
 const subtasks = ref<TaskSummaryDto[]>([]);
 const hasSubtasks = computed(() => subtasks.value.length > 0);
@@ -462,6 +652,7 @@ const loadTask = async (id: string) => {
     if (detailsTab.value === 'subtasks' && subtasks.value.length === 0) {
       detailsTab.value = 'description';
     }
+    await fetchActiveTimer();
   } catch (err) {
     notifyError(t('tasks.detail.loadError'), err);
     router.push('/tasks');
