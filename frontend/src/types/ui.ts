@@ -13,6 +13,8 @@ export interface AppNotification {
   eventType?: string;
   entityType?: string;
   entityId?: string;
+  summaryType?: 'unread_notifications';
   backendId?: string;
+  unreadCount?: number;
   payload?: unknown;
 }

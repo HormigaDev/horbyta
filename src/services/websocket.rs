@@ -5,7 +5,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use futures::SinkExt;
 use jsonwebtoken::{DecodingKey, Validation, decode};
-use sea_orm::QuerySelect;
+use sea_orm::{PaginatorTrait, QuerySelect};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
 use serde::Deserialize;
 use serde_json::json;
@@ -21,6 +21,9 @@ use crate::{
     services::notifications::{NotificationEvent, NotificationService},
     state::AppState,
 };
+
+const UNREAD_NOTIFICATION_BATCH_LIMIT: u64 = 20;
+const UNREAD_NOTIFICATION_SUMMARY_THRESHOLD: u64 = 20;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -66,18 +69,49 @@ impl WebSocketService {
         user_id: Uuid,
         sender: &mut futures::stream::SplitSink<WebSocket, Message>,
     ) -> Result<(), AppError> {
-        let unread_notifications = Notifications::find()
+        let unread_count = Notifications::find()
             .filter(notifications::Column::UserId.eq(user_id))
             .filter(notifications::Column::IsRead.eq(false))
+            .count(self.state.db.as_ref())
+            .await
+            .map_err(AppError::Database)?;
+
+        let pending_count = Notifications::find()
+            .filter(notifications::Column::UserId.eq(user_id))
+            .filter(notifications::Column::IsRead.eq(false))
+            .filter(notifications::Column::ReceivedAt.is_null())
+            .count(self.state.db.as_ref())
+            .await
+            .map_err(AppError::Database)?;
+
+        if pending_count > UNREAD_NOTIFICATION_SUMMARY_THRESHOLD {
+            self.send_notification_summary_event(sender, unread_count).await?;
+            NotificationService::mark_unread_as_received(self.state.db.as_ref(), user_id).await?;
+            self.send_unread_count_event(sender, unread_count).await?;
+            return Ok(());
+        }
+
+        let pending_notifications = Notifications::find()
+            .filter(notifications::Column::UserId.eq(user_id))
+            .filter(notifications::Column::IsRead.eq(false))
+            .filter(notifications::Column::ReceivedAt.is_null())
             .order_by_asc(notifications::Column::CreatedAt)
-            .limit(20)
+            .limit(UNREAD_NOTIFICATION_BATCH_LIMIT)
             .all(self.state.db.as_ref())
             .await
             .map_err(AppError::Database)?;
 
-        for notification in unread_notifications {
+        let received_ids = pending_notifications
+            .iter()
+            .map(|notification| notification.id)
+            .collect::<Vec<_>>();
+
+        for notification in &pending_notifications {
             self.send_notification_event(sender, &notification).await?;
         }
+
+        NotificationService::mark_as_received(self.state.db.as_ref(), user_id, received_ids).await?;
+        self.send_unread_count_event(sender, unread_count).await?;
 
         Ok(())
     }
@@ -161,6 +195,53 @@ impl WebSocketService {
                 "createdAt": notification.created_at
             })),
             id: Some(notification.id.to_string()),
+        };
+
+        self.send_ws_message(sender, &event).await
+    }
+
+    pub async fn send_notification_event_and_mark_received(
+        &self,
+        sender: &mut futures::stream::SplitSink<WebSocket, Message>,
+        notification: &notifications::Model,
+    ) -> Result<(), AppError> {
+        self.send_notification_event(sender, notification).await?;
+        NotificationService::mark_as_received(
+            self.state.db.as_ref(),
+            notification.user_id,
+            vec![notification.id],
+        )
+        .await
+    }
+
+    async fn send_notification_summary_event(
+        &self,
+        sender: &mut futures::stream::SplitSink<WebSocket, Message>,
+        unread_count: u64,
+    ) -> Result<(), AppError> {
+        let event = WsMessage {
+            msg_type: "notification".to_string(),
+            data: Some(json!({
+                "type": "info",
+                "source": "async",
+                "summaryType": "unread_notifications",
+                "unreadCount": unread_count
+            })),
+            id: None,
+        };
+
+        self.send_ws_message(sender, &event).await
+    }
+
+    async fn send_unread_count_event(
+        &self,
+        sender: &mut futures::stream::SplitSink<WebSocket, Message>,
+        unread_count: u64,
+    ) -> Result<(), AppError> {
+        let event = WsMessage {
+            msg_type: "notification.unread_count".to_string(),
+            data: Some(json!({ "count": unread_count })),
+            id: None,
         };
 
         self.send_ws_message(sender, &event).await

@@ -22,6 +22,7 @@ pub struct Model {
     pub entity_id: Option<Uuid>,
     pub is_read: bool,
     pub read_at: Option<DateTimeWithTimeZone>,
+    pub received_at: Option<DateTimeWithTimeZone>,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
 }

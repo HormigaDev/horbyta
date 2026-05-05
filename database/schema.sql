@@ -410,6 +410,7 @@ create table notifications (
     entity_id uuid,
     is_read boolean not null default false,
     read_at timestamptz,
+    received_at timestamptz,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
 
@@ -499,6 +500,7 @@ create index idx_conversation_history_user_created_at on conversation_history(us
 create index idx_conversation_history_user_updated_at on conversation_history(user_id, updated_at desc);
 create index idx_user_ui_state_user_scope on user_ui_state(user_id, scope);
 create index idx_notifications_user_read_created on notifications(user_id, is_read, created_at desc);
+create index idx_notifications_user_received_created on notifications(user_id, received_at, created_at desc);
 create index idx_notifications_user_preference on notifications(user_id, preference_key);
 create index idx_notifications_user_entity on notifications(user_id, entity_type, entity_id);
 create index idx_notifications_created_at on notifications(created_at desc);

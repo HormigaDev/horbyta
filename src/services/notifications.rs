@@ -58,6 +58,7 @@ impl NotificationService {
             entity_id: Set(input.entity_id),
             is_read: Set(false),
             read_at: Set(None),
+            received_at: Set(None),
             ..Default::default()
         }
         .insert(state.db.as_ref())
@@ -73,9 +74,12 @@ impl NotificationService {
     }
 
     pub async fn mark_as_read(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
+        let now = Utc::now().fixed_offset();
+
         Notifications::update_many()
             .col_expr(notifications::Column::IsRead, Expr::value(true))
-            .col_expr(notifications::Column::ReadAt, Expr::value(Utc::now().fixed_offset()))
+            .col_expr(notifications::Column::ReadAt, Expr::value(now))
+            .col_expr(notifications::Column::ReceivedAt, Expr::value(now))
             .filter(notifications::Column::UserId.eq(user_id))
             .filter(notifications::Column::Id.eq(id))
             .exec(db)
@@ -86,11 +90,50 @@ impl NotificationService {
     }
 
     pub async fn mark_all_as_read(db: &impl ConnectionTrait, user_id: Uuid) -> Result<(), AppError> {
+        let now = Utc::now().fixed_offset();
+
         Notifications::update_many()
             .col_expr(notifications::Column::IsRead, Expr::value(true))
-            .col_expr(notifications::Column::ReadAt, Expr::value(Utc::now().fixed_offset()))
+            .col_expr(notifications::Column::ReadAt, Expr::value(now))
+            .col_expr(notifications::Column::ReceivedAt, Expr::value(now))
             .filter(notifications::Column::UserId.eq(user_id))
             .filter(notifications::Column::IsRead.eq(false))
+            .exec(db)
+            .await
+            .map_err(AppError::Database)?;
+
+        Ok(())
+    }
+
+    pub async fn mark_as_received(db: &impl ConnectionTrait, user_id: Uuid, ids: Vec<Uuid>) -> Result<(), AppError> {
+        if ids.is_empty() {
+            return Ok(());
+        }
+
+        Notifications::update_many()
+            .col_expr(
+                notifications::Column::ReceivedAt,
+                Expr::value(Utc::now().fixed_offset()),
+            )
+            .filter(notifications::Column::UserId.eq(user_id))
+            .filter(notifications::Column::Id.is_in(ids))
+            .filter(notifications::Column::ReceivedAt.is_null())
+            .exec(db)
+            .await
+            .map_err(AppError::Database)?;
+
+        Ok(())
+    }
+
+    pub async fn mark_unread_as_received(db: &impl ConnectionTrait, user_id: Uuid) -> Result<(), AppError> {
+        Notifications::update_many()
+            .col_expr(
+                notifications::Column::ReceivedAt,
+                Expr::value(Utc::now().fixed_offset()),
+            )
+            .filter(notifications::Column::UserId.eq(user_id))
+            .filter(notifications::Column::IsRead.eq(false))
+            .filter(notifications::Column::ReceivedAt.is_null())
             .exec(db)
             .await
             .map_err(AppError::Database)?;

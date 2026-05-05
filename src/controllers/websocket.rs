@@ -102,7 +102,7 @@ async fn handle_socket(
                 bus_event = notification_rx.recv() => {
                     match bus_event {
                         Ok(event) if event.user_id == user_id => {
-                            if let Err(error) = service.send_notification_event(&mut sender, &event.notification).await {
+                            if let Err(error) = service.send_notification_event_and_mark_received(&mut sender, &event.notification).await {
                                 tracing::error!("Failed to send notification event: {}", error);
                                 break;
                             }

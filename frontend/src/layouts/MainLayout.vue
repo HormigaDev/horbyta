@@ -577,7 +577,8 @@ websocket.on('notification', (data: unknown) => {
     return;
   }
 
-  const notification = notificationsStore.addAsyncNotificationFromEvent(data);
+  const event = localizeAsyncNotificationEvent(data);
+  const notification = notificationsStore.addAsyncNotificationFromEvent(event);
   const notifyOptions: QNotifyCreateOptions = {
     message: notification.title || notification.message,
     type: notification.type,
@@ -591,6 +592,14 @@ websocket.on('notification', (data: unknown) => {
   }
 
   $q.notify(notifyOptions);
+});
+
+websocket.on('notification.unread_count', (data: unknown) => {
+  if (!isUnreadCountEvent(data)) {
+    return;
+  }
+
+  notificationsStore.setAsyncUnreadCount(data.count);
 });
 
 async function logout() {
@@ -681,12 +690,16 @@ function openSelectedNotificationPayload() {
 }
 
 function markNotificationAsRead(notif: AppNotification) {
-  notificationsStore.markAsRead(notif.id);
-
   if (!notif.backendId) {
+    if (notif.unreadCount && notif.unreadCount > 1) {
+      return;
+    }
+
+    notificationsStore.markAsRead(notif.id);
     return;
   }
 
+  notificationsStore.markAsRead(notif.id);
   sendWebSocketMessage({
     type: 'notification.read',
     data: { id: notif.backendId },
@@ -711,6 +724,25 @@ function sendWebSocketMessage(message: { type: string; data?: Record<string, unk
   }
 }
 
+function localizeAsyncNotificationEvent(event: AsyncNotificationEvent): AsyncNotificationEvent {
+  if (event.summaryType !== 'unread_notifications') {
+    return {
+      ...event,
+      title: event.title ?? event.message ?? t('layout.notifications.fallbackTitle'),
+      message: event.message ?? event.title ?? t('layout.notifications.fallbackTitle'),
+    };
+  }
+
+  const count = event.unreadCount ?? 0;
+
+  return {
+    ...event,
+    title: t('layout.notifications.unreadSummaryTitle'),
+    message: t('layout.notifications.unreadSummaryMessage', { count }),
+    body: t('layout.notifications.unreadSummaryBody', { count }),
+  };
+}
+
 function isAsyncNotificationEvent(data: unknown): data is AsyncNotificationEvent {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     return false;
@@ -721,8 +753,19 @@ function isAsyncNotificationEvent(data: unknown): data is AsyncNotificationEvent
     (candidate.id === undefined || typeof candidate.id === 'string') &&
     (candidate.message === undefined || typeof candidate.message === 'string') &&
     (candidate.title === undefined || typeof candidate.title === 'string') &&
-    (candidate.body === undefined || candidate.body === null || typeof candidate.body === 'string')
+    (candidate.body === undefined || candidate.body === null || typeof candidate.body === 'string') &&
+    (candidate.summaryType === undefined || candidate.summaryType === 'unread_notifications') &&
+    (candidate.unreadCount === undefined || typeof candidate.unreadCount === 'number')
   );
+}
+
+function isUnreadCountEvent(data: unknown): data is { count: number } {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return false;
+  }
+
+  const count = (data as Record<string, unknown>).count;
+  return typeof count === 'number' && Number.isFinite(count);
 }
 
 function getPayloadRoute(payload: unknown): string | null {

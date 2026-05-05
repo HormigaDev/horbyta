@@ -968,6 +968,7 @@ export const messages: Record<keyof typeof es, string> = {
   'layout.header.searchPlaceholder': 'Search tasks...',
   'layout.header.notifications': 'Notifications',
   'layout.notifications.subtitle': 'Asynchronous activity and pending notices',
+  'layout.notifications.fallbackTitle': 'New notification',
   'layout.notifications.groupCount': '{count} notifications',
   'layout.notifications.group.changeRequests': 'Change requests',
   'layout.notifications.group.billing': 'Payments and billing',
@@ -976,6 +977,10 @@ export const messages: Record<keyof typeof es, string> = {
   'layout.notifications.group.negative': 'Errors',
   'layout.notifications.group.warning': 'Warnings',
   'layout.notifications.group.info': 'Information',
+  'layout.notifications.unreadSummaryTitle': 'Unread notifications',
+  'layout.notifications.unreadSummaryMessage': 'You have {count} unread notifications',
+  'layout.notifications.unreadSummaryBody':
+    'You have {count} unread notifications waiting in the notification center.',
   'layout.header.markAllRead': 'Mark as read',
   'layout.header.noNotifications': 'No notifications',
   'layout.header.clearAll': 'Clear all',

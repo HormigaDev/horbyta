@@ -1014,6 +1014,7 @@ export const messages = {
   'layout.header.searchPlaceholder': 'Buscar tareas...',
   'layout.header.notifications': 'Notificaciones',
   'layout.notifications.subtitle': 'Actividad asíncrona y avisos pendientes',
+  'layout.notifications.fallbackTitle': 'Nueva notificación',
   'layout.notifications.groupCount': '{count} notificaciones',
   'layout.notifications.group.changeRequests': 'Solicitudes de cambio',
   'layout.notifications.group.billing': 'Pagos y facturación',
@@ -1022,6 +1023,10 @@ export const messages = {
   'layout.notifications.group.negative': 'Errores',
   'layout.notifications.group.warning': 'Advertencias',
   'layout.notifications.group.info': 'Información',
+  'layout.notifications.unreadSummaryTitle': 'Notificaciones sin leer',
+  'layout.notifications.unreadSummaryMessage': 'Tienes {count} notificaciones sin leer',
+  'layout.notifications.unreadSummaryBody':
+    'Tienes {count} notificaciones sin leer en el centro de notificaciones.',
   'layout.header.markAllRead': 'Marcar leídas',
   'layout.header.noNotifications': 'No hay notificaciones',
   'layout.header.clearAll': 'Borrar todas',

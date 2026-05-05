@@ -14,15 +14,23 @@ export interface AsyncNotificationEvent {
   eventType?: string;
   entityType?: string | null;
   entityId?: string | null;
+  summaryType?: 'unread_notifications';
+  unreadCount?: number;
 }
 
 export const useNotificationsStore = defineStore('notifications', {
   state: () => ({
     notifications: [] as AppNotification[],
+    persistedAsyncUnreadCount: null as number | null,
   }),
   getters: {
-    asyncUnreadCount: (state) =>
-      state.notifications.filter((n) => !n.read && n.source === 'async').length,
+    asyncUnreadCount: (state) => {
+      const localUnreadCount = state.notifications
+        .filter((n) => !n.read && n.source === 'async')
+        .reduce((total, notification) => total + (notification.unreadCount ?? 1), 0);
+
+      return state.persistedAsyncUnreadCount ?? localUnreadCount;
+    },
     asyncNotifications: (state) => state.notifications.filter((n) => n.source === 'async'),
     allUnreadNotifications: (state) => state.notifications.filter((n) => !n.read),
     allNotifications: (state) => state.notifications,
@@ -79,25 +87,42 @@ export const useNotificationsStore = defineStore('notifications', {
         createdAt,
         payload: event.payload,
       };
+      if (typeof event.unreadCount === 'number' && Number.isFinite(event.unreadCount)) {
+        newNotification.unreadCount = Math.max(0, Math.floor(event.unreadCount));
+      }
       event.preferenceKey && (newNotification.preferenceKey = event.preferenceKey);
       event.eventType && (newNotification.eventType = event.eventType);
       event.entityType && (newNotification.entityType = event.entityType);
       event.entityId && (newNotification.entityId = event.entityId);
+      event.summaryType && (newNotification.summaryType = event.summaryType);
       backendId && (newNotification.backendId = backendId);
 
       this.notifications.unshift(newNotification);
+      if (this.persistedAsyncUnreadCount !== null) {
+        this.persistedAsyncUnreadCount += newNotification.unreadCount ?? 1;
+      }
       return newNotification;
     },
     markAsRead(id: string) {
       const target = this.notifications.find((n) => n.id === id);
       if (target) {
         target.read = true;
+        if (target.source === 'async' && this.persistedAsyncUnreadCount !== null) {
+          this.persistedAsyncUnreadCount = Math.max(
+            0,
+            this.persistedAsyncUnreadCount - (target.unreadCount ?? 1),
+          );
+        }
       }
     },
     markAllAsRead() {
       this.notifications.forEach((n) => {
         n.read = true;
       });
+      this.persistedAsyncUnreadCount = 0;
+    },
+    setAsyncUnreadCount(count: number) {
+      this.persistedAsyncUnreadCount = Math.max(0, Math.floor(count));
     },
     clearAll() {
       this.notifications = [];
