@@ -991,6 +991,35 @@ export const messages: Record<keyof typeof es, string> = {
   'layout.notifications.unreadSummaryMessage': 'Você tem {count} notificações não lidas',
   'layout.notifications.unreadSummaryBody':
     'Você tem {count} notificações não lidas no centro de notificações.',
+  'notifications.clientPortal.changeRequestCreated.title':
+    'Solicitação de mudança #{recordNumber} criada',
+  'notifications.clientPortal.changeRequestCreated.body': 'O cliente criou a solicitação: {title}',
+  'notifications.clientPortal.changeRequestUpdated.title':
+    'Solicitação de mudança #{recordNumber} atualizada',
+  'notifications.clientPortal.changeRequestUpdated.body':
+    'O cliente atualizou a solicitação: {title}',
+  'notifications.clientPortal.changeRequestApproved.title':
+    'Solicitação de mudança #{recordNumber} aprovada',
+  'notifications.clientPortal.changeRequestApproved.body':
+    'O cliente aprovou a solicitação: {title}',
+  'notifications.clientPortal.changeRequestDeclined.title':
+    'Solicitação de mudança #{recordNumber} recusada',
+  'notifications.clientPortal.changeRequestDeclined.body':
+    'O cliente recusou a solicitação: {title}',
+  'notifications.clientPortal.changeRequestCancelled.title':
+    'Solicitação de mudança #{recordNumber} cancelada',
+  'notifications.clientPortal.changeRequestCancelled.body':
+    'O cliente cancelou a solicitação: {title}',
+  'notifications.billing.invoiceOpened.title': 'Fatura #{recordNumber} emitida',
+  'notifications.billing.invoiceOpened.body':
+    'A fatura de {amount} {currency} foi marcada como aberta.',
+  'notifications.billing.invoicePaid.title': 'Fatura #{recordNumber} paga',
+  'notifications.billing.invoicePaid.body':
+    'A fatura de {amount} {currency} foi marcada como paga.',
+  'notifications.billing.paymentReceived.title': 'Pagamento #{recordNumber} registrado',
+  'notifications.billing.paymentReceived.body': 'Um pagamento de {amount} {currency} foi registrado.',
+  'notifications.work.milestoneReleased.title': 'Marco liberado',
+  'notifications.work.milestoneReleased.body': 'O marco "{name}" foi marcado como liberado.',
   'layout.header.markAllRead': 'Marcar como lidas',
   'layout.header.noNotifications': 'Não há notificações',
   'layout.header.clearAll': 'Limpar todas',

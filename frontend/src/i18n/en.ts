@@ -981,6 +981,29 @@ export const messages: Record<keyof typeof es, string> = {
   'layout.notifications.unreadSummaryMessage': 'You have {count} unread notifications',
   'layout.notifications.unreadSummaryBody':
     'You have {count} unread notifications waiting in the notification center.',
+  'notifications.clientPortal.changeRequestCreated.title': 'Change request #{recordNumber} created',
+  'notifications.clientPortal.changeRequestCreated.body': 'The client created request: {title}',
+  'notifications.clientPortal.changeRequestUpdated.title': 'Change request #{recordNumber} updated',
+  'notifications.clientPortal.changeRequestUpdated.body': 'The client updated request: {title}',
+  'notifications.clientPortal.changeRequestApproved.title':
+    'Change request #{recordNumber} approved',
+  'notifications.clientPortal.changeRequestApproved.body': 'The client approved request: {title}',
+  'notifications.clientPortal.changeRequestDeclined.title':
+    'Change request #{recordNumber} declined',
+  'notifications.clientPortal.changeRequestDeclined.body': 'The client declined request: {title}',
+  'notifications.clientPortal.changeRequestCancelled.title':
+    'Change request #{recordNumber} cancelled',
+  'notifications.clientPortal.changeRequestCancelled.body': 'The client cancelled request: {title}',
+  'notifications.billing.invoiceOpened.title': 'Invoice #{recordNumber} issued',
+  'notifications.billing.invoiceOpened.body':
+    'The invoice for {amount} {currency} was marked as open.',
+  'notifications.billing.invoicePaid.title': 'Invoice #{recordNumber} paid',
+  'notifications.billing.invoicePaid.body':
+    'The invoice for {amount} {currency} was marked as paid.',
+  'notifications.billing.paymentReceived.title': 'Payment #{recordNumber} recorded',
+  'notifications.billing.paymentReceived.body': 'A payment of {amount} {currency} was recorded.',
+  'notifications.work.milestoneReleased.title': 'Milestone released',
+  'notifications.work.milestoneReleased.body': 'Milestone "{name}" was marked as released.',
   'layout.header.markAllRead': 'Mark as read',
   'layout.header.noNotifications': 'No notifications',
   'layout.header.clearAll': 'Clear all',

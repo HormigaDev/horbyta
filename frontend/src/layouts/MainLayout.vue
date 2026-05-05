@@ -729,6 +729,23 @@ function sendWebSocketMessage(message: { type: string; data?: Record<string, unk
 
 function localizeAsyncNotificationEvent(event: AsyncNotificationEvent): AsyncNotificationEvent {
   if (event.summaryType !== 'unread_notifications') {
+    const translation = getNotificationTranslation(event.payload);
+    if (translation) {
+      const translatedEvent: AsyncNotificationEvent = {
+        ...event,
+        title: t(translation.titleKey, translation.params),
+        message: t(translation.titleKey, translation.params),
+      };
+
+      if (translation.bodyKey) {
+        translatedEvent.body = t(translation.bodyKey, translation.params);
+      } else if (event.body !== undefined) {
+        translatedEvent.body = event.body;
+      }
+
+      return translatedEvent;
+    }
+
     return {
       ...event,
       title: event.title ?? event.message ?? t('layout.notifications.fallbackTitle'),
@@ -744,6 +761,42 @@ function localizeAsyncNotificationEvent(event: AsyncNotificationEvent): AsyncNot
     message: t('layout.notifications.unreadSummaryMessage', { count }),
     body: t('layout.notifications.unreadSummaryBody', { count }),
   };
+}
+
+function getNotificationTranslation(
+  payload: unknown,
+): { titleKey: string; bodyKey?: string; params: Record<string, unknown> } | null {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return null;
+  }
+
+  const translation = (payload as Record<string, unknown>).translation;
+  if (!translation || typeof translation !== 'object' || Array.isArray(translation)) {
+    return null;
+  }
+
+  const translationRecord = translation as Record<string, unknown>;
+  const titleKey = translationRecord.titleKey;
+  const bodyKey = translationRecord.bodyKey;
+  const params = translationRecord.params;
+
+  if (typeof titleKey !== 'string' || titleKey.trim().length === 0) {
+    return null;
+  }
+
+  const result: { titleKey: string; bodyKey?: string; params: Record<string, unknown> } = {
+    titleKey,
+    params:
+      params && typeof params === 'object' && !Array.isArray(params)
+        ? (params as Record<string, unknown>)
+        : {},
+  };
+
+  if (typeof bodyKey === 'string' && bodyKey.trim().length > 0) {
+    result.bodyKey = bodyKey;
+  }
+
+  return result;
 }
 
 function isAsyncNotificationEvent(data: unknown): data is AsyncNotificationEvent {

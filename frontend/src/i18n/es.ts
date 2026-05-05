@@ -1027,6 +1027,35 @@ export const messages = {
   'layout.notifications.unreadSummaryMessage': 'Tienes {count} notificaciones sin leer',
   'layout.notifications.unreadSummaryBody':
     'Tienes {count} notificaciones sin leer en el centro de notificaciones.',
+  'notifications.clientPortal.changeRequestCreated.title':
+    'Solicitud de cambio #{recordNumber} creada',
+  'notifications.clientPortal.changeRequestCreated.body': 'El cliente creó la solicitud: {title}',
+  'notifications.clientPortal.changeRequestUpdated.title':
+    'Solicitud de cambio #{recordNumber} actualizada',
+  'notifications.clientPortal.changeRequestUpdated.body':
+    'El cliente actualizó la solicitud: {title}',
+  'notifications.clientPortal.changeRequestApproved.title':
+    'Solicitud de cambio #{recordNumber} aprobada',
+  'notifications.clientPortal.changeRequestApproved.body':
+    'El cliente aprobó la solicitud: {title}',
+  'notifications.clientPortal.changeRequestDeclined.title':
+    'Solicitud de cambio #{recordNumber} rechazada',
+  'notifications.clientPortal.changeRequestDeclined.body':
+    'El cliente rechazó la solicitud: {title}',
+  'notifications.clientPortal.changeRequestCancelled.title':
+    'Solicitud de cambio #{recordNumber} cancelada',
+  'notifications.clientPortal.changeRequestCancelled.body':
+    'El cliente canceló la solicitud: {title}',
+  'notifications.billing.invoiceOpened.title': 'Factura #{recordNumber} emitida',
+  'notifications.billing.invoiceOpened.body':
+    'La factura por {amount} {currency} fue marcada como abierta.',
+  'notifications.billing.invoicePaid.title': 'Factura #{recordNumber} pagada',
+  'notifications.billing.invoicePaid.body':
+    'La factura por {amount} {currency} fue marcada como pagada.',
+  'notifications.billing.paymentReceived.title': 'Pago #{recordNumber} registrado',
+  'notifications.billing.paymentReceived.body': 'Se registró un pago de {amount} {currency}.',
+  'notifications.work.milestoneReleased.title': 'Hito liberado',
+  'notifications.work.milestoneReleased.body': 'El hito "{name}" fue marcado como liberado.',
   'layout.header.markAllRead': 'Marcar leídas',
   'layout.header.noNotifications': 'No hay notificaciones',
   'layout.header.clearAll': 'Borrar todas',
