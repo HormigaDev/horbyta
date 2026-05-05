@@ -7,6 +7,7 @@ use axum::{
 };
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use chrono::Utc;
+use cookie::time::{Duration as CookieDuration, OffsetDateTime};
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, Set};
 use serde_json::json;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -89,7 +90,12 @@ pub(crate) async fn login(
     };
 
     let token = crate::utils::crypto::generate_jwt(&claims, &state.config.jwt_secret)?;
-    let cookie = build_auth_cookie(USER_AUTH_COOKIE_NAME, token, state.config.is_production);
+    let cookie = build_auth_cookie(
+        USER_AUTH_COOKIE_NAME,
+        token,
+        state.config.is_production,
+        state.config.time_to_exp,
+    )?;
 
     let mut headers = HeaderMap::new();
     headers.insert(SET_COOKIE, cookie.to_string().parse()?);
@@ -257,7 +263,12 @@ pub(crate) async fn register(
     };
 
     let token = generate_jwt(&claims, &state.config.jwt_secret)?;
-    let cookie = build_auth_cookie(USER_AUTH_COOKIE_NAME, token, state.config.is_production);
+    let cookie = build_auth_cookie(
+        USER_AUTH_COOKIE_NAME,
+        token,
+        state.config.is_production,
+        state.config.time_to_exp,
+    )?;
 
     let mut headers = HeaderMap::new();
     headers.insert(SET_COOKIE, cookie.to_string().parse()?);
@@ -283,11 +294,8 @@ pub(crate) async fn register(
         (status = 401, description = "Unauthorized")
     )
 )]
-pub(crate) async fn logout(_user: UserDto) -> Result<impl IntoResponse, AppError> {
-    let cookie = Cookie::build((USER_AUTH_COOKIE_NAME, ""))
-        .path("/")
-        .http_only(true)
-        .build();
+pub(crate) async fn logout(State(state): State<AppState>, _user: UserDto) -> Result<impl IntoResponse, AppError> {
+    let cookie = build_clear_auth_cookie(USER_AUTH_COOKIE_NAME, state.config.is_production);
 
     let mut headers = HeaderMap::new();
     headers.insert(SET_COOKIE, cookie.to_string().parse()?);
@@ -308,11 +316,11 @@ pub(crate) async fn logout(_user: UserDto) -> Result<impl IntoResponse, AppError
         (status = 401, description = "Unauthorized")
     )
 )]
-pub(crate) async fn logout_client(_client: ClientAuthDto) -> Result<impl IntoResponse, AppError> {
-    let cookie = Cookie::build((CLIENT_AUTH_COOKIE_NAME, ""))
-        .path("/")
-        .http_only(true)
-        .build();
+pub(crate) async fn logout_client(
+    State(state): State<AppState>,
+    _client: ClientAuthDto,
+) -> Result<impl IntoResponse, AppError> {
+    let cookie = build_clear_auth_cookie(CLIENT_AUTH_COOKIE_NAME, state.config.is_production);
 
     let mut headers = HeaderMap::new();
     headers.insert(SET_COOKIE, cookie.to_string().parse()?);
@@ -329,13 +337,40 @@ fn get_expiration_time(time_to_exp: Duration) -> Result<usize, AppError> {
     Ok(time_now.as_secs() as usize + time_to_exp.as_secs() as usize)
 }
 
-fn build_auth_cookie<'a>(name: &'a str, token: String, is_production: bool) -> Cookie<'a> {
-    Cookie::build((name, token))
+fn build_auth_cookie<'a>(
+    name: &'a str,
+    token: String,
+    is_production: bool,
+    time_to_exp: Duration,
+) -> Result<Cookie<'a>, AppError> {
+    let duration = cookie_duration(time_to_exp)?;
+
+    Ok(Cookie::build((name, token))
         .path("/")
         .http_only(true)
         .secure(is_production)
         .same_site(SameSite::Strict)
+        .max_age(duration)
+        .expires(OffsetDateTime::now_utc() + duration)
+        .build())
+}
+
+fn build_clear_auth_cookie<'a>(name: &'a str, is_production: bool) -> Cookie<'a> {
+    Cookie::build((name, ""))
+        .path("/")
+        .http_only(true)
+        .secure(is_production)
+        .same_site(SameSite::Strict)
+        .max_age(CookieDuration::ZERO)
+        .expires(OffsetDateTime::UNIX_EPOCH)
         .build()
+}
+
+fn cookie_duration(time_to_exp: Duration) -> Result<CookieDuration, AppError> {
+    let seconds = i64::try_from(time_to_exp.as_secs())
+        .map_err(|_| AppError::Internal("session duration is too large".to_string()))?;
+
+    Ok(CookieDuration::seconds(seconds))
 }
 
 #[utoipa::path(
@@ -374,7 +409,12 @@ pub(crate) async fn handle_client_login_success(
 
     let token = generate_jwt(&claims, &state.config.jwt_secret_client)?;
 
-    let cookie = build_auth_cookie(CLIENT_AUTH_COOKIE_NAME, token, state.config.is_production);
+    let cookie = build_auth_cookie(
+        CLIENT_AUTH_COOKIE_NAME,
+        token,
+        state.config.is_production,
+        state.config.time_to_exp,
+    )?;
 
     let mut headers = HeaderMap::new();
     headers.insert(SET_COOKIE, cookie.to_string().parse()?);
@@ -417,5 +457,39 @@ fn record_two_factor_failure<T>(state: &AppState, key: &str, result: &Result<T, 
         ))
     ) {
         record_key_rate_limit_failure(&state.rate_limit_totp_failures, key.to_string());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn auth_cookie_uses_configured_session_duration() {
+        let cookie = build_auth_cookie(
+            USER_AUTH_COOKIE_NAME,
+            "token".to_string(),
+            false,
+            Duration::from_secs(7 * 24 * 60 * 60),
+        )
+        .expect("cookie should build");
+
+        assert_eq!(cookie.max_age(), Some(CookieDuration::days(7)));
+        assert!(cookie.expires().is_some());
+        assert!(cookie.http_only().unwrap_or(false));
+        assert_eq!(cookie.path(), Some("/"));
+    }
+
+    #[test]
+    fn clear_cookie_expires_immediately() {
+        let cookie = build_clear_auth_cookie(USER_AUTH_COOKIE_NAME, false);
+
+        assert_eq!(cookie.max_age(), Some(CookieDuration::ZERO));
+        assert_eq!(
+            cookie.expires(),
+            Some(cookie::Expiration::DateTime(OffsetDateTime::UNIX_EPOCH))
+        );
+        assert!(cookie.http_only().unwrap_or(false));
+        assert_eq!(cookie.path(), Some("/"));
     }
 }
