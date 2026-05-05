@@ -213,7 +213,7 @@ const routes: RouteRecordRaw[] = [
   },
 
   {
-    path: '/client/login',
+    path: '/client/u/:userId/login',
     name: 'client-login',
     component: () => import('pages/Client/LoginPage.vue'),
     meta: { requiresClientAuth: false },

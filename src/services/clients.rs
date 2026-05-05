@@ -224,6 +224,20 @@ impl ClientService {
         dto: SaveClientCredentialsDto,
     ) -> Result<(), AppError> {
         Self::get_by_id(db, user_id, client_id).await?;
+        let normalized_email = dto.email.trim().to_lowercase();
+
+        let email_taken = ClientAuth::find()
+            .filter(client_auth::Column::UserId.eq(user_id))
+            .filter(client_auth::Column::Email.eq(normalized_email.clone()))
+            .filter(client_auth::Column::ClientId.ne(client_id))
+            .one(db)
+            .await
+            .map_err(AppError::Database)?
+            .is_some();
+
+        if email_taken {
+            return Err(AppError::Conflict("client auth email is already in use".to_string()));
+        }
 
         let mut is_insertion: bool = false;
         let mut client_auth: client_auth::ActiveModel = match Self::get_client_auth(db, user_id, client_id).await {
@@ -243,7 +257,7 @@ impl ClientService {
 
         let client_password_hash = hash_password(dto.password)?;
 
-        client_auth.email = Set(Some(dto.email));
+        client_auth.email = Set(Some(normalized_email));
         client_auth.password_hash = Set(Some(client_password_hash));
         client_auth.magic_link_hash = Set(None);
         client_auth.magic_link_exp = Set(None);

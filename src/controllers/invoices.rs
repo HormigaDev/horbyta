@@ -4,13 +4,15 @@ use axum::{
     response::IntoResponse,
     routing::{get, patch, post},
 };
-use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
     dtos::{
-        invoice::{CreateInvoiceDto, InvoiceStatus, UpdateInvoiceDto, UpdateInvoiceStatusDto, invoice_filter_schema},
+        invoice::{
+            BillableTasksQuery, CreateInvoiceDto, InvoiceStatus, UpdateInvoiceDto, UpdateInvoiceStatusDto,
+            invoice_filter_schema,
+        },
         query::QueryPayload,
         user::UserDto,
         utils::AppResult,
@@ -19,13 +21,6 @@ use crate::{
     services::{invoices::InvoiceService, notifications::NotificationService},
     state::AppState,
 };
-
-#[derive(Debug, Deserialize, utoipa::IntoParams)]
-pub(crate) struct BillableTasksQuery {
-    pub page: Option<u64>,
-    pub per_page: Option<u64>,
-    pub invoice_id: Option<Uuid>,
-}
 
 #[utoipa::path(
     get,

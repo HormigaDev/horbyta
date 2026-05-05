@@ -188,9 +188,10 @@ const drawer = ref(true);
 const appVersion = APP_VERSION;
 
 async function logout() {
+  const portalUserId = clientAuthStore.client?.user_id ?? clientAuthStore.portalUserId;
   await apiFetchClient('/auth/logout-client', { method: 'POST' }).catch(() => null);
   clientAuthStore.clearAuth();
-  void router.push('/client/login');
+  void router.push(portalUserId ? `/client/u/${portalUserId}/login` : '/login');
 }
 </script>
 

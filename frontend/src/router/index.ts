@@ -26,6 +26,11 @@ export default route(function (/* { store, ssrContext } */) {
   Router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore();
     const clientAuthStore = useClientAuthStore();
+    const routePortalUserId = typeof to.params.userId === 'string' ? to.params.userId.trim() : '';
+
+    if (to.name === 'client-login' && routePortalUserId) {
+      clientAuthStore.setPortalUserId(routePortalUserId);
+    }
 
     if (to.meta.requiresClientAuth) {
       if (!clientAuthStore.isInitialized) {
@@ -33,7 +38,8 @@ export default route(function (/* { store, ssrContext } */) {
       }
 
       if (!clientAuthStore.isAuthenticated) {
-        next('/client/login');
+        const portalUserId = clientAuthStore.portalUserId;
+        next(portalUserId ? `/client/u/${portalUserId}/login` : { name: 'login' });
         return;
       }
     }

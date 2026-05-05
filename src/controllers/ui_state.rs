@@ -4,11 +4,13 @@ use axum::{
     response::IntoResponse,
     routing::{delete, get},
 };
-use serde::Deserialize;
 use serde_json::json;
 
 use crate::{
-    dtos::{ui_state::UpsertUiStateDto, user::UserDto},
+    dtos::{
+        ui_state::{ListScopeQuery, UpsertUiStateDto},
+        user::UserDto,
+    },
     error::AppError,
     middlewares::validator::ValidatedJson,
     services::ui_state::UiStateService,
@@ -48,11 +50,6 @@ fn ensure_valid_key(key: &str) -> Result<(), AppError> {
     }
 
     Ok(())
-}
-
-#[derive(Debug, Deserialize, utoipa::IntoParams)]
-pub(crate) struct ListScopeQuery {
-    pub scope: String,
 }
 
 #[utoipa::path(

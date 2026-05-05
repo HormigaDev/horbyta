@@ -17,7 +17,7 @@ use crate::{
     auth::totp_2fa::default_totp_policy,
     constants::{CLIENT_AUTH_COOKIE_NAME, USER_AUTH_COOKIE_NAME},
     dtos::{
-        auth::{ClientMagicTokenLogin, LoginPayload, RegisterPayload},
+        auth::{ClientLoginPayload, ClientMagicTokenLogin, LoginPayload, RegisterPayload},
         client::ClientAuthDto,
         user::UserDto,
     },
@@ -116,7 +116,7 @@ pub(crate) async fn login(
     post,
     path = "/api/v1/auth/login-client",
     tag = "Auth",
-    request_body = LoginPayload,
+    request_body = ClientLoginPayload,
     responses(
         (status = 200, description = "Client authenticated, sets client auth cookie"),
         (status = 401, description = "Invalid credentials"),
@@ -126,22 +126,24 @@ pub(crate) async fn login(
 pub(crate) async fn login_client(
     State(state): State<AppState>,
     headers: HeaderMap,
-    ValidatedJson(payload): ValidatedJson<LoginPayload>,
+    ValidatedJson(payload): ValidatedJson<ClientLoginPayload>,
 ) -> Result<impl IntoResponse, AppError> {
     check_ip_rate_limit(&state.rate_limit_auth, &headers, AUTH_RATE_LIMIT)?;
 
+    let normalized_email = payload.email.trim().to_lowercase();
     let client_model = client_auth::Entity::find()
-        .filter(client_auth::Column::Email.eq(payload.email))
+        .filter(client_auth::Column::UserId.eq(payload.user_id))
+        .filter(client_auth::Column::Email.eq(normalized_email))
         .one(state.db.as_ref())
         .await?
         .ok_or(AppError::Unauthorized("invalid credentials".to_string()))?;
 
-    if let Some(password_hash) = &client_model.password_hash {
-        compare_password(payload.password, password_hash.clone())?;
-        return handle_client_login_success(client_model, &state).await;
-    }
-
-    Err(AppError::Unauthorized("invalid credentials".to_string()))
+    let password_hash = client_model
+        .password_hash
+        .clone()
+        .ok_or(AppError::Unauthorized("invalid credentials".to_string()))?;
+    compare_password(payload.password, password_hash)?;
+    handle_client_login_success(client_model, &state).await
 }
 
 #[utoipa::path(
@@ -165,6 +167,7 @@ pub(crate) async fn login_magic_token(
     let hash = verify_magic_link_token(&payload.magic_token)?;
 
     let client_model = client_auth::Entity::find()
+        .filter(client_auth::Column::UserId.eq(payload.user_id))
         .filter(client_auth::Column::MagicLinkHash.eq(hash))
         .one(state.db.as_ref())
         .await?
@@ -174,6 +177,11 @@ pub(crate) async fn login_magic_token(
         if exp.with_timezone(&Utc) < Utc::now() {
             return Err(AppError::Unauthorized("expired token".to_string()));
         }
+
+        let mut active_client_auth: client_auth::ActiveModel = client_model.clone().into();
+        active_client_auth.magic_link_exp = Set(Some((Utc::now() - chrono::Duration::seconds(1)).fixed_offset()));
+        let client_model = active_client_auth.update(state.db.as_ref()).await?;
+
         return handle_client_login_success(client_model, &state).await;
     }
 
@@ -401,6 +409,10 @@ pub(crate) async fn handle_client_login_success(
         .one(state.db.as_ref())
         .await?
         .ok_or_else(|| AppError::NotFound("client not found".to_string()))?;
+
+    if client_profile.status != "active" {
+        return Err(AppError::Forbidden("client access is not active".to_string()));
+    }
 
     let claims = ClientClaims {
         sub: client_model.id,

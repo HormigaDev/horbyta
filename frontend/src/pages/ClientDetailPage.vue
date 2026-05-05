@@ -309,6 +309,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import { useClientCredentialRules } from 'src/composables/rules/clientCredentials.rules';
+import { useAuthStore } from 'src/stores/auth';
 
 interface GeneratedMagicToken {
   magic_client_token: string;
@@ -320,6 +321,7 @@ const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmAction, confirmDelete, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
+const authStore = useAuthStore();
 const { emailRuleState, passwordRuleState, validateEmail, validatePassword } =
   useClientCredentialRules();
 
@@ -348,9 +350,12 @@ const formatDate = (value: string, fallback = t('common.empty')) =>
     fallback,
   });
 
-const clientFrontendLoginEndpoint = computed(
-  () => `${window.location.origin}${router.resolve({ name: 'client-login' }).href}`,
-);
+const clientFrontendLoginEndpoint = computed(() => {
+  const userId = authStore.user?.id;
+  const href = userId ? router.resolve({ name: 'client-login', params: { userId } }).href : '';
+
+  return `${window.location.origin}${href}`;
+});
 
 const loadClientAuthStatus = async (notifyFailure = true) => {
   try {

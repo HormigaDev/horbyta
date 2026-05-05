@@ -50,6 +50,25 @@ impl FromRequestParts<AppState> for ClientAuthDto {
         let client_id = token_data.claims.sub;
 
         if let Some(client) = state.client_cache.get(&client_id).await {
+            let is_active = clients::Entity::find_by_id(client.client_id)
+                .one(state.db.as_ref())
+                .await
+                .map_err(|_| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(json!({"error": "db error", "type": "database"})),
+                    )
+                })?
+                .is_some_and(|client_profile| client_profile.status == "active");
+
+            if !is_active {
+                state.client_cache.invalidate(&client_id).await;
+                return Err((
+                    StatusCode::FORBIDDEN,
+                    Json(json!({"error": "client access is not active", "type": "forbidden"})),
+                ));
+            }
+
             return Ok(client);
         }
 
@@ -85,6 +104,13 @@ impl FromRequestParts<AppState> for ClientAuthDto {
                     Json(json!({"error": "client not found", "type": "unauthorized"})),
                 )
             })?;
+
+        if client_profile.status != "active" {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(json!({"error": "client access is not active", "type": "forbidden"})),
+            ));
+        }
 
         let client_dto = ClientAuthDto {
             id: client_model.id,

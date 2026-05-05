@@ -1,6 +1,7 @@
 use crate::utils::validate_password;
 use serde::Deserialize;
 use utoipa::ToSchema;
+use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Deserialize, Clone, Validate, ToSchema)]
@@ -34,6 +35,15 @@ pub struct LoginPayload {
 }
 
 #[derive(Deserialize, Clone, Validate, ToSchema)]
+pub struct ClientLoginPayload {
+    pub user_id: Uuid,
+    #[validate(email(message = "email must be a valid email address"))]
+    pub email: String,
+    #[validate(length(min = 1, message = "password is required"))]
+    pub password: String,
+}
+
+#[derive(Deserialize, Clone, Validate, ToSchema)]
 pub struct UpdatePassword {
     #[validate(length(min = 1, message = "current password is required"))]
     pub current_password: String,
@@ -43,6 +53,7 @@ pub struct UpdatePassword {
 
 #[derive(Deserialize, Clone, Validate, ToSchema)]
 pub struct ClientMagicTokenLogin {
+    pub user_id: Uuid,
     #[validate(length(min = 1, message = "magic token is required"))]
     pub magic_token: String,
 }

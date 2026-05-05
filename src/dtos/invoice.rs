@@ -2,7 +2,7 @@ use chrono::{DateTime, FixedOffset, NaiveDate};
 use sea_orm::{FromQueryResult, prelude::Decimal};
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
@@ -42,6 +42,13 @@ use crate::{
     string_enum,
     utils::search::FilterField,
 };
+
+#[derive(Debug, Deserialize, IntoParams)]
+pub struct BillableTasksQuery {
+    pub page: Option<u64>,
+    pub per_page: Option<u64>,
+    pub invoice_id: Option<Uuid>,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum::EnumString, strum::EnumIter)]
 #[strum(serialize_all = "snake_case")]

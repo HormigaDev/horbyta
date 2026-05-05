@@ -6,7 +6,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    dtos::query::{ColumnType, FilterSchema},
+    dtos::query::{ColumnType, FilterSchema, QueryPayload},
     entities::attachments,
     utils::search::FilterField,
 };
@@ -147,6 +147,79 @@ pub struct AttachmentStorageUsageDto {
     pub used_bytes: i64,
     pub limit_bytes: i64,
     pub remaining_bytes: i64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AttachmentSearchResponseDto {
+    pub payload: QueryPayload,
+    pub items: Vec<AttachmentSummaryDto>,
+    pub total: u64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AttachmentUploadResponseDto {
+    pub items: Vec<AttachmentDetailDto>,
+    pub uploaded_bytes: i64,
+    pub uploaded_count: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct AttachmentUploadScope {
+    pub project_id: Option<Uuid>,
+    pub task_id: Option<Uuid>,
+    pub milestone_id: Option<Uuid>,
+    pub change_request_id: Option<Uuid>,
+}
+
+impl AttachmentUploadScope {
+    pub const fn project(project_id: Uuid) -> Self {
+        Self {
+            project_id: Some(project_id),
+            task_id: None,
+            milestone_id: None,
+            change_request_id: None,
+        }
+    }
+
+    pub const fn task(task_id: Uuid) -> Self {
+        Self {
+            project_id: None,
+            task_id: Some(task_id),
+            milestone_id: None,
+            change_request_id: None,
+        }
+    }
+
+    pub fn into_create_attachment_dto(self, file: UploadedFile) -> (CreateAttachmentDto, Vec<u8>) {
+        let dto = CreateAttachmentDto {
+            project_id: self.project_id,
+            task_id: self.task_id,
+            milestone_id: self.milestone_id,
+            change_request_id: self.change_request_id,
+            original_name: file.original_name,
+            mime_type: file.mime_type,
+        };
+
+        (dto, file.bytes)
+    }
+}
+
+#[derive(Debug)]
+pub struct AttachmentRawFileDto {
+    pub mime_type: String,
+    pub content_disposition: String,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum AttachmentViewer {
+    User { user_id: Uuid },
+    Client { user_id: Uuid, client_id: Uuid },
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AttachmentDeleteResponseDto {
+    pub message: String,
 }
 
 pub struct UploadedFile {

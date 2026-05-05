@@ -105,8 +105,9 @@ async function request(url: string, options: RequestInit, scope: 'user' | 'clien
     if (response.status === 401 && shouldClearSessionOnUnauthorized(errorPayload)) {
       if (scope === 'client') {
         const clientAuthStore = useClientAuthStore();
+        const portalUserId = clientAuthStore.client?.user_id ?? clientAuthStore.portalUserId;
         clientAuthStore.clearAuth();
-        window.location.hash = '/client/login';
+        window.location.hash = portalUserId ? `/client/u/${portalUserId}/login` : '/login';
       } else {
         const authStore = useAuthStore();
         authStore.clearAuth();

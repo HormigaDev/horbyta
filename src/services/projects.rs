@@ -201,6 +201,7 @@ impl ProjectService {
                 "cant send project_billing if project is not billable".to_string(),
             ));
         }
+        Self::ensure_project_references_ownership(db, user_id, dto.category_id, dto.client_id).await?;
 
         let project = projects::ActiveModel {
             user_id: Set(user_id),
@@ -465,6 +466,7 @@ impl ProjectService {
                 "closed projects cannot accept new milestones".to_string(),
             ));
         }
+        Self::ensure_project_references_ownership(db, user_id, dto.category_id, dto.client_id).await?;
 
         let txn = db.begin().await.map_err(AppError::Database)?;
 
@@ -594,6 +596,7 @@ impl ProjectService {
         dto: UpdateProjectCategoryDto,
     ) -> Result<ProjectModel, AppError> {
         let project = Self::find_by_id(db, user_id, id).await?;
+        Self::ensure_category_ownership(db, user_id, dto.category_id).await?;
         let mut active_project: projects::ActiveModel = project.into();
 
         active_project.category_id = Set(dto.category_id);
@@ -742,6 +745,60 @@ impl ProjectService {
             .ok_or_else(|| AppError::NotFound("project not found".to_string()))?;
 
         Ok(project)
+    }
+
+    async fn ensure_project_references_ownership(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        category_id: Option<Uuid>,
+        client_id: Option<Uuid>,
+    ) -> Result<(), AppError> {
+        Self::ensure_category_ownership(db, user_id, category_id).await?;
+        Self::ensure_client_ownership(db, user_id, client_id).await
+    }
+
+    async fn ensure_category_ownership(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        category_id: Option<Uuid>,
+    ) -> Result<(), AppError> {
+        if let Some(category_id) = category_id {
+            let exists = categories::Entity::find()
+                .filter(categories::Column::Id.eq(category_id))
+                .filter(categories::Column::UserId.eq(user_id))
+                .one(db)
+                .await
+                .map_err(AppError::Database)?
+                .is_some();
+
+            if !exists {
+                return Err(AppError::BadRequest("invalid category or no permissions".to_string()));
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn ensure_client_ownership(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        client_id: Option<Uuid>,
+    ) -> Result<(), AppError> {
+        if let Some(client_id) = client_id {
+            let exists = clients::Entity::find()
+                .filter(clients::Column::Id.eq(client_id))
+                .filter(clients::Column::UserId.eq(user_id))
+                .one(db)
+                .await
+                .map_err(AppError::Database)?
+                .is_some();
+
+            if !exists {
+                return Err(AppError::BadRequest("invalid client or no permissions".to_string()));
+            }
+        }
+
+        Ok(())
     }
 }
 

@@ -1,26 +1,38 @@
+use axum::extract::Multipart;
+use axum_extra::extract::CookieJar;
+use jsonwebtoken::{DecodingKey, Validation, decode};
 use object_store::{ObjectStore, ObjectStoreExt, path::Path as ObjectPath};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    Set, TransactionTrait, sea_query::Expr,
+    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, ModelTrait, PaginatorTrait, QueryFilter,
+    QuerySelect, Set, TransactionTrait, sea_query::Expr,
 };
+use serde_json::Value;
 use std::env;
 use uuid::Uuid;
 
 use crate::{
+    constants::{CLIENT_AUTH_COOKIE_NAME, USER_AUTH_COOKIE_NAME},
     dtos::{
         attachment::{
-            AttachmentDetailDto, AttachmentSearchField, AttachmentStorageUsageDto, AttachmentSummaryDto,
-            CreateAttachmentDto,
+            AttachmentDeleteResponseDto, AttachmentDetailDto, AttachmentRawFileDto, AttachmentSearchField,
+            AttachmentSearchResponseDto, AttachmentStorageUsageDto, AttachmentSummaryDto, AttachmentUploadResponseDto,
+            AttachmentUploadScope, AttachmentViewer, CreateAttachmentDto, UploadedFile, attachment_filter_schema,
         },
-        query::QueryPayload,
+        query::{Filter, FilterOperator, QueryPayload},
     },
     entities::{
         attachments::{self, Model as AttachmentModel},
-        change_requests, milestones,
+        change_requests, client_auth, clients, milestones,
         prelude::{Attachments, ChangeRequests, Milestones, Projects, Tasks},
         projects, tasks,
     },
     error::AppError,
+    middlewares::{
+        auth::Claims,
+        client_auth::ClientClaims,
+        rate_limit::{UPLOADS_RATE_LIMIT, check_user_rate_limit},
+    },
+    state::AppState,
     utils::{
         multipart::MarkdownUploadedFile,
         search::{apply_filters, apply_ordering, apply_pagination},
@@ -33,10 +45,130 @@ pub const MAX_ATTACHMENT_SCOPE_BYTES: i64 = 50 * 1024 * 1024;
 const DEFAULT_ATTACHMENT_MIME: &str = "application/octet-stream";
 const USER_STORAGE_LIMIT_GB_ENV: &str = "USER_STORAGE_LIMIT_GB";
 const DEFAULT_USER_STORAGE_LIMIT_GB: u64 = 2;
+const FILES_FIELD_NAME: &str = "files";
 
 pub struct AttachmentService;
 
 impl AttachmentService {
+    pub async fn upload_files_to_scope(
+        state: &AppState,
+        user_id: Uuid,
+        scope: AttachmentUploadScope,
+        multipart: Multipart,
+    ) -> Result<AttachmentUploadResponseDto, AppError> {
+        check_user_rate_limit(&state.rate_limit_uploads, user_id, UPLOADS_RATE_LIMIT)?;
+
+        let (files, total_upload_bytes) = Self::parse_uploaded_files(multipart).await?;
+        Self::guard_upload_capacity(
+            state.db.as_ref(),
+            user_id,
+            scope.project_id,
+            scope.task_id,
+            scope.milestone_id,
+            scope.change_request_id,
+            total_upload_bytes,
+        )
+        .await?;
+
+        let tx = state.db.begin().await.map_err(AppError::Database)?;
+        let mut created_attachments = Vec::with_capacity(files.len());
+        let mut created_storage_keys: Vec<String> = Vec::new();
+
+        for file in files {
+            let (dto, bytes) = scope.into_create_attachment_dto(file);
+
+            match Self::create_in_tx(&tx, state.storage.as_ref(), user_id, dto, bytes).await {
+                Ok(created) => {
+                    created_storage_keys.push(created.storage_key.clone());
+                    created_attachments.push(created);
+                }
+                Err(error) => {
+                    if let Err(rollback_error) = tx.rollback().await {
+                        tracing::warn!(error = %rollback_error, "Attachment upload rollback failed");
+                    }
+
+                    Self::cleanup_storage_objects(state.storage.as_ref(), &created_storage_keys).await;
+                    return Err(error);
+                }
+            }
+        }
+
+        if let Err(commit_error) = tx.commit().await {
+            Self::cleanup_storage_objects(state.storage.as_ref(), &created_storage_keys).await;
+            return Err(AppError::Database(commit_error));
+        }
+
+        Ok(AttachmentUploadResponseDto {
+            uploaded_count: created_storage_keys.len(),
+            uploaded_bytes: total_upload_bytes,
+            items: created_attachments,
+        })
+    }
+
+    pub async fn search_project(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        project_id: Uuid,
+        payload: QueryPayload,
+    ) -> Result<AttachmentSearchResponseDto, AppError> {
+        Self::search_scoped(db, user_id, payload, "project_id", project_id).await
+    }
+
+    pub async fn search_task(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        task_id: Uuid,
+        payload: QueryPayload,
+    ) -> Result<AttachmentSearchResponseDto, AppError> {
+        Self::search_scoped(db, user_id, payload, "task_id", task_id).await
+    }
+
+    pub async fn get_raw_file_for_cookies(
+        state: &AppState,
+        jar: &CookieJar,
+        attachment_id: Uuid,
+    ) -> Result<AttachmentRawFileDto, AppError> {
+        let viewer = Self::resolve_attachment_viewer(state, jar).await?;
+        let attachment = match viewer {
+            AttachmentViewer::User { user_id } => Self::get_by_id(state.db.as_ref(), user_id, attachment_id).await?,
+            AttachmentViewer::Client { user_id, client_id } => {
+                Self::get_by_id_for_client(state.db.as_ref(), user_id, client_id, attachment_id).await?
+            }
+        };
+
+        let storage_path = ObjectPath::parse(attachment.storage_key.as_str())
+            .map_err(|error| AppError::Internal(format!("invalid storage key: {}", error)))?;
+
+        let object = state
+            .storage
+            .get(&storage_path)
+            .await
+            .map_err(|error| AppError::NotFound(format!("file not found in storage: {}", error)))?;
+
+        let bytes = object
+            .bytes()
+            .await
+            .map_err(|error| AppError::Internal(format!("could not read file: {}", error)))?;
+
+        Ok(AttachmentRawFileDto {
+            mime_type: attachment.mime_type.clone(),
+            content_disposition: Self::build_content_disposition(&attachment.original_name, &attachment.mime_type),
+            bytes: bytes.to_vec(),
+        })
+    }
+
+    pub async fn delete_with_response(
+        db: &impl ConnectionTrait,
+        storage: &dyn ObjectStore,
+        user_id: Uuid,
+        attachment_id: Uuid,
+    ) -> Result<AttachmentDeleteResponseDto, AppError> {
+        Self::delete(db, storage, user_id, attachment_id).await?;
+        Ok(AttachmentDeleteResponseDto {
+            message: "Adjunto eliminado".to_string(),
+        })
+    }
+
     pub async fn create_markdown_files_in_tx(
         tx: &impl ConnectionTrait,
         storage: &dyn ObjectStore,
@@ -277,6 +409,17 @@ impl AttachmentService {
         Ok(Self::to_detail_dto(model))
     }
 
+    pub async fn get_by_id_for_client(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        client_id: Uuid,
+        attachment_id: Uuid,
+    ) -> Result<AttachmentDetailDto, AppError> {
+        let model = Self::find_by_id(db, user_id, attachment_id).await?;
+        Self::ensure_client_can_access_attachment(db, user_id, client_id, &model).await?;
+        Ok(Self::to_detail_dto(model))
+    }
+
     pub async fn delete(
         db: &impl ConnectionTrait,
         storage: &dyn ObjectStore,
@@ -357,6 +500,175 @@ impl AttachmentService {
         .map_err(AppError::Database)?;
 
         Ok((models, total_items))
+    }
+
+    async fn search_scoped(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        mut payload: QueryPayload,
+        scope_column: &str,
+        scope_id: Uuid,
+    ) -> Result<AttachmentSearchResponseDto, AppError> {
+        payload.filters.push(Filter {
+            column: scope_column.to_string(),
+            operator: FilterOperator::Eq,
+            value: Value::String(scope_id.to_string()),
+        });
+
+        attachment_filter_schema().validate_payload(&payload)?;
+        let (items, total) = Self::search(db, user_id, payload.clone()).await?;
+
+        Ok(AttachmentSearchResponseDto { payload, items, total })
+    }
+
+    async fn parse_uploaded_files(mut multipart: Multipart) -> Result<(Vec<UploadedFile>, i64), AppError> {
+        let mut files = Vec::new();
+        let mut total_upload_bytes: i64 = 0;
+
+        while let Some(field) = multipart
+            .next_field()
+            .await
+            .map_err(|_| AppError::BadRequest("error processing multipart form".to_string()))?
+        {
+            if field.name().unwrap_or_default() != FILES_FIELD_NAME {
+                continue;
+            }
+
+            let original_name = field.file_name().unwrap_or("archivo").to_string();
+            let mime_type = field.content_type().map(|value| value.to_string());
+            let bytes = field
+                .bytes()
+                .await
+                .map_err(|_| AppError::BadRequest("could not read one of the files".to_string()))?;
+
+            let file_size = i64::try_from(bytes.len())
+                .map_err(|_| AppError::BadRequest("file exceeds the supported size".to_string()))?;
+
+            if file_size > MAX_ATTACHMENT_FILE_BYTES {
+                return Err(AppError::BadRequest("each file cannot exceed 50mb".to_string()));
+            }
+
+            total_upload_bytes = total_upload_bytes
+                .checked_add(file_size)
+                .ok_or_else(|| AppError::BadRequest("total file size exceeds the allowed limit".to_string()))?;
+
+            files.push(UploadedFile {
+                original_name,
+                mime_type,
+                bytes: bytes.to_vec(),
+            });
+        }
+
+        if files.is_empty() {
+            return Err(AppError::BadRequest(
+                "you must send files in the files field".to_string(),
+            ));
+        }
+
+        Ok((files, total_upload_bytes))
+    }
+
+    async fn cleanup_storage_objects(storage: &dyn ObjectStore, storage_keys: &[String]) {
+        for storage_key in storage_keys {
+            let location = match ObjectPath::parse(storage_key.as_str()) {
+                Ok(location) => location,
+                Err(error) => {
+                    tracing::warn!(storage_key = %storage_key, error = %error, "Invalid storage key during cleanup");
+                    continue;
+                }
+            };
+
+            if let Err(error) = storage.delete(&location).await {
+                tracing::warn!(storage_key = %storage_key, error = %error, "Attachment cleanup failed");
+            }
+        }
+    }
+
+    async fn resolve_attachment_viewer(state: &AppState, jar: &CookieJar) -> Result<AttachmentViewer, AppError> {
+        if let Some(cookie) = jar.get(USER_AUTH_COOKIE_NAME) {
+            let token = decode::<Claims>(
+                cookie.value(),
+                &DecodingKey::from_secret(state.config.jwt_secret.as_bytes()),
+                &Validation::default(),
+            )
+            .map_err(|_| AppError::Unauthorized("invalid user session".to_string()))?;
+
+            return Ok(AttachmentViewer::User {
+                user_id: token.claims.sub,
+            });
+        }
+
+        if let Some(cookie) = jar.get(CLIENT_AUTH_COOKIE_NAME) {
+            let token = decode::<ClientClaims>(
+                cookie.value(),
+                &DecodingKey::from_secret(state.config.jwt_secret_client.as_bytes()),
+                &Validation::default(),
+            )
+            .map_err(|_| AppError::Unauthorized("invalid client session".to_string()))?;
+
+            let client_auth = client_auth::Entity::find_by_id(token.claims.sub)
+                .one(state.db.as_ref())
+                .await
+                .map_err(AppError::Database)?
+                .ok_or_else(|| AppError::Unauthorized("invalid client session".to_string()))?;
+
+            let client_profile = client_auth
+                .find_related(clients::Entity)
+                .one(state.db.as_ref())
+                .await
+                .map_err(AppError::Database)?
+                .ok_or_else(|| AppError::Unauthorized("client not found".to_string()))?;
+
+            if client_profile.status != "active" {
+                return Err(AppError::Forbidden("client access is not active".to_string()));
+            }
+
+            return Ok(AttachmentViewer::Client {
+                user_id: client_auth.user_id,
+                client_id: client_auth.client_id,
+            });
+        }
+
+        Err(AppError::Unauthorized("no session".to_string()))
+    }
+
+    fn build_content_disposition(file_name: &str, mime_type: &str) -> String {
+        let safe_name = Self::quote_filename_for_header(file_name);
+        let disposition_type = if Self::is_inline_safe_mime_type(mime_type) {
+            "inline"
+        } else {
+            "attachment"
+        };
+
+        format!("{disposition_type}; filename=\"{safe_name}\"")
+    }
+
+    fn quote_filename_for_header(file_name: &str) -> String {
+        file_name
+            .chars()
+            .filter(|ch| !matches!(ch, '"' | '\\' | '\r' | '\n') && !ch.is_control())
+            .collect()
+    }
+
+    fn is_inline_safe_mime_type(mime_type: &str) -> bool {
+        let normalized = mime_type
+            .split(';')
+            .next()
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase();
+
+        matches!(
+            normalized.as_str(),
+            "application/pdf"
+                | "image/apng"
+                | "image/avif"
+                | "image/gif"
+                | "image/jpeg"
+                | "image/png"
+                | "image/webp"
+                | "text/plain"
+        )
     }
 
     fn resolve_user_storage_limit_bytes() -> Result<i64, AppError> {
@@ -554,6 +866,124 @@ impl AttachmentService {
             .ok_or_else(|| AppError::NotFound("attachment not found".to_string()))?;
 
         Ok(attachment)
+    }
+
+    async fn ensure_client_can_access_attachment(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        client_id: Uuid,
+        attachment: &AttachmentModel,
+    ) -> Result<(), AppError> {
+        let mut checked_scope = false;
+
+        if let Some(project_id) = attachment.project_id {
+            checked_scope = true;
+            if !Self::client_can_access_project(db, user_id, client_id, project_id).await? {
+                return Err(AppError::NotFound("attachment not found".to_string()));
+            }
+        }
+
+        if let Some(task_id) = attachment.task_id {
+            checked_scope = true;
+            if !Self::client_can_access_task(db, user_id, client_id, task_id).await? {
+                return Err(AppError::NotFound("attachment not found".to_string()));
+            }
+        }
+
+        if let Some(milestone_id) = attachment.milestone_id {
+            checked_scope = true;
+            if !Self::client_can_access_milestone(db, user_id, client_id, milestone_id).await? {
+                return Err(AppError::NotFound("attachment not found".to_string()));
+            }
+        }
+
+        if let Some(change_request_id) = attachment.change_request_id {
+            checked_scope = true;
+            if !Self::client_can_access_change_request(db, user_id, client_id, change_request_id).await? {
+                return Err(AppError::NotFound("attachment not found".to_string()));
+            }
+        }
+
+        if checked_scope {
+            Ok(())
+        } else {
+            Err(AppError::NotFound("attachment not found".to_string()))
+        }
+    }
+
+    async fn client_can_access_project(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        client_id: Uuid,
+        project_id: Uuid,
+    ) -> Result<bool, AppError> {
+        let exists = Projects::find()
+            .filter(projects::Column::Id.eq(project_id))
+            .filter(projects::Column::UserId.eq(user_id))
+            .filter(projects::Column::ClientId.eq(client_id))
+            .one(db)
+            .await
+            .map_err(AppError::Database)?
+            .is_some();
+
+        Ok(exists)
+    }
+
+    async fn client_can_access_task(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        client_id: Uuid,
+        task_id: Uuid,
+    ) -> Result<bool, AppError> {
+        let task_with_project = Tasks::find()
+            .filter(tasks::Column::Id.eq(task_id))
+            .filter(tasks::Column::UserId.eq(user_id))
+            .find_also_related(Projects)
+            .one(db)
+            .await
+            .map_err(AppError::Database)?;
+
+        Ok(matches!(
+            task_with_project,
+            Some((_task, Some(project))) if project.user_id == user_id && project.client_id == Some(client_id)
+        ))
+    }
+
+    async fn client_can_access_milestone(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        client_id: Uuid,
+        milestone_id: Uuid,
+    ) -> Result<bool, AppError> {
+        let milestone_with_project = Milestones::find()
+            .filter(milestones::Column::Id.eq(milestone_id))
+            .find_also_related(Projects)
+            .one(db)
+            .await
+            .map_err(AppError::Database)?;
+
+        Ok(matches!(
+            milestone_with_project,
+            Some((_milestone, Some(project))) if project.user_id == user_id && project.client_id == Some(client_id)
+        ))
+    }
+
+    async fn client_can_access_change_request(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        client_id: Uuid,
+        change_request_id: Uuid,
+    ) -> Result<bool, AppError> {
+        let exists = ChangeRequests::find()
+            .filter(change_requests::Column::Id.eq(change_request_id))
+            .filter(change_requests::Column::UserId.eq(user_id))
+            .filter(change_requests::Column::ClientId.eq(client_id))
+            .one(db)
+            .await
+            .map_err(AppError::Database)?
+            .is_some();
+
+        Ok(exists)
     }
 
     fn build_storage_key(

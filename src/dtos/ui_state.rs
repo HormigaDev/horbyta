@@ -1,6 +1,6 @@
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::entities::user_ui_state::Model as UiStateModel;
@@ -74,6 +74,11 @@ impl From<UiStateModel> for UiStateEntryDto {
             updated_at: model.updated_at,
         }
     }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+pub struct ListScopeQuery {
+    pub scope: String,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]

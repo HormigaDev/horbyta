@@ -7,11 +7,13 @@ export interface ClientAuthIdentity {
 }
 
 export interface ClientLoginPayload {
+  user_id: string;
   email: string;
   password: string;
 }
 
 export interface ClientMagicTokenLoginPayload {
+  user_id: string;
   magic_token: string;
 }
 

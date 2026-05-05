@@ -62,7 +62,7 @@ impl AppState {
                 .with_access_key_id(config.s3_access_key.as_deref().unwrap_or_default())
                 .with_secret_access_key(config.s3_secret_key.as_deref().unwrap_or_default())
                 .with_endpoint(config.s3_endpoint.as_deref().unwrap_or_default())
-                .with_allow_http(true)
+                .with_allow_http(!config.is_production)
                 .build()
                 .map_err(|e| AppError::Internal(format!("failed to init s3: {}", e)))?;
 

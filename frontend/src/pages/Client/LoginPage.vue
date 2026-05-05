@@ -107,8 +107,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useLoginRules } from 'src/composables/rules/login.rules';
 import { useClientAuthStore } from 'src/stores/clientAuth';
@@ -116,6 +116,7 @@ import { useClientAuthStore } from 'src/stores/clientAuth';
 type LoginMode = 'credentials' | 'magic_token';
 
 const router = useRouter();
+const route = useRoute();
 const { t } = useI18n();
 const clientAuthStore = useClientAuthStore();
 const loginRules = useLoginRules();
@@ -127,6 +128,10 @@ const magicToken = ref('');
 const isLoadingCredentials = ref(false);
 const isLoadingMagicToken = ref(false);
 const errorMessage = ref('');
+const portalUserId = computed(() => {
+  const raw = route.params.userId;
+  return typeof raw === 'string' ? raw.trim() : '';
+});
 
 const parseErrorMessage = (err: unknown): string => {
   if (err instanceof Error && err.message) {
@@ -148,6 +153,7 @@ const handleCredentialsLogin = async () => {
 
   try {
     await clientAuthStore.login({
+      user_id: portalUserId.value,
       email: email.value.trim(),
       password: password.value,
     });
@@ -172,6 +178,7 @@ const handleMagicTokenLogin = async () => {
 
   try {
     await clientAuthStore.loginWithMagicToken({
+      user_id: portalUserId.value,
       magic_token: magicToken.value.trim(),
     });
     void router.push('/client');
