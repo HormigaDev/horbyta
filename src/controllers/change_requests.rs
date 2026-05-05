@@ -29,7 +29,7 @@ use crate::{
     get,
     path = "/api/v1/change-requests/search",
     tag = "Change Requests",
-    params(QueryPayload),
+    params(crate::dtos::query::SearchQuery),
     responses(
         (status = 200, description = "Paginated list of change requests"),
         (status = 400, description = "Invalid query"),
@@ -56,7 +56,7 @@ pub(crate) async fn search_change_requests(
     get,
     path = "/api/v1/change-requests/client/search",
     tag = "Change Requests",
-    params(QueryPayload),
+    params(crate::dtos::query::SearchQuery),
     responses(
         (status = 200, description = "Paginated list of client-visible change requests"),
         (status = 400, description = "Invalid query"),

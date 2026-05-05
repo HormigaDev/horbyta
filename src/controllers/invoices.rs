@@ -31,7 +31,7 @@ pub(crate) struct BillableTasksQuery {
     get,
     path = "/api/v1/invoices/search",
     tag = "Invoices",
-    params(QueryPayload),
+    params(crate::dtos::query::SearchQuery),
     responses(
         (status = 200, description = "Paginated list of invoices"),
         (status = 400, description = "Invalid query"),

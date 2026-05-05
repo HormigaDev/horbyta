@@ -23,7 +23,7 @@ use crate::{
     get,
     path = "/api/v1/categories/search",
     tag = "Categories",
-    params(QueryPayload),
+    params(crate::dtos::query::SearchQuery),
     responses(
         (status = 200, description = "Paginated list of categories"),
         (status = 400, description = "Invalid query"),

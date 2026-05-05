@@ -172,7 +172,7 @@ async fn upload_attachments_to_scope(
     tag = "Attachments",
     params(
         ("project_id" = Uuid, Path, description = "Project id"),
-        QueryPayload
+        crate::dtos::query::SearchQuery
     ),
     responses(
         (status = 200, description = "Paginated attachments for project"),
@@ -209,7 +209,7 @@ pub(crate) async fn search_project_attachments(
     tag = "Attachments",
     params(
         ("task_id" = Uuid, Path, description = "Task id"),
-        QueryPayload
+        crate::dtos::query::SearchQuery
     ),
     responses(
         (status = 200, description = "Paginated attachments for task"),

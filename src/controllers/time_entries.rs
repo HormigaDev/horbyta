@@ -26,7 +26,7 @@ use crate::{
     get,
     path = "/api/v1/time-entries/search",
     tag = "Time Entries",
-    params(QueryPayload),
+    params(crate::dtos::query::SearchQuery),
     responses(
         (status = 200, description = "Paginated list of time entries"),
         (status = 400, description = "Invalid query"),

@@ -23,7 +23,7 @@ use crate::{
     get,
     path = "/api/v1/activities/search",
     tag = "Activities",
-    params(QueryPayload),
+    params(crate::dtos::query::SearchQuery),
     responses(
         (status = 200, description = "Paginated list of activities", body = serde_json::Value),
         (status = 400, description = "Invalid search payload"),

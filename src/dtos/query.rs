@@ -35,8 +35,7 @@ pub struct Filter {
     pub value: Value,
 }
 
-#[derive(Debug, Deserialize, Serialize, Validate, Clone, ToSchema, IntoParams)]
-#[into_params(parameter_in = Query)]
+#[derive(Debug, Deserialize, Serialize, Validate, Clone, ToSchema)]
 pub struct QueryPayload {
     #[validate(range(min = 1))]
     #[serde(default = "default_page")]
@@ -56,8 +55,11 @@ pub struct QueryPayload {
     pub filters: Vec<Filter>,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct SearchQuery {
+    /// URL-encoded JSON string. After URL decoding, the value must match QueryPayload.
+    #[param(example = "{\"page\":1,\"limit\":10,\"order_by\":\"created_at\",\"order_asc\":false,\"filters\":[]}")]
     pub q: String,
 }
 

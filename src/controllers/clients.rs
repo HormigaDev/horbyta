@@ -28,7 +28,7 @@ use crate::{
     get,
     path = "/api/v1/clients/search",
     tag = "Clients",
-    params(QueryPayload),
+    params(crate::dtos::query::SearchQuery),
     responses(
         (status = 200, description = "Paginated list of clients"),
         (status = 400, description = "Invalid query"),

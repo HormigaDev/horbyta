@@ -28,7 +28,7 @@ use crate::{
     get,
     path = "/api/v1/projects/search",
     tag = "Projects",
-    params(QueryPayload),
+    params(crate::dtos::query::SearchQuery),
     responses(
         (status = 200, description = "Paginated list of projects"),
         (status = 400, description = "Invalid query"),
@@ -75,7 +75,7 @@ pub(crate) async fn get_project(
     get,
     path = "/api/v1/projects/client-search",
     tag = "Projects",
-    params(QueryPayload),
+    params(crate::dtos::query::SearchQuery),
     responses(
         (status = 200, description = "Paginated list of client-visible projects"),
         (status = 400, description = "Invalid query"),

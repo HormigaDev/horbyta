@@ -27,7 +27,7 @@ use crate::{
     get,
     path = "/api/v1/milestones/search",
     tag = "Milestones",
-    params(QueryPayload),
+    params(crate::dtos::query::SearchQuery),
     responses(
         (status = 200, description = "Paginated list of milestones"),
         (status = 400, description = "Invalid query"),
@@ -56,7 +56,7 @@ pub(crate) async fn search_milestones(
     tag = "Milestones",
     params(
         ("id" = Uuid, Path, description = "Project id"),
-        QueryPayload
+        crate::dtos::query::SearchQuery
     ),
     responses(
         (status = 200, description = "Paginated list of client-visible milestones"),

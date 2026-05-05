@@ -24,7 +24,7 @@ use crate::{
     get,
     path = "/api/v1/payments/search",
     tag = "Payments",
-    params(QueryPayload),
+    params(crate::dtos::query::SearchQuery),
     responses(
         (status = 200, description = "Paginated list of payments"),
         (status = 400, description = "Invalid query"),

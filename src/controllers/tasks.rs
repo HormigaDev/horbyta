@@ -38,7 +38,7 @@ pub(crate) async fn view_tasks(State(state): State<AppState>, user: UserDto) -> 
     get,
     path = "/api/v1/tasks/search",
     tag = "Tasks",
-    params(QueryPayload),
+    params(crate::dtos::query::SearchQuery),
     responses(
         (status = 200, description = "Paginated list of tasks"),
         (status = 400, description = "Invalid query"),
