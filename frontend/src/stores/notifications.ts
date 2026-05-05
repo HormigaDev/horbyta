@@ -16,6 +16,7 @@ export interface AsyncNotificationEvent {
   entityId?: string | null;
   summaryType?: 'unread_notifications';
   silent?: boolean;
+  read?: boolean;
   unreadCount?: number;
 }
 
@@ -84,7 +85,7 @@ export const useNotificationsStore = defineStore('notifications', {
         title,
         body: typeof event.body === 'string' ? event.body : null,
         type: event.type ?? 'info',
-        read: false,
+        read: event.read ?? false,
         createdAt,
         payload: event.payload,
       };
@@ -99,7 +100,7 @@ export const useNotificationsStore = defineStore('notifications', {
       backendId && (newNotification.backendId = backendId);
 
       this.notifications.unshift(newNotification);
-      if (this.persistedAsyncUnreadCount !== null) {
+      if (this.persistedAsyncUnreadCount !== null && !newNotification.read) {
         this.persistedAsyncUnreadCount += newNotification.unreadCount ?? 1;
       }
       return newNotification;

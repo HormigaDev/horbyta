@@ -812,6 +812,7 @@ function isAsyncNotificationEvent(data: unknown): data is AsyncNotificationEvent
     (candidate.body === undefined || candidate.body === null || typeof candidate.body === 'string') &&
     (candidate.summaryType === undefined || candidate.summaryType === 'unread_notifications') &&
     (candidate.silent === undefined || typeof candidate.silent === 'boolean') &&
+    (candidate.read === undefined || typeof candidate.read === 'boolean') &&
     (candidate.unreadCount === undefined || typeof candidate.unreadCount === 'number')
   );
 }
