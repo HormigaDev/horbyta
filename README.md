@@ -413,4 +413,6 @@ The provided config proxies to `127.0.0.1:8890` and includes WebSocket upgrade h
 
 ## License
 
-Horbyta is released under the [MIT License](LICENSE).
+All versions of this project have been publicly released under AGPL-3.0-only.
+
+Earlier commits referencing MIT were never publicly distributed under that license.
