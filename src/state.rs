@@ -29,6 +29,7 @@ pub struct AppState {
     pub rate_limit_charts: SyncCache<Uuid, Arc<AtomicU32>>,
     pub rate_limit_uploads: SyncCache<Uuid, Arc<AtomicU32>>,
     pub rate_limit_magic_token: SyncCache<Uuid, Arc<AtomicU32>>,
+    pub rate_limit_totp_failures: SyncCache<String, Arc<AtomicU32>>,
     // WebSocket connection counter per user
     pub ws_connections: Arc<DashMap<Uuid, AtomicUsize>>,
 }
@@ -113,6 +114,12 @@ impl AppState {
             .max_capacity(10_000)
             .build();
 
+        // 5 failed two-factor code attempts per minute per user.
+        let rate_limit_totp_failures = SyncCache::builder()
+            .time_to_live(Duration::from_secs(60))
+            .max_capacity(50_000)
+            .build();
+
         let ws_connections = Arc::new(DashMap::new());
 
         Ok(Self {
@@ -127,6 +134,7 @@ impl AppState {
             rate_limit_charts,
             rate_limit_uploads,
             rate_limit_magic_token,
+            rate_limit_totp_failures,
             ws_connections,
         })
     }

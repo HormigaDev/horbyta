@@ -13,6 +13,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use crate::{
+    auth::totp_2fa::default_totp_policy,
     constants::{CLIENT_AUTH_COOKIE_NAME, USER_AUTH_COOKIE_NAME},
     dtos::{
         auth::{ClientMagicTokenLogin, LoginPayload, RegisterPayload},
@@ -20,13 +21,17 @@ use crate::{
         user::UserDto,
     },
     entities::{client_auth, clients, users},
-    error::AppError,
+    error::{AppError, Totp2FaError},
     middlewares::{
         auth::Claims,
         client_auth::ClientClaims,
-        rate_limit::{AUTH_RATE_LIMIT, check_ip_rate_limit},
+        rate_limit::{
+            AUTH_RATE_LIMIT, TWO_FACTOR_AUTH_FAILURE_RATE_LIMIT, check_ip_rate_limit, check_key_rate_limit,
+            record_key_rate_limit_failure,
+        },
         validator::ValidatedJson,
     },
+    services::users::UserService,
     state::AppState,
     utils::crypto::{compare_password, generate_jwt, hash_password, verify_magic_link_token},
 };
@@ -56,7 +61,27 @@ pub(crate) async fn login(
         .await?
         .ok_or(AppError::Unauthorized("invalid credentials".to_string()))?;
 
-    compare_password(payload.password, user_model.password_hash)?;
+    compare_password(payload.password, user_model.password_hash.clone())?;
+
+    let two_factor_rate_limit_key = two_factor_rate_limit_key(user_model.id);
+    if user_model.two_factor_auth_enabled {
+        check_key_rate_limit(
+            &state.rate_limit_totp_failures,
+            &two_factor_rate_limit_key,
+            TWO_FACTOR_AUTH_FAILURE_RATE_LIMIT,
+        )?;
+    }
+
+    let two_factor_result = UserService::verify_totp_for_login(
+        state.db.as_ref(),
+        user_model,
+        &default_totp_policy(),
+        payload.two_factor_auth_code,
+        payload.two_factor_auth_backup_code,
+    )
+    .await;
+    record_two_factor_failure(&state, &two_factor_rate_limit_key, &two_factor_result);
+    let user_model = two_factor_result?;
 
     let claims = Claims {
         sub: user_model.id,
@@ -215,6 +240,11 @@ pub(crate) async fn register(
         email: Set(normalized_email),
         password_hash: Set(password_hash),
         preferences: Set(None),
+        two_factor_auth_enabled: Set(false),
+        two_factor_auth_secret_base32: Set(None),
+        two_factor_auth_pending_secret_base32: Set(None),
+        two_factor_auth_last_used_step: Set(None),
+        two_factor_auth_backup_code_hashes: Set(None),
         created_at: Set(now),
         updated_at: Set(now),
     };
@@ -373,4 +403,19 @@ pub fn auth_controller() -> Router<AppState> {
         .route("/logout", post(logout))
         .route("/logout-client", post(logout_client))
         .route("/client-me", get(client_me))
+}
+
+fn two_factor_rate_limit_key(user_id: Uuid) -> String {
+    format!("user-2fa:{user_id}")
+}
+
+fn record_two_factor_failure<T>(state: &AppState, key: &str, result: &Result<T, AppError>) {
+    if matches!(
+        result,
+        Err(AppError::Totp2Fa(
+            Totp2FaError::InvalidCode | Totp2FaError::ReplayedCode
+        ))
+    ) {
+        record_key_rate_limit_failure(&state.rate_limit_totp_failures, key.to_string());
+    }
 }

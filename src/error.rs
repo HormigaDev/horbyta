@@ -7,6 +7,33 @@ use axum::{
 use serde_json::json;
 
 #[derive(thiserror::Error, Debug)]
+pub enum Totp2FaError {
+    #[error("two-factor authentication is already enabled")]
+    AlreadyEnabled,
+
+    #[error("two-factor authentication is not enabled")]
+    NotEnabled,
+
+    #[error("two-factor authentication setup has not been started")]
+    SetupNotStarted,
+
+    #[error("invalid two-factor authentication code")]
+    InvalidCode,
+
+    #[error("two-factor authentication code is required")]
+    CodeRequired,
+
+    #[error("two-factor authentication code was already used")]
+    ReplayedCode,
+
+    #[error("invalid two-factor authentication secret")]
+    InvalidSecret,
+
+    #[error("failed to generate two-factor authentication qr code")]
+    QrGeneration,
+}
+
+#[derive(thiserror::Error, Debug)]
 pub enum AppError {
     #[error("database error")]
     Database(#[from] sea_orm::DbErr),
@@ -22,6 +49,9 @@ pub enum AppError {
 
     #[error("http header parse error")]
     Header(#[from] axum::http::header::InvalidHeaderValue),
+
+    #[error(transparent)]
+    Totp2Fa(#[from] Totp2FaError),
 
     #[error("{0}")]
     BadRequest(String),
@@ -89,6 +119,52 @@ impl IntoResponse for AppError {
                 "hash_error",
                 "failed to process credentials".to_string(),
             ),
+            AppError::Totp2Fa(Totp2FaError::AlreadyEnabled) => (
+                StatusCode::CONFLICT,
+                "two_factor_auth_already_enabled",
+                "two-factor authentication is already enabled".to_string(),
+            ),
+            AppError::Totp2Fa(Totp2FaError::NotEnabled) => (
+                StatusCode::BAD_REQUEST,
+                "two_factor_auth_not_enabled",
+                "two-factor authentication is not enabled".to_string(),
+            ),
+            AppError::Totp2Fa(Totp2FaError::SetupNotStarted) => (
+                StatusCode::BAD_REQUEST,
+                "two_factor_auth_setup_not_started",
+                "two-factor authentication setup has not been started".to_string(),
+            ),
+            AppError::Totp2Fa(Totp2FaError::InvalidCode) => (
+                StatusCode::UNAUTHORIZED,
+                "invalid_two_factor_auth_code",
+                "invalid two-factor authentication code".to_string(),
+            ),
+            AppError::Totp2Fa(Totp2FaError::CodeRequired) => (
+                StatusCode::UNAUTHORIZED,
+                "two_factor_auth_code_required",
+                "two-factor authentication code is required".to_string(),
+            ),
+            AppError::Totp2Fa(Totp2FaError::ReplayedCode) => (
+                StatusCode::UNAUTHORIZED,
+                "replayed_two_factor_auth_code",
+                "two-factor authentication code was already used".to_string(),
+            ),
+            AppError::Totp2Fa(Totp2FaError::InvalidSecret) => {
+                tracing::error!("invalid two-factor authentication secret");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "invalid_two_factor_auth_secret",
+                    "failed to process two-factor authentication".to_string(),
+                )
+            }
+            AppError::Totp2Fa(Totp2FaError::QrGeneration) => {
+                tracing::error!("failed to generate two-factor authentication qr code");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "two_factor_auth_qr_generation",
+                    "failed to generate two-factor authentication qr code".to_string(),
+                )
+            }
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, "bad_request", msg),
             AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, "unauthorized", msg),
             AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, "forbidden", msg),

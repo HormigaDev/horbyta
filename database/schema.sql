@@ -10,6 +10,14 @@ create table users (
     email varchar(255) not null,
     preferences jsonb,
     password_hash text not null,
+
+    -- 2FA
+    two_factor_auth_enabled boolean not null default false,
+    two_factor_auth_secret_base32 text,
+    two_factor_auth_pending_secret_base32 text,
+    two_factor_auth_last_used_step bigint,
+    two_factor_auth_backup_code_hashes jsonb,
+
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );

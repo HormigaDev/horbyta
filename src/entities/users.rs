@@ -15,6 +15,14 @@ pub struct Model {
     pub preferences: Option<Json>,
     #[sea_orm(column_type = "Text")]
     pub password_hash: String,
+    pub two_factor_auth_enabled: bool,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub two_factor_auth_secret_base32: Option<String>,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub two_factor_auth_pending_secret_base32: Option<String>,
+    pub two_factor_auth_last_used_step: Option<i64>,
+    #[sea_orm(column_type = "JsonBinary", nullable)]
+    pub two_factor_auth_backup_code_hashes: Option<Json>,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
 }

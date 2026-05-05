@@ -52,6 +52,7 @@ export interface User {
 }
 
 export interface UserSettings extends User {
+  two_factor_auth_enabled: boolean;
   preferences: UserPreferences;
 }
 
@@ -64,6 +65,8 @@ export interface UpdateUserPasswordDto {
   current_password: string;
   new_password: string;
   confirm_password: string;
+  two_factor_auth_code?: string;
+  two_factor_auth_backup_code?: string;
 }
 
 export interface UpdateUserPreferencesDto {
@@ -97,4 +100,33 @@ export interface UpdateNotificationPreferencesDto {
   client_portal?: ClientPortalNotificationsPatch;
   billing?: BillingNotificationsPatch;
   work?: WorkNotificationsPatch;
+}
+
+export interface TotpSetup {
+  otpauth_url: string;
+  qr_png_base64: string;
+  qr_data_uri: string;
+  manual_entry_key: string;
+}
+
+export interface TotpStatus {
+  enabled: boolean;
+  setup_pending: boolean;
+  backup_codes_remaining: number;
+}
+
+export interface TotpEnableResult {
+  status: TotpStatus;
+  backup_codes: string[];
+  backup_codes_file: string;
+}
+
+export interface VerifyTotpCodeDto {
+  code: string;
+}
+
+export interface DisableTotpDto {
+  password: string;
+  two_factor_auth_code?: string;
+  two_factor_auth_backup_code?: string;
 }

@@ -74,6 +74,18 @@ async function parseErrorPayload(response: Response): Promise<Record<string, unk
   return {};
 }
 
+function shouldClearSessionOnUnauthorized(payload: Record<string, unknown>): boolean {
+  const errorType = typeof payload.type === 'string' ? payload.type : null;
+  const errorMessage = typeof payload.error === 'string' ? payload.error : null;
+
+  return (
+    errorType === 'jwt_error' ||
+    errorMessage === 'no session' ||
+    errorMessage === 'invalid token' ||
+    errorMessage === 'user not authenticated'
+  );
+}
+
 async function request(url: string, options: RequestInit, scope: 'user' | 'client') {
   const headers = new Headers(options.headers);
   const isMultipartForm = options.body instanceof FormData;
@@ -88,20 +100,20 @@ async function request(url: string, options: RequestInit, scope: 'user' | 'clien
     credentials: 'include',
   });
 
-  if (response.status === 401) {
-    if (scope === 'client') {
-      const clientAuthStore = useClientAuthStore();
-      clientAuthStore.clearAuth();
-      window.location.hash = '/client/login';
-    } else {
-      const authStore = useAuthStore();
-      authStore.clearAuth();
-      window.location.hash = '/login';
-    }
-  }
-
   if (!response.ok) {
     const errorPayload = await parseErrorPayload(response);
+    if (response.status === 401 && shouldClearSessionOnUnauthorized(errorPayload)) {
+      if (scope === 'client') {
+        const clientAuthStore = useClientAuthStore();
+        clientAuthStore.clearAuth();
+        window.location.hash = '/client/login';
+      } else {
+        const authStore = useAuthStore();
+        authStore.clearAuth();
+        window.location.hash = '/login';
+      }
+    }
+
     throw new ApiHttpError({
       status: response.status,
       method: (options.method ?? 'GET').toUpperCase(),

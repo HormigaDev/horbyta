@@ -19,6 +19,18 @@ pub struct LoginPayload {
     pub email: String,
     #[validate(length(min = 1, message = "password is required"))]
     pub password: String,
+    #[validate(length(
+        min = 6,
+        max = 8,
+        message = "two-factor authentication code must be between 6 and 8 digits"
+    ))]
+    pub two_factor_auth_code: Option<String>,
+    #[validate(length(
+        min = 8,
+        max = 32,
+        message = "two-factor authentication backup code must be between 8 and 32 characters"
+    ))]
+    pub two_factor_auth_backup_code: Option<String>,
 }
 
 #[derive(Deserialize, Clone, Validate, ToSchema)]

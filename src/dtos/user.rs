@@ -34,6 +34,14 @@ fn validate_password_confirmation(payload: &UpdateUserPasswordDto) -> Result<(),
     Ok(())
 }
 
+fn validate_password_two_factor_payload(payload: &UpdateUserPasswordDto) -> Result<(), ValidationError> {
+    if payload.two_factor_auth_code.is_some() && payload.two_factor_auth_backup_code.is_some() {
+        return Err(ValidationError::new("multiple_two_factor_auth_codes"));
+    }
+
+    Ok(())
+}
+
 fn validate_non_empty_preferences_patch(payload: &UpdateUserPreferencesDto) -> Result<(), ValidationError> {
     if payload.theme.is_none()
         && payload.timezone.is_none()
@@ -297,6 +305,7 @@ pub struct UpdateUserProfileDto {
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 #[serde(deny_unknown_fields)]
 #[validate(schema(function = "validate_password_confirmation"))]
+#[validate(schema(function = "validate_password_two_factor_payload"))]
 pub struct UpdateUserPasswordDto {
     #[validate(length(
         min = 1,
@@ -314,6 +323,20 @@ pub struct UpdateUserPasswordDto {
         message = "confirm password must be between 12 and 128 characters"
     ))]
     pub confirm_password: String,
+
+    #[validate(length(
+        min = 6,
+        max = 8,
+        message = "two-factor authentication code must be between 6 and 8 digits"
+    ))]
+    pub two_factor_auth_code: Option<String>,
+
+    #[validate(length(
+        min = 8,
+        max = 32,
+        message = "two-factor authentication backup code must be between 8 and 32 characters"
+    ))]
+    pub two_factor_auth_backup_code: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
@@ -379,6 +402,7 @@ pub struct UserSettingsDto {
     pub id: Uuid,
     pub name: String,
     pub email: String,
+    pub two_factor_auth_enabled: bool,
     pub preferences: UserPreferences,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
@@ -391,6 +415,7 @@ impl From<crate::entities::users::Model> for UserSettingsDto {
             id: model.id,
             name: model.name,
             email: model.email,
+            two_factor_auth_enabled: model.two_factor_auth_enabled,
             preferences,
             created_at: model.created_at,
             updated_at: model.updated_at,

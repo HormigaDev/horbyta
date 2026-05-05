@@ -15,6 +15,7 @@ pub const AUTH_RATE_LIMIT: u32 = 5;
 pub const CHARTS_RATE_LIMIT: u32 = 60;
 pub const UPLOADS_RATE_LIMIT: u32 = 10;
 pub const MAGIC_TOKEN_RATE_LIMIT: u32 = 5;
+pub const TWO_FACTOR_AUTH_FAILURE_RATE_LIMIT: u32 = 5;
 pub const WS_MAX_CONNECTIONS: usize = 2;
 
 /// Extracts the real client IP from Nginx-forwarded headers, falling back to
@@ -57,4 +58,20 @@ pub fn check_user_rate_limit(limiter: &Cache<Uuid, Arc<AtomicU32>>, user_id: Uui
         return Err(AppError::TooManyRequests);
     }
     Ok(())
+}
+
+pub fn check_key_rate_limit(limiter: &Cache<String, Arc<AtomicU32>>, key: &str, limit: u32) -> Result<(), AppError> {
+    if limiter
+        .get(key)
+        .is_some_and(|counter| counter.load(Ordering::Relaxed) >= limit)
+    {
+        return Err(AppError::TooManyRequests);
+    }
+
+    Ok(())
+}
+
+pub fn record_key_rate_limit_failure(limiter: &Cache<String, Arc<AtomicU32>>, key: String) {
+    let counter = limiter.get_with(key, || Arc::new(AtomicU32::new(0)));
+    counter.fetch_add(1, Ordering::Relaxed);
 }

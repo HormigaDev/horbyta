@@ -39,6 +39,16 @@ export const messages = {
   'auth.login.emailLabel': 'Correo electrónico',
   'auth.login.passwordLabel': 'Contraseña',
   'auth.login.submit': 'Iniciar sesión',
+  'auth.login.twoFactorSubtitle': 'Verificación de dos factores',
+  'auth.login.twoFactorTab': 'App',
+  'auth.login.backupCodeTab': 'Respaldo',
+  'auth.login.twoFactorCodeLabel': 'Código de autenticación',
+  'auth.login.backupCodeLabel': 'Código de respaldo',
+  'auth.login.verifyTwoFactor': 'Verificar',
+  'auth.login.backToCredentials': 'Volver a credenciales',
+  'auth.login.twoFactorRequired': 'Ingresa el código de autenticación',
+  'auth.login.backupCodeRequired': 'Ingresa un código de respaldo',
+  'auth.login.invalidTwoFactorError': 'El código de autenticación no es válido o ya fue usado',
   'auth.login.invalidCredentialsError': 'Credenciales inválidas',
   'auth.login.unexpectedError': 'Ocurrió un error inesperado. Intente nuevamente más tarde',
   'auth.login.noAccount': '¿No tienes una cuenta?',
@@ -938,16 +948,48 @@ export const messages = {
   'settings.user.newPasswordLabel': 'Nueva contraseña',
   'settings.user.confirmPasswordLabel': 'Confirmar contraseña',
   'settings.user.updatePasswordButton': 'Actualizar contraseña',
+  'settings.user.twoFactorTitle': 'Autenticación de dos factores',
+  'settings.user.twoFactorSubtitle': 'Protege tu cuenta con una aplicación autenticadora y códigos de respaldo.',
+  'settings.user.twoFactorEnabled': 'Activa',
+  'settings.user.twoFactorDisabled': 'Inactiva',
+  'settings.user.backupCodesRemaining': '{count} código(s) de respaldo disponible(s)',
+  'settings.user.startTwoFactorButton': 'Activar 2FA',
+  'settings.user.disableTwoFactorButton': 'Desactivar 2FA',
+  'settings.user.twoFactorCodeTab': 'App autenticadora',
+  'settings.user.backupCodeTab': 'Código de respaldo',
+  'settings.user.twoFactorCodeLabel': 'Código de autenticación',
+  'settings.user.backupCodeLabel': 'Código de respaldo',
+  'settings.user.setupDialogTitle': 'Configurar autenticación de dos factores',
+  'settings.user.setupDialogSubtitle': 'Escanea el QR o copia la clave manual y confirma con un código.',
+  'settings.user.manualKeyLabel': 'Clave manual',
+  'settings.user.confirmTwoFactorCodeLabel': 'Código de confirmación',
+  'settings.user.enableTwoFactorButton': 'Confirmar y activar',
+  'settings.user.backupCodesDialogTitle': 'Códigos de respaldo',
+  'settings.user.backupCodesDialogSubtitle':
+    'Guárdalos en un lugar seguro. Cada código funciona una sola vez.',
+  'settings.user.downloadBackupCodes': 'Descargar archivo',
+  'settings.user.disableDialogTitle': 'Desactivar autenticación de dos factores',
+  'settings.user.disableDialogSubtitle': 'Confirma tu contraseña y un código válido para desactivar 2FA.',
   'settings.user.validation.nameRequired': 'El nombre es obligatorio',
   'settings.user.validation.emailRequired': 'El correo es obligatorio',
   'settings.user.validation.passwordFieldsRequired': 'Completa los tres campos de contraseña',
   'settings.user.validation.passwordMismatch':
     'La confirmación no coincide con la nueva contraseña',
   'settings.user.validation.passwordMin': 'La nueva contraseña debe tener al menos 12 caracteres',
+  'settings.user.validation.twoFactorRequired': 'Ingresa un código de autenticación o respaldo',
+  'settings.user.validation.disableTwoFactorRequired':
+    'Ingresa la contraseña actual y un código de autenticación o respaldo',
   'settings.user.profileSuccess': 'Usuario actualizado',
   'settings.user.profileError': 'No se pudo actualizar el usuario',
   'settings.user.passwordSuccess': 'Contraseña actualizada',
   'settings.user.passwordError': 'No se pudo actualizar la contraseña',
+  'settings.user.twoFactorLoadError': 'No se pudo cargar el estado de 2FA',
+  'settings.user.twoFactorSetupError': 'No se pudo iniciar la configuración de 2FA',
+  'settings.user.twoFactorEnableError': 'No se pudo activar 2FA',
+  'settings.user.twoFactorCancelError': 'No se pudo cancelar la configuración de 2FA',
+  'settings.user.twoFactorDisableError': 'No se pudo desactivar 2FA',
+  'settings.user.twoFactorEnabledSuccess': 'Autenticación de dos factores activada',
+  'settings.user.twoFactorDisabledSuccess': 'Autenticación de dos factores desactivada',
 
   'settings.notifications.title': 'Notificaciones',
   'settings.notifications.subtitle': 'Configura los tipos de notificaciones que quieres recibir.',
@@ -1326,6 +1368,21 @@ export const messages = {
     'La nueva contraseña debe tener entre 12 y 128 caracteres.',
   'backendErrors.confirm password must be between 12 and 128 characters':
     'La confirmación de contraseña debe tener entre 12 y 128 caracteres.',
+  'backendErrors.two-factor authentication code must be between 6 and 8 digits':
+    'El código de autenticación debe tener entre 6 y 8 dígitos.',
+  'backendErrors.two-factor authentication backup code must be between 8 and 32 characters':
+    'El código de respaldo debe tener entre 8 y 32 caracteres.',
+  'backendErrors.two-factor authentication is already enabled':
+    'La autenticación de dos factores ya está activa.',
+  'backendErrors.two-factor authentication is not enabled':
+    'La autenticación de dos factores no está activa.',
+  'backendErrors.two-factor authentication setup has not been started':
+    'Primero inicia la configuración de autenticación de dos factores.',
+  'backendErrors.invalid two-factor authentication code': 'El código de autenticación no es válido.',
+  'backendErrors.two-factor authentication code is required':
+    'Debes ingresar un código de autenticación.',
+  'backendErrors.two-factor authentication code was already used':
+    'Ese código de autenticación o respaldo ya fue usado.',
   'backendErrors.timezone must be between 1 and 64 characters':
     'La timezone debe tener entre 1 y 64 caracteres.',
   'backendErrors.ai model must be between 1 and 128 characters':

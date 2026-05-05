@@ -125,6 +125,11 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::controllers::users::update_password,
         crate::controllers::users::update_preferences,
         crate::controllers::users::update_notifications,
+        crate::controllers::users::get_totp_status,
+        crate::controllers::users::start_totp_setup,
+        crate::controllers::users::enable_totp,
+        crate::controllers::users::cancel_totp_setup,
+        crate::controllers::users::disable_totp,
         crate::controllers::websocket::websocket_handler
     ),
     tags(
