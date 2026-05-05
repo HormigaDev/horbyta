@@ -105,6 +105,16 @@ impl NotificationService {
         Ok(())
     }
 
+    pub async fn delete_all(db: &impl ConnectionTrait, user_id: Uuid) -> Result<(), AppError> {
+        Notifications::delete_many()
+            .filter(notifications::Column::UserId.eq(user_id))
+            .exec(db)
+            .await
+            .map_err(AppError::Database)?;
+
+        Ok(())
+    }
+
     pub async fn mark_as_received(db: &impl ConnectionTrait, user_id: Uuid, ids: Vec<Uuid>) -> Result<(), AppError> {
         if ids.is_empty() {
             return Ok(());

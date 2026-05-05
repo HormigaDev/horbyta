@@ -715,7 +715,7 @@ function markAllNotificationsAsRead() {
 }
 
 function clearNotifications() {
-  markAllNotificationsAsRead();
+  sendWebSocketMessage({ type: 'notification.clear_all' });
   notificationsStore.clearAll();
 }
 

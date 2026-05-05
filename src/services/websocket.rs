@@ -175,6 +175,10 @@ impl WebSocketService {
                 NotificationService::mark_all_as_read(self.state.db.as_ref(), _user_id).await?;
                 Ok(true)
             }
+            "notification.clear_all" => {
+                NotificationService::delete_all(self.state.db.as_ref(), _user_id).await?;
+                Ok(true)
+            }
             _ => Err(AppError::BadRequest("unknown message type".to_string())),
         }
     }
