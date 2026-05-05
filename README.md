@@ -128,21 +128,21 @@ Important flows:
 
 Current backend convention:
 
-| Error | Use when |
-| --- | --- |
-| `Unprocessable` | Request body cannot be parsed as the expected transport format, e.g. invalid JSON or multipart. |
-| `BadRequest` | Payload is syntactically valid but violates DTO validation or a business input rule. |
-| `Conflict` | The action is valid in general but conflicts with current state, e.g. editing a non-draft invoice or creating work inside a closed project. |
-| `Forbidden` | The authenticated actor exists but is not allowed to perform that role-specific action. |
-| `NotFound` | The resource does not exist in the caller's tenant scope, or should not reveal cross-tenant existence. |
-| `Unauthorized` | Missing, invalid, or expired session token. |
+| Error           | Use when                                                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Unprocessable` | Request body cannot be parsed as the expected transport format, e.g. invalid JSON or multipart.                                             |
+| `BadRequest`    | Payload is syntactically valid but violates DTO validation or a business input rule.                                                        |
+| `Conflict`      | The action is valid in general but conflicts with current state, e.g. editing a non-draft invoice or creating work inside a closed project. |
+| `Forbidden`     | The authenticated actor exists but is not allowed to perform that role-specific action.                                                     |
+| `NotFound`      | The resource does not exist in the caller's tenant scope, or should not reveal cross-tenant existence.                                      |
+| `Unauthorized`  | Missing, invalid, or expired session token.                                                                                                 |
 
 Responses use:
 
 ```json
 {
-  "error": "human readable message",
-  "type": "bad_request"
+    "error": "human readable message",
+    "type": "bad_request"
 }
 ```
 
@@ -256,28 +256,28 @@ npm run lint
 
 All runtime configuration is read from environment variables. `Config::init()` requires the critical values at startup.
 
-| Variable | Required | Default | Description |
-| --- | --- | --- | --- |
-| `DATABASE_URL` | yes | none | PostgreSQL connection string. |
-| `JWT_SECRET` | yes | none | Secret used to sign freelancer/user JWTs. Use 32+ random chars. |
-| `JWT_SECRET_CLIENT` | yes | none | Separate secret for client portal JWTs. Use 32+ random chars. |
-| `TIME_TO_EXP_SESSION` | yes | none | Session duration parsed by `duration-str`, e.g. `7d`, `12h`, `30m`. |
-| `APP_URI` | no | `127.0.0.1:8890` | Address the Rust server binds to. In Docker this is set to `0.0.0.0:8890`. |
-| `APP_ENV` | no | `development` | `production` disables development CORS behavior. |
-| `FRONTEND_ORIGIN` | dev only | `http://localhost:9000` | Allowed CORS origin outside production. |
-| `STATIC_DIR` | no | `frontend/dist/pwa` | Directory served as the PWA. |
-| `ALLOW_REGISTRATION` | no | `false` | Enables public user registration. Turn off after creating the first user. |
-| `UPLOAD_DIR` | no | `./data/storage` | Local attachment storage path when S3 is not configured. |
-| `USER_STORAGE_LIMIT_GB` | no | `2` | Per-user attachment storage cap. |
-| `S3_BUCKET` | no | unset | Enables S3-compatible storage when set. |
-| `S3_REGION` | no | unset | S3 region. |
-| `S3_ENDPOINT` | no | unset | Custom S3 endpoint for MinIO, Cloudflare R2, Backblaze B2, etc. |
-| `S3_ACCESS_KEY` | no | unset | S3 access key. |
-| `S3_SECRET_KEY` | no | unset | S3 secret key. |
-| `RUST_LOG` | no | `info` | Logging filter, e.g. `debug`, `info,sqlx=warn`. |
-| `RUST_PORT` | compose | `8890` | Host port used by Docker Compose. |
-| `APP_VERSION` | compose | `latest` | Docker image tag suffix. |
-| `BINARY_NAME` | compose/build | `horbyta` | Binary copied by the production Dockerfile. |
+| Variable                | Required      | Default                 | Description                                                                |
+| ----------------------- | ------------- | ----------------------- | -------------------------------------------------------------------------- |
+| `DATABASE_URL`          | yes           | none                    | PostgreSQL connection string.                                              |
+| `JWT_SECRET`            | yes           | none                    | Secret used to sign freelancer/user JWTs. Use 32+ random chars.            |
+| `JWT_SECRET_CLIENT`     | yes           | none                    | Separate secret for client portal JWTs. Use 32+ random chars.              |
+| `TIME_TO_EXP_SESSION`   | yes           | none                    | Session duration parsed by `duration-str`, e.g. `7d`, `12h`, `30m`.        |
+| `APP_URI`               | no            | `127.0.0.1:8890`        | Address the Rust server binds to. In Docker this is set to `0.0.0.0:8890`. |
+| `APP_ENV`               | no            | `development`           | `production` disables development CORS behavior.                           |
+| `FRONTEND_ORIGIN`       | dev only      | `http://localhost:9000` | Allowed CORS origin outside production.                                    |
+| `STATIC_DIR`            | no            | `frontend/dist/pwa`     | Directory served as the PWA.                                               |
+| `ALLOW_REGISTRATION`    | no            | `false`                 | Enables public user registration. Turn off after creating the first user.  |
+| `UPLOAD_DIR`            | no            | `./data/storage`        | Local attachment storage path when S3 is not configured.                   |
+| `USER_STORAGE_LIMIT_GB` | no            | `2`                     | Per-user attachment storage cap.                                           |
+| `S3_BUCKET`             | no            | unset                   | Enables S3-compatible storage when set.                                    |
+| `S3_REGION`             | no            | unset                   | S3 region.                                                                 |
+| `S3_ENDPOINT`           | no            | unset                   | Custom S3 endpoint for MinIO, Cloudflare R2, Backblaze B2, etc.            |
+| `S3_ACCESS_KEY`         | no            | unset                   | S3 access key.                                                             |
+| `S3_SECRET_KEY`         | no            | unset                   | S3 secret key.                                                             |
+| `RUST_LOG`              | no            | `info`                  | Logging filter, e.g. `debug`, `info,sqlx=warn`.                            |
+| `RUST_PORT`             | compose       | `8890`                  | Host port used by Docker Compose.                                          |
+| `APP_VERSION`           | compose       | `latest`                | Docker image tag suffix.                                                   |
+| `BINARY_NAME`           | compose/build | `horbyta`               | Binary copied by the production Dockerfile.                                |
 
 `.env.template` includes extra helper values used by compose/development. Variables not read by the Rust app may still be used by Docker or scripts.
 
@@ -413,6 +413,6 @@ The provided config proxies to `127.0.0.1:8890` and includes WebSocket upgrade h
 
 ## License
 
-All versions of this project have been publicly released under AGPL-3.0-only.
+All versions of this project have been publicly released under [AGPL-3.0-only](./LICENSE).
 
 Earlier commits referencing MIT were never publicly distributed under that license.
