@@ -84,23 +84,27 @@ impl WebSocketService {
             .await
             .map_err(AppError::Database)?;
 
-        let unread_notifications = Notifications::find()
+        let persisted_notifications = Notifications::find()
             .filter(notifications::Column::UserId.eq(user_id))
-            .filter(notifications::Column::IsRead.eq(false))
             .order_by_asc(notifications::Column::CreatedAt)
             .all(self.state.db.as_ref())
             .await
             .map_err(AppError::Database)?;
 
-        for notification in unread_notifications
-            .iter()
-            .filter(|notification| notification.received_at.is_some())
-        {
+        for notification in persisted_notifications.iter().filter(|notification| {
+            notification.is_read || (!notification.is_read && notification.received_at.is_some())
+        }) {
             self.send_silent_notification_event(sender, notification).await?;
         }
 
         if pending_count > UNREAD_NOTIFICATION_SUMMARY_THRESHOLD {
             self.send_notification_summary_event(sender, unread_count).await?;
+            for notification in persisted_notifications
+                .iter()
+                .filter(|notification| !notification.is_read && notification.received_at.is_none())
+            {
+                self.send_silent_notification_event(sender, notification).await?;
+            }
             NotificationService::mark_unread_as_received(self.state.db.as_ref(), user_id).await?;
             self.send_unread_count_event(sender, unread_count).await?;
             return Ok(());
@@ -227,6 +231,7 @@ impl WebSocketService {
                 "entityId": notification.entity_id,
                 "payload": notification.payload,
                 "silent": silent,
+                "read": notification.is_read,
                 "createdAt": notification.created_at
             })),
             id: Some(notification.id.to_string()),

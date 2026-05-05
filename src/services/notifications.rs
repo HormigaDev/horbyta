@@ -147,12 +147,6 @@ impl NotificationService {
         client_id: Uuid,
         change_request: &ClientChangeRequestDetailDto,
     ) -> Result<(), AppError> {
-        let title = "New change request".to_string();
-        let body = Some(format!(
-            "The client created request #{}: {}",
-            change_request.record_number, change_request.title
-        ));
-
         Self::create_and_publish(
             state,
             Self::change_request_input(
@@ -160,8 +154,8 @@ impl NotificationService {
                 client_id,
                 change_request,
                 "client_portal.change_request_created",
-                title,
-                body,
+                "notifications.clientPortal.changeRequestCreated.title",
+                "notifications.clientPortal.changeRequestCreated.body",
                 "info",
             ),
         )
@@ -176,12 +170,6 @@ impl NotificationService {
         client_id: Uuid,
         change_request: &ClientChangeRequestDetailDto,
     ) -> Result<(), AppError> {
-        let title = "Change request updated".to_string();
-        let body = Some(format!(
-            "The client updated request #{}: {}",
-            change_request.record_number, change_request.title
-        ));
-
         Self::create_and_publish(
             state,
             Self::change_request_input(
@@ -189,8 +177,8 @@ impl NotificationService {
                 client_id,
                 change_request,
                 "client_portal.change_request_updated",
-                title,
-                body,
+                "notifications.clientPortal.changeRequestUpdated.title",
+                "notifications.clientPortal.changeRequestUpdated.body",
                 "info",
             ),
         )
@@ -211,18 +199,17 @@ impl NotificationService {
         } else {
             "client_portal.change_request_declined"
         };
-        let title = if approved {
-            "Change request approved"
+        let (title_key, body_key) = if approved {
+            (
+                "notifications.clientPortal.changeRequestApproved.title",
+                "notifications.clientPortal.changeRequestApproved.body",
+            )
         } else {
-            "Change request declined"
-        }
-        .to_string();
-        let body = Some(format!(
-            "The client {} request #{}: {}",
-            if approved { "approved" } else { "declined" },
-            change_request.record_number,
-            change_request.title
-        ));
+            (
+                "notifications.clientPortal.changeRequestDeclined.title",
+                "notifications.clientPortal.changeRequestDeclined.body",
+            )
+        };
 
         Self::create_and_publish(
             state,
@@ -231,8 +218,8 @@ impl NotificationService {
                 client_id,
                 change_request,
                 preference_key,
-                title,
-                body,
+                title_key,
+                body_key,
                 if approved { "positive" } else { "warning" },
             ),
         )
@@ -247,12 +234,6 @@ impl NotificationService {
         client_id: Uuid,
         change_request: &ClientChangeRequestDetailDto,
     ) -> Result<(), AppError> {
-        let title = "Change request cancelled".to_string();
-        let body = Some(format!(
-            "The client cancelled request #{}: {}",
-            change_request.record_number, change_request.title
-        ));
-
         Self::create_and_publish(
             state,
             Self::change_request_input(
@@ -260,8 +241,8 @@ impl NotificationService {
                 client_id,
                 change_request,
                 "client_portal.change_request_cancelled",
-                title,
-                body,
+                "notifications.clientPortal.changeRequestCancelled.title",
+                "notifications.clientPortal.changeRequestCancelled.body",
                 "warning",
             ),
         )
@@ -276,18 +257,19 @@ impl NotificationService {
             CreateNotificationInput {
                 user_id: invoice.user_id,
                 preference_key: "billing.invoice_opened",
-                title: format!("Invoice #{} issued", invoice.record_number),
-                body: Some(format!(
-                    "The invoice for {} {} was marked as open.",
-                    invoice.amount, invoice.currency_type
-                )),
-                payload: Some(json!({
+                title: "notifications.billing.invoiceOpened.title".to_string(),
+                body: Some("notifications.billing.invoiceOpened.body".to_string()),
+                payload: Some(Self::translated_payload(json!({
                     "route": format!("/invoices/{}", invoice.id),
                     "invoiceId": invoice.id,
                     "invoiceRecordNumber": invoice.record_number,
                     "projectId": invoice.project_id,
                     "projectName": invoice.project_name,
-                })),
+                }), "notifications.billing.invoiceOpened.title", "notifications.billing.invoiceOpened.body", json!({
+                    "recordNumber": invoice.record_number,
+                    "amount": invoice.amount,
+                    "currency": invoice.currency_type,
+                }))),
                 severity: "info",
                 source: "invoice",
                 entity_type: Some("invoice"),
@@ -305,18 +287,19 @@ impl NotificationService {
             CreateNotificationInput {
                 user_id: invoice.user_id,
                 preference_key: "billing.invoice_paid",
-                title: format!("Invoice #{} paid", invoice.record_number),
-                body: Some(format!(
-                    "The invoice for {} {} was marked as paid.",
-                    invoice.amount, invoice.currency_type
-                )),
-                payload: Some(json!({
+                title: "notifications.billing.invoicePaid.title".to_string(),
+                body: Some("notifications.billing.invoicePaid.body".to_string()),
+                payload: Some(Self::translated_payload(json!({
                     "route": format!("/invoices/{}", invoice.id),
                     "invoiceId": invoice.id,
                     "invoiceRecordNumber": invoice.record_number,
                     "projectId": invoice.project_id,
                     "projectName": invoice.project_name,
-                })),
+                }), "notifications.billing.invoicePaid.title", "notifications.billing.invoicePaid.body", json!({
+                    "recordNumber": invoice.record_number,
+                    "amount": invoice.amount,
+                    "currency": invoice.currency_type,
+                }))),
                 severity: "positive",
                 source: "invoice",
                 entity_type: Some("invoice"),
@@ -338,18 +321,19 @@ impl NotificationService {
             CreateNotificationInput {
                 user_id,
                 preference_key: "billing.payment_received",
-                title: format!("Payment #{} recorded", payment.record_number),
-                body: Some(format!(
-                    "A payment of {} {} was recorded.",
-                    payment.amount, payment.currency_type
-                )),
-                payload: Some(json!({
+                title: "notifications.billing.paymentReceived.title".to_string(),
+                body: Some("notifications.billing.paymentReceived.body".to_string()),
+                payload: Some(Self::translated_payload(json!({
                     "route": format!("/payments/{}", payment.id),
                     "paymentId": payment.id,
                     "paymentRecordNumber": payment.record_number,
                     "projectId": payment.project_id,
                     "projectName": payment.project_name,
-                })),
+                }), "notifications.billing.paymentReceived.title", "notifications.billing.paymentReceived.body", json!({
+                    "recordNumber": payment.record_number,
+                    "amount": payment.amount,
+                    "currency": payment.currency_type,
+                }))),
                 severity: "positive",
                 source: "payment",
                 entity_type: Some("payment"),
@@ -375,14 +359,16 @@ impl NotificationService {
             CreateNotificationInput {
                 user_id,
                 preference_key: "work.milestone_released",
-                title: "Milestone released".to_string(),
-                body: Some(format!("Milestone \"{}\" was marked as released.", milestone.name)),
-                payload: Some(json!({
+                title: "notifications.work.milestoneReleased.title".to_string(),
+                body: Some("notifications.work.milestoneReleased.body".to_string()),
+                payload: Some(Self::translated_payload(json!({
                     "route": format!("/milestones/{}", milestone.id),
                     "milestoneId": milestone.id,
                     "projectId": milestone.project_id,
                     "name": milestone.name,
-                })),
+                }), "notifications.work.milestoneReleased.title", "notifications.work.milestoneReleased.body", json!({
+                    "name": milestone.name,
+                }))),
                 severity: "positive",
                 source: "milestone",
                 entity_type: Some("milestone"),
@@ -414,16 +400,16 @@ impl NotificationService {
         client_id: Uuid,
         change_request: &ClientChangeRequestDetailDto,
         preference_key: &'static str,
-        title: String,
-        body: Option<String>,
+        title_key: &'static str,
+        body_key: &'static str,
         severity: &'static str,
     ) -> CreateNotificationInput {
         CreateNotificationInput {
             user_id,
             preference_key,
-            title,
-            body,
-            payload: Some(json!({
+            title: title_key.to_string(),
+            body: Some(body_key.to_string()),
+            payload: Some(Self::translated_payload(json!({
                 "route": format!("/change-requests/{}", change_request.id),
                 "changeRequestId": change_request.id,
                 "changeRequestRecordNumber": change_request.record_number,
@@ -432,11 +418,29 @@ impl NotificationService {
                 "projectName": change_request.project_name,
                 "title": change_request.title,
                 "status": change_request.status,
-            })),
+            }), title_key, body_key, json!({
+                "recordNumber": change_request.record_number,
+                "title": change_request.title,
+            }))),
             severity,
             source: "client_portal",
             entity_type: Some("change_request"),
             entity_id: Some(change_request.id),
         }
+    }
+
+    fn translated_payload(mut payload: Value, title_key: &'static str, body_key: &'static str, params: Value) -> Value {
+        if let Some(payload) = payload.as_object_mut() {
+            payload.insert(
+                "translation".to_string(),
+                json!({
+                    "titleKey": title_key,
+                    "bodyKey": body_key,
+                    "params": params,
+                }),
+            );
+        }
+
+        payload
     }
 }
