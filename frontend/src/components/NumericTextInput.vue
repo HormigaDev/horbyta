@@ -25,13 +25,17 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { normalizeNumericText } from 'src/utils/numericInput';
+import type { UserNumberFormatPreference } from 'src/types/user';
 
 interface Props {
   modelValue: string | number | null;
   label?: string;
   onlyIntegers?: boolean;
   decimalPlaces?: number;
+  decimalSeparator?: UserNumberFormatPreference['decimal_separator'];
+  thousandSeparator?: UserNumberFormatPreference['thousand_separator'];
   disable?: boolean;
   error?: boolean;
   outlined?: boolean;
@@ -53,9 +57,13 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void;
 }>();
 
+const preferencesStore = useUserPreferencesStore();
+
 const normalizedOptions = computed(() => ({
   onlyIntegers: props.onlyIntegers,
   decimalPlaces: props.decimalPlaces,
+  decimalSeparator: props.decimalSeparator ?? preferencesStore.decimalSeparator,
+  thousandSeparator: props.thousandSeparator ?? preferencesStore.thousandSeparator,
 }));
 
 const typingOptions = computed(() => ({

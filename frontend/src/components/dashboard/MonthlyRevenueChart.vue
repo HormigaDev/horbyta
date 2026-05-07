@@ -18,6 +18,7 @@ import {
 import type { ChartPalette } from '../../composables/dashboard/useChartPalette';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 import { useI18n } from 'vue-i18n';
 
 interface Props {
@@ -28,7 +29,11 @@ interface Props {
 
 const props = defineProps<Props>();
 const userPreferencesStore = useUserPreferencesStore();
+const { formatNumber } = useNumberFormatter();
 const { t } = useI18n();
+
+const formatChartNumber = (value: unknown) =>
+  typeof value === 'number' || typeof value === 'string' ? formatNumber(value) : '—';
 
 const formatDate = (rawDate: string) =>
   formatDateByPreferences(rawDate, {
@@ -67,7 +72,7 @@ const option = computed<DashboardEChartsOption | null>(() => {
 
   return {
     color: props.palette.palette,
-    tooltip: { trigger: 'axis', ...baseTooltip(props.palette) },
+    tooltip: { trigger: 'axis', valueFormatter: formatChartNumber, ...baseTooltip(props.palette) },
     legend: {
       top: 4,
       textStyle: { color: props.palette.text },
@@ -82,7 +87,7 @@ const option = computed<DashboardEChartsOption | null>(() => {
     yAxis: {
       type: 'value',
       axisLine: { lineStyle: { color: props.palette.axis } },
-      axisLabel: { color: props.palette.text },
+      axisLabel: { color: props.palette.text, formatter: (value: number) => formatNumber(value) },
       splitLine: { lineStyle: { color: props.palette.grid } },
     },
     series,

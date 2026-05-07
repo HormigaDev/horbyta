@@ -48,6 +48,7 @@ import { useRouter } from 'vue-router';
 import type { ProjectBillingType, ProjectStatus } from 'src/types/project';
 import type { ClientProjectPortfolioRow } from 'src/types/dashboard';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 
 interface Props {
@@ -69,6 +70,7 @@ interface Props {
 const props = defineProps<Props>();
 const router = useRouter();
 const preferencesStore = useUserPreferencesStore();
+const { formatCurrency } = useNumberFormatter();
 
 const formatDate = (value: string) =>
   formatDateByPreferences(value, {
@@ -82,7 +84,7 @@ const formatAmount = (currency: string | null, value: string | null) => {
     return props.emptyValue;
   }
 
-  return `${currency || ''} ${value}`.trim();
+  return formatCurrency(value, currency, props.emptyValue, false);
 };
 
 const billingSummary = (row: ClientProjectPortfolioRow) => {

@@ -11,6 +11,7 @@ import type { TimeByActivityRow } from 'src/types/dashboard';
 import { ensureEChartsRegistered } from '../../composables/dashboard/registerECharts';
 import { baseTooltip, type DashboardEChartsOption } from '../../composables/dashboard/chartHelpers';
 import type { ChartPalette } from '../../composables/dashboard/useChartPalette';
+import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 
 interface Props {
   rows: TimeByActivityRow[];
@@ -19,6 +20,10 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { formatNumber } = useNumberFormatter();
+
+const formatChartNumber = (value: unknown) =>
+  typeof value === 'number' || typeof value === 'string' ? formatNumber(value) : '—';
 
 ensureEChartsRegistered();
 
@@ -43,7 +48,7 @@ const option = computed<DashboardEChartsOption | null>(() => {
 
   return {
     color: props.palette.palette,
-    tooltip: { trigger: 'item', ...baseTooltip(props.palette) },
+    tooltip: { trigger: 'item', valueFormatter: formatChartNumber, ...baseTooltip(props.palette) },
     legend: {
       orient: 'horizontal',
       bottom: 4,

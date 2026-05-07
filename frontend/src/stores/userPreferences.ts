@@ -11,6 +11,13 @@ import {
   normalizeDateFormat,
   normalizeTimezone,
 } from 'src/utils/dateFormatting';
+import {
+  DEFAULT_DECIMAL_QUANTITY,
+  DEFAULT_DECIMAL_SEPARATOR,
+  DEFAULT_THOUSAND_SEPARATOR,
+  normalizeNumberFormat,
+} from 'src/utils/numberFormatting';
+import type { UserNumberFormatPreference } from 'src/types/user';
 
 const PINNED_SCOPE = 'pinned' as const;
 const MAX_PINNED_TASKS = 10;
@@ -18,6 +25,13 @@ const MAX_PINNED_TASKS = 10;
 export const useUserPreferencesStore = defineStore('userPreferences', () => {
   const timezone = ref(DEFAULT_TIMEZONE);
   const dateFormat = ref(DEFAULT_DATE_FORMAT);
+  const thousandSeparator = ref<UserNumberFormatPreference['thousand_separator']>(
+    DEFAULT_THOUSAND_SEPARATOR,
+  );
+  const decimalSeparator = ref<UserNumberFormatPreference['decimal_separator']>(
+    DEFAULT_DECIMAL_SEPARATOR,
+  );
+  const decimalQuantity = ref(DEFAULT_DECIMAL_QUANTITY);
   const groupNotifications = ref(false);
   const pinnedTasks = ref<PinnedTask[]>([]);
   const isLoaded = ref(false);
@@ -36,6 +50,10 @@ export const useUserPreferencesStore = defineStore('userPreferences', () => {
   function applyPreferences(preferences: UserPreferences | null | undefined) {
     timezone.value = normalizeTimezone(preferences?.timezone);
     dateFormat.value = normalizeDateFormat(preferences?.date_format);
+    const numberFormat = normalizeNumberFormat(preferences?.number_format);
+    thousandSeparator.value = numberFormat.thousand_separator;
+    decimalSeparator.value = numberFormat.decimal_separator;
+    decimalQuantity.value = numberFormat.decimal_quantity;
     groupNotifications.value = preferences?.notifications?.group_notifications ?? false;
     themeStore.setThemePreference(resolveIsDarkTheme(preferences));
     if (preferences?.language) {
@@ -64,6 +82,9 @@ export const useUserPreferencesStore = defineStore('userPreferences', () => {
   function resetToDefaults() {
     timezone.value = DEFAULT_TIMEZONE;
     dateFormat.value = DEFAULT_DATE_FORMAT;
+    thousandSeparator.value = DEFAULT_THOUSAND_SEPARATOR;
+    decimalSeparator.value = DEFAULT_DECIMAL_SEPARATOR;
+    decimalQuantity.value = DEFAULT_DECIMAL_QUANTITY;
     groupNotifications.value = false;
     pinnedTasks.value = [];
     isLoaded.value = false;
@@ -107,6 +128,9 @@ export const useUserPreferencesStore = defineStore('userPreferences', () => {
     } catch {
       timezone.value = DEFAULT_TIMEZONE;
       dateFormat.value = DEFAULT_DATE_FORMAT;
+      thousandSeparator.value = DEFAULT_THOUSAND_SEPARATOR;
+      decimalSeparator.value = DEFAULT_DECIMAL_SEPARATOR;
+      decimalQuantity.value = DEFAULT_DECIMAL_QUANTITY;
       groupNotifications.value = false;
       pinnedTasks.value = [];
       isLoaded.value = true;
@@ -118,6 +142,9 @@ export const useUserPreferencesStore = defineStore('userPreferences', () => {
   return {
     timezone,
     dateFormat,
+    thousandSeparator,
+    decimalSeparator,
+    decimalQuantity,
     groupNotifications,
     pinnedTasks,
     isLoaded,

@@ -186,6 +186,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useUI } from 'src/composables/useUI';
+import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 import { ClientProjectsService } from 'src/services/clientProjects';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
@@ -196,6 +197,7 @@ const router = useRouter();
 const { t } = useI18n();
 const { notifyError, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
+const { formatCurrency } = useNumberFormatter();
 
 const project = ref<ClientProjectDetailDto | null>(null);
 const projectId = String(route.params.id || '');
@@ -223,8 +225,7 @@ const formatBillingAmount = (
 ) => {
   if (!amount) return t('common.empty');
 
-  const currency = currencyType || '';
-  return `${currency} ${amount}`.trim();
+  return formatCurrency(amount, currencyType, amount, false);
 };
 
 const paymentDayLabel = (day: number | null | undefined) => {

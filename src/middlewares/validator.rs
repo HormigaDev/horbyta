@@ -107,6 +107,11 @@ fn format_custom_message(field: &str, code: &str) -> Option<String> {
         "invalid_decimal_range" => format!("{field} must be greater than or equal to 0"),
         "invalid_signature_ip" => format!("{field} must be a valid ip address"),
         "invalid_timezone" => format!("{field} must be a valid timezone"),
+        "invalid_number_separator" => {
+            format!("{field} must use comma or dot as numeric separators")
+        }
+        "number_separators_must_differ" => "thousand separator and decimal separator must be different".to_string(),
+        "invalid_decimal_quantity" => "decimal quantity must be between 1 and 4".to_string(),
         "password_mismatch" => "new password and confirm password must match".to_string(),
         "new_password_must_change" => "new password must be different from current password".to_string(),
         "empty_preferences_patch" => "request must include at least one preference field".to_string(),

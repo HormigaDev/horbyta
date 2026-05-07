@@ -879,6 +879,10 @@ export const messages: Record<keyof typeof es, string> = {
   'settings.preferences.languageLabel': 'Language',
   'settings.preferences.dateFormatLabel': 'Date format',
   'settings.preferences.timezoneLabel': 'Timezone',
+  'settings.preferences.thousandSeparatorLabel': 'Thousands separator',
+  'settings.preferences.decimalSeparatorLabel': 'Decimal separator',
+  'settings.preferences.decimalQuantityLabel': 'Visible decimals',
+  'settings.preferences.decimalQuantityHint': 'Must be an integer between 1 and 4.',
   'settings.preferences.maxDailyHoursLabel': 'Maximum daily hours',
   'settings.preferences.maxDailyHoursHint':
     'Your preference is applied, but it can never exceed the global cap of 14 hours.',
@@ -886,6 +890,10 @@ export const messages: Record<keyof typeof es, string> = {
   'settings.preferences.invalidTimezone': 'You must select a valid timezone',
   'settings.preferences.invalidMaxDailyHours':
     'The daily maximum must be an integer between 1 and 14.',
+  'settings.preferences.invalidDecimalQuantity':
+    'The decimal quantity must be an integer between 1 and 4.',
+  'settings.preferences.invalidNumberSeparators':
+    'The thousands separator and decimal separator must be different.',
   'settings.preferences.success': 'Preferences updated',
   'settings.preferences.reloadNotice':
     'Some translations will fully apply after reloading the page',
@@ -896,6 +904,8 @@ export const messages: Record<keyof typeof es, string> = {
   'settings.preferences.language.es': 'Spanish',
   'settings.preferences.language.en': 'English',
   'settings.preferences.language.pt': 'Portuguese',
+  'settings.preferences.separator.comma': 'Comma (,)',
+  'settings.preferences.separator.dot': 'Dot (.)',
   'settings.user.title': 'User',
   'settings.user.subtitle': 'Update the name, email, and password of your authenticated account.',
   'settings.user.nameLabel': 'Name',

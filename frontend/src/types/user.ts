@@ -4,6 +4,12 @@ export type UserDateFormatPreference = 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD
 export type UserRole = 'user' | 'admin';
 export type UserStatus = 'active' | 'inactive' | 'blocked';
 
+export interface UserNumberFormatPreference {
+  thousand_separator: ',' | '.';
+  decimal_separator: ',' | '.';
+  decimal_quantity: number;
+}
+
 export interface ClientPortalNotifications {
   change_request_created: boolean;
   change_request_updated: boolean;
@@ -40,6 +46,7 @@ export interface UserPreferences {
   theme: UserThemePreference;
   timezone: string;
   date_format: UserDateFormatPreference;
+  number_format: UserNumberFormatPreference;
   language: UserLanguagePreference;
   max_daily_hours: number;
   notifications: NotificationPreferences;
@@ -77,6 +84,7 @@ export interface UpdateUserPreferencesDto {
   theme?: UserThemePreference;
   timezone?: string;
   date_format?: UserDateFormatPreference;
+  number_format?: UserNumberFormatPreference;
   language?: UserLanguagePreference;
   max_daily_hours?: number;
 }

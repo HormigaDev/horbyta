@@ -2,6 +2,8 @@ export interface NumericTextOptions {
   onlyIntegers?: boolean;
   decimalPlaces?: number;
   keepIncompleteDecimals?: boolean;
+  decimalSeparator?: ',' | '.';
+  thousandSeparator?: ',' | '.';
 }
 
 const clampDecimalPlaces = (value: number | undefined): number => {
@@ -21,6 +23,33 @@ const normalizeIntegerPart = (value: string): string => {
   return withoutLeadingZeros || '0';
 };
 
+const stripGroupedThousands = (value: string, thousandSeparator: ',' | '.'): string => {
+  let output = '';
+
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+
+    if (char !== thousandSeparator) {
+      output += char;
+      continue;
+    }
+
+    const previous = value[index - 1] ?? '';
+    const nextGroup = value.slice(index + 1, index + 4);
+    const afterGroup = value[index + 4] ?? '';
+    const isGroupedThousands =
+      /\d/.test(previous) &&
+      /^\d{3}$/.test(nextGroup) &&
+      (afterGroup === '' || afterGroup === thousandSeparator || !/\d/.test(afterGroup));
+
+    if (!isGroupedThousands) {
+      output += char;
+    }
+  }
+
+  return output;
+};
+
 export const normalizeNumericText = (
   rawValue: string,
   options: NumericTextOptions = {},
@@ -28,6 +57,11 @@ export const normalizeNumericText = (
   const onlyIntegers = options.onlyIntegers ?? false;
   const decimalPlaces = clampDecimalPlaces(options.decimalPlaces);
   const keepIncompleteDecimals = options.keepIncompleteDecimals ?? false;
+  const decimalSeparator = options.decimalSeparator === '.' ? '.' : ',';
+  const thousandSeparator =
+    options.thousandSeparator === ',' || options.thousandSeparator === '.'
+      ? options.thousandSeparator
+      : null;
 
   if (!rawValue) return '';
 
@@ -37,17 +71,22 @@ export const normalizeNumericText = (
     return normalizeIntegerPart(digitsOnly);
   }
 
-  const withComma = rawValue.replace(/\./g, ',');
-  const cleaned = withComma.replace(/[^0-9,]/g, '');
-  const separatorIndex = cleaned.indexOf(',');
+  const withoutThousands = thousandSeparator
+    ? stripGroupedThousands(rawValue, thousandSeparator)
+    : rawValue;
+  const normalizedSeparator = withoutThousands.replace(/[.,]/g, decimalSeparator);
+  const separatorPattern = decimalSeparator === '.' ? /[^0-9.]/g : /[^0-9,]/g;
+  const cleaned = normalizedSeparator.replace(separatorPattern, '');
+  const separatorIndex = cleaned.indexOf(decimalSeparator);
 
   if (separatorIndex === -1) {
     return normalizeIntegerPart(cleaned);
   }
 
   const integerPart = normalizeIntegerPart(cleaned.slice(0, separatorIndex));
-  let decimalPart = cleaned.slice(separatorIndex + 1).replace(/,/g, '');
-  const hadTrailingSeparator = cleaned.endsWith(',');
+  const repeatedSeparatorPattern = decimalSeparator === '.' ? /\./g : /,/g;
+  let decimalPart = cleaned.slice(separatorIndex + 1).replace(repeatedSeparatorPattern, '');
+  const hadTrailingSeparator = cleaned.endsWith(decimalSeparator);
 
   if (decimalPlaces === 0) {
     return integerPart;
@@ -58,7 +97,7 @@ export const normalizeNumericText = (
   }
 
   if (!decimalPart.length) {
-    return hadTrailingSeparator ? `${integerPart},` : integerPart;
+    return hadTrailingSeparator ? `${integerPart}${decimalSeparator}` : integerPart;
   }
 
   const hasNonZeroDecimalDigit = /[1-9]/.test(decimalPart);
@@ -73,7 +112,7 @@ export const normalizeNumericText = (
     return integerPart;
   }
 
-  return `${integerPart},${decimalPart}`;
+  return `${integerPart}${decimalSeparator}${decimalPart}`;
 };
 
 export const parseNumericText = (value: string, options: NumericTextOptions = {}): number => {

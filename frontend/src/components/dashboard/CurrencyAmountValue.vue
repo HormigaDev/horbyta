@@ -7,7 +7,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { CURRENCY_SYMBOLS } from 'src/data/constants';
+import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 
 interface Props {
   amount: string | number;
@@ -21,16 +21,10 @@ const props = withDefaults(defineProps<Props>(), {
   big: false,
 });
 
+const { formatCurrency } = useNumberFormatter();
+
 const formatted = computed<string>(() => {
-  const num = typeof props.amount === 'number' ? props.amount : Number(props.amount);
-  if (!Number.isFinite(num)) {
-    return '—';
-  }
-  const symbol = CURRENCY_SYMBOLS[props.currencyType] ?? `${props.currencyType} `;
-  return `${symbol} ${num.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  return formatCurrency(props.amount, props.currencyType);
 });
 </script>
 

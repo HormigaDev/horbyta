@@ -1,6 +1,7 @@
 import type { ComposerTranslation } from 'vue-i18n';
 import type { QTableProps } from 'quasar';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import { normalizeId } from 'src/utils/normalizeId';
 import { formatStorageBytes } from 'src/utils/attachments';
@@ -781,6 +782,7 @@ export const getTimeEntryColumns = (t: ComposerTranslation) => {
 
 export const getPaymentColumns = (t: ComposerTranslation) => {
   const formatDate = useDateFormatter();
+  const { formatNumber } = useNumberFormatter();
 
   return withFixedColumnSizing([
     {
@@ -829,7 +831,7 @@ export const getPaymentColumns = (t: ComposerTranslation) => {
       field: 'amount',
       sortable: false,
       align: 'right' as const,
-      format: (val: string | null) => (val ? Number(val).toFixed(2) : '-'),
+      format: (val: string | null) => (val ? formatNumber(val, '-') : '-'),
     },
     {
       name: 'payment_date',
@@ -852,6 +854,7 @@ export const getPaymentColumns = (t: ComposerTranslation) => {
 
 export const getInvoiceColumns = (t: ComposerTranslation) => {
   const formatDate = useDateFormatter();
+  const { formatNumber } = useNumberFormatter();
 
   return withFixedColumnSizing([
     {
@@ -884,7 +887,7 @@ export const getInvoiceColumns = (t: ComposerTranslation) => {
       field: 'amount',
       sortable: false,
       align: 'right',
-      format: (val: string | null) => (val ? Number(val).toFixed(2) : '-'),
+      format: (val: string | null) => (val ? formatNumber(val, '-') : '-'),
     },
     {
       name: 'status',

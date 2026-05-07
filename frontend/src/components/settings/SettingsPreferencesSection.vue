@@ -62,6 +62,42 @@
       </div>
 
       <div class="col-12 col-md-3">
+        <q-select
+          v-model="form.thousandSeparator"
+          :label="t('settings.preferences.thousandSeparatorLabel')"
+          outlined
+          dense
+          emit-value
+          map-options
+          :options="separatorOptions"
+        />
+      </div>
+
+      <div class="col-12 col-md-3">
+        <q-select
+          v-model="form.decimalSeparator"
+          :label="t('settings.preferences.decimalSeparatorLabel')"
+          outlined
+          dense
+          emit-value
+          map-options
+          :options="separatorOptions"
+        />
+      </div>
+
+      <div class="col-12 col-md-3">
+        <NumericTextInput
+          v-model="form.decimalQuantity"
+          :label="t('settings.preferences.decimalQuantityLabel')"
+          :only-integers="true"
+          :decimal-places="0"
+        />
+        <div class="text-caption q-mt-xs" style="color: var(--text-muted)">
+          {{ t('settings.preferences.decimalQuantityHint') }}
+        </div>
+      </div>
+
+      <div class="col-12 col-md-3">
         <NumericTextInput
           v-model="form.maxDailyHours"
           :label="t('settings.preferences.maxDailyHoursLabel')"
@@ -97,6 +133,7 @@ import { useThemeStore } from 'src/stores/theme';
 import { setAppLocale } from 'src/boot/i18n';
 import type {
   UserDateFormatPreference,
+  UserNumberFormatPreference,
   UpdateUserPreferencesDto,
   UserLanguagePreference,
   UserPreferences,
@@ -136,6 +173,10 @@ const dateFormatOptions = [
   { label: 'MM/DD/YYYY', value: 'MM/DD/YYYY' },
   { label: 'YYYY/MM/DD', value: 'YYYY/MM/DD' },
 ];
+const separatorOptions = [
+  { label: t('settings.preferences.separator.comma'), value: ',' },
+  { label: t('settings.preferences.separator.dot'), value: '.' },
+];
 const themeOptions = [
   { label: t('settings.preferences.theme.system'), value: 'system' },
   { label: t('settings.preferences.theme.dark'), value: 'dark' },
@@ -147,6 +188,9 @@ const form = reactive({
   timezone: 'UTC',
   language: 'es' as UserLanguagePreference,
   dateFormat: 'DD/MM/YYYY' as UserDateFormatPreference,
+  thousandSeparator: ',' as UserNumberFormatPreference['thousand_separator'],
+  decimalSeparator: '.' as UserNumberFormatPreference['decimal_separator'],
+  decimalQuantity: '2',
   maxDailyHours: '8',
 });
 
@@ -197,6 +241,22 @@ async function savePreferences() {
   }
 
   const normalizedMaxDailyHours = Number(form.maxDailyHours);
+  const normalizedDecimalQuantity = Number(form.decimalQuantity);
+
+  if (
+    !Number.isInteger(normalizedDecimalQuantity) ||
+    normalizedDecimalQuantity < 1 ||
+    normalizedDecimalQuantity > 4
+  ) {
+    notify(t('settings.preferences.invalidDecimalQuantity'), 'warning');
+    return;
+  }
+
+  if (form.thousandSeparator === form.decimalSeparator) {
+    notify(t('settings.preferences.invalidNumberSeparators'), 'warning');
+    return;
+  }
+
   if (
     !Number.isInteger(normalizedMaxDailyHours) ||
     normalizedMaxDailyHours < 1 ||
@@ -213,6 +273,11 @@ async function savePreferences() {
       theme: form.theme,
       timezone: form.timezone,
       date_format: form.dateFormat,
+      number_format: {
+        thousand_separator: form.thousandSeparator,
+        decimal_separator: form.decimalSeparator,
+        decimal_quantity: normalizedDecimalQuantity,
+      },
       language: form.language,
       max_daily_hours: normalizedMaxDailyHours,
     };
@@ -244,6 +309,20 @@ watch(
 );
 
 watch(
+  () => form.thousandSeparator,
+  (newSeparator) => {
+    form.decimalSeparator = newSeparator === ',' ? '.' : ',';
+  },
+);
+
+watch(
+  () => form.decimalSeparator,
+  (newSeparator) => {
+    form.thousandSeparator = newSeparator === ',' ? '.' : ',';
+  },
+);
+
+watch(
   () => props.preferences,
   (value) => {
     if (!value) return;
@@ -252,6 +331,9 @@ watch(
     form.language = value.language;
     form.timezone = value.timezone;
     form.dateFormat = value.date_format ?? 'DD/MM/YYYY';
+    form.thousandSeparator = value.number_format?.thousand_separator ?? ',';
+    form.decimalSeparator = value.number_format?.decimal_separator ?? '.';
+    form.decimalQuantity = String(value.number_format?.decimal_quantity ?? 2);
     form.maxDailyHours = String(value.max_daily_hours ?? 8);
 
     ensureTimezoneOption(value.timezone);

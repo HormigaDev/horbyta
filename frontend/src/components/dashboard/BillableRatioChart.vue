@@ -9,6 +9,7 @@ import VChart from 'vue-echarts';
 
 import type { BillableRatioDailyRow } from 'src/types/dashboard';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import { ensureEChartsRegistered } from '../../composables/dashboard/registerECharts';
 import {
@@ -29,6 +30,10 @@ interface Props {
 const props = defineProps<Props>();
 
 const preferencesStore = useUserPreferencesStore();
+const { formatNumber } = useNumberFormatter();
+
+const formatChartNumber = (value: unknown) =>
+  typeof value === 'number' || typeof value === 'string' ? formatNumber(value) : '—';
 
 ensureEChartsRegistered();
 
@@ -50,7 +55,7 @@ const option = computed<DashboardEChartsOption | null>(() => {
 
   return {
     color: [pickColor(props.palette, 0), pickColor(props.palette, 4)],
-    tooltip: { trigger: 'axis', ...baseTooltip(props.palette) },
+    tooltip: { trigger: 'axis', valueFormatter: formatChartNumber, ...baseTooltip(props.palette) },
     legend: {
       top: 4,
       textStyle: { color: props.palette.text },
@@ -66,7 +71,7 @@ const option = computed<DashboardEChartsOption | null>(() => {
     yAxis: {
       type: 'value',
       axisLine: { lineStyle: { color: props.palette.axis } },
-      axisLabel: { color: props.palette.text },
+      axisLabel: { color: props.palette.text, formatter: (value: number) => formatNumber(value) },
       splitLine: { lineStyle: { color: props.palette.grid } },
     },
     series: [

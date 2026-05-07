@@ -282,6 +282,7 @@ import { AttachmentsService } from 'src/services/attachments';
 import { useUI } from 'src/composables/useUI';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 import type { AttachmentListItem, AttachmentSummaryDto } from 'src/types/attachment';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { QueryPayload } from 'src/types/query';
@@ -289,13 +290,13 @@ import type { ProjectBillingType, ProjectDetailDto, ProjectStatus } from 'src/ty
 import { normalizeId } from 'src/utils/normalizeId';
 import { useCopyClipboard } from 'src/composables/useCopyClipboard';
 import { formatStorageBytes, resolveAttachmentIcon } from 'src/utils/attachments';
-import { CURRENCY_SYMBOLS } from 'src/data/constants';
 
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmDelete, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
+const { formatCurrency } = useNumberFormatter();
 
 const { isCopied: idCopied, copyToClipboard } = useCopyClipboard();
 const project = ref<ProjectDetailDto | null>(null);
@@ -450,8 +451,7 @@ const formatBillingAmount = (
 ) => {
   if (!amount) return t('common.empty');
 
-  const currency = currencyType || '';
-  return `${CURRENCY_SYMBOLS[currency]} ${amount}`.trim();
+  return formatCurrency(amount, currencyType, amount);
 };
 
 const paymentDayLabel = (day: number | null | undefined) => {

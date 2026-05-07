@@ -920,6 +920,10 @@ export const messages = {
   'settings.preferences.languageLabel': 'Idioma',
   'settings.preferences.dateFormatLabel': 'Formato de fecha',
   'settings.preferences.timezoneLabel': 'Timezone',
+  'settings.preferences.thousandSeparatorLabel': 'Separador de miles',
+  'settings.preferences.decimalSeparatorLabel': 'Separador decimal',
+  'settings.preferences.decimalQuantityLabel': 'Decimales visibles',
+  'settings.preferences.decimalQuantityHint': 'Debe ser un número entero entre 1 y 4.',
   'settings.preferences.maxDailyHoursLabel': 'Máximo de horas diarias',
   'settings.preferences.maxDailyHoursHint':
     'Se aplica tu preferencia, pero nunca puede superar el techo global de 14 horas.',
@@ -927,6 +931,10 @@ export const messages = {
   'settings.preferences.invalidTimezone': 'Debes seleccionar una timezone válida',
   'settings.preferences.invalidMaxDailyHours':
     'El máximo diario debe ser un número entero entre 1 y 14.',
+  'settings.preferences.invalidDecimalQuantity':
+    'La cantidad de decimales debe ser un número entero entre 1 y 4.',
+  'settings.preferences.invalidNumberSeparators':
+    'El separador de miles y el separador decimal deben ser distintos.',
   'settings.preferences.success': 'Preferencias actualizadas',
   'settings.preferences.reloadNotice':
     'Algunas traducciones se aplicarán completamente al recargar la página',
@@ -937,6 +945,8 @@ export const messages = {
   'settings.preferences.language.es': 'Español',
   'settings.preferences.language.en': 'English',
   'settings.preferences.language.pt': 'Português',
+  'settings.preferences.separator.comma': 'Coma (,)',
+  'settings.preferences.separator.dot': 'Punto (.)',
 
   'settings.user.title': 'Usuario',
   'settings.user.subtitle': 'Actualiza nombre, correo y contraseña de tu cuenta autenticada.',

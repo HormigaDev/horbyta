@@ -135,6 +135,7 @@ fn validate_non_empty_preferences_patch(payload: &UpdateUserPreferencesDto) -> R
     if payload.theme.is_none()
         && payload.timezone.is_none()
         && payload.date_format.is_none()
+        && payload.number_format.is_none()
         && payload.language.is_none()
         && payload.max_daily_hours.is_none()
     {
@@ -172,6 +173,26 @@ fn validate_non_empty_admin_user_patch(payload: &AdminUpdateUserDto) -> Result<(
 fn validate_admin_user_password_patch(payload: &AdminUpdateUserDto) -> Result<(), ValidationError> {
     if let Some(password) = payload.password.as_ref() {
         validate_admin_managed_password(password)?;
+    }
+
+    Ok(())
+}
+
+fn validate_number_format_preference(payload: &UserNumberFormatPreference) -> Result<(), ValidationError> {
+    let thousand_separator = payload.thousand_separator.as_str();
+    let decimal_separator = payload.decimal_separator.as_str();
+
+    let uses_supported_separators = matches!(thousand_separator, "," | ".") && matches!(decimal_separator, "," | ".");
+    if !uses_supported_separators {
+        return Err(ValidationError::new("invalid_number_separator"));
+    }
+
+    if thousand_separator == decimal_separator {
+        return Err(ValidationError::new("number_separators_must_differ"));
+    }
+
+    if !(1..=4).contains(&payload.decimal_quantity) {
+        return Err(ValidationError::new("invalid_decimal_quantity"));
     }
 
     Ok(())
@@ -221,6 +242,25 @@ pub enum UserDateFormatPreference {
     MmDdYyyy,
     #[serde(rename = "YYYY/MM/DD")]
     YyyyMmDd,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema, Validate)]
+#[serde(default)]
+#[validate(schema(function = "validate_number_format_preference"))]
+pub struct UserNumberFormatPreference {
+    pub thousand_separator: String,
+    pub decimal_separator: String,
+    pub decimal_quantity: u8,
+}
+
+impl Default for UserNumberFormatPreference {
+    fn default() -> Self {
+        Self {
+            thousand_separator: ",".to_string(),
+            decimal_separator: ".".to_string(),
+            decimal_quantity: 2,
+        }
+    }
 }
 
 impl Default for UserDateFormatPreference {
@@ -327,6 +367,7 @@ pub struct UserPreferences {
     pub theme: UserThemePreference,
     pub timezone: String,
     pub date_format: UserDateFormatPreference,
+    pub number_format: UserNumberFormatPreference,
     pub language: UserLanguagePreference,
     #[serde(default = "default_max_daily_hours")]
     pub max_daily_hours: i32,
@@ -343,6 +384,7 @@ impl Default for UserPreferences {
             theme: UserThemePreference::System,
             timezone: "UTC".to_string(),
             date_format: UserDateFormatPreference::DdMmYyyy,
+            number_format: UserNumberFormatPreference::default(),
             language: UserLanguagePreference::Es,
             max_daily_hours: default_max_daily_hours(),
             notifications: NotificationPreferences::default(),
@@ -353,6 +395,12 @@ impl Default for UserPreferences {
 impl UserPreferences {
     pub fn from_json_value(raw: Option<&serde_json::Value>) -> Self {
         raw.and_then(|value| serde_json::from_value::<Self>(value.clone()).ok())
+            .map(|mut preferences| {
+                if preferences.number_format.validate().is_err() {
+                    preferences.number_format = UserNumberFormatPreference::default();
+                }
+                preferences
+            })
             .unwrap_or_default()
     }
 
@@ -367,6 +415,10 @@ impl UserPreferences {
 
         if let Some(date_format) = patch.date_format {
             self.date_format = date_format;
+        }
+
+        if let Some(number_format) = patch.number_format.as_ref() {
+            self.number_format = number_format.clone();
         }
 
         if let Some(language) = patch.language {
@@ -480,6 +532,9 @@ pub struct UpdateUserPreferencesDto {
     pub timezone: Option<String>,
 
     pub date_format: Option<UserDateFormatPreference>,
+
+    #[validate(nested)]
+    pub number_format: Option<UserNumberFormatPreference>,
 
     pub language: Option<UserLanguagePreference>,
 

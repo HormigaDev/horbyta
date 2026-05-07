@@ -211,7 +211,7 @@
                         class="text-positive q-ml-sm"
                       >
                         ·
-                        {{ taskContributions.get(task.task_id)?.toFixed(2) }}
+                        {{ formatNumber(taskContributions.get(task.task_id), '0') }}
                         {{ currencySymbol }}
                       </span>
                     </q-item-label>
@@ -344,6 +344,7 @@ import {
   parseDisplayDateToIso,
 } from 'src/utils/dateFormatting';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 import { CURRENCY_SYMBOLS } from 'src/data/constants';
 
 const route = useRoute();
@@ -351,6 +352,7 @@ const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
+const { formatNumber, formatCurrency } = useNumberFormatter();
 
 const isNew = computed(() => route.name === 'invoice-create');
 const invoiceId = computed(() => route.params.id as string);
@@ -443,8 +445,8 @@ const calculatedAmount = computed(() => {
 });
 
 const calculatedAmountDisplay = computed(() => {
-  if (calculatedAmount.value === null) return '0.00';
-  return calculatedAmount.value.toFixed(2);
+  if (calculatedAmount.value === null) return formatNumber(0);
+  return formatNumber(calculatedAmount.value);
 });
 
 const parsedManualAmount = computed(() => {
@@ -463,8 +465,7 @@ const finalTotal = computed(() => {
 
 const finalTotalDisplay = computed(() => {
   const total = Math.max(0, finalTotal.value);
-  const symbol = currencySymbol.value ? `${currencySymbol.value} ` : '';
-  return `${symbol}${total.toFixed(2)}`;
+  return formatCurrency(total, currencyType.value);
 });
 
 const taskContributions = computed(() => {

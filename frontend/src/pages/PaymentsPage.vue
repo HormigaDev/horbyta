@@ -122,6 +122,7 @@ import { useCrudDelete } from 'src/composables/useCrudDelete';
 import { useCrudListHandlers } from 'src/composables/useCrudListHandlers';
 import { useQuery } from 'src/composables/useQuery';
 import { useUI } from 'src/composables/useUI';
+import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 import { PaymentsService } from 'src/services/payments';
 import { parseNumericText } from 'src/utils/numericInput';
 import { CURRENCY_SYMBOLS } from 'src/data/constants';
@@ -131,6 +132,7 @@ import type { PaymentSummaryDto, PaymentDetailDto } from 'src/types/payment';
 const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmDelete } = useUI();
+const { formatCurrency } = useNumberFormatter();
 
 const paymentFilterSchema: FilterSchema = {
   id: { type: 'Text', label: t('payments.list.filter.id') },
@@ -172,12 +174,7 @@ const isLoadingDetail = ref(false);
 const selectedPaymentDetail = ref<PaymentDetailDto | null>(null);
 const refundForm = ref({ amount: '', notes: null as string | null });
 
-const formatAmount = (amount: string, currency: string) => {
-  const num = parseFloat(amount);
-  const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
-  if (isNaN(num)) return `${symbol} ${amount}`.trim();
-  return `${symbol} ${num.toFixed(2)}`.trim();
-};
+const formatAmount = (amount: string, currency: string) => formatCurrency(amount, currency, amount);
 
 const remainingAmount = computed(() => {
   if (!selectedPaymentDetail.value) return '0';

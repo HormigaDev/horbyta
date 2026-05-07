@@ -370,8 +370,8 @@ import { useUI } from 'src/composables/useUI';
 import { normalizeId } from 'src/utils/normalizeId';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
-import { CURRENCY_SYMBOLS } from 'src/data/constants';
 import { useCopyClipboard } from 'src/composables/useCopyClipboard';
+import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 import { parseNumericText } from 'src/utils/numericInput';
 import type { PaymentDetailDto } from 'src/types/payment';
 
@@ -380,6 +380,7 @@ const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmDelete, showLoading, hideLoading } = useUI();
 const userPreferencesStore = useUserPreferencesStore();
+const { formatCurrency } = useNumberFormatter();
 
 const { isCopied: idCopied, copyToClipboard } = useCopyClipboard();
 const paymentId = route.params.id as string;
@@ -396,12 +397,7 @@ const formatDate = (value: string) =>
     fallback: t('common.empty'),
   });
 
-const formatAmount = (amount: string, currency: string) => {
-  const num = parseFloat(amount);
-  const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
-  if (isNaN(num)) return `${symbol} ${amount}`.trim();
-  return `${symbol} ${num.toFixed(2)}`.trim();
-};
+const formatAmount = (amount: string, currency: string) => formatCurrency(amount, currency, amount);
 
 const remainingAmount = computed(() => {
   if (!payment.value) return '0';
