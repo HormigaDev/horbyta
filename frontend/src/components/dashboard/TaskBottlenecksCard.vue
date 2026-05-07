@@ -3,6 +3,7 @@
     :title="t('dashboard.bottlenecks.title')"
     :caption="t('dashboard.bottlenecks.caption')"
     short
+    auto-height
     :filters-title="t('dashboard.filters.taskBottlenecks.title')"
     :open="state.dialogOpen.value"
     @open="state.openDialog"

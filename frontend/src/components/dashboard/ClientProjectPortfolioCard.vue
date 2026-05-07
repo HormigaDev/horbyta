@@ -3,6 +3,7 @@
     :title="t('clientDashboard.portfolio.title')"
     :caption="t('clientDashboard.portfolio.caption')"
     short
+    auto-height
     :filters-title="t('dashboard.filters.clientProjectPortfolio.title')"
     :open="state.dialogOpen.value"
     @open="state.openDialog"

@@ -3,6 +3,7 @@
     :title="t('clientDashboard.milestones.title')"
     :caption="t('clientDashboard.milestones.caption')"
     short
+    auto-height
     :filters-title="t('dashboard.filters.clientMilestoneHealth.title')"
     :open="state.dialogOpen.value"
     @open="state.openDialog"

@@ -1,5 +1,5 @@
 <template>
-  <DashboardChartCard :title="title" :caption="caption" :short="short">
+  <DashboardChartCard :title="title" :caption="caption" :short="short" :auto-height="autoHeight">
     <template #actions>
       <q-btn
         flat
@@ -37,6 +37,7 @@ interface Props {
   title: string;
   caption?: string;
   short?: boolean;
+  autoHeight?: boolean;
   filtersTitle: string;
   open: boolean;
 }
@@ -44,6 +45,7 @@ interface Props {
 withDefaults(defineProps<Props>(), {
   caption: '',
   short: false,
+  autoHeight: false,
 });
 
 const emit = defineEmits<{

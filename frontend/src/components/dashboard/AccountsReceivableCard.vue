@@ -3,6 +3,7 @@
     :title="t('dashboard.accountsReceivable.title')"
     :caption="t('dashboard.kpi.accountsReceivable.caption')"
     short
+    auto-height
     :filters-title="t('dashboard.filters.accountsReceivable.title')"
     :open="state.dialogOpen.value"
     @open="state.openDialog"

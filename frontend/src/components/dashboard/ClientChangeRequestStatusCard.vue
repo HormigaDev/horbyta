@@ -3,6 +3,7 @@
     :title="t('clientDashboard.changeRequests.title')"
     :caption="t('clientDashboard.changeRequests.caption')"
     short
+    auto-height
     :filters-title="t('dashboard.filters.clientChangeRequestStatus.title')"
     :open="state.dialogOpen.value"
     @open="state.openDialog"
