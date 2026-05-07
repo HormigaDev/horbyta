@@ -1464,6 +1464,7 @@ export const messages = {
   'datatable.actions.view': 'Ver',
   'datatable.actions.edit': 'Editar',
   'datatable.actions.delete': 'Eliminar',
+  'datatable.actions.deleteSingleOnly': 'Selecciona un único registro para eliminar.',
   'datatable.actions.new': 'Nuevo',
   'datatable.filter.column': 'Columna',
   'datatable.filter.operator': 'Operador',

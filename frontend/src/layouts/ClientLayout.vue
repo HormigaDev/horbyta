@@ -3,17 +3,20 @@
     <q-header class="q-py-xs">
       <q-toolbar>
         <q-btn
-          v-if="$q.screen.lt.md"
           flat
           dense
           round
-          icon="menu"
+          :icon="
+            (!$q.screen.lt.md && drawerExpanded) || ($q.screen.lt.md && drawer)
+              ? 'menu_open'
+              : 'menu'
+          "
           aria-label="Menu"
-          @click="drawer = !drawer"
-          class="q-mr-sm"
+          @click="toggleDrawer"
+          class="q-mr-lg"
         />
 
-        <q-img alt="Logo" src="/logo.png" width="36px" height="36px" class="q-mr-md q-ml-md" />
+        <q-img alt="Logo" src="/logo.png" width="36px" height="36px" class="q-mr-md" />
         <q-toolbar-title class="text-h6 ellipsis" v-if="clientAuthStore.client?.name">
           {{ t('layout.header.welcome') }}
           <b class="text-weight-bold">{{ clientAuthStore.client.name }}</b>
@@ -55,28 +58,64 @@
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="drawer" show-if-above :mini="!$q.screen.lt.md" :mini-width="60" bordered>
-      <template v-if="!$q.screen.lt.md">
+    <q-drawer
+      v-model="drawer"
+      show-if-above
+      :mini="!$q.screen.lt.md && !drawerExpanded"
+      :mini-width="60"
+      :width="280"
+      bordered
+    >
+      <template #mini>
         <div class="column flex-center q-pt-md q-gutter-y-md">
-          <q-btn flat round dense icon="bar_chart" to="/client">
+          <q-btn
+            flat
+            round
+            dense
+            icon="bar_chart"
+            to="/client"
+            exact
+            :color="getMiniRouteColor('/client', true)"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.dashboard') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="folder" to="/client/projects">
+          <q-btn
+            flat
+            round
+            dense
+            icon="folder"
+            to="/client/projects"
+            :color="getMiniRouteColor('/client/projects')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.projects') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="flag" to="/client/milestones">
+          <q-btn
+            flat
+            round
+            dense
+            icon="flag"
+            to="/client/milestones"
+            :color="getMiniRouteColor('/client/milestones')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.milestones') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="compare_arrows" to="/client/change-requests">
+          <q-btn
+            flat
+            round
+            dense
+            icon="compare_arrows"
+            to="/client/change-requests"
+            :color="getMiniRouteColor('/client/change-requests')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.changeRequests') }}
             </q-tooltip>
@@ -89,12 +128,45 @@
               {{ t('layout.header.logout') }}
             </q-tooltip>
           </q-btn>
+        </div>
+      </template>
 
-          <q-separator class="q-my-sm" inset />
+      <template v-if="!$q.screen.lt.md">
+        <div class="column justify-between full-height">
+          <q-list class="q-pt-sm">
+            <q-item clickable v-ripple to="/client" exact>
+              <q-item-section avatar><q-icon name="bar_chart" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.dashboard') }}</q-item-section>
+            </q-item>
 
-          <div class="text-caption text-center client-version">
-            {{ appVersion }}
-          </div>
+            <q-item clickable v-ripple to="/client/projects">
+              <q-item-section avatar><q-icon name="folder" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.projects') }}</q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple to="/client/milestones">
+              <q-item-section avatar><q-icon name="flag" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.milestones') }}</q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple to="/client/change-requests">
+              <q-item-section avatar><q-icon name="compare_arrows" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.changeRequests') }}</q-item-section>
+            </q-item>
+          </q-list>
+
+          <q-list class="q-pb-md">
+            <q-separator class="q-my-md" />
+
+            <q-item clickable v-ripple @click="logout" class="text-negative">
+              <q-item-section avatar><q-icon name="logout" color="negative" /></q-item-section>
+              <q-item-section>{{ t('layout.header.logout') }}</q-item-section>
+            </q-item>
+
+            <div class="text-caption text-center q-mt-md client-version">
+              {{ appVersion }}
+            </div>
+          </q-list>
         </div>
       </template>
 
@@ -118,7 +190,7 @@
             <q-separator />
 
             <q-list>
-              <q-item clickable v-ripple to="/client">
+              <q-item clickable v-ripple to="/client" exact>
                 <q-item-section avatar>
                   <q-icon name="bar_chart" />
                 </q-item-section>
@@ -174,17 +246,21 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useQuasar } from 'quasar';
 import { useClientAuthStore } from 'src/stores/clientAuth';
 import { APP_VERSION } from 'src/data/constants';
 import { apiFetchClient } from 'src/boot/fetch';
 
+const route = useRoute();
 const router = useRouter();
 const clientAuthStore = useClientAuthStore();
 const { t } = useI18n();
+const $q = useQuasar();
 
-const drawer = ref(true);
+const drawer = ref(!$q.screen.lt.md);
+const drawerExpanded = ref(false);
 const appVersion = APP_VERSION;
 
 async function logout() {
@@ -192,6 +268,28 @@ async function logout() {
   await apiFetchClient('/auth/logout-client', { method: 'POST' }).catch(() => null);
   clientAuthStore.clearAuth();
   void router.push(portalUserId ? `/client/u/${portalUserId}/login` : '/login');
+}
+
+function toggleDrawer() {
+  if ($q.screen.lt.md) {
+    drawer.value = !drawer.value;
+    return;
+  }
+
+  drawer.value = true;
+  drawerExpanded.value = !drawerExpanded.value;
+}
+
+function isActivePath(path: string, exact = false) {
+  if (exact) {
+    return route.path === path;
+  }
+
+  return route.path === path || route.path.startsWith(`${path}/`);
+}
+
+function getMiniRouteColor(path: string, exact = false) {
+  return isActivePath(path, exact) ? 'primary' : undefined;
 }
 </script>
 

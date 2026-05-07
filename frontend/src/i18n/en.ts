@@ -1383,6 +1383,7 @@ export const messages: Record<keyof typeof es, string> = {
   'datatable.actions.view': 'View',
   'datatable.actions.edit': 'Edit',
   'datatable.actions.delete': 'Delete',
+  'datatable.actions.deleteSingleOnly': 'Select a single record to delete.',
   'datatable.actions.new': 'New',
   'datatable.filter.column': 'Column',
   'datatable.filter.operator': 'Operator',

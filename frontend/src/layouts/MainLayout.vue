@@ -3,17 +3,20 @@
     <q-header class="q-py-xs">
       <q-toolbar>
         <q-btn
-          v-if="$q.screen.lt.md"
           flat
           dense
           round
-          icon="menu"
+          :icon="
+            (!$q.screen.lt.md && drawerExpanded) || ($q.screen.lt.md && drawer)
+              ? 'menu_open'
+              : 'menu'
+          "
           aria-label="Menu"
-          @click="drawer = !drawer"
-          class="q-mr-sm"
+          @click="toggleDrawer"
+          class="q-mr-lg"
         />
 
-        <q-img alt="Logo" src="/logo.png" width="36px" height="36px" class="q-mr-md q-ml-md" />
+        <q-img alt="Logo" src="/logo.png" width="36px" height="36px" class="q-mr-md" />
         <q-toolbar-title class="text-subtitle1 ellipsis" v-if="authStore.user">
           {{ t('layout.header.welcome') }} <b class="text-weight-bold">{{ authStore.user.name }}</b>
         </q-toolbar-title>
@@ -93,70 +96,149 @@
     </q-header>
 
     <!-- PC -->
-    <q-drawer v-model="drawer" show-if-above :mini="!$q.screen.lt.md" :mini-width="60" bordered>
-      <template v-if="!$q.screen.lt.md">
+    <q-drawer
+      v-model="drawer"
+      show-if-above
+      :mini="!$q.screen.lt.md && !drawerExpanded"
+      :mini-width="60"
+      :width="280"
+      bordered
+    >
+      <template #mini>
         <div class="column flex-center q-pt-md q-gutter-y-md">
-          <q-btn flat round dense icon="bar_chart" to="/">
+          <q-btn
+            flat
+            round
+            dense
+            icon="bar_chart"
+            to="/"
+            exact
+            :color="getMiniRouteColor('/', true)"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.dashboard') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="view_kanban" to="/board">
+          <q-btn
+            flat
+            round
+            dense
+            icon="view_kanban"
+            to="/board"
+            :color="getMiniRouteColor('/board')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ $t('layout.drawer.board') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="folder" to="/projects">
+          <q-btn
+            flat
+            round
+            dense
+            icon="folder"
+            to="/projects"
+            :color="getMiniRouteColor('/projects')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.projects') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="flag" to="/milestones">
+          <q-btn
+            flat
+            round
+            dense
+            icon="flag"
+            to="/milestones"
+            :color="getMiniRouteColor('/milestones')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.milestones') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="checklist" to="/tasks">
-            <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">{{
-              t('layout.drawer.tasks')
-            }}</q-tooltip>
+          <q-btn flat round dense icon="checklist" to="/tasks" :color="getMiniRouteColor('/tasks')">
+            <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
+              {{ t('layout.drawer.tasks') }}
+            </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="compare_arrows" to="/change-requests">
+          <q-btn
+            flat
+            round
+            dense
+            icon="compare_arrows"
+            to="/change-requests"
+            :color="getMiniRouteColor('/change-requests')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.changeRequests') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="people" to="/clients">
+          <q-btn
+            flat
+            round
+            dense
+            icon="people"
+            to="/clients"
+            :color="getMiniRouteColor('/clients')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ $t('layout.drawer.clients') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="receipt_long" to="/invoices">
+          <q-btn
+            flat
+            round
+            dense
+            icon="receipt_long"
+            to="/invoices"
+            :color="getMiniRouteColor('/invoices')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.invoices') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="paid" to="/payments">
+          <q-btn
+            flat
+            round
+            dense
+            icon="paid"
+            to="/payments"
+            :color="getMiniRouteColor('/payments')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.payments') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="settings" to="/settings">
+          <q-btn
+            flat
+            round
+            dense
+            icon="settings"
+            to="/settings"
+            :color="getMiniRouteColor('/settings')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.settings') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn v-if="isAdmin" flat round dense icon="admin_panel_settings" color="warning" to="/admin/users">
+          <q-btn
+            v-if="isAdmin"
+            flat
+            round
+            dense
+            icon="admin_panel_settings"
+            :color="getMiniRouteColor('/admin/users', true, 'warning')"
+            to="/admin/users"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.adminUsers') }}
             </q-tooltip>
@@ -181,13 +263,96 @@
               {{ t('layout.drawer.newMilestone') }}
             </q-tooltip>
           </q-btn>
+        </div>
+      </template>
 
-          <q-separator class="q-my-sm" inset />
+      <template v-if="!$q.screen.lt.md">
+        <q-scroll-area class="fit">
+          <q-list class="q-pt-sm">
+            <q-item clickable v-ripple to="/" exact>
+              <q-item-section avatar><q-icon name="bar_chart" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.dashboard') }}</q-item-section>
+            </q-item>
 
-          <div class="text-caption text-center" style="font-size: 10px; color: var(--text-muted)">
+            <q-item clickable v-ripple to="/board">
+              <q-item-section avatar><q-icon name="view_kanban" /></q-item-section>
+              <q-item-section>{{ $t('layout.drawer.board') }}</q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple to="/projects">
+              <q-item-section avatar><q-icon name="folder" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.projects') }}</q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple to="/milestones">
+              <q-item-section avatar><q-icon name="flag" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.milestones') }}</q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple to="/tasks">
+              <q-item-section avatar><q-icon name="checklist" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.tasks') }}</q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple to="/change-requests">
+              <q-item-section avatar><q-icon name="compare_arrows" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.changeRequests') }}</q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple to="/clients">
+              <q-item-section avatar><q-icon name="people" /></q-item-section>
+              <q-item-section>{{ $t('layout.drawer.clients') }}</q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple to="/invoices">
+              <q-item-section avatar><q-icon name="receipt_long" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.invoices') }}</q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple to="/payments">
+              <q-item-section avatar><q-icon name="paid" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.payments') }}</q-item-section>
+            </q-item>
+
+            <q-separator class="q-my-md" />
+
+            <q-item clickable v-ripple to="/settings">
+              <q-item-section avatar><q-icon name="settings" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.settings') }}</q-item-section>
+            </q-item>
+
+            <q-item v-if="isAdmin" clickable v-ripple to="/admin/users">
+              <q-item-section avatar
+                ><q-icon name="admin_panel_settings" color="warning"
+              /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.adminUsers') }}</q-item-section>
+            </q-item>
+
+            <q-separator class="q-my-md" />
+
+            <q-item clickable v-ripple class="text-primary" to="/tasks/new">
+              <q-item-section avatar><q-icon name="post_add" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.newTask') }}</q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple class="text-primary" to="/projects/new">
+              <q-item-section avatar><q-icon name="create_new_folder" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.newProject') }}</q-item-section>
+            </q-item>
+
+            <q-item clickable v-ripple class="text-primary" to="/milestones/new">
+              <q-item-section avatar><q-icon name="flag_circle" /></q-item-section>
+              <q-item-section>{{ t('layout.drawer.newMilestone') }}</q-item-section>
+            </q-item>
+          </q-list>
+
+          <div
+            class="text-caption text-center q-my-md"
+            style="font-size: 10px; color: var(--text-muted)"
+          >
             {{ appVersion }}
           </div>
-        </div>
+        </q-scroll-area>
       </template>
 
       <!-- Mobile -->
@@ -212,7 +377,7 @@
           <q-separator />
 
           <q-list>
-            <q-item clickable v-ripple to="/">
+            <q-item clickable v-ripple to="/" exact>
               <q-item-section avatar>
                 <q-icon name="bar_chart" />
               </q-item-section>
@@ -280,7 +445,14 @@
               </q-item-section>
             </q-item>
 
-            <q-item clickable v-ripple @click="pinnedTasksOpen = true; drawer = false">
+            <q-item
+              clickable
+              v-ripple
+              @click="
+                pinnedTasksOpen = true;
+                drawer = false;
+              "
+            >
               <q-item-section avatar><q-icon name="push_pin" /></q-item-section>
               <q-item-section>{{ t('layout.header.pinnedTasks') }}</q-item-section>
             </q-item>
@@ -301,14 +473,14 @@
 
             <q-separator class="q-my-md" />
 
-            <q-item clickable v-ripple class="text-primary">
+            <q-item clickable v-ripple class="text-primary" to="/tasks/new">
               <q-item-section avatar>
                 <q-icon name="post_add" />
               </q-item-section>
               <q-item-section>{{ t('layout.drawer.newTask') }}</q-item-section>
             </q-item>
 
-            <q-item clickable v-ripple class="text-primary">
+            <q-item clickable v-ripple class="text-primary" to="/projects/new">
               <q-item-section avatar>
                 <q-icon name="create_new_folder" />
               </q-item-section>
@@ -328,7 +500,10 @@
             </q-item>
           </q-list>
 
-          <div class="text-caption text-center q-my-md" style="font-size: 10px; color: var(--text-muted)">
+          <div
+            class="text-caption text-center q-my-md"
+            style="font-size: 10px; color: var(--text-muted)"
+          >
             {{ appVersion }}
           </div>
         </q-scroll-area>
@@ -373,10 +548,7 @@
             <div class="text-subtitle1 q-mt-sm">{{ t('layout.header.noNotifications') }}</div>
           </div>
 
-          <q-list
-            v-else-if="userPreferencesStore.groupNotifications"
-            class="notifications-list"
-          >
+          <q-list v-else-if="userPreferencesStore.groupNotifications" class="notifications-list">
             <q-expansion-item
               v-for="group in asyncNotificationGroups"
               :key="group.key"
@@ -389,7 +561,9 @@
                 <q-item-section>
                   <q-item-label class="text-weight-medium">{{ group.label }}</q-item-label>
                   <q-item-label caption>
-                    {{ t('layout.notifications.groupCount', { count: group.notifications.length }) }}
+                    {{
+                      t('layout.notifications.groupCount', { count: group.notifications.length })
+                    }}
                   </q-item-label>
                 </q-item-section>
                 <q-item-section side v-if="group.unreadCount > 0">
@@ -533,7 +707,7 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QNotifyCreateOptions } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
@@ -551,12 +725,14 @@ const PinnedTasksDialog = defineAsyncComponent(
   () => import('src/components/PinnedTasksDialog.vue'),
 );
 
+const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const $q = useQuasar();
 const { t } = useI18n();
 
-const drawer = ref(true);
+const drawer = ref(!$q.screen.lt.md);
+const drawerExpanded = ref(false);
 const pinnedTasksOpen = ref(false);
 const notificationsCenterOpen = ref(false);
 const notificationDetailsOpen = ref(false);
@@ -638,6 +814,28 @@ function gotoSettings() {
 
 function gotoAdminUsers() {
   void router.push({ name: 'admin-users' });
+}
+
+function toggleDrawer() {
+  if ($q.screen.lt.md) {
+    drawer.value = !drawer.value;
+    return;
+  }
+
+  drawer.value = true;
+  drawerExpanded.value = !drawerExpanded.value;
+}
+
+function isActivePath(path: string, exact = false) {
+  if (exact) {
+    return route.path === path;
+  }
+
+  return route.path === path || route.path.startsWith(`${path}/`);
+}
+
+function getMiniRouteColor(path: string, exact = false, inactiveColor?: string) {
+  return isActivePath(path, exact) ? 'primary' : inactiveColor;
 }
 
 function openNotificationsCenter() {
@@ -834,7 +1032,9 @@ function isAsyncNotificationEvent(data: unknown): data is AsyncNotificationEvent
     (candidate.id === undefined || typeof candidate.id === 'string') &&
     (candidate.message === undefined || typeof candidate.message === 'string') &&
     (candidate.title === undefined || typeof candidate.title === 'string') &&
-    (candidate.body === undefined || candidate.body === null || typeof candidate.body === 'string') &&
+    (candidate.body === undefined ||
+      candidate.body === null ||
+      typeof candidate.body === 'string') &&
     (candidate.summaryType === undefined || candidate.summaryType === 'unread_notifications') &&
     (candidate.silent === undefined || typeof candidate.silent === 'boolean') &&
     (candidate.read === undefined || typeof candidate.read === 'boolean') &&

@@ -328,7 +328,7 @@ import { ref, onMounted, watch, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useDataTableStore } from '../stores/datatable';
 import type { ColumnType, Filter, FilterOperator, FilterSchema } from '../types/query';
-import type { QTableProps } from 'quasar';
+import { useQuasar, type QTableProps } from 'quasar';
 
 type SelectionMode = 'none' | 'single' | 'multiple';
 
@@ -372,6 +372,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const { t } = useI18n();
+const $q = useQuasar();
 
 const emit = defineEmits<{
   (
@@ -400,6 +401,12 @@ const isSavingColumnPreferences = ref(false);
 
 const showFilters = ref(false);
 const filters = ref<Partial<Filter>[]>([]);
+
+const clearSelection = () => {
+  if (selected.value.length > 0) {
+    selected.value = [];
+  }
+};
 
 const columnOptions = computed(() =>
   props.columns
@@ -690,11 +697,8 @@ const getRowId = (row: object): string => {
 
 watch(
   () => props.rows,
-  (newRows) => {
-    if (selected.value.length > 0 && Array.isArray(newRows)) {
-      const rowIds = new Set(newRows.map((row) => getRowValue(row, props.rowKey)));
-      selected.value = selected.value.filter((row) => rowIds.has(getRowValue(row, props.rowKey)));
-    }
+  () => {
+    clearSelection();
   },
   { deep: true },
 );
@@ -715,10 +719,18 @@ const onEdit = () => {
   }
 };
 const onDelete = () => {
-  if (selected.value.length > 0) {
-    const ids = selected.value.map((row) => getRowId(row));
-    emit('delete', ids);
+  if (selected.value.length !== 1) {
+    $q.notify({
+      message: t('datatable.actions.deleteSingleOnly'),
+      type: 'warning',
+      position: 'top-right',
+      timeout: 2500,
+      actions: [{ icon: 'close', color: 'white', round: true, size: 'sm' }],
+    });
+    return;
   }
+
+  emit('delete', [getRowId(selected.value[0] as T)]);
 };
 </script>
 

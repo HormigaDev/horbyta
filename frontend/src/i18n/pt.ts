@@ -1403,6 +1403,7 @@ export const messages: Record<keyof typeof es, string> = {
   'datatable.actions.view': 'Ver',
   'datatable.actions.edit': 'Editar',
   'datatable.actions.delete': 'Excluir',
+  'datatable.actions.deleteSingleOnly': 'Selecione um único registro para excluir.',
   'datatable.actions.new': 'Novo',
   'datatable.filter.column': 'Coluna',
   'datatable.filter.operator': 'Operador',
