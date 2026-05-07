@@ -70,6 +70,13 @@
                   <q-item-section>{{ t('layout.header.settings') }}</q-item-section>
                 </q-item>
 
+                <q-item v-if="isAdmin" clickable @click="gotoAdminUsers">
+                  <q-item-section avatar>
+                    <q-icon name="admin_panel_settings" color="warning" />
+                  </q-item-section>
+                  <q-item-section>{{ t('layout.drawer.adminUsers') }}</q-item-section>
+                </q-item>
+
                 <q-item clickable @click="logout" tag="a">
                   <q-item-section avatar>
                     <q-icon name="logout" color="negative" />
@@ -146,6 +153,12 @@
           <q-btn flat round dense icon="settings" to="/settings">
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.settings') }}
+            </q-tooltip>
+          </q-btn>
+
+          <q-btn v-if="isAdmin" flat round dense icon="admin_panel_settings" color="warning" to="/admin/users">
+            <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
+              {{ t('layout.drawer.adminUsers') }}
             </q-tooltip>
           </q-btn>
         </div>
@@ -277,6 +290,13 @@
                 <q-icon name="settings" />
               </q-item-section>
               <q-item-section>{{ t('layout.header.settings') }}</q-item-section>
+            </q-item>
+
+            <q-item v-if="isAdmin" clickable v-ripple to="/admin/users">
+              <q-item-section avatar>
+                <q-icon name="admin_panel_settings" color="warning" />
+              </q-item-section>
+              <q-item-section>{{ t('layout.drawer.adminUsers') }}</q-item-section>
             </q-item>
 
             <q-separator class="q-my-md" />
@@ -546,6 +566,7 @@ const notificationsStore = useNotificationsStore();
 const userPreferencesStore = useUserPreferencesStore();
 const { showErrorDialog } = useUI();
 const websocket = useWebSocket();
+const isAdmin = computed(() => authStore.user?.role === 'admin');
 
 interface NotificationGroup {
   key: string;
@@ -613,6 +634,10 @@ async function logout() {
 
 function gotoSettings() {
   void router.push({ name: 'settings' });
+}
+
+function gotoAdminUsers() {
+  void router.push({ name: 'admin-users' });
 }
 
 function openNotificationsCenter() {

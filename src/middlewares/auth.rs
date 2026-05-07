@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use axum::{
     Json,
     extract::FromRequestParts,
@@ -10,7 +12,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::{constants::USER_AUTH_COOKIE_NAME, dtos::user::UserDto, entities::users, state::AppState};
+use crate::{
+    constants::USER_AUTH_COOKIE_NAME,
+    dtos::user::{UserDto, UserRole, UserStatus},
+    entities::users,
+    state::AppState,
+};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Claims {
@@ -45,12 +52,6 @@ impl FromRequestParts<AppState> for UserDto {
 
         let user_id = token_data.claims.sub;
 
-        // Fast path: Caché
-        if let Some(user) = state.user_cache.get(&user_id).await {
-            return Ok(user);
-        }
-
-        // Slow path: Base de datos
         let user_model = users::Entity::find_by_id(user_id)
             .one(state.db.as_ref())
             .await
@@ -67,10 +68,29 @@ impl FromRequestParts<AppState> for UserDto {
                 )
             })?;
 
+        let status = UserStatus::from_str(&user_model.status).unwrap_or(UserStatus::Inactive);
+        match status {
+            UserStatus::Active => {}
+            UserStatus::Inactive => {
+                return Err((
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({"error": "user not authenticated", "type": "unauthorized"})),
+                ));
+            }
+            UserStatus::Blocked => {
+                return Err((
+                    StatusCode::FORBIDDEN,
+                    Json(json!({"error": "account blocked", "type": "forbidden"})),
+                ));
+            }
+        }
+
         let user_dto = UserDto {
             id: user_model.id,
             name: user_model.name,
             email: user_model.email,
+            role: UserRole::from_str(&user_model.role).unwrap_or(UserRole::User),
+            status,
             created_at: user_model.created_at,
             updated_at: user_model.updated_at,
         };

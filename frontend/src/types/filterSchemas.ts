@@ -12,3 +12,13 @@ export const CLIENT_FILTER_SCHEMA: FilterSchema = {
   created_at: 'Date',
   updated_at: 'Date',
 };
+
+export const USER_FILTER_SCHEMA: FilterSchema = {
+  id: 'Text',
+  name: 'Text',
+  email: 'Text',
+  role: 'Text',
+  status: 'Text',
+  created_at: 'Date',
+  updated_at: 'Date',
+};

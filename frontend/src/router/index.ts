@@ -61,6 +61,8 @@ export default route(function (/* { store, ssrContext } */) {
 
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
       next({ name: 'login' });
+    } else if (to.meta.requiresAdmin && authStore.user?.role !== 'admin') {
+      next({ name: 'dashboard' });
     } else if (to.name === 'login' && authStore.isAuthenticated) {
       next({ name: 'dashboard' });
     } else if (to.name === 'client-login' && clientAuthStore.isAuthenticated) {

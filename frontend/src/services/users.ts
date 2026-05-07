@@ -1,5 +1,9 @@
 import { apiFetch } from 'src/boot/fetch';
+import type { PaginatedResponse, QueryPayload } from 'src/types';
 import type {
+  AdminCreateUserDto,
+  AdminUpdateUserDto,
+  AdminUserSummary,
   UpdateNotificationPreferencesDto,
   UpdateUserPasswordDto,
   UpdateUserPreferencesDto,
@@ -13,6 +17,30 @@ import type {
 } from 'src/types/user';
 
 export const UsersService = {
+  search: (payload: QueryPayload): Promise<PaginatedResponse<AdminUserSummary>> => {
+    const params = new URLSearchParams({ q: JSON.stringify(payload) });
+    return apiFetch(`/users/search?${params.toString()}`, {
+      method: 'GET',
+    });
+  },
+
+  adminCreate: (data: AdminCreateUserDto): Promise<UserSettings> =>
+    apiFetch('/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  adminUpdate: (id: string, data: AdminUpdateUserDto): Promise<UserSettings> =>
+    apiFetch(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  adminDelete: (id: string): Promise<{ message: string }> =>
+    apiFetch(`/users/${id}`, {
+      method: 'DELETE',
+    }),
+
   getMe: (): Promise<UserSettings> =>
     apiFetch('/users/me', {
       method: 'GET',

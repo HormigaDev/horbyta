@@ -1,23 +1,26 @@
 use axum::{
     Json, Router,
-    extract::State,
+    extract::{Path, State},
+    http::StatusCode,
     response::IntoResponse,
-    routing::{get, patch, post},
+    routing::{get, patch, post, put},
 };
 use serde_json::json;
+use uuid::Uuid;
 
 use crate::{
     auth::totp_2fa::default_totp_policy,
     controllers::ui_state::ui_state_controller,
+    dtos::query::QueryPayload,
     dtos::totp_2fa::{DisableTotpDto, VerifyTotpCodeDto},
     dtos::user::{
-        UpdateNotificationPreferencesDto, UpdateUserPasswordDto, UpdateUserPreferencesDto, UpdateUserProfileDto,
-        UserDto,
+        AdminCreateUserDto, AdminUpdateUserDto, UpdateNotificationPreferencesDto, UpdateUserPasswordDto,
+        UpdateUserPreferencesDto, UpdateUserProfileDto, UserDto, UserSettingsDto, user_filter_schema,
     },
     error::{AppError, Totp2FaError},
     middlewares::{
         rate_limit::{TWO_FACTOR_AUTH_FAILURE_RATE_LIMIT, check_key_rate_limit, record_key_rate_limit_failure},
-        validator::ValidatedJson,
+        validator::{ValidatedJson, ValidatedSearchQuery},
     },
     services::users::UserService,
     state::AppState,
@@ -35,6 +38,114 @@ use crate::{
 pub(crate) async fn get_me(State(state): State<AppState>, user: UserDto) -> Result<impl IntoResponse, AppError> {
     let me = UserService::get_me(state.db.as_ref(), user.id).await?;
     Ok(Json(me))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/search",
+    tag = "Users",
+    params(crate::dtos::query::SearchQuery),
+    responses(
+        (status = 200, description = "Paginated list of users for admins"),
+        (status = 400, description = "Invalid query"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Admin privileges required")
+    )
+)]
+pub(crate) async fn admin_search_users(
+    State(state): State<AppState>,
+    user: UserDto,
+    ValidatedSearchQuery(payload): ValidatedSearchQuery<QueryPayload>,
+) -> Result<impl IntoResponse, AppError> {
+    user_filter_schema().validate_payload(&payload)?;
+    let (users, total_items) = UserService::admin_search_users(state.db.as_ref(), user.id, payload.clone()).await?;
+
+    Ok(Json(json!({
+        "payload": payload,
+        "items": users,
+        "total": total_items
+    })))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/users/",
+    tag = "Users",
+    request_body = AdminCreateUserDto,
+    responses(
+        (status = 201, description = "User created by admin", body = crate::dtos::user::UserSettingsDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Admin privileges required"),
+        (status = 409, description = "Email or username already taken")
+    )
+)]
+pub(crate) async fn admin_create_user(
+    State(state): State<AppState>,
+    user: UserDto,
+    ValidatedJson(payload): ValidatedJson<AdminCreateUserDto>,
+) -> Result<impl IntoResponse, AppError> {
+    let created = UserService::admin_create_user(state.db.as_ref(), user.id, payload).await?;
+    state
+        .user_cache
+        .insert(created.id, settings_to_user_dto(&created))
+        .await;
+
+    Ok((StatusCode::CREATED, Json(created)))
+}
+
+#[utoipa::path(
+    put,
+    path = "/api/v1/users/{id}",
+    tag = "Users",
+    params(("id" = Uuid, Path, description = "User id")),
+    request_body = AdminUpdateUserDto,
+    responses(
+        (status = 200, description = "User updated by admin", body = crate::dtos::user::UserSettingsDto),
+        (status = 400, description = "Validation failed"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Admin privileges required"),
+        (status = 404, description = "User not found"),
+        (status = 409, description = "Email or username already taken")
+    )
+)]
+pub(crate) async fn admin_update_user(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(id): Path<Uuid>,
+    ValidatedJson(payload): ValidatedJson<AdminUpdateUserDto>,
+) -> Result<impl IntoResponse, AppError> {
+    let updated = UserService::admin_update_user(state.db.as_ref(), user.id, id, payload).await?;
+    state
+        .user_cache
+        .insert(updated.id, settings_to_user_dto(&updated))
+        .await;
+
+    Ok(Json(updated))
+}
+
+#[utoipa::path(
+    delete,
+    path = "/api/v1/users/{id}",
+    tag = "Users",
+    params(("id" = Uuid, Path, description = "User id")),
+    responses(
+        (status = 200, description = "User deleted by admin"),
+        (status = 400, description = "Invalid request"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Admin privileges required"),
+        (status = 404, description = "User not found")
+    )
+)]
+pub(crate) async fn admin_delete_user(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    UserService::admin_delete_user(state.db.as_ref(), user.id, id).await?;
+    state.user_cache.invalidate(&id).await;
+
+    Ok(Json(json!({ "message": "User deleted" })))
 }
 
 #[utoipa::path(
@@ -57,16 +168,7 @@ pub(crate) async fn update_profile(
 
     state
         .user_cache
-        .insert(
-            updated.id,
-            UserDto {
-                id: updated.id,
-                name: updated.name.clone(),
-                email: updated.email.clone(),
-                created_at: updated.created_at,
-                updated_at: updated.updated_at,
-            },
-        )
+        .insert(updated.id, settings_to_user_dto(&updated))
         .await;
 
     Ok(Json(updated))
@@ -260,6 +362,9 @@ pub(crate) async fn disable_totp(
 
 pub fn users_controller() -> Router<AppState> {
     Router::new()
+        .route("/search", get(admin_search_users))
+        .route("/", post(admin_create_user))
+        .route("/{id}", put(admin_update_user).delete(admin_delete_user))
         .route("/me", get(get_me))
         .route("/me/profile", patch(update_profile))
         .route("/me/password", patch(update_password))
@@ -270,6 +375,18 @@ pub fn users_controller() -> Router<AppState> {
         .route("/me/2fa/enable", post(enable_totp))
         .route("/me/2fa/disable", post(disable_totp))
         .nest("/me/ui-state", ui_state_controller())
+}
+
+fn settings_to_user_dto(settings: &UserSettingsDto) -> UserDto {
+    UserDto {
+        id: settings.id,
+        name: settings.name.clone(),
+        email: settings.email.clone(),
+        role: settings.role.clone(),
+        status: settings.status.clone(),
+        created_at: settings.created_at,
+        updated_at: settings.updated_at,
+    }
 }
 
 fn two_factor_rate_limit_key(user_id: uuid::Uuid) -> String {

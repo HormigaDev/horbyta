@@ -400,6 +400,8 @@ async function saveProfile() {
       id: updated.id,
       name: updated.name,
       email: updated.email,
+      role: updated.role,
+      status: updated.status,
       created_at: updated.created_at,
       updated_at: updated.updated_at,
     });

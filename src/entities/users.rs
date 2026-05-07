@@ -15,6 +15,8 @@ pub struct Model {
     pub preferences: Option<Json>,
     #[sea_orm(column_type = "Text")]
     pub password_hash: String,
+    pub role: String,
+    pub status: String,
     pub two_factor_auth_enabled: bool,
     #[sea_orm(column_type = "Text", nullable)]
     pub two_factor_auth_secret_base32: Option<String>,

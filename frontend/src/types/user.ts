@@ -1,6 +1,8 @@
 export type UserThemePreference = 'system' | 'light' | 'dark';
 export type UserLanguagePreference = 'en' | 'es' | 'pt';
 export type UserDateFormatPreference = 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD';
+export type UserRole = 'user' | 'admin';
+export type UserStatus = 'active' | 'inactive' | 'blocked';
 
 export interface ClientPortalNotifications {
   change_request_created: boolean;
@@ -47,6 +49,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  role: UserRole;
+  status: UserStatus;
   created_at: string;
   updated_at: string;
 }
@@ -100,6 +104,32 @@ export interface UpdateNotificationPreferencesDto {
   client_portal?: ClientPortalNotificationsPatch;
   billing?: BillingNotificationsPatch;
   work?: WorkNotificationsPatch;
+}
+
+export interface AdminCreateUserDto {
+  name: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  status: UserStatus;
+}
+
+export interface AdminUpdateUserDto {
+  name?: string;
+  email?: string;
+  password?: string;
+  role?: UserRole;
+  status?: UserStatus;
+}
+
+export interface AdminUserSummary {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface TotpSetup {

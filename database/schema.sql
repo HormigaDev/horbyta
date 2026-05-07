@@ -10,6 +10,8 @@ create table users (
     email varchar(255) not null,
     preferences jsonb,
     password_hash text not null,
+    role varchar(20) not null default 'user',
+    status varchar(20) not null default 'active',
 
     -- 2FA
     two_factor_auth_enabled boolean not null default false,
@@ -19,7 +21,10 @@ create table users (
     two_factor_auth_backup_code_hashes jsonb,
 
     created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
+    updated_at timestamptz not null default now(),
+
+    constraint chk_users_role check (role in ('user', 'admin')),
+    constraint chk_users_status check (status in ('active', 'inactive', 'blocked'))
 );
 
 create table seq_by_user (

@@ -101,6 +101,9 @@ fn format_custom_message(field: &str, code: &str) -> Option<String> {
         "password_requires_uppercase" => "password must include at least one uppercase letter".to_string(),
         "password_requires_number" => "password must include at least one number".to_string(),
         "password_requires_symbol" => "password must include at least one symbol".to_string(),
+        "admin_managed_password_policy" => {
+            "password must be at least 8 characters and include uppercase, lowercase, and number".to_string()
+        }
         "invalid_decimal_range" => format!("{field} must be greater than or equal to 0"),
         "invalid_signature_ip" => format!("{field} must be a valid ip address"),
         "invalid_timezone" => format!("{field} must be a valid timezone"),
@@ -108,6 +111,7 @@ fn format_custom_message(field: &str, code: &str) -> Option<String> {
         "new_password_must_change" => "new password must be different from current password".to_string(),
         "empty_preferences_patch" => "request must include at least one preference field".to_string(),
         "empty_notifications_patch" => "request must include at least one notification preference field".to_string(),
+        "empty_admin_user_patch" => "request must include at least one user field".to_string(),
         "non_negative_decimal" => "decimal must be greater than or equal to 0".to_string(),
         _ => return None,
     };

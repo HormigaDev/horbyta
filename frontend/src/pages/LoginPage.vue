@@ -215,6 +215,9 @@ async function handleLogin() {
       errorMessage.value = t('auth.login.invalidTwoFactorError');
     } else if (isApiHttpError(error) && error.status === 429) {
       errorMessage.value = t('error.rateLimited');
+    } else if (isApiHttpError(error) && error.status === 403) {
+      errorMessage.value = t('auth.login.blockedAccountError');
+      password.value = '';
     } else if (isApiHttpError(error) && error.status === 401) {
       errorMessage.value = t('auth.login.invalidCredentialsError');
       password.value = '';

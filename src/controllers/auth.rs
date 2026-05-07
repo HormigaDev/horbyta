@@ -34,7 +34,7 @@ use crate::{
     },
     services::users::UserService,
     state::AppState,
-    utils::crypto::{compare_password, generate_jwt, hash_password, verify_magic_link_token},
+    utils::crypto::{compare_password, generate_jwt, verify_magic_link_token},
 };
 
 #[utoipa::path(
@@ -83,6 +83,7 @@ pub(crate) async fn login(
     .await;
     record_two_factor_failure(&state, &two_factor_rate_limit_key, &two_factor_result);
     let user_model = two_factor_result?;
+    UserService::ensure_user_can_authenticate(&user_model)?;
 
     let claims = Claims {
         sub: user_model.id,
@@ -106,6 +107,8 @@ pub(crate) async fn login(
             "id": user_model.id,
             "name": user_model.name,
             "email": user_model.email,
+            "role": user_model.role,
+            "status": user_model.status,
         }
     }));
 
@@ -224,46 +227,7 @@ pub(crate) async fn register(
         return Err(AppError::Locked("registration is disabled".to_string()));
     }
 
-    let normalized_email = payload.email.trim().to_lowercase();
-    let normalized_name = payload.name.trim().to_string();
-
-    let email_taken = users::Entity::find()
-        .filter(users::Column::Email.eq(&normalized_email))
-        .one(state.db.as_ref())
-        .await?;
-
-    if email_taken.is_some() {
-        return Err(AppError::Conflict("email is already registered".to_string()));
-    }
-
-    let name_taken = users::Entity::find()
-        .filter(users::Column::Name.eq(&normalized_name))
-        .one(state.db.as_ref())
-        .await?;
-
-    if name_taken.is_some() {
-        return Err(AppError::Conflict("username is already taken".to_string()));
-    }
-
-    let password_hash = hash_password(payload.password)?;
-    let now = Utc::now().fixed_offset();
-
-    let new_user = users::ActiveModel {
-        id: Set(Uuid::new_v4()),
-        name: Set(normalized_name),
-        email: Set(normalized_email),
-        password_hash: Set(password_hash),
-        preferences: Set(None),
-        two_factor_auth_enabled: Set(false),
-        two_factor_auth_secret_base32: Set(None),
-        two_factor_auth_pending_secret_base32: Set(None),
-        two_factor_auth_last_used_step: Set(None),
-        two_factor_auth_backup_code_hashes: Set(None),
-        created_at: Set(now),
-        updated_at: Set(now),
-    };
-
-    let user_model = new_user.insert(state.db.as_ref()).await?;
+    let user_model = UserService::register(state.db.as_ref(), payload).await?;
 
     let claims = Claims {
         sub: user_model.id,
@@ -287,6 +251,8 @@ pub(crate) async fn register(
             "id": user_model.id,
             "name": user_model.name,
             "email": user_model.email,
+            "role": user_model.role,
+            "status": user_model.status,
         }
     }));
 

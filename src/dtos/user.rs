@@ -1,17 +1,106 @@
 use chrono::{DateTime, FixedOffset};
+use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use strum::IntoEnumIterator;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
+
+use crate::{
+    dtos::query::{ColumnType, FilterSchema},
+    entities::users,
+    string_enum,
+    utils::search::FilterField,
+};
 
 #[derive(Serialize, Deserialize, Clone, ToSchema)]
 pub struct UserDto {
     pub id: Uuid,
     pub name: String,
     pub email: String,
+    pub role: UserRole,
+    pub status: UserStatus,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
+}
+
+string_enum!(
+    pub enum UserRole {
+        User,
+        Admin,
+    }
+);
+
+string_enum!(
+    pub enum UserStatus {
+        Active,
+        Inactive,
+        Blocked,
+    }
+);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::EnumString, strum::EnumIter)]
+#[strum(serialize_all = "snake_case")]
+pub enum UserSearchField {
+    Id,
+    Name,
+    Email,
+    Role,
+    Status,
+    CreatedAt,
+    UpdatedAt,
+}
+
+impl UserSearchField {
+    pub const fn column_name(self) -> &'static str {
+        match self {
+            Self::Id => "id",
+            Self::Name => "name",
+            Self::Email => "email",
+            Self::Role => "role",
+            Self::Status => "status",
+            Self::CreatedAt => "created_at",
+            Self::UpdatedAt => "updated_at",
+        }
+    }
+
+    pub const fn column_type(self) -> ColumnType {
+        match self {
+            Self::Id | Self::Name | Self::Email | Self::Role | Self::Status => ColumnType::Text,
+            Self::CreatedAt | Self::UpdatedAt => ColumnType::Date,
+        }
+    }
+
+    pub const fn filter_field(self) -> FilterField<users::Column> {
+        match self {
+            Self::Id => FilterField::Uuid(users::Column::Id),
+            Self::Name => FilterField::Text(users::Column::Name),
+            Self::Email => FilterField::Text(users::Column::Email),
+            Self::Role => FilterField::Keyword(users::Column::Role),
+            Self::Status => FilterField::Keyword(users::Column::Status),
+            Self::CreatedAt => FilterField::DateTime(users::Column::CreatedAt),
+            Self::UpdatedAt => FilterField::DateTime(users::Column::UpdatedAt),
+        }
+    }
+
+    pub const fn order_column(self) -> users::Column {
+        match self {
+            Self::Id => users::Column::Id,
+            Self::Name => users::Column::Name,
+            Self::Email => users::Column::Email,
+            Self::Role => users::Column::Role,
+            Self::Status => users::Column::Status,
+            Self::CreatedAt => users::Column::CreatedAt,
+            Self::UpdatedAt => users::Column::UpdatedAt,
+        }
+    }
+}
+
+pub fn user_filter_schema() -> FilterSchema {
+    UserSearchField::iter().fold(FilterSchema::new(), |schema, field| {
+        schema.add_column(field.column_name(), field.column_type())
+    })
 }
 
 fn validate_timezone(timezone: &str) -> Result<(), ValidationError> {
@@ -65,6 +154,47 @@ fn validate_non_empty_notifications_patch(payload: &UpdateNotificationPreference
     }
 
     Ok(())
+}
+
+fn validate_non_empty_admin_user_patch(payload: &AdminUpdateUserDto) -> Result<(), ValidationError> {
+    if payload.name.is_none()
+        && payload.email.is_none()
+        && payload.password.is_none()
+        && payload.role.is_none()
+        && payload.status.is_none()
+    {
+        return Err(ValidationError::new("empty_admin_user_patch"));
+    }
+
+    Ok(())
+}
+
+fn validate_admin_user_password_patch(payload: &AdminUpdateUserDto) -> Result<(), ValidationError> {
+    if let Some(password) = payload.password.as_ref() {
+        validate_admin_managed_password(password)?;
+    }
+
+    Ok(())
+}
+
+fn validate_admin_managed_password(password: &str) -> Result<(), ValidationError> {
+    let (mut has_upper, mut has_lower, mut has_number) = (false, false, false);
+
+    for char in password.chars() {
+        if char.is_uppercase() {
+            has_upper = true;
+        } else if char.is_lowercase() {
+            has_lower = true;
+        } else if char.is_numeric() {
+            has_number = true;
+        }
+    }
+
+    if password.len() >= 8 && has_upper && has_lower && has_number {
+        return Ok(());
+    }
+
+    Err(ValidationError::new("admin_managed_password_policy"))
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, ToSchema)]
@@ -397,11 +527,62 @@ pub struct UpdateNotificationPreferencesDto {
     pub work: Option<WorkNotificationsPatch>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AdminCreateUserDto {
+    #[validate(length(min = 2, max = 100, message = "name must be between 2 and 100 characters"))]
+    pub name: String,
+
+    #[validate(email(message = "email must be a valid email address"))]
+    #[validate(length(max = 255, message = "email must be at most 255 characters"))]
+    pub email: String,
+
+    #[validate(custom(function = "validate_admin_managed_password"))]
+    pub password: String,
+
+    pub role: UserRole,
+
+    pub status: UserStatus,
+}
+
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
+#[serde(deny_unknown_fields)]
+#[validate(schema(function = "validate_non_empty_admin_user_patch"))]
+#[validate(schema(function = "validate_admin_user_password_patch"))]
+pub struct AdminUpdateUserDto {
+    #[validate(length(min = 2, max = 100, message = "name must be between 2 and 100 characters"))]
+    pub name: Option<String>,
+
+    #[validate(email(message = "email must be a valid email address"))]
+    #[validate(length(max = 255, message = "email must be at most 255 characters"))]
+    pub email: Option<String>,
+
+    #[validate(length(max = 128, message = "password must be at most 128 characters"))]
+    pub password: Option<String>,
+
+    pub role: Option<UserRole>,
+
+    pub status: Option<UserStatus>,
+}
+
+#[derive(Debug, Serialize, FromQueryResult, ToSchema)]
+pub struct AdminUserSummaryDto {
+    pub id: Uuid,
+    pub name: String,
+    pub email: String,
+    pub role: UserRole,
+    pub status: UserStatus,
+    pub created_at: DateTime<FixedOffset>,
+    pub updated_at: DateTime<FixedOffset>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct UserSettingsDto {
     pub id: Uuid,
     pub name: String,
     pub email: String,
+    pub role: UserRole,
+    pub status: UserStatus,
     pub two_factor_auth_enabled: bool,
     pub preferences: UserPreferences,
     pub created_at: DateTime<FixedOffset>,
@@ -415,6 +596,8 @@ impl From<crate::entities::users::Model> for UserSettingsDto {
             id: model.id,
             name: model.name,
             email: model.email,
+            role: UserRole::from_str(&model.role).unwrap_or(UserRole::User),
+            status: UserStatus::from_str(&model.status).unwrap_or(UserStatus::Inactive),
             two_factor_auth_enabled: model.two_factor_auth_enabled,
             preferences,
             created_at: model.created_at,

@@ -33,6 +33,7 @@ const WIDE_TEXT_COLUMN_NAMES = new Set([
   'category_id',
   'client_id',
   'project_id',
+  'email',
 ]);
 
 const MEDIUM_TEXT_COLUMN_NAMES = new Set(['mime_type']);
@@ -612,6 +613,59 @@ export const getClientColumns = (t: ComposerTranslation) => {
     {
       name: 'updated_at',
       label: t('columns.client.updated_at'),
+      field: 'updated_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val),
+    },
+  ]);
+};
+
+export const getUserColumns = (t: ComposerTranslation) => {
+  const formatDate = useDateFormatter();
+
+  return withFixedColumnSizing([
+    {
+      name: 'name',
+      label: t('columns.user.name'),
+      field: 'name',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'email',
+      label: t('columns.user.email'),
+      field: 'email',
+      sortable: true,
+      align: 'left' as const,
+    },
+    {
+      name: 'role',
+      label: t('columns.user.role'),
+      field: 'role',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => (val ? t(`adminUsers.role.${val}`) : '-'),
+    },
+    {
+      name: 'status',
+      label: t('columns.user.status'),
+      field: 'status',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string | null) => (val ? t(`adminUsers.status.${val}`) : '-'),
+    },
+    {
+      name: 'created_at',
+      label: t('columns.user.created_at'),
+      field: 'created_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val),
+    },
+    {
+      name: 'updated_at',
+      label: t('columns.user.updated_at'),
       field: 'updated_at',
       sortable: true,
       align: 'center' as const,
