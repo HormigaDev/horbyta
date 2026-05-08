@@ -38,8 +38,8 @@
             {{
               t('invoices.detail.meta', {
                 id: invoice.id,
-                created: formatDate(invoice.created_at),
-                updated: formatDate(invoice.updated_at),
+                created: formatTimestamp(invoice.created_at),
+                updated: formatTimestamp(invoice.updated_at),
               })
             }}
           </div>
@@ -106,7 +106,7 @@
                   {{ t('invoices.detail.issuedAt') }}
                 </div>
                 <div style="color: var(--text-color)">
-                  {{ invoice.issued_at ? formatDate(invoice.issued_at) : t('common.empty') }}
+                  {{ invoice.issued_at ? formatTimestamp(invoice.issued_at) : t('common.empty') }}
                 </div>
               </div>
 
@@ -115,7 +115,7 @@
                   {{ t('invoices.detail.dueDate') }}
                 </div>
                 <div style="color: var(--text-color)">
-                  {{ invoice.due_date ? formatDate(invoice.due_date) : '-' }}
+                  {{ invoice.due_date ? formatDateOnly(invoice.due_date) : '-' }}
                 </div>
               </div>
 
@@ -186,7 +186,7 @@
                     formatDurationMinutes(entry.duration_minutes)
                   }}</span>
                   <span class="text-caption" style="color: var(--text-muted)">{{
-                    entry.work_date
+                    formatDateOnly(entry.work_date)
                   }}</span>
                   <span
                     v-if="entry.activity_name"
@@ -375,7 +375,15 @@ const showMarkPaidDialog = ref(false);
 const isMarkingPaid = ref(false);
 const markPaidForm = ref({ payment_method: null as string | null, notes: null as string | null });
 
-const formatDate = (value: string) =>
+const formatTimestamp = (value: string) =>
+  formatDateByPreferences(value, {
+    timezone: userPreferencesStore.timezone,
+    dateFormat: userPreferencesStore.dateFormat,
+    includeTime: true,
+    fallback: t('common.empty'),
+  });
+
+const formatDateOnly = (value: string) =>
   formatDateByPreferences(value, {
     timezone: userPreferencesStore.timezone,
     dateFormat: userPreferencesStore.dateFormat,

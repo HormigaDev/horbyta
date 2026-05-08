@@ -1122,6 +1122,8 @@ export const messages = {
   'columns.task.project': 'Proyecto',
   'columns.task.milestone': 'Milestone',
   'columns.task.due_date': 'Fecha límite',
+  'columns.task.created_at': 'Creado',
+  'columns.task.updated_at': 'Actualizado',
   'columns.client.name': 'Nombre',
   'columns.client.status': 'Estado',
   'columns.client.created_at': 'Creado',

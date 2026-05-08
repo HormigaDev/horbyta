@@ -44,8 +44,8 @@
             {{
               t('payments.detail.meta', {
                 id: payment.id,
-                created: formatDate(payment.created_at),
-                updated: formatDate(payment.updated_at),
+                created: formatTimestamp(payment.created_at),
+                updated: formatTimestamp(payment.updated_at),
               })
             }}
           </div>
@@ -119,7 +119,7 @@
                 <div class="text-caption" style="color: var(--text-muted)">
                   {{ t('payments.detail.paymentDate') }}
                 </div>
-                <div style="color: var(--text-color)">{{ formatDate(payment.payment_date) }}</div>
+                <div style="color: var(--text-color)">{{ formatDateOnly(payment.payment_date) }}</div>
               </div>
 
               <div class="col-12 col-md-4">
@@ -176,7 +176,7 @@
                 PAY-{{ normalizeId(payment.parent_payment.record_number) }}
               </a>
               <span class="text-caption" style="color: var(--text-muted)">
-                · {{ formatDate(payment.parent_payment.payment_date) }}
+                · {{ formatDateOnly(payment.parent_payment.payment_date) }}
               </span>
             </div>
           </div>
@@ -213,7 +213,7 @@
                 -{{ formatAmount(refund.amount, payment!.currency_type) }}
               </span>
               <span class="text-caption" style="color: var(--text-muted)">
-                · {{ formatDate(refund.payment_date) }}
+                · {{ formatDateOnly(refund.payment_date) }}
               </span>
               <span
                 v-if="refund.notes"
@@ -390,7 +390,15 @@ const showRefundDialog = ref(false);
 const isRefunding = ref(false);
 const refundForm = ref({ amount: '', notes: null as string | null });
 
-const formatDate = (value: string) =>
+const formatTimestamp = (value: string) =>
+  formatDateByPreferences(value, {
+    timezone: userPreferencesStore.timezone,
+    dateFormat: userPreferencesStore.dateFormat,
+    includeTime: true,
+    fallback: t('common.empty'),
+  });
+
+const formatDateOnly = (value: string) =>
   formatDateByPreferences(value, {
     timezone: userPreferencesStore.timezone,
     dateFormat: userPreferencesStore.dateFormat,

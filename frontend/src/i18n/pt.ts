@@ -1087,6 +1087,8 @@ export const messages: Record<keyof typeof es, string> = {
   'columns.task.project': 'Projeto',
   'columns.task.milestone': 'Marco',
   'columns.task.due_date': 'Prazo',
+  'columns.task.created_at': 'Criado',
+  'columns.task.updated_at': 'Atualizado',
   'columns.client.name': 'Nome',
   'columns.client.status': 'Status',
   'columns.client.created_at': 'Criado',

@@ -9,7 +9,7 @@ import {
   formatIsoDateForInput,
   getDateInputMask,
   getQDateMask,
-  parseDisplayDateToIso,
+  parseDisplayDateToDateOnly,
 } from 'src/utils/dateFormatting';
 import type { TaskDetailDto } from 'src/types/task';
 import type {
@@ -193,17 +193,15 @@ export function useTimeEntryDialog(options: {
       return;
     }
 
-    const isoWorkDate = parseDisplayDateToIso(
+    const workDate = parseDisplayDateToDateOnly(
       timeEntryForm.work_date,
       userPreferencesStore.dateFormat,
     );
 
-    if (['manual', 'edit'].includes(timeEntryDialogMode.value) && !isoWorkDate) {
+    if (['manual', 'edit'].includes(timeEntryDialogMode.value) && !workDate) {
       notify(t('tasks.timeEntries.dialog.validation.workDateRequired'), 'warning');
       return;
     }
-
-    const workDate = isoWorkDate?.split('T')[0] ?? null;
 
     isSavingTimeEntry.value = true;
     try {

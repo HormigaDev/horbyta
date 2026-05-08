@@ -19,6 +19,7 @@ export interface DateFormattingOptions {
 
 export const DEFAULT_TIMEZONE = 'UTC';
 export const DEFAULT_DATE_FORMAT: UserDateFormatPreference = 'DD/MM/YYYY';
+const ISO_DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 const SUPPORTED_DATE_FORMATS = new Set<UserDateFormatPreference>([
   'DD/MM/YYYY',
@@ -48,6 +49,30 @@ function toDate(value: DateInput): Date | null {
 
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getDateOnlyParts(value: DateInput): DateParts | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const match = ISO_DATE_ONLY_PATTERN.exec(value.trim());
+  if (!match) {
+    return null;
+  }
+
+  const [, year, month, day] = match;
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return {
+    day,
+    month,
+    year,
+    hour: '00',
+    minute: '00',
+  };
 }
 
 function getDateParts(date: Date, timezone: string, includeTime: boolean): DateParts | null {
@@ -108,15 +133,21 @@ export function formatDateByPreferences(
   options: DateFormattingOptions = {},
 ): string {
   const fallback = options.fallback ?? '';
+  const dateFormat = normalizeDateFormat(options.dateFormat);
+  const timezone = normalizeTimezone(options.timezone);
+  const includeTime = options.includeTime === true;
+  const dateOnlyParts = getDateOnlyParts(value);
+
+  if (dateOnlyParts) {
+    const datePart = buildDatePart(dateOnlyParts, dateFormat);
+    return includeTime ? `${datePart} ${dateOnlyParts.hour}:${dateOnlyParts.minute}` : datePart;
+  }
+
   const parsedDate = toDate(value);
 
   if (!parsedDate) {
     return fallback;
   }
-
-  const dateFormat = normalizeDateFormat(options.dateFormat);
-  const timezone = normalizeTimezone(options.timezone);
-  const includeTime = options.includeTime === true;
 
   const parts =
     getDateParts(parsedDate, timezone, includeTime) ||
@@ -219,6 +250,21 @@ export function parseDisplayDateToIso(
   value: string,
   dateFormat: UserDateFormatPreference,
 ): string | null {
+  const dateOnly = parseDisplayDateToDateOnly(value, dateFormat);
+
+  return dateOnly ? `${dateOnly}T12:00:00.000Z` : null;
+}
+
+export function parseDisplayDateToDateOnly(
+  value: string,
+  dateFormat: UserDateFormatPreference,
+): string | null {
+  const isoDateOnly = getDateOnlyParts(value);
+
+  if (isoDateOnly) {
+    return `${isoDateOnly.year}-${isoDateOnly.month}-${isoDateOnly.day}`;
+  }
+
   const normalized = normalizeDateFormat(dateFormat);
   const tokens = normalizeDateTokens(value, normalized);
 
@@ -226,7 +272,7 @@ export function parseDisplayDateToIso(
     return null;
   }
 
-  return `${tokens.year}-${tokens.month}-${tokens.day}T12:00:00.000Z`;
+  return `${tokens.year}-${tokens.month}-${tokens.day}`;
 }
 
 export function formatIsoDateForInput(

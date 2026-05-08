@@ -626,6 +626,7 @@ const formatDate = (val: string) =>
   formatDateByPreferences(val, {
     timezone: userPreferencesStore.timezone,
     dateFormat: userPreferencesStore.dateFormat,
+    includeTime: true,
   });
 
 const loadSubtasks = async (parentId: string) => {

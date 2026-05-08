@@ -194,7 +194,7 @@ impl InvoiceService {
             amount: Set(dto.amount),
             currency_type: Set(currency_type),
             status: Set("draft".to_string()),
-            due_date: Set(dto.due_date.map(|dt| dt.date_naive())),
+            due_date: Set(dto.due_date),
             issued_at: Set(None),
             provider: Set(dto.provider.to_string()),
             provider_external_id: Set(normalized_external_id),
@@ -242,7 +242,7 @@ impl InvoiceService {
 
         let mut active: invoices::ActiveModel = invoice.into();
         active.amount = Set(dto.amount);
-        active.due_date = Set(dto.due_date.map(|dt| dt.date_naive()));
+        active.due_date = Set(dto.due_date);
         active.provider = Set(dto.provider.to_string());
         active.provider_external_id = Set(normalized_external_id);
         active.payment_link = Set(normalized_payment_link);

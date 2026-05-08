@@ -6,7 +6,7 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
-use super::utils::is_non_negative_decimal;
+use super::utils::{deserialize_optional_naive_date_from_string_or_datetime, is_non_negative_decimal};
 
 fn validate_provider_fields(dto: &CreateInvoiceDto) -> Result<(), ValidationError> {
     if dto.provider != InvoiceProvider::Manual
@@ -136,7 +136,11 @@ pub struct CreateInvoiceDto {
     #[validate(custom(function = "is_non_negative_decimal"))]
     pub amount: Decimal,
 
-    pub due_date: Option<DateTime<FixedOffset>>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_naive_date_from_string_or_datetime"
+    )]
+    pub due_date: Option<NaiveDate>,
 
     #[validate(length(max = 5000, message = "freelancer_notes must be at most 5000 characters"))]
     pub freelancer_notes: Option<String>,
@@ -159,7 +163,11 @@ pub struct UpdateInvoiceDto {
     #[validate(custom(function = "is_non_negative_decimal"))]
     pub amount: Decimal,
 
-    pub due_date: Option<DateTime<FixedOffset>>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_naive_date_from_string_or_datetime"
+    )]
+    pub due_date: Option<NaiveDate>,
 
     #[validate(length(max = 5000, message = "freelancer_notes must be at most 5000 characters"))]
     pub freelancer_notes: Option<String>,

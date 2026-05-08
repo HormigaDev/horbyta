@@ -19,7 +19,7 @@ const COLUMN_WIDTHS = {
   wideText: 260,
   mediumText: 200,
   compact: 132,
-  date: 164,
+  date: 184,
   numeric: 124,
 } as const;
 
@@ -46,6 +46,8 @@ const DATE_COLUMN_NAMES = new Set([
   'updated_at',
   'due_date',
   'work_date',
+  'payment_date',
+  'issued_at',
   'start_time',
   'end_time',
 ]);
@@ -154,10 +156,11 @@ const withFixedColumnSizing = (columns: TableColumn[]): TableColumn[] => {
 const useDateFormatter = () => {
   const userPreferencesStore = useUserPreferencesStore();
 
-  return (value: string, fallback = '-') =>
+  return (value: string, fallback = '-', includeTime = true) =>
     formatDateByPreferences(value, {
       timezone: userPreferencesStore.timezone,
       dateFormat: userPreferencesStore.dateFormat,
+      includeTime,
       fallback,
     });
 };
@@ -572,7 +575,6 @@ export const getTaskColumns = (t: ComposerTranslation) => {
       align: 'center' as const,
       format: (val: string | null) => (val ? t(`tasks.form.complexity.${val}`) : val),
     },
-
     {
       name: 'due_date',
       label: t('columns.task.due_date'),
@@ -580,6 +582,22 @@ export const getTaskColumns = (t: ComposerTranslation) => {
       sortable: true,
       align: 'center' as const,
       format: (val: string | null) => (val ? formatDate(val, 'N/A') : 'N/A'),
+    },
+    {
+      name: 'created_at',
+      label: t('columns.task.created_at'),
+      field: 'created_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val),
+    },
+    {
+      name: 'updated_at',
+      label: t('columns.task.updated_at'),
+      field: 'updated_at',
+      sortable: true,
+      align: 'center' as const,
+      format: (val: string) => formatDate(val),
     },
   ]);
 };
@@ -839,7 +857,7 @@ export const getPaymentColumns = (t: ComposerTranslation) => {
       field: 'payment_date',
       sortable: true,
       align: 'center' as const,
-      format: (val: string | null) => (val ? formatDate(val) : '-'),
+      format: (val: string | null) => (val ? formatDate(val, '-', false) : '-'),
     },
     {
       name: 'created_at',
@@ -911,7 +929,7 @@ export const getInvoiceColumns = (t: ComposerTranslation) => {
       field: 'due_date',
       sortable: true,
       align: 'center' as const,
-      format: (val: string | null) => (val ? formatDate(val) : '-'),
+      format: (val: string | null) => (val ? formatDate(val, '-', false) : '-'),
     },
     {
       name: 'created_at',

@@ -32,7 +32,7 @@ import {
   formatIsoDateForInput,
   getDateInputMask,
   getQDateMask,
-  parseDisplayDateToIso,
+  parseDisplayDateToDateOnly,
 } from 'src/utils/dateFormatting';
 
 interface Props {
@@ -81,13 +81,12 @@ const emitParsed = (value: string) => {
     emit('update:modelValue', null);
     return;
   }
-  const iso = parseDisplayDateToIso(trimmed, preferencesStore.dateFormat);
-  if (iso === null) {
+  const dateOnly = parseDisplayDateToDateOnly(trimmed, preferencesStore.dateFormat);
+  if (dateOnly === null) {
     emit('update:modelValue', null);
     return;
   }
-  // Send YYYY-MM-DD only (backend expects PG date)
-  emit('update:modelValue', iso.slice(0, 10));
+  emit('update:modelValue', dateOnly);
 };
 
 const handleBlur = () => {

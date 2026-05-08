@@ -234,7 +234,7 @@
                           {{ formatDurationMinutes(entry.duration_minutes) }}
                         </span>
                         <span class="text-caption" style="color: var(--text-muted)">
-                          {{ entry.work_date }}
+                          {{ formatDateOnly(entry.work_date) }}
                         </span>
                         <span
                           v-if="entry.activity_name"
@@ -341,7 +341,7 @@ import {
   formatIsoDateForInput,
   getDateInputMask,
   getQDateMask,
-  parseDisplayDateToIso,
+  parseDisplayDateToDateOnly,
 } from 'src/utils/dateFormatting';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { useNumberFormatter } from 'src/composables/useNumberFormatter';
@@ -617,6 +617,12 @@ const formatDurationMinutes = (minutes: number): string => {
   return `${h}h ${m}min`;
 };
 
+const formatDateOnly = (value: string): string =>
+  formatIsoDateForInput(value, {
+    timezone: userPreferencesStore.timezone,
+    dateFormat: userPreferencesStore.dateFormat,
+  });
+
 const loadInvoice = async () => {
   if (isNew.value) return;
 
@@ -695,7 +701,10 @@ const saveInvoice = async () => {
   try {
     const timeEntryIds = [...selectedEntryIds.value];
     const amount = String(Math.max(0, finalTotal.value));
-    const dueDate = parseDisplayDateToIso(dueDateDisplay.value, userPreferencesStore.dateFormat);
+    const dueDate = parseDisplayDateToDateOnly(
+      dueDateDisplay.value,
+      userPreferencesStore.dateFormat,
+    );
     const providerExternalId = isExternalProvider.value
       ? form.value.provider_external_id?.trim() || null
       : null;

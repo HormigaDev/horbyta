@@ -168,7 +168,7 @@ import {
   formatIsoDateForInput,
   getDateInputMask,
   getQDateMask,
-  parseDisplayDateToIso,
+  parseDisplayDateToDateOnly,
 } from 'src/utils/dateFormatting';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 
@@ -372,7 +372,7 @@ const savePayment = async () => {
   showLoading(t('payments.form.saving'));
 
   try {
-    const paymentDate = parseDisplayDateToIso(
+    const paymentDate = parseDisplayDateToDateOnly(
       paymentDateDisplay.value,
       userPreferencesStore.dateFormat,
     );

@@ -206,6 +206,7 @@ const formatDate = (value: string, fallback = t('common.empty')) =>
   formatDateByPreferences(value, {
     timezone: userPreferencesStore.timezone,
     dateFormat: userPreferencesStore.dateFormat,
+    includeTime: true,
     fallback,
   });
 

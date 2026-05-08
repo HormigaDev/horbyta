@@ -917,7 +917,8 @@ export const messages: Record<keyof typeof es, string> = {
   'settings.user.confirmPasswordLabel': 'Confirm password',
   'settings.user.updatePasswordButton': 'Update password',
   'settings.user.twoFactorTitle': 'Two-factor authentication',
-  'settings.user.twoFactorSubtitle': 'Protect your account with an authenticator app and backup codes.',
+  'settings.user.twoFactorSubtitle':
+    'Protect your account with an authenticator app and backup codes.',
   'settings.user.twoFactorEnabled': 'Enabled',
   'settings.user.twoFactorDisabled': 'Disabled',
   'settings.user.backupCodesRemaining': '{count} backup code(s) available',
@@ -928,7 +929,8 @@ export const messages: Record<keyof typeof es, string> = {
   'settings.user.twoFactorCodeLabel': 'Authentication code',
   'settings.user.backupCodeLabel': 'Backup code',
   'settings.user.setupDialogTitle': 'Set up two-factor authentication',
-  'settings.user.setupDialogSubtitle': 'Scan the QR code or copy the manual key, then confirm with a code.',
+  'settings.user.setupDialogSubtitle':
+    'Scan the QR code or copy the manual key, then confirm with a code.',
   'settings.user.manualKeyLabel': 'Manual key',
   'settings.user.confirmTwoFactorCodeLabel': 'Confirmation code',
   'settings.user.enableTwoFactorButton': 'Confirm and enable',
@@ -1066,6 +1068,8 @@ export const messages: Record<keyof typeof es, string> = {
   'columns.task.project': 'Project',
   'columns.task.milestone': 'Milestone',
   'columns.task.due_date': 'Due date',
+  'columns.task.created_at': 'Created',
+  'columns.task.updated_at': 'Updated',
   'columns.client.name': 'Name',
   'columns.client.status': 'Status',
   'columns.client.created_at': 'Created',
@@ -1346,8 +1350,7 @@ export const messages: Record<keyof typeof es, string> = {
     'Two-factor authentication is not enabled.',
   'backendErrors.two-factor authentication setup has not been started':
     'Two-factor authentication setup has not been started.',
-  'backendErrors.invalid two-factor authentication code':
-    'Invalid two-factor authentication code.',
+  'backendErrors.invalid two-factor authentication code': 'Invalid two-factor authentication code.',
   'backendErrors.two-factor authentication code is required':
     'Two-factor authentication code is required.',
   'backendErrors.two-factor authentication code was already used':
