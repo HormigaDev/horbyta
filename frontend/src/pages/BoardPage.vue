@@ -36,6 +36,7 @@
             :label="t('board.filters.milestone')"
             :options="displayedMilestoneOptions"
             :loading="isMilestoneLoading"
+            :disable="!filters.projectId"
             clearable
             @search="onMilestoneSearch"
           />
@@ -47,6 +48,7 @@
             :label="t('board.filters.parentTask')"
             :options="displayedParentOptions"
             :loading="isParentTaskLoading"
+            :disable="!filters.projectId"
             clearable
             @search="onParentTaskSearch"
           />
@@ -230,11 +232,15 @@ const onProjectSearch = (term: string) => {
 };
 
 const onMilestoneSearch = (term: string) => {
-  void loadMilestonesByTerm(term).then(syncSelectedMilestoneOption);
+  if (!filters.projectId) return;
+  const extraFilters = [{ column: 'project_id', operator: '=' as const, value: filters.projectId }];
+  void loadMilestonesByTerm(term, extraFilters).then(syncSelectedMilestoneOption);
 };
 
 const onParentTaskSearch = (term: string) => {
-  void loadParentTasksByTerm(term).then(syncSelectedParentOption);
+  if (!filters.projectId) return;
+  const extraFilters = [{ column: 'project_id', operator: '=' as const, value: filters.projectId }];
+  void loadParentTasksByTerm(term, extraFilters).then(syncSelectedParentOption);
 };
 
 const onResetFilters = () => {
@@ -245,13 +251,26 @@ const onResetFilters = () => {
 onMounted(() => {
   void loadTasks();
   void loadProjectsByTerm('').then(syncSelectedProjectOption);
-  void loadMilestonesByTerm('').then(syncSelectedMilestoneOption);
-  void loadParentTasksByTerm('').then(syncSelectedParentOption);
 });
 
-watch(() => filters.projectId, (newId) => {
+watch(() => filters.projectId, (newId, oldId) => {
   if (resolvedProjectId.value !== newId) resolvedProjectId.value = null;
   void syncSelectedProjectOption();
+
+  if (newId !== oldId) {
+    filters.milestoneId = null;
+    filters.parentId = null;
+    selectedMilestoneOption.value = null;
+    resolvedMilestoneId.value = null;
+    selectedParentOption.value = null;
+    resolvedParentId.value = null;
+
+    if (newId) {
+      const extraFilters = [{ column: 'project_id', operator: '=' as const, value: newId }];
+      void loadMilestonesByTerm('', extraFilters).then(syncSelectedMilestoneOption);
+      void loadParentTasksByTerm('', extraFilters).then(syncSelectedParentOption);
+    }
+  }
 });
 
 watch(() => filters.milestoneId, (newId) => {
