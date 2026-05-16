@@ -39,6 +39,7 @@ export default defineConfigWithVueTs(
     files: ['**/*.ts', '**/*.vue'],
     rules: {
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
+      '@typescript-eslint/no-misused-promises': 'off',
     },
   },
   // https://github.com/vuejs/eslint-config-typescript
@@ -85,6 +86,7 @@ export default defineConfigWithVueTs(
         },
       ],
       '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
     },
   },
 
