@@ -23,11 +23,7 @@
         </div>
 
         <q-list v-if="!isLoading && preferences.length > 0" separator>
-          <q-item
-            v-for="pref in preferences"
-            :key="pref.id"
-            class="q-px-none"
-          >
+          <q-item v-for="pref in preferences" :key="pref.id" class="q-px-none">
             <q-item-section side>
               <q-btn
                 flat
@@ -39,7 +35,11 @@
                 :loading="isSaving"
                 @click="toggleDefault(pref.id)"
               >
-                <q-tooltip>{{ defaultId === pref.id ? t('formPreferences.unsetDefault') : t('formPreferences.setDefault') }}</q-tooltip>
+                <q-tooltip>{{
+                  defaultId === pref.id
+                    ? t('formPreferences.unsetDefault')
+                    : t('formPreferences.setDefault')
+                }}</q-tooltip>
               </q-btn>
             </q-item-section>
 
@@ -68,8 +68,12 @@
                         <q-item-section>{{ t('common.rename') }}</q-item-section>
                       </q-item>
                       <q-item clickable v-close-popup @click="confirmDelete(pref)">
-                        <q-item-section side><q-icon name="delete" size="sm" color="negative" /></q-item-section>
-                        <q-item-section class="text-negative">{{ t('common.delete') }}</q-item-section>
+                        <q-item-section side
+                          ><q-icon name="delete" size="sm" color="negative"
+                        /></q-item-section>
+                        <q-item-section class="text-negative">{{
+                          t('common.delete')
+                        }}</q-item-section>
                       </q-item>
                     </q-list>
                   </q-menu>
@@ -133,7 +137,11 @@
 import { computed, ref } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
-import { useFormPreferences, type FormPrefKey, type FormPreference } from 'src/composables/useFormPreferences';
+import {
+  useFormPreferences,
+  type FormPrefKey,
+  type FormPreference,
+} from 'src/composables/useFormPreferences';
 
 interface Props {
   modelValue: boolean;
@@ -156,8 +164,16 @@ const dialogModel = computed({
   set: (v: boolean) => emit('update:modelValue', v),
 });
 
-const { isLoading, isSaving, preferences, defaultId, addPreference, removePreference, setDefault, renamePreference } =
-  useFormPreferences(props.formKey);
+const {
+  isLoading,
+  isSaving,
+  preferences,
+  defaultId,
+  addPreference,
+  removePreference,
+  setDefault,
+  renamePreference,
+} = useFormPreferences(props.formKey);
 
 const nameDialogOpen = ref(false);
 const nameDialogValue = ref('');
@@ -201,7 +217,7 @@ const submitNameDialog = async () => {
   nameDialogError.value = false;
 
   if (nameDialogMode.value === 'save') {
-    await addPreference(trimmed, props.currentFields as Record<string, unknown>);
+    await addPreference(trimmed, props.currentFields);
   } else if (renamingId.value) {
     await renamePreference(renamingId.value, trimmed);
     renamingId.value = null;

@@ -1,4 +1,4 @@
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
@@ -23,7 +23,10 @@ export function useUnsavedChanges(isDirty: () => boolean) {
   };
 
   onBeforeRouteLeave(async (_to, _from, next) => {
-    if (!isDirty()) { next(); return; }
+    if (!isDirty()) {
+      next();
+      return;
+    }
     const confirmed = await promptUnsaved();
     next(confirmed ? undefined : false);
   });
