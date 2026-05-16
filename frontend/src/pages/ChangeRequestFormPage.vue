@@ -91,20 +91,16 @@
           <div class="text-subtitle1 q-mb-sm">
             {{ t('changeRequests.form.clientRequestTitle') }}
           </div>
-          <div class="row q-col-gutter-md" style="min-height: 40vh">
-            <div class="col-12" style="display: flex; flex-direction: column">
-              <MarkdownRenderer
-                v-model="clientRequestMarkdown"
-                v-model:pending-files="clientRequestMarkdownFiles"
-                :edit-mode="!isReadOnlyForm"
-                :enable-preview-toggle="true"
-                enable-attachments
-                class="full-height"
-              />
-              <div v-if="hasClientRequestError" class="text-negative text-caption q-mt-xs">
-                {{ t('changeRequests.form.clientRequestTitle') }}
-              </div>
-            </div>
+          <MarkdownRenderer
+            ref="clientRequestMarkdownRef"
+            v-model="clientRequestMarkdown"
+            v-model:pending-files="clientRequestMarkdownFiles"
+            :edit-mode="!isReadOnlyForm"
+            :enable-preview-toggle="true"
+            enable-attachments
+          />
+          <div v-if="hasClientRequestError" class="text-negative text-caption q-mt-xs">
+            {{ t('changeRequests.form.clientRequestTitle') }}
           </div>
         </q-card-section>
       </q-card>
@@ -147,18 +143,14 @@
             </div>
           </div>
 
-          <div class="row q-col-gutter-md" style="min-height: 36vh">
-            <div class="col-12" style="display: flex; flex-direction: column">
-              <MarkdownRenderer
-                v-model="technicalAssessmentMarkdown"
-                v-model:pending-files="technicalAssessmentMarkdownFiles"
-                :edit-mode="!isReadOnlyForm"
-                :enable-preview-toggle="true"
-                enable-attachments
-                class="full-height"
-              />
-            </div>
-          </div>
+          <MarkdownRenderer
+            ref="technicalAssessmentMarkdownRef"
+            v-model="technicalAssessmentMarkdown"
+            v-model:pending-files="technicalAssessmentMarkdownFiles"
+            :edit-mode="!isReadOnlyForm"
+            :enable-preview-toggle="true"
+            enable-attachments
+          />
         </q-card-section>
       </q-card>
 
@@ -243,6 +235,13 @@ const hasAttemptedSubmit = ref(false);
 const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
 const clientRequestMarkdownFiles = ref<MarkdownPendingFile[]>([]);
 const technicalAssessmentMarkdownFiles = ref<MarkdownPendingFile[]>([]);
+const clientRequestMarkdownRef = ref<{ resetToEdit: () => void } | null>(null);
+const technicalAssessmentMarkdownRef = ref<{ resetToEdit: () => void } | null>(null);
+
+watch(stayOnFormAfterSave, () => {
+  clientRequestMarkdownRef.value?.resetToEdit();
+  technicalAssessmentMarkdownRef.value?.resetToEdit();
+});
 
 const createEmptyChangeRequestForm = (): ChangeRequestFormState => ({
   id: '',
@@ -263,6 +262,8 @@ const createEmptyChangeRequestForm = (): ChangeRequestFormState => ({
 const form = reactive<ChangeRequestFormState>(createEmptyChangeRequestForm());
 
 const resetChangeRequestForm = async () => {
+  clientRequestMarkdownRef.value?.resetToEdit();
+  technicalAssessmentMarkdownRef.value?.resetToEdit();
   hasAttemptedSubmit.value = false;
 
   if (isNew.value) {

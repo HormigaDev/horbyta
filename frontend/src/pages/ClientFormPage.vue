@@ -86,20 +86,26 @@
       <q-card flat bordered class="q-mb-md">
         <q-card-section>
           <div class="text-subtitle1 q-mb-sm">{{ $t('clients.form.notesTitle') }}</div>
-          <div class="row q-col-gutter-md" style="min-height: 50vh">
-            <div class="col-12" style="display: flex; flex-direction: column">
-              <MarkdownRenderer
-                v-model="client.notes!"
-                edit-mode
-                enable-preview-toggle
-                class="full-height"
-              />
-            </div>
-          </div>
+          <MarkdownRenderer
+            ref="markdownRef"
+            v-model="client.notes!"
+            edit-mode
+            enable-preview-toggle
+          />
         </q-card-section>
       </q-card>
 
       <div class="row justify-end q-gutter-sm">
+        <q-btn
+          v-if="isNew"
+          flat
+          round
+          icon="bookmarks"
+          color="grey"
+          @click="prefsDialogOpen = true"
+        >
+          <q-tooltip>{{ t('formPreferences.title') }}</q-tooltip>
+        </q-btn>
         <q-btn
           flat
           round
@@ -119,17 +125,28 @@
           @click.stop="saveClient"
         />
       </div>
+
+      <FormPreferencesDialog
+        v-model="prefsDialogOpen"
+        form-key="client"
+        :current-fields="currentPreferenceFields"
+        @apply="applyPreference"
+      />
     </div>
   </q-page>
 </template>
 <script setup lang="ts">
+import FormPreferencesDialog from 'src/components/FormPreferencesDialog.vue';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useClientRules } from 'src/composables/rules/client.rules';
+import { useFormDraft } from 'src/composables/useFormDraft';
+import { useFormPreferences } from 'src/composables/useFormPreferences';
 import { usePinnedFormSave } from 'src/composables/usePinnedFormSave';
 import { useUI } from 'src/composables/useUI';
+import { useUnsavedChanges } from 'src/composables/useUnsavedChanges';
 import { ClientsService } from 'src/services/clients';
 import type { ClientDetailDto, CreateClientDto, UpdateClientDto } from 'src/types/clients';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -141,7 +158,13 @@ const { notify, notifyError, showLoading, hideLoading } = useUI();
 
 const isNew = computed(() => route.name === 'client-create');
 const isSubmitting = ref(false);
+const hasChanges = ref(false);
 const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
+const markdownRef = ref<{ resetToEdit: () => void } | null>(null);
+
+watch(stayOnFormAfterSave, () => {
+  markdownRef.value?.resetToEdit();
+});
 
 const createEmptyClient = (): ClientDetailDto => ({
   id: '',
@@ -158,12 +181,49 @@ const createEmptyClient = (): ClientDetailDto => ({
 
 const client = ref<ClientDetailDto>(createEmptyClient());
 
+const prefsDialogOpen = ref(false);
+const { defaultPreference, load: loadPreferences } = useFormPreferences('client');
+
+const currentPreferenceFields = computed(() => ({
+  status: client.value.status,
+}));
+
+const applyPreference = (fields: Record<string, unknown>) => {
+  if (fields.status !== undefined)
+    client.value.status = fields.status as typeof client.value.status;
+};
+
+const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
+  () => ({ ...client.value }),
+  (draft) => {
+    Object.assign(client.value, draft);
+  },
+  { formKey: 'client', enabled: () => isNew.value },
+);
+
+useUnsavedChanges(() => hasChanges.value);
+
+watch(
+  client,
+  () => {
+    hasChanges.value = true;
+  },
+  { deep: true },
+);
+
 const resetClientForm = async () => {
+  markdownRef.value?.resetToEdit();
   emailRuleState.value = { error: false, message: '' };
   phoneRuleState.value = { error: false, message: '' };
 
+  hasChanges.value = false;
+
   if (isNew.value) {
     client.value = createEmptyClient();
+    clearDraft();
+    if (defaultPreference.value) {
+      applyPreference(defaultPreference.value.fields);
+    }
     return;
   }
 
@@ -188,6 +248,8 @@ const loadClient = async () => {
 };
 
 const goBack = () => {
+  clearDraft();
+  hasChanges.value = false;
   if (isNew.value) {
     void router.push('/clients');
   } else {
@@ -247,11 +309,20 @@ const saveClient = async () => {
     notifyError(t('clients.form.saveError'), err);
   } finally {
     isSubmitting.value = false;
+    hasChanges.value = false;
+    clearDraft();
     hideLoading();
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
+  if (isNew.value) {
+    await loadPreferences();
+    const restored = await restoreDraftIfAvailable();
+    if (!restored && defaultPreference.value) {
+      applyPreference(defaultPreference.value.fields);
+    }
+  }
   loadClient();
 });
 </script>

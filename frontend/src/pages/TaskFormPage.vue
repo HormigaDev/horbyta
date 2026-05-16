@@ -111,7 +111,7 @@
             </q-input>
           </div>
 
-          <div class="col-12">
+          <div class="col-12 col-md-8">
             <SelectByTerm
               v-model="form.tag_ids"
               :label="t('tasks.form.tagsLabel')"
@@ -153,7 +153,7 @@
             </SelectByTerm>
           </div>
 
-          <div class="col-12">
+          <div class="col-12 col-md-4">
             <q-toggle
               v-model="form.block_parent"
               :label="t('tasks.form.blockParentLabel')"
@@ -166,22 +166,28 @@
       <q-card flat bordered class="q-mb-md">
         <q-card-section>
           <div class="text-subtitle1 q-mb-sm">{{ t('tasks.form.descriptionTitle') }}</div>
-          <div class="row q-col-gutter-md" style="min-height: 30vh">
-            <div class="col-12" style="display: flex; flex-direction: column">
-              <MarkdownRenderer
-                v-model="taskDescription"
-                v-model:pending-files="markdownFiles"
-                edit-mode
-                enable-preview-toggle
-                enable-attachments
-                class="full-height"
-              />
-            </div>
-          </div>
+          <MarkdownRenderer
+            ref="markdownRef"
+            v-model="taskDescription"
+            v-model:pending-files="markdownFiles"
+            edit-mode
+            enable-preview-toggle
+            enable-attachments
+          />
         </q-card-section>
       </q-card>
 
       <div class="row justify-end q-gutter-sm">
+        <q-btn
+          v-if="isNew"
+          flat
+          round
+          icon="bookmarks"
+          color="grey"
+          @click="prefsDialogOpen = true"
+        >
+          <q-tooltip>{{ t('formPreferences.title') }}</q-tooltip>
+        </q-btn>
         <q-btn
           flat
           round
@@ -201,6 +207,13 @@
           @click.stop="saveTask"
         />
       </div>
+
+      <FormPreferencesDialog
+        v-model="prefsDialogOpen"
+        form-key="task"
+        :current-fields="currentPreferenceFields"
+        @apply="applyPreference"
+      />
     </div>
   </q-page>
 </template>
@@ -209,10 +222,14 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import FormPreferencesDialog from 'src/components/FormPreferencesDialog.vue';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
+import { useFormDraft } from 'src/composables/useFormDraft';
+import { useFormPreferences } from 'src/composables/useFormPreferences';
 import { usePinnedFormSave } from 'src/composables/usePinnedFormSave';
 import { useUI } from 'src/composables/useUI';
+import { useUnsavedChanges } from 'src/composables/useUnsavedChanges';
 import { useTasksRules } from 'src/composables/rules/tasks.rules';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { TasksService } from 'src/services/tasks';
@@ -246,9 +263,15 @@ const isNew = computed(() => route.name === 'task-create');
 const taskId = computed(() => String(route.params.id || ''));
 const isSubmitting = ref(false);
 const isHydratingTask = ref(false);
+const hasChanges = ref(false);
 const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
 const HEX_COLOR_REGEX = /^#(?:[0-9A-F]{3}|[0-9A-F]{6})$/i;
 const markdownFiles = ref<MarkdownPendingFile[]>([]);
+const markdownRef = ref<{ resetToEdit: () => void } | null>(null);
+
+watch(stayOnFormAfterSave, () => {
+  markdownRef.value?.resetToEdit();
+});
 
 const statusOptions: Array<{ label: string; value: TaskStatus }> = [
   { label: t('tasks.form.status.todo'), value: 'todo' },
@@ -289,8 +312,94 @@ const createEmptyTaskForm = (): CreateTaskDto => ({
 
 const form = reactive<CreateTaskDto>(createEmptyTaskForm());
 
+const prefsDialogOpen = ref(false);
+const { defaultPreference, load: loadPreferences } = useFormPreferences('task');
+
+const currentPreferenceFields = computed(() => ({
+  project_id: form.project_id,
+  parent_id: form.parent_id,
+  milestone_id: form.milestone_id,
+  status: form.status,
+  priority: form.priority,
+  complexity: form.complexity,
+  block_parent: form.block_parent,
+  tag_ids: [...form.tag_ids],
+}));
+
+const applyPreference = async (fields: Record<string, unknown>) => {
+  isHydratingTask.value = true;
+  if (fields.status !== undefined) form.status = fields.status as typeof form.status;
+  if (fields.priority !== undefined) form.priority = fields.priority as number;
+  if (fields.complexity !== undefined) form.complexity = fields.complexity as number;
+  if (fields.block_parent !== undefined) form.block_parent = fields.block_parent as boolean;
+
+  const projectId = (fields.project_id as string | null | undefined) ?? null;
+  if (projectId) {
+    form.project_id = projectId;
+    await ensureProjectOption(projectId);
+    const projectFilters: Filter[] = [{ column: 'project_id', operator: '=', value: projectId }];
+    await loadMilestonesByTerm('', projectFilters);
+    await loadParentTasksByTerm('', projectFilters);
+  }
+  isHydratingTask.value = false;
+
+  const milestoneId = (fields.milestone_id as string | null | undefined) ?? null;
+  if (milestoneId && form.project_id) {
+    form.milestone_id = milestoneId;
+    await ensureMilestoneOption(milestoneId);
+  }
+
+  const parentId = (fields.parent_id as string | null | undefined) ?? null;
+  if (parentId && form.project_id) {
+    form.parent_id = parentId;
+    await ensureParentTaskOption(parentId);
+  }
+
+  if (Array.isArray(fields.tag_ids)) {
+    form.tag_ids = [...(fields.tag_ids as string[])];
+    await ensureTagOptions(form.tag_ids);
+  }
+};
+
+const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
+  () => ({ ...form, _dueDateDisplay: dueDateDisplay.value }),
+  (draft) => {
+    isHydratingTask.value = true;
+    Object.assign(form, {
+      project_id: draft.project_id ?? null,
+      parent_id: draft.parent_id ?? null,
+      milestone_id: draft.milestone_id ?? null,
+      title: draft.title ?? '',
+      description: draft.description ?? null,
+      status: draft.status ?? 'todo',
+      priority: draft.priority ?? 1,
+      complexity: draft.complexity ?? 1,
+      block_parent: draft.block_parent ?? true,
+      due_date: draft.due_date ?? null,
+      tag_ids: draft.tag_ids ?? [],
+    });
+    if ((draft as Record<string, unknown>)._dueDateDisplay) {
+      dueDateDisplay.value = (draft as Record<string, unknown>)._dueDateDisplay as string;
+    }
+    isHydratingTask.value = false;
+  },
+  { formKey: 'task', enabled: () => isNew.value },
+);
+
+useUnsavedChanges(() => hasChanges.value);
+
+watch(
+  form,
+  () => {
+    if (!isHydratingTask.value) hasChanges.value = true;
+  },
+  { deep: true },
+);
+
 const resetTaskForm = async () => {
+  markdownRef.value?.resetToEdit();
   titleRuleState.value = { error: false, message: '' };
+  hasChanges.value = false;
 
   if (isNew.value) {
     isHydratingTask.value = true;
@@ -299,7 +408,11 @@ const resetTaskForm = async () => {
     markdownFiles.value = [];
     setMilestoneOptions([]);
     setParentTaskOptions([]);
+    clearDraft();
     isHydratingTask.value = false;
+    if (defaultPreference.value) {
+      await applyPreference(defaultPreference.value.fields);
+    }
     return;
   }
 
@@ -595,6 +708,8 @@ watch(
 );
 
 const goBack = () => {
+  clearDraft();
+  hasChanges.value = false;
   if (isNew.value) {
     void router.push('/tasks');
   } else {
@@ -655,6 +770,8 @@ const saveTask = async () => {
     notifyError(t('tasks.form.saveError'), err);
   } finally {
     isSubmitting.value = false;
+    hasChanges.value = false;
+    clearDraft();
     hideLoading();
   }
 };
@@ -662,6 +779,14 @@ const saveTask = async () => {
 onMounted(async () => {
   try {
     await loadReferenceData();
+
+    if (isNew.value) {
+      await loadPreferences();
+      const restored = await restoreDraftIfAvailable();
+      if (!restored && defaultPreference.value) {
+        await applyPreference(defaultPreference.value.fields);
+      }
+    }
 
     if (isNew.value) {
       const queryProjectId = route.query.projectId;

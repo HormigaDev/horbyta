@@ -205,12 +205,83 @@ const applyFormat = (type: MarkdownFormat) => {
 };
 
 const handleKeydown = (event: KeyboardEvent) => {
+  const key = event.key;
+
+  if (key === 'Tab') {
+    event.preventDefault();
+    insertTextAtCursor('    ');
+    return;
+  }
+
+  if (key === 'Enter') {
+    const textarea = editorRef.value?.getNativeElement();
+    if (!textarea) return;
+
+    const text = rawContent.value || '';
+    const cursorPos = textarea.selectionStart ?? 0;
+    const selEnd = textarea.selectionEnd ?? cursorPos;
+    const lineStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
+    const currentLine = text.substring(lineStart, cursorPos);
+
+    const unorderedMatch = currentLine.match(/^(\s*)([-*]) (.*)$/);
+    const orderedMatch = currentLine.match(/^(\s*)(\d+)\. (.*)$/);
+
+    if (unorderedMatch) {
+      event.preventDefault();
+      const indent = unorderedMatch[1] ?? '';
+      const marker = unorderedMatch[2] ?? '-';
+      const content = unorderedMatch[3] ?? '';
+      if (content.trim() === '') {
+        rawContent.value = text.substring(0, lineStart) + text.substring(cursorPos);
+        window.setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(lineStart, lineStart);
+        }, 0);
+      } else {
+        const insertion = `\n${indent}${marker} `;
+        rawContent.value = text.substring(0, cursorPos) + insertion + text.substring(selEnd);
+        const newPos = cursorPos + insertion.length;
+        window.setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(newPos, newPos);
+        }, 0);
+      }
+      return;
+    }
+
+    if (orderedMatch) {
+      event.preventDefault();
+      const indent = orderedMatch[1] ?? '';
+      const num = orderedMatch[2] ?? '1';
+      const content = orderedMatch[3] ?? '';
+      if (content.trim() === '') {
+        rawContent.value = text.substring(0, lineStart) + text.substring(cursorPos);
+        window.setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(lineStart, lineStart);
+        }, 0);
+      } else {
+        const nextNum = parseInt(num, 10) + 1;
+        const insertion = `\n${indent}${nextNum}. `;
+        rawContent.value = text.substring(0, cursorPos) + insertion + text.substring(selEnd);
+        const newPos = cursorPos + insertion.length;
+        window.setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(newPos, newPos);
+        }, 0);
+      }
+      return;
+    }
+
+    return;
+  }
+
   if (!event.ctrlKey && !event.metaKey) return;
 
-  const key = event.key.toLowerCase();
-  if (key === 'b' || key === 'i') {
+  const lowerKey = key.toLowerCase();
+  if (lowerKey === 'b' || lowerKey === 'i') {
     event.preventDefault();
-    applyFormat(key === 'b' ? 'bold' : 'italic');
+    applyFormat(lowerKey === 'b' ? 'bold' : 'italic');
   }
 };
 
@@ -280,6 +351,29 @@ const handleFileInputChange = (event: Event) => {
 };
 
 const handlePaste = (event: ClipboardEvent) => {
+  const textarea = editorRef.value?.getNativeElement();
+
+  if (textarea) {
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
+
+    if (start !== end) {
+      const clipboardText = (event.clipboardData?.getData('text/plain') ?? '').trim();
+      if (/^(https?:\/\/|\.{1,2}\/|\/)[^\s]+$/.test(clipboardText)) {
+        event.preventDefault();
+        const selectedText = rawContent.value.substring(start, end);
+        const markdownLink = `[${selectedText}](${clipboardText})`;
+        rawContent.value =
+          rawContent.value.substring(0, start) + markdownLink + rawContent.value.substring(end);
+        window.setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(start + markdownLink.length, start + markdownLink.length);
+        }, 0);
+        return;
+      }
+    }
+  }
+
   if (!props.enableAttachments) return;
 
   const files = Array.from(event.clipboardData?.files || []).filter((file) =>
@@ -326,5 +420,11 @@ const togglePreviewMode = () => {
 
 onBeforeUnmount(() => {
   Object.values(objectUrls.value).forEach((url) => URL.revokeObjectURL(url));
+});
+
+defineExpose({
+  resetToEdit: () => {
+    isPreviewMode.value = false;
+  },
 });
 </script>

@@ -24,6 +24,15 @@ export const UiStateService = {
       body: JSON.stringify({ value }),
     }),
 
+  batchUpsert: <T = unknown>(
+    scope: UiStateScope,
+    entries: Array<{ key: string; value: T }>,
+  ): Promise<{ items: UiStateEntryDto<T>[] }> =>
+    apiFetch(`${BASE_URL}/${encode(scope)}/batch`, {
+      method: 'PUT',
+      body: JSON.stringify({ entries }),
+    }),
+
   remove: (scope: UiStateScope, key: string): Promise<{ message: string }> =>
     apiFetch(`${BASE_URL}/${encode(scope)}/${encode(key)}`, { method: 'DELETE' }),
 

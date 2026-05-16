@@ -131,6 +131,20 @@ impl UiStateService {
         state.ui_state_cache.invalidate(&Self::cache_key(user_id, scope)).await;
     }
 
+    pub async fn batch_upsert(
+        state: &AppState,
+        user_id: Uuid,
+        scope: &str,
+        entries: Vec<(String, serde_json::Value)>,
+    ) -> Result<Vec<UiStateEntryDto>, AppError> {
+        let mut results = Vec::with_capacity(entries.len());
+        for (key, value) in entries {
+            let entry = Self::upsert(state, user_id, scope, &key, value).await?;
+            results.push(entry);
+        }
+        Ok(results)
+    }
+
     pub async fn invalidate_user(state: &AppState, user_id: Uuid) {
         let prefix = format!("{}:", user_id);
         state

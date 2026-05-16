@@ -76,22 +76,28 @@
       <q-card flat bordered class="q-mb-md">
         <q-card-section>
           <div class="text-subtitle1 q-mb-sm">{{ t('milestones.form.descriptionTitle') }}</div>
-          <div class="row q-col-gutter-md" style="min-height: 45vh">
-            <div class="col-12" style="display: flex; flex-direction: column">
-              <MarkdownRenderer
-                v-model="milestoneDescription"
-                v-model:pending-files="markdownFiles"
-                edit-mode
-                enable-preview-toggle
-                enable-attachments
-                class="full-height"
-              />
-            </div>
-          </div>
+          <MarkdownRenderer
+            ref="markdownRef"
+            v-model="milestoneDescription"
+            v-model:pending-files="markdownFiles"
+            edit-mode
+            enable-preview-toggle
+            enable-attachments
+          />
         </q-card-section>
       </q-card>
 
       <div class="row justify-end q-gutter-sm">
+        <q-btn
+          v-if="isNew"
+          flat
+          round
+          icon="bookmarks"
+          color="grey"
+          @click="prefsDialogOpen = true"
+        >
+          <q-tooltip>{{ t('formPreferences.title') }}</q-tooltip>
+        </q-btn>
         <q-btn
           flat
           round
@@ -111,18 +117,29 @@
           @click.stop="saveMilestone"
         />
       </div>
+
+      <FormPreferencesDialog
+        v-model="prefsDialogOpen"
+        form-key="milestone"
+        :current-fields="currentPreferenceFields"
+        @apply="applyPreference"
+      />
     </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import FormPreferencesDialog from 'src/components/FormPreferencesDialog.vue';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
+import { useFormDraft } from 'src/composables/useFormDraft';
+import { useFormPreferences } from 'src/composables/useFormPreferences';
 import { usePinnedFormSave } from 'src/composables/usePinnedFormSave';
 import { useUI } from 'src/composables/useUI';
+import { useUnsavedChanges } from 'src/composables/useUnsavedChanges';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { MilestonesService } from 'src/services/milestones';
 import { ProjectsService } from 'src/services/projects';
@@ -151,8 +168,14 @@ const isNew = computed(() => route.name === 'milestone-create');
 const milestoneId = computed(() => String(route.params.id || ''));
 const isSubmitting = ref(false);
 const hasAttemptedSubmit = ref(false);
+const hasChanges = ref(false);
 const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
 const markdownFiles = ref<MarkdownPendingFile[]>([]);
+const markdownRef = ref<{ resetToEdit: () => void } | null>(null);
+
+watch(stayOnFormAfterSave, () => {
+  markdownRef.value?.resetToEdit();
+});
 const dueDateDisplay = ref('');
 const dateInputMask = computed(() => getDateInputMask(userPreferencesStore.dateFormat));
 const qDateMask = computed(() => getQDateMask(userPreferencesStore.dateFormat));
@@ -175,13 +198,64 @@ const createEmptyMilestoneForm = (): MilestoneFormState => ({
 
 const form = reactive<MilestoneFormState>(createEmptyMilestoneForm());
 
+const prefsDialogOpen = ref(false);
+const { defaultPreference, load: loadPreferences } = useFormPreferences('milestone');
+
+const currentPreferenceFields = computed(() => ({
+  project_id: form.project_id,
+  status: form.status,
+}));
+
+const applyPreference = async (fields: Record<string, unknown>) => {
+  if (fields.status !== undefined) form.status = fields.status as typeof form.status;
+  const projectId = (fields.project_id as string | null | undefined) ?? null;
+  if (projectId) {
+    form.project_id = projectId;
+    await ensureProjectOption(projectId);
+  }
+};
+
+const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
+  () => ({ ...form, _dueDateDisplay: dueDateDisplay.value }),
+  (draft) => {
+    Object.assign(form, {
+      project_id: (draft as Record<string, unknown>).project_id ?? null,
+      name: (draft as Record<string, unknown>).name ?? '',
+      description: (draft as Record<string, unknown>).description ?? null,
+      status: (draft as Record<string, unknown>).status ?? 'open',
+      due_date: (draft as Record<string, unknown>).due_date ?? null,
+    });
+    if ((draft as Record<string, unknown>)._dueDateDisplay) {
+      dueDateDisplay.value = (draft as Record<string, unknown>)._dueDateDisplay as string;
+    }
+  },
+  { formKey: 'milestone', enabled: () => isNew.value },
+);
+
+useUnsavedChanges(() => hasChanges.value);
+
+watch(
+  form,
+  () => {
+    hasChanges.value = true;
+  },
+  { deep: true },
+);
+
 const resetMilestoneForm = async () => {
+  markdownRef.value?.resetToEdit();
   hasAttemptedSubmit.value = false;
+
+  hasChanges.value = false;
 
   if (isNew.value) {
     Object.assign(form, createEmptyMilestoneForm());
     dueDateDisplay.value = '';
     markdownFiles.value = [];
+    clearDraft();
+    if (defaultPreference.value) {
+      await applyPreference(defaultPreference.value.fields);
+    }
     return;
   }
 
@@ -262,6 +336,8 @@ const loadMilestone = async () => {
 };
 
 const goBack = () => {
+  clearDraft();
+  hasChanges.value = false;
   if (isNew.value) {
     void router.push('/milestones');
     return;
@@ -315,12 +391,21 @@ const saveMilestone = async () => {
     notifyError(t('milestones.form.saveError'), err);
   } finally {
     isSubmitting.value = false;
+    hasChanges.value = false;
+    clearDraft();
     hideLoading();
   }
 };
 
 onMounted(async () => {
   await loadProjectsByTerm('');
+  if (isNew.value) {
+    await loadPreferences();
+    const restored = await restoreDraftIfAvailable();
+    if (!restored && defaultPreference.value) {
+      await applyPreference(defaultPreference.value.fields);
+    }
+  }
   await loadMilestone();
 });
 </script>

@@ -719,6 +719,8 @@ export const messages = {
   'board.moveBlockedMessage':
     'La tarea necesita al menos una entrada de tiempo antes de pasar a Finalizada.',
   'board.filters.project': 'Proyecto',
+  'board.filters.milestone': 'Hito',
+  'board.filters.parentTask': 'Tarea padre',
   'board.filters.createdFrom': 'Creado desde',
   'board.filters.createdTo': 'Creado hasta',
   'board.columns.todo': 'Por hacer',
@@ -1780,4 +1782,30 @@ export const messages = {
   'columns.user.status': 'Estado',
   'columns.user.created_at': 'Creado',
   'columns.user.updated_at': 'Actualizado',
+
+  'common.rename': 'Renombrar',
+
+  'common.draft.restoreTitle': 'Borrador guardado',
+  'common.draft.restoreMessage': 'Se encontró un borrador no guardado. ¿Deseas restaurarlo?',
+  'common.draft.restoreAction': 'Restaurar borrador',
+  'common.draft.discardAction': 'Descartar',
+
+  'common.unsavedChanges.title': 'Cambios sin guardar',
+  'common.unsavedChanges.message': 'Tienes cambios sin guardar. ¿Seguro que deseas salir?',
+  'common.unsavedChanges.leaveAction': 'Salir de todos modos',
+  'common.unsavedChanges.stayAction': 'Quedarme',
+
+  'formPreferences.title': 'Preferencias de formulario',
+  'formPreferences.empty': 'No hay preferencias guardadas',
+  'formPreferences.applyAction': 'Aplicar',
+  'formPreferences.saveCurrentAction': 'Guardar actual',
+  'formPreferences.saveCurrentTitle': 'Guardar preferencia actual',
+  'formPreferences.renameTitle': 'Renombrar preferencia',
+  'formPreferences.deleteTitle': 'Eliminar preferencia',
+  'formPreferences.deleteMessage': '¿Eliminar la preferencia "{name}"?',
+  'formPreferences.nameLabel': 'Nombre',
+  'formPreferences.nameRequired': 'El nombre es obligatorio',
+  'formPreferences.defaultLabel': 'Predeterminada',
+  'formPreferences.setDefault': 'Marcar como predeterminada',
+  'formPreferences.unsetDefault': 'Quitar como predeterminada',
 } as const;

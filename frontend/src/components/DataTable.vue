@@ -788,6 +788,13 @@ const onDelete = () => {
       }
     }
 
+    .q-table__top {
+      position: sticky;
+      top: 80px;
+      z-index: 5;
+      background-color: var(--card-bg);
+    }
+
     thead tr th {
       position: sticky;
       z-index: 2;

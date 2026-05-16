@@ -1,4 +1,4 @@
-export type UiStateScope = 'datatable' | 'board' | 'pinned' | 'notification_log';
+export type UiStateScope = 'datatable' | 'board' | 'pinned' | 'notification_log' | 'form_pref';
 
 export interface UiStateEntryDto<T = unknown> {
   scope: string;

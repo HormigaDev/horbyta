@@ -55,11 +55,10 @@
             {{ t('client.changeRequests.form.clientRequestTitle') }}
           </div>
           <div class="row q-col-gutter-md" style="min-height: 42vh">
-            <div class="col-12 col-md-6" style="display: flex; flex-direction: column">
+            <div class="col-12 col-md-6">
               <MarkdownRenderer
                 v-model="clientRequestMarkdown"
                 :edit-mode="true"
-                class="full-height"
               />
               <div v-if="hasClientRequestError" class="text-negative text-caption q-mt-xs">
                 {{ t('client.changeRequests.form.clientRequestTitle') }}

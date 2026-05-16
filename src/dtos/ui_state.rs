@@ -88,6 +88,19 @@ pub struct UpsertUiStateDto {
     pub value: serde_json::Value,
 }
 
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct BatchUpsertEntryDto {
+    pub key: String,
+    #[schema(value_type = Object)]
+    pub value: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct BatchUpsertUiStateDto {
+    #[validate(length(min = 1, max = 50, message = "batch must contain between 1 and 50 entries"))]
+    pub entries: Vec<BatchUpsertEntryDto>,
+}
+
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct UiStatePathParams {
     #[validate(length(min = 1, max = 40))]

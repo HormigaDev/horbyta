@@ -11,6 +11,8 @@ import type { TaskStatus } from 'src/types/task';
 
 export interface KanbanBoardFilters {
   projectId: string | null;
+  milestoneId: string | null;
+  parentId: string | null;
   createdFrom: string | null;
   createdTo: string | null;
 }
@@ -30,12 +32,14 @@ const isKanbanBoardFilters = (value: unknown): value is KanbanBoardFilters => {
   }
 
   const candidate = value as Record<string, unknown>;
-  const values = [candidate.projectId, candidate.createdFrom, candidate.createdTo];
+  const values = [candidate.projectId, candidate.milestoneId, candidate.parentId, candidate.createdFrom, candidate.createdTo];
   return values.every((item) => item === null || typeof item === 'string');
 };
 
 const defaultFilters = (): KanbanBoardFilters => ({
   projectId: null,
+  milestoneId: null,
+  parentId: null,
   createdFrom: null,
   createdTo: null,
 });
@@ -55,6 +59,8 @@ export function useKanbanBoard() {
 
   const applyFilters = (next: KanbanBoardFilters) => {
     filters.projectId = next.projectId;
+    filters.milestoneId = next.milestoneId ?? null;
+    filters.parentId = next.parentId ?? null;
     filters.createdFrom = next.createdFrom;
     filters.createdTo = next.createdTo;
   };
@@ -84,6 +90,14 @@ export function useKanbanBoard() {
 
     if (filters.projectId) {
       result.push({ column: 'project_id', operator: '=', value: filters.projectId });
+    }
+
+    if (filters.milestoneId) {
+      result.push({ column: 'milestone_id', operator: '=', value: filters.milestoneId });
+    }
+
+    if (filters.parentId) {
+      result.push({ column: 'parent_id', operator: '=', value: filters.parentId });
     }
 
     if (filters.createdFrom) {
@@ -200,6 +214,8 @@ export function useKanbanBoard() {
 
   const resetFilters = () => {
     filters.projectId = null;
+    filters.milestoneId = null;
+    filters.parentId = null;
     filters.createdFrom = null;
     filters.createdTo = null;
   };

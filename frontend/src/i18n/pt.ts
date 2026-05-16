@@ -695,6 +695,8 @@ export const messages: Record<keyof typeof es, string> = {
   'board.moveBlockedMessage':
     'A tarefa precisa de pelo menos uma entrada de tempo antes de passar para Concluída.',
   'board.filters.project': 'Projeto',
+  'board.filters.milestone': 'Marco',
+  'board.filters.parentTask': 'Tarefa pai',
   'board.filters.createdFrom': 'Criado de',
   'board.filters.createdTo': 'Criado até',
   'board.columns.todo': 'A fazer',
@@ -1700,4 +1702,30 @@ export const messages: Record<keyof typeof es, string> = {
   'columns.user.status': 'Estado',
   'columns.user.created_at': 'Criado',
   'columns.user.updated_at': 'Atualizado',
+
+  'common.rename': 'Renomear',
+
+  'common.draft.restoreTitle': 'Rascunho salvo',
+  'common.draft.restoreMessage': 'Um rascunho não salvo foi encontrado. Deseja restaurá-lo?',
+  'common.draft.restoreAction': 'Restaurar rascunho',
+  'common.draft.discardAction': 'Descartar',
+
+  'common.unsavedChanges.title': 'Alterações não salvas',
+  'common.unsavedChanges.message': 'Você tem alterações não salvas. Tem certeza que deseja sair?',
+  'common.unsavedChanges.leaveAction': 'Sair mesmo assim',
+  'common.unsavedChanges.stayAction': 'Ficar',
+
+  'formPreferences.title': 'Preferências de formulário',
+  'formPreferences.empty': 'Nenhuma preferência salva',
+  'formPreferences.applyAction': 'Aplicar',
+  'formPreferences.saveCurrentAction': 'Salvar atual',
+  'formPreferences.saveCurrentTitle': 'Salvar preferência atual',
+  'formPreferences.renameTitle': 'Renomear preferência',
+  'formPreferences.deleteTitle': 'Excluir preferência',
+  'formPreferences.deleteMessage': 'Excluir a preferência "{name}"?',
+  'formPreferences.nameLabel': 'Nome',
+  'formPreferences.nameRequired': 'O nome é obrigatório',
+  'formPreferences.defaultLabel': 'Padrão',
+  'formPreferences.setDefault': 'Definir como padrão',
+  'formPreferences.unsetDefault': 'Remover como padrão',
 };

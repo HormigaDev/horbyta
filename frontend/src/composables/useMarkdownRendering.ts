@@ -62,6 +62,23 @@ const configureMarkdown = () => {
     renderer,
     gfm: true,
     breaks: true,
+    extensions: [
+      {
+        name: 'inlineCheckbox',
+        level: 'inline' as const,
+        start: (src: string) => src.indexOf('['),
+        tokenizer(src: string) {
+          const match = src.match(/^\[([xX ])\](?!\()/);
+          if (match) {
+            return { type: 'inlineCheckbox', raw: match[0], checked: (match[1] as string).toLowerCase() === 'x' };
+          }
+          return undefined;
+        },
+        renderer(token: { type: string; raw: string; [key: string]: unknown }): string {
+          return `<input type="checkbox"${token['checked'] ? ' checked' : ''} disabled>`;
+        },
+      },
+    ],
   });
 
   isConfigured = true;
@@ -116,8 +133,9 @@ export const useMarkdownRendering = (
         'tbody',
         'div',
         'img',
+        'input',
       ],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'target', 'rel', 'loading'],
+      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'target', 'rel', 'loading', 'type', 'checked', 'disabled'],
       ALLOWED_URI_REGEXP:
         /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|blob):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
     });

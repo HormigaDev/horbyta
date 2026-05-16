@@ -8,7 +8,7 @@ use serde_json::json;
 
 use crate::{
     dtos::{
-        ui_state::{ListScopeQuery, UpsertUiStateDto},
+        ui_state::{BatchUpsertUiStateDto, ListScopeQuery, UpsertUiStateDto},
         user::UserDto,
     },
     error::AppError,
@@ -178,9 +178,43 @@ pub(crate) async fn delete_scope(
     Ok(Json(json!({ "message": "Scope cleared" })))
 }
 
+#[utoipa::path(
+    put,
+    path = "/api/v1/users/me/ui-state/{scope}/batch",
+    tag = "UI State",
+    params(("scope" = String, Path, description = "UI state scope")),
+    request_body = BatchUpsertUiStateDto,
+    responses(
+        (status = 200, description = "Batch upsert result"),
+        (status = 400, description = "Invalid scope, key, or payload"),
+        (status = 401, description = "Unauthorized")
+    )
+)]
+pub(crate) async fn batch_upsert(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(scope): Path<String>,
+    ValidatedJson(payload): ValidatedJson<BatchUpsertUiStateDto>,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_valid_scope(&scope)?;
+
+    let entries: Result<Vec<(String, serde_json::Value)>, AppError> = payload
+        .entries
+        .into_iter()
+        .map(|e| {
+            ensure_valid_key(&e.key)?;
+            Ok((e.key, e.value))
+        })
+        .collect();
+
+    let updated = UiStateService::batch_upsert(&state, user.id, &scope, entries?).await?;
+    Ok(Json(json!({ "items": updated })))
+}
+
 pub fn ui_state_controller() -> Router<AppState> {
     Router::new()
         .route("/", get(list_scope))
         .route("/{scope}", delete(delete_scope))
+        .route("/{scope}/batch", axum::routing::put(batch_upsert))
         .route("/{scope}/{key}", get(get_one).put(upsert).delete(delete_one))
 }

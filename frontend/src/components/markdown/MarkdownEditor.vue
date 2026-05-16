@@ -4,6 +4,7 @@
     :model-value="modelValue"
     type="textarea"
     outlined
+    autogrow
     class="markdown-editor"
     :input-style="editorInputStyle"
     @update:model-value="emit('update:modelValue', String($event ?? ''))"
@@ -31,9 +32,8 @@ const emit = defineEmits<{
 const editorRef = ref<QInput | null>(null);
 
 const editorInputStyle = {
-  height: '100%',
-  minHeight: '100%',
   resize: 'none',
+  minHeight: '12rem',
 };
 
 const onPaste = (event: Event) => {

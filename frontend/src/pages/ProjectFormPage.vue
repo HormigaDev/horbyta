@@ -168,26 +168,32 @@
       <q-card flat bordered class="q-mb-md">
         <q-card-section>
           <div class="text-subtitle1 q-mb-sm">{{ t('projects.form.descriptionTitle') }}</div>
-          <div class="row q-col-gutter-md" style="min-height: 50vh">
-            <div class="col-12" style="display: flex; flex-direction: column">
-              <MarkdownRenderer
-                v-model="projectDescription"
-                v-model:pending-files="markdownFiles"
-                edit-mode
-                enable-preview-toggle
-                enable-attachments
-                class="full-height"
-                @update:model-value="(val) => validateDescription(val ? val : null)"
-              />
-              <div v-if="descriptionRuleState.error" class="text-negative text-caption q-mt-xs">
-                {{ descriptionRuleState.message }}
-              </div>
-            </div>
+          <MarkdownRenderer
+            ref="markdownRef"
+            v-model="projectDescription"
+            v-model:pending-files="markdownFiles"
+            edit-mode
+            enable-preview-toggle
+            enable-attachments
+            @update:model-value="(val) => validateDescription(val ? val : null)"
+          />
+          <div v-if="descriptionRuleState.error" class="text-negative text-caption q-mt-xs">
+            {{ descriptionRuleState.message }}
           </div>
         </q-card-section>
       </q-card>
 
       <div class="row justify-end q-gutter-sm">
+        <q-btn
+          v-if="isNew"
+          flat
+          round
+          icon="bookmarks"
+          color="grey"
+          @click="prefsDialogOpen = true"
+        >
+          <q-tooltip>{{ t('formPreferences.title') }}</q-tooltip>
+        </q-btn>
         <q-btn
           flat
           round
@@ -207,19 +213,30 @@
           @click.stop="saveProject"
         />
       </div>
+
+      <FormPreferencesDialog
+        v-model="prefsDialogOpen"
+        form-key="project"
+        :current-fields="currentPreferenceFields"
+        @apply="applyPreference"
+      />
     </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import FormPreferencesDialog from 'src/components/FormPreferencesDialog.vue';
 import NumericTextInput from 'src/components/NumericTextInput.vue';
 import { ProjectsService } from 'src/services/projects';
 import { CategoriesService } from 'src/services/categories';
+import { useFormDraft } from 'src/composables/useFormDraft';
+import { useFormPreferences } from 'src/composables/useFormPreferences';
 import { usePinnedFormSave } from 'src/composables/usePinnedFormSave';
 import { useUI } from 'src/composables/useUI';
+import { useUnsavedChanges } from 'src/composables/useUnsavedChanges';
 import { useProjectsRules } from 'src/composables/rules/projects.rules';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
@@ -257,8 +274,14 @@ const { nameRuleState, descriptionRuleState, validateName, validateDescription }
 const isNew = computed(() => route.name === 'project-create');
 const isSubmitting = ref(false);
 const hasAttemptedSubmit = ref(false);
+const hasChanges = ref(false);
 const { stayOnFormAfterSave, pinButtonColor, handlePinnedSaveSuccess } = usePinnedFormSave();
 const markdownFiles = ref<MarkdownPendingFile[]>([]);
+const markdownRef = ref<{ resetToEdit: () => void } | null>(null);
+
+watch(stayOnFormAfterSave, () => {
+  markdownRef.value?.resetToEdit();
+});
 
 const createDefaultBillingForm = (): ProjectBillingFormState => ({
   billing_type: 'fixed',
@@ -391,15 +414,56 @@ const createEmptyProjectForm = (): ProjectFormStateDto => ({
 
 const project = ref<ProjectFormStateDto>(createEmptyProjectForm());
 
+const prefsDialogOpen = ref(false);
+const { defaultPreference, load: loadPreferences } = useFormPreferences('project');
+
+const currentPreferenceFields = computed(() => ({
+  category_id: project.value.category_id,
+  client_id: project.value.client_id,
+  billable: project.value.billable,
+}));
+
+const applyPreference = (fields: Record<string, unknown>) => {
+  if (fields.category_id !== undefined)
+    project.value.category_id = fields.category_id as string | null;
+  if (fields.client_id !== undefined) project.value.client_id = fields.client_id as string | null;
+  if (fields.billable !== undefined) project.value.billable = fields.billable as boolean;
+};
+
+const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
+  () => ({ ...project.value }),
+  (draft) => {
+    Object.assign(project.value, draft);
+  },
+  { formKey: 'project', enabled: () => isNew.value },
+);
+
+useUnsavedChanges(() => hasChanges.value);
+
+watch(
+  project,
+  () => {
+    hasChanges.value = true;
+  },
+  { deep: true },
+);
+
 const resetProjectForm = async () => {
+  markdownRef.value?.resetToEdit();
   hasAttemptedSubmit.value = false;
   nameRuleState.value = { error: false, message: '' };
   descriptionRuleState.value = { error: false, message: '' };
+
+  hasChanges.value = false;
 
   if (isNew.value) {
     project.value = createEmptyProjectForm();
     billingForm.value = createDefaultBillingForm();
     markdownFiles.value = [];
+    clearDraft();
+    if (defaultPreference.value) {
+      applyPreference(defaultPreference.value.fields);
+    }
     return;
   }
 
@@ -553,6 +617,8 @@ const loadProject = async () => {
 };
 
 const goBack = () => {
+  clearDraft();
+  hasChanges.value = false;
   if (isNew.value) {
     void router.push('/projects');
   } else {
@@ -612,13 +678,22 @@ const saveProject = async () => {
     notifyError(t('projects.form.saveError'), err);
   } finally {
     isSubmitting.value = false;
+    hasChanges.value = false;
+    clearDraft();
     hideLoading();
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   void loadCategoriesByTerm('');
   void loadClientsByTerm('');
+  if (isNew.value) {
+    await loadPreferences();
+    const restored = await restoreDraftIfAvailable();
+    if (!restored && defaultPreference.value) {
+      applyPreference(defaultPreference.value.fields);
+    }
+  }
   void loadProject();
 });
 </script>
