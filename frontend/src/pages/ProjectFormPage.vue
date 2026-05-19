@@ -423,11 +423,15 @@ const currentPreferenceFields = computed(() => ({
   billable: project.value.billable,
 }));
 
+const isApplyingPreference = ref(false);
+
 const applyPreference = (fields: Record<string, unknown>) => {
+  isApplyingPreference.value = true;
   if (fields.category_id !== undefined)
     project.value.category_id = fields.category_id as string | null;
   if (fields.client_id !== undefined) project.value.client_id = fields.client_id as string | null;
   if (fields.billable !== undefined) project.value.billable = fields.billable as boolean;
+  isApplyingPreference.value = false;
 };
 
 const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
@@ -438,12 +442,24 @@ const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
   { formKey: 'project', enabled: () => isNew.value },
 );
 
-useUnsavedChanges(() => hasChanges.value);
+const isDirty = computed(() => {
+  if (!hasChanges.value) return false;
+  if (project.value.name.trim() !== '') return true;
+  if (!defaultPreference.value) return true;
+  const f = defaultPreference.value.fields;
+  return !(
+    project.value.category_id === ((f.category_id as string | null) ?? null) &&
+    project.value.client_id === ((f.client_id as string | null) ?? null) &&
+    project.value.billable === ((f.billable as boolean) ?? true)
+  );
+});
+
+useUnsavedChanges(() => isDirty.value);
 
 watch(
   project,
   () => {
-    hasChanges.value = true;
+    if (!isApplyingPreference.value) hasChanges.value = true;
   },
   { deep: true },
 );
@@ -653,6 +669,8 @@ const saveProject = async () => {
     if (isNew.value) {
       const created = await ProjectsService.create(payload, markdownFiles.value);
       notify(t('projects.form.createSuccess'), 'positive');
+      hasChanges.value = false;
+      clearDraft();
       await handlePinnedSaveSuccess({
         reset: resetProjectForm,
         redirect: () => router.push(`/projects/${created.id}`),
@@ -669,6 +687,8 @@ const saveProject = async () => {
       };
       await ProjectsService.update(project.value.id, updatePayload, markdownFiles.value);
       notify(t('projects.form.updateSuccess'), 'positive');
+      hasChanges.value = false;
+      clearDraft();
       await handlePinnedSaveSuccess({
         reset: resetProjectForm,
         redirect: () => router.push(`/projects/${project.value.id}`),
@@ -678,8 +698,6 @@ const saveProject = async () => {
     notifyError(t('projects.form.saveError'), err);
   } finally {
     isSubmitting.value = false;
-    hasChanges.value = false;
-    clearDraft();
     hideLoading();
   }
 };

@@ -328,36 +328,39 @@ const currentPreferenceFields = computed(() => ({
 
 const applyPreference = async (fields: Record<string, unknown>) => {
   isHydratingTask.value = true;
-  if (fields.status !== undefined) form.status = fields.status as typeof form.status;
-  if (fields.priority !== undefined) form.priority = fields.priority as number;
-  if (fields.complexity !== undefined) form.complexity = fields.complexity as number;
-  if (fields.block_parent !== undefined) form.block_parent = fields.block_parent as boolean;
+  try {
+    if (fields.status !== undefined) form.status = fields.status as typeof form.status;
+    if (fields.priority !== undefined) form.priority = fields.priority as number;
+    if (fields.complexity !== undefined) form.complexity = fields.complexity as number;
+    if (fields.block_parent !== undefined) form.block_parent = fields.block_parent as boolean;
 
-  const projectId = (fields.project_id as string | null | undefined) ?? null;
-  if (projectId) {
-    form.project_id = projectId;
-    await ensureProjectOption(projectId);
-    const projectFilters: Filter[] = [{ column: 'project_id', operator: '=', value: projectId }];
-    await loadMilestonesByTerm('', projectFilters);
-    await loadParentTasksByTerm('', projectFilters);
-  }
-  isHydratingTask.value = false;
+    const projectId = (fields.project_id as string | null | undefined) ?? null;
+    if (projectId) {
+      form.project_id = projectId;
+      await ensureProjectOption(projectId);
+      const projectFilters: Filter[] = [{ column: 'project_id', operator: '=', value: projectId }];
+      await loadMilestonesByTerm('', projectFilters);
+      await loadParentTasksByTerm('', projectFilters);
+    }
 
-  const milestoneId = (fields.milestone_id as string | null | undefined) ?? null;
-  if (milestoneId && form.project_id) {
-    form.milestone_id = milestoneId;
-    await ensureMilestoneOption(milestoneId);
-  }
+    const milestoneId = (fields.milestone_id as string | null | undefined) ?? null;
+    if (milestoneId && form.project_id) {
+      form.milestone_id = milestoneId;
+      await ensureMilestoneOption(milestoneId);
+    }
 
-  const parentId = (fields.parent_id as string | null | undefined) ?? null;
-  if (parentId && form.project_id) {
-    form.parent_id = parentId;
-    await ensureParentTaskOption(parentId);
-  }
+    const parentId = (fields.parent_id as string | null | undefined) ?? null;
+    if (parentId && form.project_id) {
+      form.parent_id = parentId;
+      await ensureParentTaskOption(parentId);
+    }
 
-  if (Array.isArray(fields.tag_ids)) {
-    form.tag_ids = [...(fields.tag_ids as string[])];
-    await ensureTagOptions(form.tag_ids);
+    if (Array.isArray(fields.tag_ids)) {
+      form.tag_ids = [...(fields.tag_ids as string[])];
+      await ensureTagOptions(form.tag_ids);
+    }
+  } finally {
+    isHydratingTask.value = false;
   }
 };
 
@@ -386,7 +389,28 @@ const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
   { formKey: 'task', enabled: () => isNew.value },
 );
 
-useUnsavedChanges(() => hasChanges.value);
+const isDirty = computed(() => {
+  if (!hasChanges.value) return false;
+  if (form.title.trim() !== '') return true;
+  if (form.description?.trim()) return true;
+  if (dueDateDisplay.value !== '') return true;
+  if (!defaultPreference.value) return true;
+  const f = defaultPreference.value.fields;
+  const prefTags = (Array.isArray(f.tag_ids) ? (f.tag_ids as string[]) : []).slice().sort();
+  const formTags = form.tag_ids.slice().sort();
+  return !(
+    form.project_id === ((f.project_id as string | null) ?? null) &&
+    form.milestone_id === ((f.milestone_id as string | null) ?? null) &&
+    form.parent_id === ((f.parent_id as string | null) ?? null) &&
+    form.status === ((f.status as string) ?? 'todo') &&
+    form.priority === ((f.priority as number) ?? 1) &&
+    form.complexity === ((f.complexity as number) ?? 1) &&
+    form.block_parent === ((f.block_parent as boolean) ?? true) &&
+    JSON.stringify(formTags) === JSON.stringify(prefTags)
+  );
+});
+
+useUnsavedChanges(() => isDirty.value);
 
 watch(
   form,
@@ -741,6 +765,8 @@ const saveTask = async () => {
     if (isNew.value) {
       const created = await TasksService.create(payload, markdownFiles.value);
       notify(t('tasks.form.createSuccess'), 'positive');
+      hasChanges.value = false;
+      clearDraft();
       await handlePinnedSaveSuccess({
         reset: resetTaskForm,
         redirect: () => router.push(`/tasks/${created.id}`),
@@ -761,6 +787,8 @@ const saveTask = async () => {
       };
       await TasksService.update(taskId.value, updatePayload, markdownFiles.value);
       notify(t('tasks.form.updateSuccess'), 'positive');
+      hasChanges.value = false;
+      clearDraft();
       await handlePinnedSaveSuccess({
         reset: resetTaskForm,
         redirect: () => router.push(`/tasks/${taskId.value}`),
@@ -770,8 +798,6 @@ const saveTask = async () => {
     notifyError(t('tasks.form.saveError'), err);
   } finally {
     isSubmitting.value = false;
-    hasChanges.value = false;
-    clearDraft();
     hideLoading();
   }
 };

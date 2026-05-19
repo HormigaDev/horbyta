@@ -206,12 +206,19 @@ const currentPreferenceFields = computed(() => ({
   status: form.status,
 }));
 
+const isApplyingPreference = ref(false);
+
 const applyPreference = async (fields: Record<string, unknown>) => {
-  if (fields.status !== undefined) form.status = fields.status as typeof form.status;
-  const projectId = (fields.project_id as string | null | undefined) ?? null;
-  if (projectId) {
-    form.project_id = projectId;
-    await ensureProjectOption(projectId);
+  isApplyingPreference.value = true;
+  try {
+    if (fields.status !== undefined) form.status = fields.status as typeof form.status;
+    const projectId = (fields.project_id as string | null | undefined) ?? null;
+    if (projectId) {
+      form.project_id = projectId;
+      await ensureProjectOption(projectId);
+    }
+  } finally {
+    isApplyingPreference.value = false;
   }
 };
 
@@ -232,12 +239,25 @@ const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
   { formKey: 'milestone', enabled: () => isNew.value },
 );
 
-useUnsavedChanges(() => hasChanges.value);
+const isDirty = computed(() => {
+  if (!hasChanges.value) return false;
+  if (form.name.trim() !== '') return true;
+  if (form.description?.trim()) return true;
+  if (dueDateDisplay.value !== '') return true;
+  if (!defaultPreference.value) return true;
+  const f = defaultPreference.value.fields;
+  return !(
+    form.project_id === ((f.project_id as string | null) ?? null) &&
+    form.status === ((f.status as string) ?? 'open')
+  );
+});
+
+useUnsavedChanges(() => isDirty.value);
 
 watch(
   form,
   () => {
-    hasChanges.value = true;
+    if (!isApplyingPreference.value) hasChanges.value = true;
   },
   { deep: true },
 );
@@ -368,6 +388,8 @@ const saveMilestone = async () => {
     if (isNew.value) {
       const created = await MilestonesService.create(payload, markdownFiles.value);
       notify(t('milestones.form.createSuccess'), 'positive');
+      hasChanges.value = false;
+      clearDraft();
       await handlePinnedSaveSuccess({
         reset: resetMilestoneForm,
         redirect: () => router.push(`/milestones/${created.id}`),
@@ -382,6 +404,8 @@ const saveMilestone = async () => {
       };
       await MilestonesService.update(milestoneId.value, updatePayload, markdownFiles.value);
       notify(t('milestones.form.updateSuccess'), 'positive');
+      hasChanges.value = false;
+      clearDraft();
       await handlePinnedSaveSuccess({
         reset: resetMilestoneForm,
         redirect: () => router.push(`/milestones/${milestoneId.value}`),
@@ -391,8 +415,6 @@ const saveMilestone = async () => {
     notifyError(t('milestones.form.saveError'), err);
   } finally {
     isSubmitting.value = false;
-    hasChanges.value = false;
-    clearDraft();
     hideLoading();
   }
 };

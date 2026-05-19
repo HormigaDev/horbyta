@@ -188,9 +188,13 @@ const currentPreferenceFields = computed(() => ({
   status: client.value.status,
 }));
 
+const isApplyingPreference = ref(false);
+
 const applyPreference = (fields: Record<string, unknown>) => {
+  isApplyingPreference.value = true;
   if (fields.status !== undefined)
     client.value.status = fields.status as typeof client.value.status;
+  isApplyingPreference.value = false;
 };
 
 const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
@@ -201,12 +205,23 @@ const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
   { formKey: 'client', enabled: () => isNew.value },
 );
 
-useUnsavedChanges(() => hasChanges.value);
+const isDirty = computed(() => {
+  if (!hasChanges.value) return false;
+  if (client.value.name.trim() !== '') return true;
+  if ((client.value.email ?? '').trim() !== '') return true;
+  if ((client.value.phone ?? '').trim() !== '') return true;
+  if ((client.value.company ?? '').trim() !== '') return true;
+  if (!defaultPreference.value) return true;
+  const f = defaultPreference.value.fields;
+  return client.value.status !== ((f.status as string) ?? 'active');
+});
+
+useUnsavedChanges(() => isDirty.value);
 
 watch(
   client,
   () => {
-    hasChanges.value = true;
+    if (!isApplyingPreference.value) hasChanges.value = true;
   },
   { deep: true },
 );
@@ -284,6 +299,8 @@ const saveClient = async () => {
     if (isNew.value) {
       const created = await ClientsService.create(payload);
       notify(t('clients.form.createSuccess'), 'positive');
+      hasChanges.value = false;
+      clearDraft();
       await handlePinnedSaveSuccess({
         reset: resetClientForm,
         redirect: () => router.push(`/clients/${created.id}`),
@@ -300,6 +317,8 @@ const saveClient = async () => {
       };
       await ClientsService.update(client.value.id, updatedPayload);
       notify(t('clients.form.updateSuccess'), 'positive');
+      hasChanges.value = false;
+      clearDraft();
       await handlePinnedSaveSuccess({
         reset: resetClientForm,
         redirect: () => router.push(`/clients/${client.value.id}`),
@@ -309,8 +328,6 @@ const saveClient = async () => {
     notifyError(t('clients.form.saveError'), err);
   } finally {
     isSubmitting.value = false;
-    hasChanges.value = false;
-    clearDraft();
     hideLoading();
   }
 };

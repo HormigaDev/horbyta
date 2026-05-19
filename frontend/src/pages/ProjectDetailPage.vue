@@ -410,7 +410,7 @@ const goBack = () => {
 };
 
 const goToMilestones = () => {
-  void router.push('/milestones');
+  void router.push({ path: '/milestones', query: { project_id: projectId } });
 };
 
 const goToEdit = () => {

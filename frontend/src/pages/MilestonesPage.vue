@@ -10,6 +10,7 @@
       :totalItems="total"
       :loading="isLoading"
       :filter-schema="milestoneFilterSchema"
+      :initial-filters="initialFilters"
       @request="onRequest"
       @view="onView"
       @create="onCreate"
@@ -35,8 +36,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import DataTable from 'src/components/DataTable.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
@@ -50,11 +51,20 @@ import { MilestonesService } from 'src/services/milestones';
 import { ProjectsService } from 'src/services/projects';
 import type { MilestoneSummaryDto } from 'src/types/milestone';
 import type { ProjectSummaryDto } from 'src/types/project';
-import type { FilterSchema } from 'src/types/query';
+import type { Filter, FilterSchema } from 'src/types/query';
 
+const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmDelete } = useUI();
+
+const initialFilters = computed<Filter[]>(() => {
+  const projectId = route.query.project_id;
+  if (typeof projectId === 'string' && projectId) {
+    return [{ column: 'project_id', operator: '=', value: projectId }];
+  }
+  return [];
+});
 
 const milestoneFilterSchema: FilterSchema = {
   id: { type: 'Text', label: t('milestones.list.filter.id') },

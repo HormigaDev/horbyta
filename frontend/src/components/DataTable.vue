@@ -354,6 +354,7 @@ interface Props {
   hideDelete?: boolean;
   hideRefresh?: boolean;
   filterSchema?: FilterSchema;
+  initialFilters?: Filter[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -369,6 +370,7 @@ const props = withDefaults(defineProps<Props>(), {
   hideDelete: false,
   hideRefresh: false,
   filterSchema: () => ({}),
+  initialFilters: () => [],
 });
 
 const { t } = useI18n();
@@ -625,7 +627,12 @@ onMounted(async () => {
   if (savedState.visibleColumns && savedState.visibleColumns.length > 0) {
     visibleColumns.value = [...savedState.visibleColumns];
   }
-  if (savedState.filters) {
+
+  if (props.initialFilters.length > 0) {
+    filters.value = [...props.initialFilters] as Partial<Filter>[];
+    showFilters.value = true;
+    pagination.value.page = 1;
+  } else if (savedState.filters) {
     filters.value = [...savedState.filters] as Partial<Filter>[];
   }
 
