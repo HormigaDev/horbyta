@@ -4,6 +4,7 @@ use axum::{
     response::IntoResponse,
     routing::{get, patch, post},
 };
+use sea_orm::TransactionTrait;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -20,7 +21,7 @@ use crate::{
     },
     error::AppError,
     middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
-    services::projects::ProjectService,
+    services::{attachments::AttachmentService, projects::ProjectService},
     state::AppState,
 };
 
@@ -144,11 +145,16 @@ pub(crate) async fn create_project(
         "multipart request must include a payload field with project json",
     )
     .await?;
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
     let project =
-        ProjectService::create_with_markdown_files(state.db.as_ref(), state.storage.as_ref(), user.id, payload, files)
-            .await?;
+        ProjectService::create_with_markdown_files(&tx, state.storage.as_ref(), user.id, payload, files).await?;
 
-    Ok(Json(project))
+    if let Err(error) = tx.commit().await {
+        AttachmentService::cleanup_storage_objects(state.storage.as_ref(), &project.storage_keys).await;
+        return Err(AppError::Database(error));
+    }
+
+    Ok(Json(project.value))
 }
 
 #[utoipa::path(
@@ -176,16 +182,16 @@ pub(crate) async fn update_project(
         "multipart request must include a payload field with project json",
     )
     .await?;
-    let project = ProjectService::update_with_markdown_files(
-        state.db.as_ref(),
-        state.storage.as_ref(),
-        user.id,
-        id,
-        payload,
-        files,
-    )
-    .await?;
-    Ok(Json(project))
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
+    let project =
+        ProjectService::update_with_markdown_files(&tx, state.storage.as_ref(), user.id, id, payload, files).await?;
+
+    if let Err(error) = tx.commit().await {
+        AttachmentService::cleanup_storage_objects(state.storage.as_ref(), &project.storage_keys).await;
+        return Err(AppError::Database(error));
+    }
+
+    Ok(Json(project.value))
 }
 
 #[utoipa::path(
@@ -253,7 +259,9 @@ pub(crate) async fn update_project_billable(
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateProjectBillableDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let project = ProjectService::update_billable(state.db.as_ref(), user.id, id, payload).await?;
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
+    let project = ProjectService::update_billable(&tx, user.id, id, payload).await?;
+    tx.commit().await.map_err(AppError::Database)?;
     Ok(Json(project))
 }
 
@@ -276,7 +284,9 @@ pub(crate) async fn upsert_project_billing(
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateProjectBillingDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let billing = ProjectService::upsert_billing(state.db.as_ref(), user.id, id, payload).await?;
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
+    let billing = ProjectService::upsert_billing(&tx, user.id, id, payload).await?;
+    tx.commit().await.map_err(AppError::Database)?;
     Ok(Json(billing))
 }
 

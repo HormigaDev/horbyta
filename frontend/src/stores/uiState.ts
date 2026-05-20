@@ -73,7 +73,7 @@ export const useUiStateStore = defineStore('uiState', () => {
     }
   };
 
-  const setValue = <T>(
+  const setValue = async <T>(
     scope: UiStateScope,
     key: string,
     value: T,

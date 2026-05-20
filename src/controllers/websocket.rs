@@ -30,7 +30,7 @@ pub async fn websocket_handler(
     headers: HeaderMap,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let service = WebSocketService::new(state.clone());
+    let service = WebSocketService::new(state.db.clone(), state.config.clone(), state.notification_bus.clone());
     let (user_id, session_id) = service.authenticate_handshake(&headers)?;
 
     // Increment connection count atomically; reject if limit exceeded
@@ -49,7 +49,7 @@ pub async fn websocket_handler(
     let ws_connections = state.ws_connections.clone();
 
     Ok(ws.on_upgrade(move |socket| {
-        let service = WebSocketService::new(state);
+        let service = WebSocketService::new(state.db.clone(), state.config.clone(), state.notification_bus.clone());
         handle_socket(socket, user_id, session_id, service, ws_connections)
     }))
 }

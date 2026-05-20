@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
     routing::{get, post},
 };
+use sea_orm::TransactionTrait;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -16,7 +17,7 @@ use crate::{
     },
     error::AppError,
     middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
-    services::tasks::TaskService,
+    services::{attachments::AttachmentService, tasks::TaskService},
     state::AppState,
 };
 
@@ -103,11 +104,15 @@ pub(crate) async fn create_task(
         "multipart request must include a payload field with task json",
     )
     .await?;
-    let task =
-        TaskService::create_with_markdown_files(state.db.as_ref(), state.storage.as_ref(), user.id, payload, files)
-            .await?;
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
+    let task = TaskService::create_with_markdown_files(&tx, state.storage.as_ref(), user.id, payload, files).await?;
 
-    Ok(Json(task))
+    if let Err(error) = tx.commit().await {
+        AttachmentService::cleanup_storage_objects(state.storage.as_ref(), &task.storage_keys).await;
+        return Err(AppError::Database(error));
+    }
+
+    Ok(Json(task.value))
 }
 
 #[utoipa::path(
@@ -135,10 +140,16 @@ pub(crate) async fn update_task(
         "multipart request must include a payload field with task json",
     )
     .await?;
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
     let task =
-        TaskService::update_with_markdown_files(state.db.as_ref(), state.storage.as_ref(), user.id, id, payload, files)
-            .await?;
-    Ok(Json(task))
+        TaskService::update_with_markdown_files(&tx, state.storage.as_ref(), user.id, id, payload, files).await?;
+
+    if let Err(error) = tx.commit().await {
+        AttachmentService::cleanup_storage_objects(state.storage.as_ref(), &task.storage_keys).await;
+        return Err(AppError::Database(error));
+    }
+
+    Ok(Json(task.value))
 }
 
 #[utoipa::path(
@@ -160,7 +171,9 @@ pub(crate) async fn update_task_status(
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateTaskStatusDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    TaskService::change_status(state.db.as_ref(), user.id, id, payload).await?;
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
+    TaskService::change_status(&tx, user.id, id, payload).await?;
+    tx.commit().await.map_err(AppError::Database)?;
     Ok((
         StatusCode::OK,
         Json(json!({"message": "Tarea actualizada correctamente"})),

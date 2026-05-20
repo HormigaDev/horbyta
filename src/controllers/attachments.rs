@@ -9,6 +9,7 @@ use axum::{
     routing::{get, post},
 };
 use axum_extra::extract::CookieJar;
+use sea_orm::TransactionTrait;
 use uuid::Uuid;
 
 use crate::{
@@ -18,7 +19,10 @@ use crate::{
         user::UserDto,
     },
     error::AppError,
-    middlewares::validator::ValidatedSearchQuery,
+    middlewares::{
+        rate_limit::{UPLOADS_RATE_LIMIT, check_user_rate_limit},
+        validator::ValidatedSearchQuery,
+    },
     services::attachments::AttachmentService,
     state::AppState,
 };
@@ -85,7 +89,15 @@ pub(crate) async fn get_attachment_raw(
     jar: CookieJar,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let file = AttachmentService::get_raw_file_for_cookies(&state, &jar, id).await?;
+    let file = AttachmentService::get_raw_file_for_cookies(
+        state.db.as_ref(),
+        state.storage.as_ref(),
+        &state.config.jwt_secret,
+        &state.config.jwt_secret_client,
+        &jar,
+        id,
+    )
+    .await?;
 
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, HeaderValue::from_str(&file.mime_type)?);
@@ -139,10 +151,24 @@ pub(crate) async fn add_files_to_task(
     Path(task_id): Path<Uuid>,
     multipart: Multipart,
 ) -> Result<Json<AttachmentUploadResponseDto>, AppError> {
-    let response =
-        AttachmentService::upload_files_to_scope(&state, user.id, AttachmentUploadScope::task(task_id), multipart)
-            .await?;
-    Ok(Json(response))
+    check_user_rate_limit(&state.rate_limit_uploads, user.id, UPLOADS_RATE_LIMIT)?;
+
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
+    let response = AttachmentService::upload_files_to_scope(
+        &tx,
+        state.storage.as_ref(),
+        user.id,
+        AttachmentUploadScope::task(task_id),
+        multipart,
+    )
+    .await?;
+
+    if let Err(error) = tx.commit().await {
+        AttachmentService::cleanup_storage_objects(state.storage.as_ref(), &response.storage_keys).await;
+        return Err(AppError::Database(error));
+    }
+
+    Ok(Json(response.value))
 }
 
 #[utoipa::path(
@@ -164,14 +190,24 @@ pub(crate) async fn add_files_to_project(
     Path(project_id): Path<Uuid>,
     multipart: Multipart,
 ) -> Result<Json<AttachmentUploadResponseDto>, AppError> {
+    check_user_rate_limit(&state.rate_limit_uploads, user.id, UPLOADS_RATE_LIMIT)?;
+
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
     let response = AttachmentService::upload_files_to_scope(
-        &state,
+        &tx,
+        state.storage.as_ref(),
         user.id,
         AttachmentUploadScope::project(project_id),
         multipart,
     )
     .await?;
-    Ok(Json(response))
+
+    if let Err(error) = tx.commit().await {
+        AttachmentService::cleanup_storage_objects(state.storage.as_ref(), &response.storage_keys).await;
+        return Err(AppError::Database(error));
+    }
+
+    Ok(Json(response.value))
 }
 
 #[utoipa::path(

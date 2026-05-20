@@ -258,12 +258,16 @@ watch(() => filters.projectId, (newId, oldId) => {
   void syncSelectedProjectOption();
 
   if (newId !== oldId) {
-    filters.milestoneId = null;
-    filters.parentId = null;
-    selectedMilestoneOption.value = null;
-    resolvedMilestoneId.value = null;
-    selectedParentOption.value = null;
-    resolvedParentId.value = null;
+    const shouldResetDependentFilters = oldId !== null;
+
+    if (shouldResetDependentFilters) {
+      filters.milestoneId = null;
+      filters.parentId = null;
+      selectedMilestoneOption.value = null;
+      resolvedMilestoneId.value = null;
+      selectedParentOption.value = null;
+      resolvedParentId.value = null;
+    }
 
     if (newId) {
       const extraFilters = [{ column: 'project_id', operator: '=' as const, value: newId }];

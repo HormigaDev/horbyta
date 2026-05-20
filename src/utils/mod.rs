@@ -1,6 +1,8 @@
 pub mod crypto;
 pub mod multipart;
+pub mod notifications;
 pub mod search;
+pub mod ui_state;
 
 use validator::ValidationError;
 

@@ -1,12 +1,13 @@
 use object_store::ObjectStore;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-    QuerySelect, Set, TransactionTrait,
+    QuerySelect, Set,
 };
 use uuid::Uuid;
 
 use crate::{
     dtos::{
+        attachment::StorageBackedDbWrite,
         milestone::{
             CreateMilestoneDto, MilestoneSearchField, MilestoneStatus, ProjectMilestoneSummaryDto, UpdateMilestoneDto,
         },
@@ -133,20 +134,21 @@ impl MilestoneService {
     }
 
     pub async fn create_with_markdown_files(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         storage: &dyn ObjectStore,
         user_id: Uuid,
         dto: CreateMilestoneDto,
         files: Vec<MarkdownUploadedFile>,
-    ) -> Result<MilestoneModel, AppError> {
+    ) -> Result<StorageBackedDbWrite<MilestoneModel>, AppError> {
         if files.is_empty() {
-            return Self::create(db, user_id, dto).await;
+            return Ok(StorageBackedDbWrite::without_storage(
+                Self::create(db, user_id, dto).await?,
+            ));
         }
 
-        let txn = db.begin().await.map_err(AppError::Database)?;
-        let milestone = Self::create(&txn, user_id, dto).await?;
+        let milestone = Self::create(db, user_id, dto).await?;
         let upload = AttachmentService::create_markdown_files_with_tracking_in_tx(
-            &txn,
+            db,
             storage,
             user_id,
             Some(milestone.project_id),
@@ -160,22 +162,18 @@ impl MilestoneService {
         let next_description = replace_markdown_attachment_urls(milestone.description.clone(), &upload.replacements);
         let mut active_milestone: milestones::ActiveModel = milestone.into();
         active_milestone.description = Set(next_description);
-        let updated = match active_milestone.update(&txn).await.map_err(AppError::Database) {
+        let updated = match active_milestone.update(db).await.map_err(AppError::Database) {
             Ok(updated) => updated,
             Err(error) => {
-                if let Err(rollback_error) = txn.rollback().await {
-                    tracing::warn!(error = %rollback_error, "Milestone markdown create rollback failed");
-                }
                 AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
                 return Err(error);
             }
         };
 
-        if let Err(error) = txn.commit().await {
-            AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
-            return Err(AppError::Database(error));
-        }
-        Ok(updated)
+        Ok(StorageBackedDbWrite {
+            value: updated,
+            storage_keys: upload.storage_keys,
+        })
     }
 
     pub async fn get_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<MilestoneModel, AppError> {
@@ -214,21 +212,22 @@ impl MilestoneService {
     }
 
     pub async fn update_with_markdown_files(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         storage: &dyn ObjectStore,
         user_id: Uuid,
         id: Uuid,
         mut dto: UpdateMilestoneDto,
         files: Vec<MarkdownUploadedFile>,
-    ) -> Result<MilestoneModel, AppError> {
+    ) -> Result<StorageBackedDbWrite<MilestoneModel>, AppError> {
         if files.is_empty() {
-            return Self::update(db, user_id, id, dto).await;
+            return Ok(StorageBackedDbWrite::without_storage(
+                Self::update(db, user_id, id, dto).await?,
+            ));
         }
 
-        let txn = db.begin().await.map_err(AppError::Database)?;
-        let milestone = Self::check_milestone_ownership(&txn, user_id, id).await?;
+        let milestone = Self::check_milestone_ownership(db, user_id, id).await?;
         let upload = AttachmentService::create_markdown_files_with_tracking_in_tx(
-            &txn,
+            db,
             storage,
             user_id,
             Some(milestone.project_id),
@@ -240,23 +239,18 @@ impl MilestoneService {
         .await?;
 
         dto.description = replace_markdown_attachment_urls(dto.description, &upload.replacements);
-        let updated_milestone = match Self::update_with_connection(&txn, user_id, id, dto).await {
+        let updated_milestone = match Self::update_with_connection(db, user_id, id, dto).await {
             Ok(updated_milestone) => updated_milestone,
             Err(error) => {
-                if let Err(rollback_error) = txn.rollback().await {
-                    tracing::warn!(error = %rollback_error, "Milestone markdown update rollback failed");
-                }
                 AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
                 return Err(error);
             }
         };
 
-        if let Err(error) = txn.commit().await {
-            AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
-            return Err(AppError::Database(error));
-        }
-
-        Ok(updated_milestone)
+        Ok(StorageBackedDbWrite {
+            value: updated_milestone,
+            storage_keys: upload.storage_keys,
+        })
     }
 
     pub async fn delete(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<(), AppError> {

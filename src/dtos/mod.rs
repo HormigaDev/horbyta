@@ -8,6 +8,7 @@ pub mod dashboard;
 pub mod hex_color;
 pub mod invoice;
 pub mod milestone;
+pub mod notification;
 pub mod payment;
 pub mod project;
 pub mod project_billing;

@@ -4,7 +4,7 @@ use jsonwebtoken::{DecodingKey, Validation, decode};
 use object_store::{ObjectStore, ObjectStoreExt, path::Path as ObjectPath};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, ModelTrait, PaginatorTrait, QueryFilter,
-    QuerySelect, Set, TransactionTrait, sea_query::Expr,
+    QuerySelect, Set, sea_query::Expr,
 };
 use serde_json::Value;
 use std::env;
@@ -16,8 +16,8 @@ use crate::{
         attachment::{
             AttachmentDeleteResponseDto, AttachmentDetailDto, AttachmentRawFileDto, AttachmentSearchField,
             AttachmentSearchResponseDto, AttachmentStorageUsageDto, AttachmentSummaryDto, AttachmentUploadResponseDto,
-            AttachmentUploadScope, AttachmentViewer, CreateAttachmentDto, MarkdownAttachmentUploadResult, UploadedFile,
-            attachment_filter_schema,
+            AttachmentUploadScope, AttachmentViewer, CreateAttachmentDto, MarkdownAttachmentUploadResult,
+            StorageBackedDbWrite, UploadedFile, attachment_filter_schema,
         },
         query::{Filter, FilterOperator, QueryPayload},
     },
@@ -28,12 +28,7 @@ use crate::{
         projects, tasks,
     },
     error::AppError,
-    middlewares::{
-        auth::Claims,
-        client_auth::ClientClaims,
-        rate_limit::{UPLOADS_RATE_LIMIT, check_user_rate_limit},
-    },
-    state::AppState,
+    middlewares::{auth::Claims, client_auth::ClientClaims},
     utils::{
         multipart::MarkdownUploadedFile,
         search::{apply_filters, apply_ordering, apply_pagination},
@@ -52,16 +47,15 @@ pub struct AttachmentService;
 
 impl AttachmentService {
     pub async fn upload_files_to_scope(
-        state: &AppState,
+        db: &impl ConnectionTrait,
+        storage: &dyn ObjectStore,
         user_id: Uuid,
         scope: AttachmentUploadScope,
         multipart: Multipart,
-    ) -> Result<AttachmentUploadResponseDto, AppError> {
-        check_user_rate_limit(&state.rate_limit_uploads, user_id, UPLOADS_RATE_LIMIT)?;
-
+    ) -> Result<StorageBackedDbWrite<AttachmentUploadResponseDto>, AppError> {
         let (files, total_upload_bytes) = Self::parse_uploaded_files(multipart).await?;
         Self::guard_upload_capacity(
-            state.db.as_ref(),
+            db,
             user_id,
             scope.project_id,
             scope.task_id,
@@ -71,38 +65,31 @@ impl AttachmentService {
         )
         .await?;
 
-        let tx = state.db.begin().await.map_err(AppError::Database)?;
         let mut created_attachments = Vec::with_capacity(files.len());
         let mut created_storage_keys: Vec<String> = Vec::new();
 
         for file in files {
             let (dto, bytes) = scope.into_create_attachment_dto(file);
 
-            match Self::create_in_tx(&tx, state.storage.as_ref(), user_id, dto, bytes).await {
+            match Self::create_in_tx(db, storage, user_id, dto, bytes).await {
                 Ok(created) => {
                     created_storage_keys.push(created.storage_key.clone());
                     created_attachments.push(created);
                 }
                 Err(error) => {
-                    if let Err(rollback_error) = tx.rollback().await {
-                        tracing::warn!(error = %rollback_error, "Attachment upload rollback failed");
-                    }
-
-                    Self::cleanup_storage_objects(state.storage.as_ref(), &created_storage_keys).await;
+                    Self::cleanup_storage_objects(storage, &created_storage_keys).await;
                     return Err(error);
                 }
             }
         }
 
-        if let Err(commit_error) = tx.commit().await {
-            Self::cleanup_storage_objects(state.storage.as_ref(), &created_storage_keys).await;
-            return Err(AppError::Database(commit_error));
-        }
-
-        Ok(AttachmentUploadResponseDto {
-            uploaded_count: created_storage_keys.len(),
-            uploaded_bytes: total_upload_bytes,
-            items: created_attachments,
+        Ok(StorageBackedDbWrite {
+            value: AttachmentUploadResponseDto {
+                uploaded_count: created_storage_keys.len(),
+                uploaded_bytes: total_upload_bytes,
+                items: created_attachments,
+            },
+            storage_keys: created_storage_keys,
         })
     }
 
@@ -125,23 +112,25 @@ impl AttachmentService {
     }
 
     pub async fn get_raw_file_for_cookies(
-        state: &AppState,
+        db: &impl ConnectionTrait,
+        storage: &dyn ObjectStore,
+        jwt_secret: &str,
+        jwt_secret_client: &str,
         jar: &CookieJar,
         attachment_id: Uuid,
     ) -> Result<AttachmentRawFileDto, AppError> {
-        let viewer = Self::resolve_attachment_viewer(state, jar).await?;
+        let viewer = Self::resolve_attachment_viewer(db, jwt_secret, jwt_secret_client, jar).await?;
         let attachment = match viewer {
-            AttachmentViewer::User { user_id } => Self::get_by_id(state.db.as_ref(), user_id, attachment_id).await?,
+            AttachmentViewer::User { user_id } => Self::get_by_id(db, user_id, attachment_id).await?,
             AttachmentViewer::Client { user_id, client_id } => {
-                Self::get_by_id_for_client(state.db.as_ref(), user_id, client_id, attachment_id).await?
+                Self::get_by_id_for_client(db, user_id, client_id, attachment_id).await?
             }
         };
 
         let storage_path = ObjectPath::parse(attachment.storage_key.as_str())
             .map_err(|error| AppError::Internal(format!("invalid storage key: {}", error)))?;
 
-        let object = state
-            .storage
+        let object = storage
             .get(&storage_path)
             .await
             .map_err(|error| AppError::NotFound(format!("file not found in storage: {}", error)))?;
@@ -236,22 +225,13 @@ impl AttachmentService {
     }
 
     pub async fn create(
-        db: &(impl ConnectionTrait + TransactionTrait),
-        active_tx: Option<&impl ConnectionTrait>,
+        db: &impl ConnectionTrait,
         storage: &dyn ObjectStore,
         user_id: Uuid,
         dto: CreateAttachmentDto,
         file_bytes: Vec<u8>,
     ) -> Result<AttachmentDetailDto, AppError> {
-        if let Some(tx) = active_tx {
-            let model = Self::create_with_connection(tx, storage, user_id, dto, file_bytes).await?;
-            return Ok(Self::to_detail_dto(model));
-        }
-
-        let tx = db.begin().await.map_err(AppError::Database)?;
-        let model = Self::create_with_connection(&tx, storage, user_id, dto, file_bytes).await?;
-        tx.commit().await.map_err(AppError::Database)?;
-
+        let model = Self::create_with_connection(db, storage, user_id, dto, file_bytes).await?;
         Ok(Self::to_detail_dto(model))
     }
 
@@ -620,11 +600,16 @@ impl AttachmentService {
         }
     }
 
-    async fn resolve_attachment_viewer(state: &AppState, jar: &CookieJar) -> Result<AttachmentViewer, AppError> {
+    async fn resolve_attachment_viewer(
+        db: &impl ConnectionTrait,
+        jwt_secret: &str,
+        jwt_secret_client: &str,
+        jar: &CookieJar,
+    ) -> Result<AttachmentViewer, AppError> {
         if let Some(cookie) = jar.get(USER_AUTH_COOKIE_NAME) {
             let token = decode::<Claims>(
                 cookie.value(),
-                &DecodingKey::from_secret(state.config.jwt_secret.as_bytes()),
+                &DecodingKey::from_secret(jwt_secret.as_bytes()),
                 &Validation::default(),
             )
             .map_err(|_| AppError::Unauthorized("invalid user session".to_string()))?;
@@ -637,20 +622,20 @@ impl AttachmentService {
         if let Some(cookie) = jar.get(CLIENT_AUTH_COOKIE_NAME) {
             let token = decode::<ClientClaims>(
                 cookie.value(),
-                &DecodingKey::from_secret(state.config.jwt_secret_client.as_bytes()),
+                &DecodingKey::from_secret(jwt_secret_client.as_bytes()),
                 &Validation::default(),
             )
             .map_err(|_| AppError::Unauthorized("invalid client session".to_string()))?;
 
             let client_auth = client_auth::Entity::find_by_id(token.claims.sub)
-                .one(state.db.as_ref())
+                .one(db)
                 .await
                 .map_err(AppError::Database)?
                 .ok_or_else(|| AppError::Unauthorized("invalid client session".to_string()))?;
 
             let client_profile = client_auth
                 .find_related(clients::Entity)
-                .one(state.db.as_ref())
+                .one(db)
                 .await
                 .map_err(AppError::Database)?
                 .ok_or_else(|| AppError::Unauthorized("client not found".to_string()))?;

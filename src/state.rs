@@ -11,8 +11,9 @@ use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use crate::{
-    dtos::client::ClientAuthDto, dtos::ui_state::UiStateEntryDto, dtos::user::UserDto, env::Config, error::AppError,
-    services::notifications::NotificationEvent,
+    dtos::{client::ClientAuthDto, notification::NotificationEvent, ui_state::UiStateEntryDto, user::UserDto},
+    env::Config,
+    error::AppError,
 };
 
 #[derive(Clone)]

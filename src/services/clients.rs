@@ -1,7 +1,7 @@
 use chrono::{DateTime, FixedOffset, Utc};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    Set, TransactionTrait,
+    Set,
 };
 use std::time::Duration;
 use uuid::Uuid;
@@ -30,12 +30,10 @@ pub struct ClientService;
 
 impl ClientService {
     pub async fn create(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         dto: CreateClientDto,
     ) -> Result<ClientModel, AppError> {
-        let txn = db.begin().await.map_err(AppError::Database)?;
-
         let client = clients::ActiveModel {
             name: Set(dto.name),
             user_id: Set(user_id),
@@ -47,11 +45,7 @@ impl ClientService {
             ..Default::default()
         };
 
-        let created_client = client.insert(&txn).await.map_err(AppError::Database)?;
-
-        txn.commit().await.map_err(AppError::Database)?;
-
-        Ok(created_client)
+        client.insert(db).await.map_err(AppError::Database)
     }
 
     pub async fn get_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<ClientModel, AppError> {
@@ -66,13 +60,12 @@ impl ClientService {
     }
 
     pub async fn update(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         id: Uuid,
         dto: UpdateClientDto,
     ) -> Result<ClientModel, AppError> {
         let client = Self::get_by_id(db, user_id, id).await?;
-        let txn = db.begin().await.map_err(AppError::Database)?;
 
         let mut active_client: clients::ActiveModel = client.into();
         active_client.name = Set(dto.name);
@@ -83,11 +76,7 @@ impl ClientService {
         active_client.company = Set(dto.company);
         active_client.notes = Set(dto.notes);
 
-        let updated_client = active_client.update(&txn).await.map_err(AppError::Database)?;
-
-        txn.commit().await.map_err(AppError::Database)?;
-
-        Ok(updated_client)
+        active_client.update(db).await.map_err(AppError::Database)
     }
 
     pub async fn update_client_status(

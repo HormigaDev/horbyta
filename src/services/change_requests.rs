@@ -4,12 +4,13 @@ use chrono::{DateTime, FixedOffset, Utc};
 use object_store::ObjectStore;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    Set, TransactionTrait,
+    Set,
 };
 use uuid::Uuid;
 
 use crate::{
     dtos::{
+        attachment::StorageBackedDbWrite,
         change_request::{
             AssessChangeRequestDto, AssignChangeRequestTaskDto, ChangeRequestDeclineReason, ChangeRequestDetailDto,
             ChangeRequestDetailRow, ChangeRequestOrigin, ChangeRequestSearchField, ChangeRequestStatus,
@@ -66,21 +67,22 @@ impl ChangeRequestService {
     }
 
     pub async fn create_with_markdown_files(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         storage: &dyn ObjectStore,
         user_id: Uuid,
         dto: CreateChangeRequestDto,
         files: Vec<MarkdownUploadedFile>,
-    ) -> Result<ChangeRequestDetailDto, AppError> {
+    ) -> Result<StorageBackedDbWrite<ChangeRequestDetailDto>, AppError> {
         if files.is_empty() {
-            return Self::create(db, user_id, dto).await;
+            return Ok(StorageBackedDbWrite::without_storage(
+                Self::create(db, user_id, dto).await?,
+            ));
         }
 
         Self::ensure_project_client_pair(db, user_id, dto.project_id, dto.client_id).await?;
         Self::ensure_project_accepts_new_change_requests(db, user_id, dto.project_id).await?;
         Self::ensure_task_ownership(db, user_id, dto.project_id, dto.task_id).await?;
 
-        let txn = db.begin().await.map_err(AppError::Database)?;
         let change_request = change_requests::ActiveModel {
             user_id: Set(user_id),
             project_id: Set(dto.project_id),
@@ -93,9 +95,9 @@ impl ChangeRequestService {
             ..Default::default()
         };
 
-        let created = change_request.insert(&txn).await.map_err(AppError::Database)?;
+        let created = change_request.insert(db).await.map_err(AppError::Database)?;
         let upload = AttachmentService::create_markdown_files_with_tracking_in_tx(
-            &txn,
+            db,
             storage,
             user_id,
             Some(created.project_id),
@@ -110,22 +112,18 @@ impl ChangeRequestService {
             replace_markdown_attachment_urls_required(created.client_request_description.clone(), &upload.replacements);
         let mut active_model: change_requests::ActiveModel = created.into();
         active_model.client_request_description = Set(next_description);
-        let updated = match active_model.update(&txn).await.map_err(AppError::Database) {
+        let updated = match active_model.update(db).await.map_err(AppError::Database) {
             Ok(updated) => updated,
             Err(error) => {
-                if let Err(rollback_error) = txn.rollback().await {
-                    tracing::warn!(error = %rollback_error, "Change request markdown create rollback failed");
-                }
                 AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
                 return Err(error);
             }
         };
 
-        if let Err(error) = txn.commit().await {
-            AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
-            return Err(AppError::Database(error));
-        }
-        Self::get_by_id(db, user_id, updated.id).await
+        Ok(StorageBackedDbWrite {
+            value: Self::get_by_id(db, user_id, updated.id).await?,
+            storage_keys: upload.storage_keys,
+        })
     }
 
     pub async fn create_by_client(
@@ -316,21 +314,22 @@ impl ChangeRequestService {
     }
 
     pub async fn update_with_markdown_files(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         storage: &dyn ObjectStore,
         user_id: Uuid,
         id: Uuid,
         mut dto: UpdateChangeRequestDto,
         files: Vec<MarkdownUploadedFile>,
-    ) -> Result<ChangeRequestDetailDto, AppError> {
+    ) -> Result<StorageBackedDbWrite<ChangeRequestDetailDto>, AppError> {
         if files.is_empty() {
-            return Self::update(db, user_id, id, dto).await;
+            return Ok(StorageBackedDbWrite::without_storage(
+                Self::update(db, user_id, id, dto).await?,
+            ));
         }
 
-        let txn = db.begin().await.map_err(AppError::Database)?;
-        let model = Self::get_model_by_user(&txn, user_id, id).await?;
+        let model = Self::get_model_by_user(db, user_id, id).await?;
         let upload = AttachmentService::create_markdown_files_with_tracking_in_tx(
-            &txn,
+            db,
             storage,
             user_id,
             Some(model.project_id),
@@ -344,23 +343,18 @@ impl ChangeRequestService {
         dto.client_request_description =
             replace_markdown_attachment_urls_required(dto.client_request_description, &upload.replacements);
         dto.technical_assessment = replace_markdown_attachment_urls(dto.technical_assessment, &upload.replacements);
-        let updated_id = match Self::update_with_connection(&txn, user_id, id, dto).await {
+        let updated_id = match Self::update_with_connection(db, user_id, id, dto).await {
             Ok(updated_id) => updated_id,
             Err(error) => {
-                if let Err(rollback_error) = txn.rollback().await {
-                    tracing::warn!(error = %rollback_error, "Change request markdown update rollback failed");
-                }
                 AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
                 return Err(error);
             }
         };
 
-        if let Err(error) = txn.commit().await {
-            AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
-            return Err(AppError::Database(error));
-        }
-
-        Self::get_by_id(db, user_id, updated_id).await
+        Ok(StorageBackedDbWrite {
+            value: Self::get_by_id(db, user_id, updated_id).await?,
+            storage_keys: upload.storage_keys,
+        })
     }
 
     pub async fn client_update_spec(

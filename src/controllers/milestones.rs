@@ -4,6 +4,7 @@ use axum::{
     response::IntoResponse,
     routing::{get, post},
 };
+use sea_orm::TransactionTrait;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -19,8 +20,9 @@ use crate::{
     },
     error::AppError,
     middlewares::validator::ValidatedSearchQuery,
-    services::{milestones::MilestoneService, notifications::NotificationService},
+    services::{attachments::AttachmentService, milestones::MilestoneService, notifications::NotificationService},
     state::AppState,
+    utils::notifications::publish_notification,
 };
 
 #[utoipa::path(
@@ -110,15 +112,16 @@ pub(crate) async fn create_milestone(
         "multipart request must include a payload field with milestone json",
     )
     .await?;
-    let milestone = MilestoneService::create_with_markdown_files(
-        state.db.as_ref(),
-        state.storage.as_ref(),
-        user.id,
-        payload,
-        files,
-    )
-    .await?;
-    Ok(Json(milestone))
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
+    let milestone =
+        MilestoneService::create_with_markdown_files(&tx, state.storage.as_ref(), user.id, payload, files).await?;
+
+    if let Err(error) = tx.commit().await {
+        AttachmentService::cleanup_storage_objects(state.storage.as_ref(), &milestone.storage_keys).await;
+        return Err(AppError::Database(error));
+    }
+
+    Ok(Json(milestone.value))
 }
 
 #[utoipa::path(
@@ -148,19 +151,23 @@ pub(crate) async fn update_milestone(
     .await?;
     let requested_status = payload.status.clone();
     let previous = MilestoneService::get_by_id(state.db.as_ref(), user.id, id).await?;
-    let milestone = MilestoneService::update_with_markdown_files(
-        state.db.as_ref(),
-        state.storage.as_ref(),
-        user.id,
-        id,
-        payload,
-        files,
-    )
-    .await?;
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
+    let milestone =
+        MilestoneService::update_with_markdown_files(&tx, state.storage.as_ref(), user.id, id, payload, files).await?;
+
+    if let Err(error) = tx.commit().await {
+        AttachmentService::cleanup_storage_objects(state.storage.as_ref(), &milestone.storage_keys).await;
+        return Err(AppError::Database(error));
+    }
+
+    let milestone = milestone.value;
     if previous.status != MilestoneStatus::Released.to_string() && requested_status == MilestoneStatus::Released {
-        if let Err(error) = NotificationService::notify_milestone_released(&state, user.id, &milestone).await {
-            tracing::error!("Failed to create milestone notification: {}", error);
-        }
+        match NotificationService::notify_milestone_released(state.db.as_ref(), user.id, &milestone).await {
+            Ok(notification) => publish_notification(&state, user.id, notification),
+            Err(error) => {
+                tracing::error!("Failed to create milestone notification: {}", error);
+            }
+        };
     }
     Ok(Json(milestone))
 }

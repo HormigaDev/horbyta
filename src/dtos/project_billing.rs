@@ -46,6 +46,15 @@ pub struct UpdateProjectBillingDto {
     pub payment_day: Option<i16>,
 }
 
+pub(crate) struct NormalizedProjectBilling {
+    pub(crate) currency_type: String,
+    pub(crate) billing_type: String,
+    pub(crate) hourly_rate: Option<Decimal>,
+    pub(crate) fixed_price: Option<Decimal>,
+    pub(crate) retainer_amount: Option<Decimal>,
+    pub(crate) payment_day: Option<i16>,
+}
+
 string_enum!(
     pub enum ProjectBillingType {
         Fixed,

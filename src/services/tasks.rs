@@ -1,12 +1,13 @@
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-    QuerySelect, Set, TransactionTrait,
+    QuerySelect, Set,
 };
 use std::collections::HashSet;
 use uuid::Uuid;
 
 use crate::{
     dtos::{
+        attachment::StorageBackedDbWrite,
         hex_color::HexColor,
         project::ProjectStatus,
         query::QueryPayload,
@@ -357,33 +358,30 @@ impl TaskService {
     }
 
     pub async fn create(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         dto: CreateTaskDto,
     ) -> Result<TaskDetailDto, AppError> {
-        let txn = db.begin().await.map_err(AppError::Database)?;
-        let created_task = Self::create_with_connection(&txn, user_id, dto).await?;
-
-        txn.commit().await.map_err(AppError::Database)?;
-
+        let created_task = Self::create_with_connection(db, user_id, dto).await?;
         Self::get_by_id(db, user_id, created_task.id).await
     }
 
     pub async fn create_with_markdown_files(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         storage: &dyn object_store::ObjectStore,
         user_id: Uuid,
         dto: CreateTaskDto,
         files: Vec<MarkdownUploadedFile>,
-    ) -> Result<TaskDetailDto, AppError> {
+    ) -> Result<StorageBackedDbWrite<TaskDetailDto>, AppError> {
         if files.is_empty() {
-            return Self::create(db, user_id, dto).await;
+            return Ok(StorageBackedDbWrite::without_storage(
+                Self::create(db, user_id, dto).await?,
+            ));
         }
 
-        let txn = db.begin().await.map_err(AppError::Database)?;
-        let created_task = Self::create_with_connection(&txn, user_id, dto).await?;
+        let created_task = Self::create_with_connection(db, user_id, dto).await?;
         let upload = AttachmentService::create_markdown_files_with_tracking_in_tx(
-            &txn,
+            db,
             storage,
             user_id,
             created_task.project_id,
@@ -397,23 +395,18 @@ impl TaskService {
         let next_description = replace_markdown_attachment_urls(created_task.description.clone(), &upload.replacements);
         let mut active_task: tasks::ActiveModel = created_task.into();
         active_task.description = Set(next_description);
-        let updated_task = match active_task.update(&txn).await.map_err(AppError::Database) {
+        let updated_task = match active_task.update(db).await.map_err(AppError::Database) {
             Ok(updated_task) => updated_task,
             Err(error) => {
-                if let Err(rollback_error) = txn.rollback().await {
-                    tracing::warn!(error = %rollback_error, "Task markdown create rollback failed");
-                }
                 AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
                 return Err(error);
             }
         };
 
-        if let Err(error) = txn.commit().await {
-            AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
-            return Err(AppError::Database(error));
-        }
-
-        Self::get_by_id(db, user_id, updated_task.id).await
+        Ok(StorageBackedDbWrite {
+            value: Self::get_by_id(db, user_id, updated_task.id).await?,
+            storage_keys: upload.storage_keys,
+        })
     }
 
     pub async fn get_by_id(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<TaskDetailDto, AppError> {
@@ -481,34 +474,32 @@ impl TaskService {
     }
 
     pub async fn update(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         id: Uuid,
         dto: UpdateTaskDto,
     ) -> Result<TaskDetailDto, AppError> {
-        let txn = db.begin().await.map_err(AppError::Database)?;
-        let updated_task = Self::update_with_connection(&txn, user_id, id, dto).await?;
-        txn.commit().await.map_err(AppError::Database)?;
-
+        let updated_task = Self::update_with_connection(db, user_id, id, dto).await?;
         Self::get_by_id(db, user_id, updated_task.id).await
     }
 
     pub async fn update_with_markdown_files(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         storage: &dyn object_store::ObjectStore,
         user_id: Uuid,
         id: Uuid,
         mut dto: UpdateTaskDto,
         files: Vec<MarkdownUploadedFile>,
-    ) -> Result<TaskDetailDto, AppError> {
+    ) -> Result<StorageBackedDbWrite<TaskDetailDto>, AppError> {
         if files.is_empty() {
-            return Self::update(db, user_id, id, dto).await;
+            return Ok(StorageBackedDbWrite::without_storage(
+                Self::update(db, user_id, id, dto).await?,
+            ));
         }
 
-        let txn = db.begin().await.map_err(AppError::Database)?;
-        let task = Self::get_task_model(&txn, user_id, id).await?;
+        let task = Self::get_task_model(db, user_id, id).await?;
         let upload = AttachmentService::create_markdown_files_with_tracking_in_tx(
-            &txn,
+            db,
             storage,
             user_id,
             task.project_id,
@@ -520,27 +511,22 @@ impl TaskService {
         .await?;
 
         dto.description = replace_markdown_attachment_urls(dto.description, &upload.replacements);
-        let updated_task = match Self::update_with_connection(&txn, user_id, id, dto).await {
+        let updated_task = match Self::update_with_connection(db, user_id, id, dto).await {
             Ok(updated_task) => updated_task,
             Err(error) => {
-                if let Err(rollback_error) = txn.rollback().await {
-                    tracing::warn!(error = %rollback_error, "Task markdown update rollback failed");
-                }
                 AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
                 return Err(error);
             }
         };
 
-        if let Err(error) = txn.commit().await {
-            AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
-            return Err(AppError::Database(error));
-        }
-
-        Self::get_by_id(db, user_id, updated_task.id).await
+        Ok(StorageBackedDbWrite {
+            value: Self::get_by_id(db, user_id, updated_task.id).await?,
+            storage_keys: upload.storage_keys,
+        })
     }
 
     pub async fn change_status(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         id: Uuid,
         dto: UpdateTaskStatusDto,
@@ -551,13 +537,9 @@ impl TaskService {
             Self::ensure_no_blocking_children(db, id).await?;
         }
 
-        let txn = db.begin().await.map_err(AppError::Database)?;
-
         let mut active_task: tasks::ActiveModel = task.into();
         active_task.status = Set(dto.status.to_string());
-        let _ = active_task.update(&txn).await.map_err(AppError::Database)?;
-
-        txn.commit().await.map_err(AppError::Database)?;
+        let _ = active_task.update(db).await.map_err(AppError::Database)?;
 
         Ok(())
     }

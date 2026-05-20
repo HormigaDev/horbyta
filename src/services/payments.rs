@@ -1,6 +1,6 @@
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, JoinType, PaginatorTrait, QueryFilter,
-    QuerySelect, RelationTrait, Set, TransactionTrait, prelude::Decimal,
+    QuerySelect, RelationTrait, Set, prelude::Decimal,
 };
 use uuid::Uuid;
 
@@ -163,22 +163,20 @@ impl PaymentService {
     }
 
     pub async fn create(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         dto: CreatePaymentDto,
     ) -> Result<PaymentDetailDto, AppError> {
-        let txn = db.begin().await.map_err(AppError::Database)?;
-
-        Self::ensure_project_ownership(&txn, user_id, dto.project_id).await?;
+        Self::ensure_project_ownership(db, user_id, dto.project_id).await?;
 
         if let Some(invoice_id) = dto.invoice_id {
-            Self::validate_invoice_for_project(&txn, user_id, invoice_id, dto.project_id).await?;
+            Self::validate_invoice_for_project(db, user_id, invoice_id, dto.project_id).await?;
         }
 
         let currency_type = project_billing::Entity::find()
             .filter(project_billing::Column::ProjectId.eq(dto.project_id))
             .filter(project_billing::Column::UserId.eq(user_id))
-            .one(&txn)
+            .one(db)
             .await
             .map_err(AppError::Database)?
             .map(|b| b.currency_type)
@@ -203,11 +201,11 @@ impl PaymentService {
             ..Default::default()
         };
 
-        let created = payment.insert(&txn).await.map_err(AppError::Database)?;
+        let created = payment.insert(db).await.map_err(AppError::Database)?;
 
         if let Some(invoice_id) = dto.invoice_id {
             InvoiceService::update_status(
-                &txn,
+                db,
                 user_id,
                 invoice_id,
                 UpdateInvoiceStatusDto {
@@ -216,8 +214,6 @@ impl PaymentService {
             )
             .await?;
         }
-
-        txn.commit().await.map_err(AppError::Database)?;
 
         Self::get_by_id(db, user_id, created.id).await
     }

@@ -4,6 +4,7 @@ use axum::{
     response::IntoResponse,
     routing::{get, post},
 };
+use sea_orm::TransactionTrait;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -21,8 +22,11 @@ use crate::{
     },
     error::AppError,
     middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
-    services::{change_requests::ChangeRequestService, notifications::NotificationService},
+    services::{
+        attachments::AttachmentService, change_requests::ChangeRequestService, notifications::NotificationService,
+    },
     state::AppState,
+    utils::notifications::publish_notification,
 };
 
 #[utoipa::path(
@@ -144,15 +148,16 @@ pub(crate) async fn create_change_request(
         "multipart request must include a payload field with change request json",
     )
     .await?;
-    let change_request = ChangeRequestService::create_with_markdown_files(
-        state.db.as_ref(),
-        state.storage.as_ref(),
-        user.id,
-        payload,
-        files,
-    )
-    .await?;
-    Ok(Json(change_request))
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
+    let change_request =
+        ChangeRequestService::create_with_markdown_files(&tx, state.storage.as_ref(), user.id, payload, files).await?;
+
+    if let Err(error) = tx.commit().await {
+        AttachmentService::cleanup_storage_objects(state.storage.as_ref(), &change_request.storage_keys).await;
+        return Err(AppError::Database(error));
+    }
+
+    Ok(Json(change_request.value))
 }
 
 #[utoipa::path(
@@ -173,16 +178,17 @@ pub(crate) async fn client_create_change_request(
 ) -> Result<impl IntoResponse, AppError> {
     let change_request =
         ChangeRequestService::create_by_client(state.db.as_ref(), client.user_id, client.client_id, payload).await?;
-    if let Err(error) = NotificationService::notify_client_change_request_created(
-        &state,
+    match NotificationService::notify_client_change_request_created(
+        state.db.as_ref(),
         client.user_id,
         client.client_id,
         &change_request,
     )
     .await
     {
-        tracing::error!("Failed to create change request notification: {}", error);
-    }
+        Ok(notification) => publish_notification(&state, client.user_id, notification),
+        Err(error) => tracing::error!("Failed to create change request notification: {}", error),
+    };
     Ok(Json(change_request))
 }
 
@@ -208,16 +214,17 @@ pub(crate) async fn client_update_change_request(
     let change_request =
         ChangeRequestService::client_update_spec(state.db.as_ref(), client.user_id, client.client_id, id, payload)
             .await?;
-    if let Err(error) = NotificationService::notify_client_change_request_updated(
-        &state,
+    match NotificationService::notify_client_change_request_updated(
+        state.db.as_ref(),
         client.user_id,
         client.client_id,
         &change_request,
     )
     .await
     {
-        tracing::error!("Failed to create change request update notification: {}", error);
-    }
+        Ok(notification) => publish_notification(&state, client.user_id, notification),
+        Err(error) => tracing::error!("Failed to create change request update notification: {}", error),
+    };
     Ok(Json(change_request))
 }
 
@@ -246,16 +253,17 @@ pub(crate) async fn update_change_request(
         "multipart request must include a payload field with change request json",
     )
     .await?;
-    let change_request = ChangeRequestService::update_with_markdown_files(
-        state.db.as_ref(),
-        state.storage.as_ref(),
-        user.id,
-        id,
-        payload,
-        files,
-    )
-    .await?;
-    Ok(Json(change_request))
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
+    let change_request =
+        ChangeRequestService::update_with_markdown_files(&tx, state.storage.as_ref(), user.id, id, payload, files)
+            .await?;
+
+    if let Err(error) = tx.commit().await {
+        AttachmentService::cleanup_storage_objects(state.storage.as_ref(), &change_request.storage_keys).await;
+        return Err(AppError::Database(error));
+    }
+
+    Ok(Json(change_request.value))
 }
 
 #[utoipa::path(
@@ -406,8 +414,8 @@ pub(crate) async fn client_approve_change_request(
 ) -> Result<impl IntoResponse, AppError> {
     let change_request =
         ChangeRequestService::client_approve(state.db.as_ref(), client.user_id, client.client_id, id, payload).await?;
-    if let Err(error) = NotificationService::notify_client_change_request_decision(
-        &state,
+    match NotificationService::notify_client_change_request_decision(
+        state.db.as_ref(),
         client.user_id,
         client.client_id,
         &change_request,
@@ -415,8 +423,9 @@ pub(crate) async fn client_approve_change_request(
     )
     .await
     {
-        tracing::error!("Failed to create change request approval notification: {}", error);
-    }
+        Ok(notification) => publish_notification(&state, client.user_id, notification),
+        Err(error) => tracing::error!("Failed to create change request approval notification: {}", error),
+    };
     Ok(Json(change_request))
 }
 
@@ -447,8 +456,8 @@ pub(crate) async fn client_decline_change_request(
         payload.decline_reason,
     )
     .await?;
-    if let Err(error) = NotificationService::notify_client_change_request_decision(
-        &state,
+    match NotificationService::notify_client_change_request_decision(
+        state.db.as_ref(),
         client.user_id,
         client.client_id,
         &change_request,
@@ -456,8 +465,9 @@ pub(crate) async fn client_decline_change_request(
     )
     .await
     {
-        tracing::error!("Failed to create change request decline notification: {}", error);
-    }
+        Ok(notification) => publish_notification(&state, client.user_id, notification),
+        Err(error) => tracing::error!("Failed to create change request decline notification: {}", error),
+    };
     Ok(Json(change_request))
 }
 
@@ -482,16 +492,17 @@ pub(crate) async fn client_cancel_change_request(
 ) -> Result<impl IntoResponse, AppError> {
     let change_request =
         ChangeRequestService::client_cancel(state.db.as_ref(), client.user_id, client.client_id, id, payload).await?;
-    if let Err(error) = NotificationService::notify_client_change_request_cancelled(
-        &state,
+    match NotificationService::notify_client_change_request_cancelled(
+        state.db.as_ref(),
         client.user_id,
         client.client_id,
         &change_request,
     )
     .await
     {
-        tracing::error!("Failed to create change request cancellation notification: {}", error);
-    }
+        Ok(notification) => publish_notification(&state, client.user_id, notification),
+        Err(error) => tracing::error!("Failed to create change request cancellation notification: {}", error),
+    };
     Ok(Json(change_request))
 }
 

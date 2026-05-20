@@ -4,6 +4,7 @@ use axum::{
     response::IntoResponse,
     routing::{get, post},
 };
+use sea_orm::TransactionTrait;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -17,6 +18,7 @@ use crate::{
     middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
     services::{notifications::NotificationService, payments::PaymentService},
     state::AppState,
+    utils::notifications::publish_notification,
 };
 
 #[utoipa::path(
@@ -82,11 +84,14 @@ pub(crate) async fn create_payment(
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<CreatePaymentDto>,
 ) -> AppResult<impl IntoResponse> {
-    let payment = PaymentService::create(state.db.as_ref(), user.id, payload).await?;
+    let tx = state.db.begin().await?;
+    let payment = PaymentService::create(&tx, user.id, payload).await?;
+    tx.commit().await?;
 
-    if let Err(error) = NotificationService::notify_payment_received(&state, user.id, &payment).await {
-        tracing::error!("Failed to create payment notification: {}", error);
-    }
+    match NotificationService::notify_payment_received(state.db.as_ref(), user.id, &payment).await {
+        Ok(notification) => publish_notification(&state, user.id, notification),
+        Err(error) => tracing::error!("Failed to create payment notification: {}", error),
+    };
 
     Ok(Json(payment))
 }

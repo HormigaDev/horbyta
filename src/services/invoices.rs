@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::Utc;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, JoinType, PaginatorTrait, QueryFilter,
-    QueryOrder, QuerySelect, RelationTrait, Set, TransactionTrait, prelude::Decimal, sea_query::Expr,
+    QueryOrder, QuerySelect, RelationTrait, Set, prelude::Decimal, sea_query::Expr,
 };
 use uuid::Uuid;
 
@@ -157,7 +157,7 @@ impl InvoiceService {
     }
 
     pub async fn create(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         dto: CreateInvoiceDto,
     ) -> Result<InvoiceDetailDto, AppError> {
@@ -180,8 +180,6 @@ impl InvoiceService {
 
         let notes = Self::build_invoice_notes(&time_entries, dto.freelancer_notes.as_deref());
 
-        let txn = db.begin().await.map_err(AppError::Database)?;
-
         let normalized_external_id = dto
             .provider_external_id
             .map(|s| s.trim().to_string())
@@ -203,17 +201,15 @@ impl InvoiceService {
             ..Default::default()
         };
 
-        let created = invoice.insert(&txn).await.map_err(AppError::Database)?;
+        let created = invoice.insert(db).await.map_err(AppError::Database)?;
 
-        Self::link_time_entries(&txn, &dto.time_entry_ids, created.id).await?;
-
-        txn.commit().await.map_err(AppError::Database)?;
+        Self::link_time_entries(db, &dto.time_entry_ids, created.id).await?;
 
         Self::get_by_id(db, user_id, created.id).await
     }
 
     pub async fn update(
-        db: &(impl ConnectionTrait + TransactionTrait),
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         id: Uuid,
         dto: UpdateInvoiceDto,
@@ -229,10 +225,8 @@ impl InvoiceService {
 
         let notes = Self::build_invoice_notes(&time_entries, dto.freelancer_notes.as_deref());
 
-        let txn = db.begin().await.map_err(AppError::Database)?;
-
-        Self::unlink_time_entries(&txn, id).await?;
-        Self::link_time_entries(&txn, &dto.time_entry_ids, id).await?;
+        Self::unlink_time_entries(db, id).await?;
+        Self::link_time_entries(db, &dto.time_entry_ids, id).await?;
 
         let normalized_external_id = dto
             .provider_external_id
@@ -247,9 +241,7 @@ impl InvoiceService {
         active.provider_external_id = Set(normalized_external_id);
         active.payment_link = Set(normalized_payment_link);
         active.notes = Set(Some(notes));
-        active.update(&txn).await.map_err(AppError::Database)?;
-
-        txn.commit().await.map_err(AppError::Database)?;
+        active.update(db).await.map_err(AppError::Database)?;
 
         Self::get_by_id(db, user_id, id).await
     }

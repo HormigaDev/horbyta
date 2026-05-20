@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{
     extract::ws::{Message, WebSocket},
     http::{HeaderMap, StatusCode},
@@ -5,40 +7,46 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use futures::SinkExt;
 use jsonwebtoken::{DecodingKey, Validation, decode};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder};
 use sea_orm::{PaginatorTrait, QuerySelect};
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
-use serde::Deserialize;
 use serde_json::json;
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use crate::{
     constants::USER_AUTH_COOKIE_NAME,
-    dtos::websocket::WsMessage,
+    dtos::{
+        notification::NotificationEvent,
+        websocket::{NotificationReadPayload, WsMessage},
+    },
     entities::{notifications, prelude::Notifications},
+    env::Config,
     error::AppError,
     middlewares::{auth::Claims, origin::is_allowed_request_origin},
-    services::notifications::{NotificationEvent, NotificationService},
-    state::AppState,
+    services::notifications::NotificationService,
 };
 
 const UNREAD_NOTIFICATION_BATCH_LIMIT: u64 = 20;
 const UNREAD_NOTIFICATION_SUMMARY_THRESHOLD: u64 = 20;
 
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct NotificationReadPayload {
-    id: Uuid,
-}
-
 #[derive(Clone)]
 pub struct WebSocketService {
-    state: AppState,
+    db: Arc<DatabaseConnection>,
+    config: Config,
+    notification_bus: broadcast::Sender<NotificationEvent>,
 }
 
 impl WebSocketService {
-    pub fn new(state: AppState) -> Self {
-        Self { state }
+    pub fn new(
+        db: Arc<DatabaseConnection>,
+        config: Config,
+        notification_bus: broadcast::Sender<NotificationEvent>,
+    ) -> Self {
+        Self {
+            db,
+            config,
+            notification_bus,
+        }
     }
 
     pub fn authenticate_handshake(&self, headers: &HeaderMap) -> Result<(Uuid, String), StatusCode> {
@@ -52,7 +60,7 @@ impl WebSocketService {
 
         let token_data = decode::<Claims>(
             token,
-            &DecodingKey::from_secret(self.state.config.jwt_secret.as_bytes()),
+            &DecodingKey::from_secret(self.config.jwt_secret.as_bytes()),
             &Validation::default(),
         )
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
@@ -61,7 +69,7 @@ impl WebSocketService {
     }
 
     pub fn subscribe_notifications(&self) -> broadcast::Receiver<NotificationEvent> {
-        self.state.notification_bus.subscribe()
+        self.notification_bus.subscribe()
     }
 
     pub async fn send_unread_notifications(
@@ -72,7 +80,7 @@ impl WebSocketService {
         let unread_count = Notifications::find()
             .filter(notifications::Column::UserId.eq(user_id))
             .filter(notifications::Column::IsRead.eq(false))
-            .count(self.state.db.as_ref())
+            .count(self.db.as_ref())
             .await
             .map_err(AppError::Database)?;
 
@@ -80,14 +88,14 @@ impl WebSocketService {
             .filter(notifications::Column::UserId.eq(user_id))
             .filter(notifications::Column::IsRead.eq(false))
             .filter(notifications::Column::ReceivedAt.is_null())
-            .count(self.state.db.as_ref())
+            .count(self.db.as_ref())
             .await
             .map_err(AppError::Database)?;
 
         let persisted_notifications = Notifications::find()
             .filter(notifications::Column::UserId.eq(user_id))
             .order_by_asc(notifications::Column::CreatedAt)
-            .all(self.state.db.as_ref())
+            .all(self.db.as_ref())
             .await
             .map_err(AppError::Database)?;
 
@@ -105,7 +113,7 @@ impl WebSocketService {
             {
                 self.send_silent_notification_event(sender, notification).await?;
             }
-            NotificationService::mark_unread_as_received(self.state.db.as_ref(), user_id).await?;
+            NotificationService::mark_unread_as_received(self.db.as_ref(), user_id).await?;
             self.send_unread_count_event(sender, unread_count).await?;
             return Ok(());
         }
@@ -116,7 +124,7 @@ impl WebSocketService {
             .filter(notifications::Column::ReceivedAt.is_null())
             .order_by_asc(notifications::Column::CreatedAt)
             .limit(UNREAD_NOTIFICATION_BATCH_LIMIT)
-            .all(self.state.db.as_ref())
+            .all(self.db.as_ref())
             .await
             .map_err(AppError::Database)?;
 
@@ -129,7 +137,7 @@ impl WebSocketService {
             self.send_notification_event(sender, &notification).await?;
         }
 
-        NotificationService::mark_as_received(self.state.db.as_ref(), user_id, received_ids).await?;
+        NotificationService::mark_as_received(self.db.as_ref(), user_id, received_ids).await?;
         self.send_unread_count_event(sender, unread_count).await?;
 
         Ok(())
@@ -168,15 +176,15 @@ impl WebSocketService {
                 let payload: NotificationReadPayload = serde_json::from_value(data)
                     .map_err(|_| AppError::BadRequest("invalid notification read payload".to_string()))?;
 
-                NotificationService::mark_as_read(self.state.db.as_ref(), _user_id, payload.id).await?;
+                NotificationService::mark_as_read(self.db.as_ref(), _user_id, payload.id).await?;
                 Ok(true)
             }
             "notification.read_all" => {
-                NotificationService::mark_all_as_read(self.state.db.as_ref(), _user_id).await?;
+                NotificationService::mark_all_as_read(self.db.as_ref(), _user_id).await?;
                 Ok(true)
             }
             "notification.clear_all" => {
-                NotificationService::delete_all(self.state.db.as_ref(), _user_id).await?;
+                NotificationService::delete_all(self.db.as_ref(), _user_id).await?;
                 Ok(true)
             }
             _ => Err(AppError::BadRequest("unknown message type".to_string())),
@@ -250,12 +258,7 @@ impl WebSocketService {
         notification: &notifications::Model,
     ) -> Result<(), AppError> {
         self.send_notification_event(sender, notification).await?;
-        NotificationService::mark_as_received(
-            self.state.db.as_ref(),
-            notification.user_id,
-            vec![notification.id],
-        )
-        .await
+        NotificationService::mark_as_received(self.db.as_ref(), notification.user_id, vec![notification.id]).await
     }
 
     async fn send_notification_summary_event(
@@ -306,7 +309,7 @@ impl WebSocketService {
     }
 
     fn validate_origin(&self, headers: &HeaderMap) -> Result<(), StatusCode> {
-        if !is_allowed_request_origin(headers, &self.state.config) {
+        if !is_allowed_request_origin(headers, &self.config) {
             return Err(StatusCode::FORBIDDEN);
         }
 

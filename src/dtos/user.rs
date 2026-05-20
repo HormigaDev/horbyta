@@ -40,6 +40,14 @@ string_enum!(
     }
 );
 
+pub(crate) struct NewUserInput {
+    pub(crate) name: String,
+    pub(crate) email: String,
+    pub(crate) password: String,
+    pub(crate) role: UserRole,
+    pub(crate) status: UserStatus,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum::EnumString, strum::EnumIter)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserSearchField {

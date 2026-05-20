@@ -4,8 +4,12 @@ use axum::{
     response::IntoResponse,
     routing::{delete, get},
 };
+use sea_orm::TransactionTrait;
 use serde_json::json;
 
+use crate::utils::ui_state::{
+    ensure_valid_key, ensure_valid_scope, evict_scope, list_scope_cached, refresh_scope_cache,
+};
 use crate::{
     dtos::{
         ui_state::{BatchUpsertUiStateDto, ListScopeQuery, UpsertUiStateDto},
@@ -16,41 +20,6 @@ use crate::{
     services::ui_state::UiStateService,
     state::AppState,
 };
-
-const SCOPE_MAX_LEN: usize = 40;
-const KEY_MAX_LEN: usize = 120;
-
-fn ensure_valid_scope(scope: &str) -> Result<(), AppError> {
-    if scope.is_empty() || scope.len() > SCOPE_MAX_LEN {
-        return Err(AppError::BadRequest("invalid ui state scope".to_string()));
-    }
-
-    let is_valid = scope
-        .chars()
-        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_');
-
-    if !is_valid {
-        return Err(AppError::BadRequest("invalid ui state scope".to_string()));
-    }
-
-    Ok(())
-}
-
-fn ensure_valid_key(key: &str) -> Result<(), AppError> {
-    if key.is_empty() || key.len() > KEY_MAX_LEN {
-        return Err(AppError::BadRequest("invalid ui state key".to_string()));
-    }
-
-    let is_valid = key
-        .chars()
-        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.' || c == ':');
-
-    if !is_valid {
-        return Err(AppError::BadRequest("invalid ui state key".to_string()));
-    }
-
-    Ok(())
-}
 
 #[utoipa::path(
     get,
@@ -69,7 +38,7 @@ pub(crate) async fn list_scope(
     axum::extract::Query(query): axum::extract::Query<ListScopeQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     ensure_valid_scope(&query.scope)?;
-    let entries = UiStateService::list_scope(&state, user.id, &query.scope).await?;
+    let entries = list_scope_cached(&state, user.id, &query.scope).await?;
     Ok(Json(json!({ "items": entries })))
 }
 
@@ -96,7 +65,8 @@ pub(crate) async fn get_one(
     ensure_valid_scope(&scope)?;
     ensure_valid_key(&key)?;
 
-    match UiStateService::get_one(&state, user.id, &scope, &key).await? {
+    let entries = list_scope_cached(&state, user.id, &scope).await?;
+    match entries.into_iter().find(|entry| entry.key == key) {
         Some(entry) => Ok(Json(entry).into_response()),
         None => Err(AppError::NotFound("ui state entry not found".to_string())),
     }
@@ -126,7 +96,8 @@ pub(crate) async fn upsert(
     ensure_valid_scope(&scope)?;
     ensure_valid_key(&key)?;
 
-    let entry = UiStateService::upsert(&state, user.id, &scope, &key, payload.value).await?;
+    let entry = UiStateService::upsert(state.db.as_ref(), user.id, &scope, &key, payload.value).await?;
+    refresh_scope_cache(&state, user.id, &scope, &entry).await;
     Ok(Json(entry))
 }
 
@@ -152,7 +123,8 @@ pub(crate) async fn delete_one(
     ensure_valid_scope(&scope)?;
     ensure_valid_key(&key)?;
 
-    UiStateService::delete_one(&state, user.id, &scope, &key).await?;
+    UiStateService::delete_one(state.db.as_ref(), user.id, &scope, &key).await?;
+    evict_scope(&state, user.id, &scope).await;
     Ok(Json(json!({ "message": "Entry deleted" })))
 }
 
@@ -174,7 +146,8 @@ pub(crate) async fn delete_scope(
 ) -> Result<impl IntoResponse, AppError> {
     ensure_valid_scope(&scope)?;
 
-    UiStateService::delete_scope(&state, user.id, &scope).await?;
+    UiStateService::delete_scope(state.db.as_ref(), user.id, &scope).await?;
+    evict_scope(&state, user.id, &scope).await;
     Ok(Json(json!({ "message": "Scope cleared" })))
 }
 
@@ -207,7 +180,12 @@ pub(crate) async fn batch_upsert(
         })
         .collect();
 
-    let updated = UiStateService::batch_upsert(&state, user.id, &scope, entries?).await?;
+    let tx = state.db.begin().await.map_err(AppError::Database)?;
+    let updated = UiStateService::batch_upsert(&tx, user.id, &scope, entries?).await?;
+    tx.commit().await.map_err(AppError::Database)?;
+    for entry in &updated {
+        refresh_scope_cache(&state, user.id, &scope, entry).await;
+    }
     Ok(Json(json!({ "items": updated })))
 }
 

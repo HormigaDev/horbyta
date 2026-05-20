@@ -15,7 +15,7 @@ use crate::{
     dtos::query::QueryPayload,
     dtos::totp_2fa::{DisableTotpDto, TotpEnableDto, TotpSetupDto, TotpStatusDto, VerifyTotpCodeDto},
     dtos::user::{
-        AdminCreateUserDto, AdminUpdateUserDto, AdminUserSummaryDto, UpdateNotificationPreferencesDto,
+        AdminCreateUserDto, AdminUpdateUserDto, AdminUserSummaryDto, NewUserInput, UpdateNotificationPreferencesDto,
         UpdateUserPasswordDto, UpdateUserPreferencesDto, UpdateUserProfileDto, UserPreferences, UserRole,
         UserSearchField, UserSettingsDto, UserStatus,
     },
@@ -31,14 +31,6 @@ use crate::{
 };
 
 pub struct UserService;
-
-struct NewUserInput {
-    name: String,
-    email: String,
-    password: String,
-    role: UserRole,
-    status: UserStatus,
-}
 
 impl UserService {
     async fn get_user_model(db: &impl ConnectionTrait, user_id: Uuid) -> Result<UserModel, AppError> {

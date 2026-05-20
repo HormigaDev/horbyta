@@ -17,6 +17,12 @@ use crate::{
     utils::search::FilterField,
 };
 
+pub struct ProjectAttachmentUpload {
+    pub original_name: String,
+    pub mime_type: Option<String>,
+    pub bytes: Vec<u8>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum::EnumString, strum::EnumIter)]
 #[strum(serialize_all = "snake_case")]
 pub enum ProjectSearchField {

@@ -6,42 +6,23 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         change_request::ClientChangeRequestDetailDto, invoice::InvoiceDetailDto, milestone::MilestoneStatus,
-        payment::PaymentDetailDto, user::UserPreferences,
+        notification::CreateNotificationInput, payment::PaymentDetailDto, user::UserPreferences,
     },
     entities::{
         notifications::{self, Model as NotificationModel},
         prelude::{Notifications, Users},
     },
     error::AppError,
-    state::AppState,
 };
-
-#[derive(Debug, Clone)]
-pub struct NotificationEvent {
-    pub user_id: Uuid,
-    pub notification: NotificationModel,
-}
-
-pub struct CreateNotificationInput {
-    pub user_id: Uuid,
-    pub preference_key: &'static str,
-    pub title: String,
-    pub body: Option<String>,
-    pub payload: Option<Value>,
-    pub severity: &'static str,
-    pub source: &'static str,
-    pub entity_type: Option<&'static str>,
-    pub entity_id: Option<Uuid>,
-}
 
 pub struct NotificationService;
 
 impl NotificationService {
-    pub async fn create_and_publish(
-        state: &AppState,
+    pub async fn create(
+        db: &impl ConnectionTrait,
         input: CreateNotificationInput,
     ) -> Result<Option<NotificationModel>, AppError> {
-        if !Self::preference_enabled(state.db.as_ref(), input.user_id, input.preference_key).await? {
+        if !Self::preference_enabled(db, input.user_id, input.preference_key).await? {
             return Ok(None);
         }
 
@@ -61,14 +42,9 @@ impl NotificationService {
             received_at: Set(None),
             ..Default::default()
         }
-        .insert(state.db.as_ref())
+        .insert(db)
         .await
         .map_err(AppError::Database)?;
-
-        let _ = state.notification_bus.send(NotificationEvent {
-            user_id: input.user_id,
-            notification: notification.clone(),
-        });
 
         Ok(Some(notification))
     }
@@ -152,13 +128,13 @@ impl NotificationService {
     }
 
     pub async fn notify_client_change_request_created(
-        state: &AppState,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         client_id: Uuid,
         change_request: &ClientChangeRequestDetailDto,
-    ) -> Result<(), AppError> {
-        Self::create_and_publish(
-            state,
+    ) -> Result<Option<NotificationModel>, AppError> {
+        Self::create(
+            db,
             Self::change_request_input(
                 user_id,
                 client_id,
@@ -169,19 +145,17 @@ impl NotificationService {
                 "info",
             ),
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 
     pub async fn notify_client_change_request_updated(
-        state: &AppState,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         client_id: Uuid,
         change_request: &ClientChangeRequestDetailDto,
-    ) -> Result<(), AppError> {
-        Self::create_and_publish(
-            state,
+    ) -> Result<Option<NotificationModel>, AppError> {
+        Self::create(
+            db,
             Self::change_request_input(
                 user_id,
                 client_id,
@@ -192,18 +166,16 @@ impl NotificationService {
                 "info",
             ),
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 
     pub async fn notify_client_change_request_decision(
-        state: &AppState,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         client_id: Uuid,
         change_request: &ClientChangeRequestDetailDto,
         approved: bool,
-    ) -> Result<(), AppError> {
+    ) -> Result<Option<NotificationModel>, AppError> {
         let preference_key = if approved {
             "client_portal.change_request_approved"
         } else {
@@ -221,8 +193,8 @@ impl NotificationService {
             )
         };
 
-        Self::create_and_publish(
-            state,
+        Self::create(
+            db,
             Self::change_request_input(
                 user_id,
                 client_id,
@@ -233,19 +205,17 @@ impl NotificationService {
                 if approved { "positive" } else { "warning" },
             ),
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 
     pub async fn notify_client_change_request_cancelled(
-        state: &AppState,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         client_id: Uuid,
         change_request: &ClientChangeRequestDetailDto,
-    ) -> Result<(), AppError> {
-        Self::create_and_publish(
-            state,
+    ) -> Result<Option<NotificationModel>, AppError> {
+        Self::create(
+            db,
             Self::change_request_input(
                 user_id,
                 client_id,
@@ -256,138 +226,154 @@ impl NotificationService {
                 "warning",
             ),
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 
-    pub async fn notify_invoice_opened(state: &AppState, invoice: &InvoiceDetailDto) -> Result<(), AppError> {
-        Self::create_and_publish(
-            state,
+    pub async fn notify_invoice_opened(
+        db: &impl ConnectionTrait,
+        invoice: &InvoiceDetailDto,
+    ) -> Result<Option<NotificationModel>, AppError> {
+        Self::create(
+            db,
             CreateNotificationInput {
                 user_id: invoice.user_id,
                 preference_key: "billing.invoice_opened",
                 title: "notifications.billing.invoiceOpened.title".to_string(),
                 body: Some("notifications.billing.invoiceOpened.body".to_string()),
-                payload: Some(Self::translated_payload(json!({
-                    "route": format!("/invoices/{}", invoice.id),
-                    "invoiceId": invoice.id,
-                    "invoiceRecordNumber": invoice.record_number,
-                    "projectId": invoice.project_id,
-                    "projectName": invoice.project_name,
-                }), "notifications.billing.invoiceOpened.title", "notifications.billing.invoiceOpened.body", json!({
-                    "recordNumber": invoice.record_number,
-                    "amount": invoice.amount,
-                    "currency": invoice.currency_type,
-                }))),
+                payload: Some(Self::translated_payload(
+                    json!({
+                        "route": format!("/invoices/{}", invoice.id),
+                        "invoiceId": invoice.id,
+                        "invoiceRecordNumber": invoice.record_number,
+                        "projectId": invoice.project_id,
+                        "projectName": invoice.project_name,
+                    }),
+                    "notifications.billing.invoiceOpened.title",
+                    "notifications.billing.invoiceOpened.body",
+                    json!({
+                        "recordNumber": invoice.record_number,
+                        "amount": invoice.amount,
+                        "currency": invoice.currency_type,
+                    }),
+                )),
                 severity: "info",
                 source: "invoice",
                 entity_type: Some("invoice"),
                 entity_id: Some(invoice.id),
             },
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 
-    pub async fn notify_invoice_paid(state: &AppState, invoice: &InvoiceDetailDto) -> Result<(), AppError> {
-        Self::create_and_publish(
-            state,
+    pub async fn notify_invoice_paid(
+        db: &impl ConnectionTrait,
+        invoice: &InvoiceDetailDto,
+    ) -> Result<Option<NotificationModel>, AppError> {
+        Self::create(
+            db,
             CreateNotificationInput {
                 user_id: invoice.user_id,
                 preference_key: "billing.invoice_paid",
                 title: "notifications.billing.invoicePaid.title".to_string(),
                 body: Some("notifications.billing.invoicePaid.body".to_string()),
-                payload: Some(Self::translated_payload(json!({
-                    "route": format!("/invoices/{}", invoice.id),
-                    "invoiceId": invoice.id,
-                    "invoiceRecordNumber": invoice.record_number,
-                    "projectId": invoice.project_id,
-                    "projectName": invoice.project_name,
-                }), "notifications.billing.invoicePaid.title", "notifications.billing.invoicePaid.body", json!({
-                    "recordNumber": invoice.record_number,
-                    "amount": invoice.amount,
-                    "currency": invoice.currency_type,
-                }))),
+                payload: Some(Self::translated_payload(
+                    json!({
+                        "route": format!("/invoices/{}", invoice.id),
+                        "invoiceId": invoice.id,
+                        "invoiceRecordNumber": invoice.record_number,
+                        "projectId": invoice.project_id,
+                        "projectName": invoice.project_name,
+                    }),
+                    "notifications.billing.invoicePaid.title",
+                    "notifications.billing.invoicePaid.body",
+                    json!({
+                        "recordNumber": invoice.record_number,
+                        "amount": invoice.amount,
+                        "currency": invoice.currency_type,
+                    }),
+                )),
                 severity: "positive",
                 source: "invoice",
                 entity_type: Some("invoice"),
                 entity_id: Some(invoice.id),
             },
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 
     pub async fn notify_payment_received(
-        state: &AppState,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         payment: &PaymentDetailDto,
-    ) -> Result<(), AppError> {
-        Self::create_and_publish(
-            state,
+    ) -> Result<Option<NotificationModel>, AppError> {
+        Self::create(
+            db,
             CreateNotificationInput {
                 user_id,
                 preference_key: "billing.payment_received",
                 title: "notifications.billing.paymentReceived.title".to_string(),
                 body: Some("notifications.billing.paymentReceived.body".to_string()),
-                payload: Some(Self::translated_payload(json!({
-                    "route": format!("/payments/{}", payment.id),
-                    "paymentId": payment.id,
-                    "paymentRecordNumber": payment.record_number,
-                    "projectId": payment.project_id,
-                    "projectName": payment.project_name,
-                }), "notifications.billing.paymentReceived.title", "notifications.billing.paymentReceived.body", json!({
-                    "recordNumber": payment.record_number,
-                    "amount": payment.amount,
-                    "currency": payment.currency_type,
-                }))),
+                payload: Some(Self::translated_payload(
+                    json!({
+                        "route": format!("/payments/{}", payment.id),
+                        "paymentId": payment.id,
+                        "paymentRecordNumber": payment.record_number,
+                        "projectId": payment.project_id,
+                        "projectName": payment.project_name,
+                    }),
+                    "notifications.billing.paymentReceived.title",
+                    "notifications.billing.paymentReceived.body",
+                    json!({
+                        "recordNumber": payment.record_number,
+                        "amount": payment.amount,
+                        "currency": payment.currency_type,
+                    }),
+                )),
                 severity: "positive",
                 source: "payment",
                 entity_type: Some("payment"),
                 entity_id: Some(payment.id),
             },
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 
     pub async fn notify_milestone_released(
-        state: &AppState,
+        db: &impl ConnectionTrait,
         user_id: Uuid,
         milestone: &crate::entities::milestones::Model,
-    ) -> Result<(), AppError> {
+    ) -> Result<Option<NotificationModel>, AppError> {
         if milestone.status != MilestoneStatus::Released.to_string() {
-            return Ok(());
+            return Ok(None);
         }
 
-        Self::create_and_publish(
-            state,
+        Self::create(
+            db,
             CreateNotificationInput {
                 user_id,
                 preference_key: "work.milestone_released",
                 title: "notifications.work.milestoneReleased.title".to_string(),
                 body: Some("notifications.work.milestoneReleased.body".to_string()),
-                payload: Some(Self::translated_payload(json!({
-                    "route": format!("/milestones/{}", milestone.id),
-                    "milestoneId": milestone.id,
-                    "projectId": milestone.project_id,
-                    "name": milestone.name,
-                }), "notifications.work.milestoneReleased.title", "notifications.work.milestoneReleased.body", json!({
-                    "name": milestone.name,
-                }))),
+                payload: Some(Self::translated_payload(
+                    json!({
+                        "route": format!("/milestones/{}", milestone.id),
+                        "milestoneId": milestone.id,
+                        "projectId": milestone.project_id,
+                        "name": milestone.name,
+                    }),
+                    "notifications.work.milestoneReleased.title",
+                    "notifications.work.milestoneReleased.body",
+                    json!({
+                        "name": milestone.name,
+                    }),
+                )),
                 severity: "positive",
                 source: "milestone",
                 entity_type: Some("milestone"),
                 entity_id: Some(milestone.id),
             },
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 
     async fn preference_enabled(
@@ -419,19 +405,24 @@ impl NotificationService {
             preference_key,
             title: title_key.to_string(),
             body: Some(body_key.to_string()),
-            payload: Some(Self::translated_payload(json!({
-                "route": format!("/change-requests/{}", change_request.id),
-                "changeRequestId": change_request.id,
-                "changeRequestRecordNumber": change_request.record_number,
-                "clientId": client_id,
-                "projectId": change_request.project_id,
-                "projectName": change_request.project_name,
-                "title": change_request.title,
-                "status": change_request.status,
-            }), title_key, body_key, json!({
-                "recordNumber": change_request.record_number,
-                "title": change_request.title,
-            }))),
+            payload: Some(Self::translated_payload(
+                json!({
+                    "route": format!("/change-requests/{}", change_request.id),
+                    "changeRequestId": change_request.id,
+                    "changeRequestRecordNumber": change_request.record_number,
+                    "clientId": client_id,
+                    "projectId": change_request.project_id,
+                    "projectName": change_request.project_name,
+                    "title": change_request.title,
+                    "status": change_request.status,
+                }),
+                title_key,
+                body_key,
+                json!({
+                    "recordNumber": change_request.record_number,
+                    "title": change_request.title,
+                }),
+            )),
             severity,
             source: "client_portal",
             entity_type: Some("change_request"),

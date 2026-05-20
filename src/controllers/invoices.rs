@@ -4,6 +4,7 @@ use axum::{
     response::IntoResponse,
     routing::{get, patch, post},
 };
+use sea_orm::TransactionTrait;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -20,6 +21,7 @@ use crate::{
     middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
     services::{invoices::InvoiceService, notifications::NotificationService},
     state::AppState,
+    utils::notifications::publish_notification,
 };
 
 #[utoipa::path(
@@ -85,7 +87,9 @@ pub(crate) async fn create_invoice(
     user: UserDto,
     ValidatedJson(payload): ValidatedJson<CreateInvoiceDto>,
 ) -> AppResult<impl IntoResponse> {
-    let invoice = InvoiceService::create(state.db.as_ref(), user.id, payload).await?;
+    let tx = state.db.begin().await?;
+    let invoice = InvoiceService::create(&tx, user.id, payload).await?;
+    tx.commit().await?;
     Ok(Json(invoice))
 }
 
@@ -108,7 +112,9 @@ pub(crate) async fn update_invoice(
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<UpdateInvoiceDto>,
 ) -> AppResult<impl IntoResponse> {
-    let invoice = InvoiceService::update(state.db.as_ref(), user.id, id, payload).await?;
+    let tx = state.db.begin().await?;
+    let invoice = InvoiceService::update(&tx, user.id, id, payload).await?;
+    tx.commit().await?;
     Ok(Json(invoice))
 }
 
@@ -134,15 +140,17 @@ pub(crate) async fn update_invoice_status(
     let requested_status = payload.status.clone();
     let invoice = InvoiceService::update_status(state.db.as_ref(), user.id, id, payload).await?;
 
-    let notification_result = match requested_status {
-        InvoiceStatus::Open => NotificationService::notify_invoice_opened(&state, &invoice).await,
-        InvoiceStatus::Paid => NotificationService::notify_invoice_paid(&state, &invoice).await,
-        _ => Ok(()),
+    match requested_status {
+        InvoiceStatus::Open => match NotificationService::notify_invoice_opened(state.db.as_ref(), &invoice).await {
+            Ok(notification) => publish_notification(&state, invoice.user_id, notification),
+            Err(error) => tracing::error!("Failed to create invoice status notification: {}", error),
+        },
+        InvoiceStatus::Paid => match NotificationService::notify_invoice_paid(state.db.as_ref(), &invoice).await {
+            Ok(notification) => publish_notification(&state, invoice.user_id, notification),
+            Err(error) => tracing::error!("Failed to create invoice status notification: {}", error),
+        },
+        _ => {}
     };
-
-    if let Err(error) = notification_result {
-        tracing::error!("Failed to create invoice status notification: {}", error);
-    }
 
     Ok(Json(invoice))
 }

@@ -233,3 +233,17 @@ pub struct UploadedFile {
     pub mime_type: Option<String>,
     pub bytes: Vec<u8>,
 }
+
+pub struct StorageBackedDbWrite<T> {
+    pub value: T,
+    pub storage_keys: Vec<String>,
+}
+
+impl<T> StorageBackedDbWrite<T> {
+    pub fn without_storage(value: T) -> Self {
+        Self {
+            value,
+            storage_keys: Vec::new(),
+        }
+    }
+}
