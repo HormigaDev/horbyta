@@ -570,3 +570,53 @@ impl DashboardService {
         totals
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dtos::project::ProjectStatus;
+    use sea_orm::{DatabaseBackend, MockDatabase, prelude::Decimal};
+    use std::collections::BTreeMap;
+
+    #[tokio::test]
+    async fn client_project_portfolio_accepts_nullable_billing_fields() {
+        let project_id = Uuid::now_v7();
+        let user_id = Uuid::now_v7();
+        let client_id = Uuid::now_v7();
+        let mut row = BTreeMap::new();
+
+        row.insert("project_id", Value::from(project_id));
+        row.insert("project_name", Value::from("Client project"));
+        row.insert("project_status", Value::from(ProjectStatus::Open));
+        row.insert("billable", Value::from(true));
+        row.insert("currency_type", Value::from(Option::<String>::None));
+        row.insert("billing_type", Value::from(Option::<String>::None));
+        row.insert("hourly_rate", Value::from(None::<Decimal>));
+        row.insert("fixed_price", Value::from(None::<Decimal>));
+        row.insert("retainer_amount", Value::from(None::<Decimal>));
+        row.insert("payment_day", Value::from(None::<i16>));
+        row.insert("total_milestones", Value::from(0_i64));
+        row.insert("completed_milestones", Value::from(0_i64));
+        row.insert("overdue_milestones", Value::from(0_i64));
+        row.insert("upcoming_milestones", Value::from(0_i64));
+        row.insert("next_milestone_name", Value::from(Option::<String>::None));
+        row.insert("next_milestone_due_date", Value::from(None::<chrono::NaiveDate>));
+
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![row]])
+            .into_connection();
+
+        let rows = DashboardService::query_client_project_portfolio(
+            &db,
+            user_id,
+            client_id,
+            &ClientProjectPortfolioFiltersDto::default(),
+        )
+        .await
+        .expect("nullable billing fields should not fail to decode");
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].project_id, project_id);
+        assert_eq!(rows[0].billing_type, None);
+    }
+}

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use super::{change_request::ChangeRequestStatus, project::ProjectStatus, project_billing::ProjectBillingType};
+use super::{change_request::ChangeRequestStatus, project::ProjectStatus};
 
 #[derive(Debug, Default, Deserialize, IntoParams)]
 pub struct MonthlyRevenueFiltersDto {
@@ -199,7 +199,7 @@ pub struct ClientProjectPortfolioRow {
     pub project_status: ProjectStatus,
     pub billable: bool,
     pub currency_type: Option<String>,
-    pub billing_type: Option<ProjectBillingType>,
+    pub billing_type: Option<String>,
     pub hourly_rate: Option<Decimal>,
     pub fixed_price: Option<Decimal>,
     pub retainer_amount: Option<Decimal>,
