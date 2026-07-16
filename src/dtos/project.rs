@@ -171,7 +171,7 @@ pub struct CreateProjectDto {
     #[validate(length(min = 1, max = 255, message = "project name must be between 1 and 255 characters"))]
     pub name: String,
 
-    #[validate(length(max = 15000, message = "project description must be at most 15000 characters"))]
+    #[validate(length(max = 100000, message = "project description must be at most 100000 characters"))]
     pub description: Option<String>,
 
     pub category_id: Option<Uuid>,
@@ -189,7 +189,7 @@ pub struct UpdateProjectDto {
     #[validate(length(min = 1, max = 255, message = "project name must be between 1 and 255 characters"))]
     pub name: String,
 
-    #[validate(length(max = 15000, message = "project description must be at most 15000 characters"))]
+    #[validate(length(max = 100000, message = "project description must be at most 100000 characters"))]
     pub description: Option<String>,
 
     pub status: ProjectStatus,

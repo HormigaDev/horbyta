@@ -1226,8 +1226,8 @@ export const messages = {
     'La descripción del hito debe tener máximo 10000 caracteres.',
   'backendErrors.project name must be between 1 and 255 characters':
     'El nombre del proyecto debe tener entre 1 y 255 caracteres.',
-  'backendErrors.project description must be at most 15000 characters':
-    'La descripción del proyecto debe tener máximo 15000 caracteres.',
+  'backendErrors.project description must be at most 100000 characters':
+    'La descripción del proyecto debe tener máximo 100000 caracteres.',
   'backendErrors.task title must be between 1 and 255 characters':
     'El título de la tarea debe tener entre 1 y 255 caracteres.',
   'backendErrors.task description must be at most 15000 characters':

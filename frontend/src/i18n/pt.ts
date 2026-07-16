@@ -1183,8 +1183,8 @@ export const messages: Record<keyof typeof es, string> = {
     'Milestone description must be at most 10000 characters.',
   'backendErrors.project name must be between 1 and 255 characters':
     'Project name must be between 1 and 255 characters.',
-  'backendErrors.project description must be at most 15000 characters':
-    'Project description must be at most 15000 characters.',
+  'backendErrors.project description must be at most 100000 characters':
+    'Project description must be at most 100000 characters.',
   'backendErrors.task title must be between 1 and 255 characters':
     'Task title must be between 1 and 255 characters.',
   'backendErrors.task description must be at most 15000 characters':

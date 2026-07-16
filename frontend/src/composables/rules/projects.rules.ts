@@ -10,7 +10,7 @@ const NAME_RULES: Rule<string>[] = [
 
 const DESCRIPTION_RULES: Rule<string | null>[] = [
   (val: string | null, t) =>
-    val !== null && val.length > 15000 && t('rules.project.description.limit'),
+    val !== null && val.length > 100000 && t('rules.project.description.limit'),
 ];
 
 export const useProjectsRules = () => {
