@@ -2,10 +2,15 @@
 name = "horbyta"
 version = "1.0.0"
 edition = "2024"
+default-run = "horbyta"
 
 [[bin]]
 name = "horbyta"
 path = "src/main.rs"
+
+[[bin]]
+name = "create-user"
+path = "src/bin/create-user.rs"
 
 [dependencies]
 aes-gcm = "0.10.3"
@@ -42,6 +47,7 @@ utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid", "decimal"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
 totp-rs = {version = "5.7.1", features= ["qr", "otpauth", "gen_secret", "zeroize"]}
 constant_time_eq = "0.3.1"
+rpassword = "7.5.4"
 
 [profile.dev]
 debug = 0

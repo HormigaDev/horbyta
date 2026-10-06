@@ -214,6 +214,72 @@ and configure HTTPS for the public domain. Nginx serves the PWA and proxies
 `/api/` and `/ws` to `127.0.0.1:8890`. Back up both PostgreSQL and the local
 attachment directory, or use S3 for attachments.
 
+## Create an Administrator
+
+The auxiliary CLI connects directly to PostgreSQL using `DATABASE_URL` from
+`.env` or the process environment. It creates an **active admin**, independently
+of `ALLOW_REGISTRATION`, and shares the application's validation, uniqueness
+checks and Argon2 password hashing. It does not require JWT configuration or a
+running HTTP server, and never overwrites an existing account.
+
+Interactive mode asks for email and a hidden password with confirmation:
+
+```bash
+cargo run --bin create-user
+```
+
+Arguments are also supported; `--` separates Cargo options from CLI options:
+
+```bash
+cargo run --bin create-user -- admin@example.com 'YourPassword123!' --name 'Admin'
+```
+
+Omit the password argument to prompt for it. The interactive mode keeps the
+password out of command history and the process argument list. The display name
+defaults to the email prefix; use `--name` if that name is already taken.
+Automation can provide one password line via stdin:
+
+```bash
+cargo run --bin create-user -- admin@example.com --password-stdin --name 'Admin'
+```
+
+`cargo run` still starts the backend by default. Invalid input, duplicate
+accounts and database failures return a nonzero exit status. `--help` works
+without database configuration.
+
+## Headless UI Screenshots
+
+`scripts/capture-ui.mjs` uses local Chrome in headless mode through an isolated
+DevTools pipe and temporary browser profile. It opens no visible browser window
+and does not use your personal browser profile. See
+[Chrome's headless documentation](https://developer.chrome.com/docs/automation-and-testing/headless).
+
+Start the backend (`cargo run`) and the independent frontend (`npm run dev` in
+`frontend/`), then run from the repository root:
+
+```bash
+node scripts/capture-ui.mjs http://127.0.0.1:9000
+# Or capture selected routes:
+node scripts/capture-ui.mjs http://127.0.0.1:9000 /tasks /board /settings
+```
+
+Provide `UI_TEST_EMAIL` and `UI_TEST_PASSWORD` in the process environment, or a
+local `target/ui-tests/account.json` file containing `email` and `password`.
+Test credentials must belong to a dedicated account created with the CLI.
+Credentials and screenshots under `target/` are excluded from version control;
+restrict the credentials file to its owner (`chmod 600`).
+
+The script signs in through the login form and captures dashboard, tasks,
+projects, board, new-task form and settings at desktop and mobile sizes. PNGs
+and a report with route, viewport, theme, overflow measurements and runtime/HTTP
+diagnostics are written to `target/ui-tests/screenshots/`. It does not seed
+projects/tasks or change preferences. Chrome's temporary profile is removed
+when the script finishes. No npm automation dependency is required.
+
+Overrides: `CHROME_BIN`, `UI_SCREENSHOT_DIR`. Some restricted environments require
+`CHROME_NO_SANDBOX=1`; ordinary local runs keep Chrome's sandbox enabled.
+`node scripts/capture-ui.mjs --help` lists all options.
+
 ## Running Tests
 
 Backend tests:

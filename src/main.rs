@@ -1,22 +1,8 @@
-pub mod auth;
-pub mod constants;
-pub mod controllers;
-pub mod dtos;
-pub mod entities;
-pub mod env;
-pub mod error;
-pub mod macros;
-pub mod middlewares;
-pub mod services;
-pub mod state;
-pub mod swagger;
-pub mod utils;
-
 use axum::{Router, middleware, routing::get};
 use sea_orm::Database;
 use tracing_subscriber;
 
-use crate::{env::Config, state::AppState};
+use horbyta::{controllers, dtos::user::UserDto, env::Config, middlewares, state::AppState, swagger};
 
 fn main() {
     // Load configuration before starting runtime threads. Exported variables win.
@@ -46,7 +32,7 @@ async fn run() {
     let api_routes = Router::new()
         .route(
             "/health",
-            get(|user: crate::dtos::user::UserDto| async move {
+            get(|user: UserDto| async move {
                 axum::Json(serde_json::json!({
                     "status": "ok",
                     "message": "Horbyta API v1 Operativa",

@@ -5,6 +5,7 @@ use sea_orm::{
 };
 use std::str::FromStr;
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::{
     auth::totp_2fa::{
@@ -31,6 +32,69 @@ use crate::{
 };
 
 pub struct UserService;
+
+#[cfg(test)]
+mod provisioning_tests {
+    use super::*;
+    use sea_orm::{DatabaseBackend, MockDatabase};
+
+    #[tokio::test]
+    async fn invalid_admin_input_never_reaches_the_database_or_exposes_password() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+        let error = UserService::provision_admin(
+            &db,
+            RegisterPayload {
+                name: "UI Tester".into(),
+                email: "tester@example.com".into(),
+                password: "plaintext-invalid".into(),
+            },
+        )
+        .await
+        .err()
+        .expect("Invalid password must be rejected");
+        assert!(matches!(error, AppError::BadRequest(_)));
+        assert!(!error.to_string().contains("plaintext-invalid"));
+        assert!(db.into_transaction_log().is_empty());
+    }
+
+    #[tokio::test]
+    async fn an_existing_email_is_not_overwritten_or_promoted() {
+        let existing: UserModel = serde_json::from_value(serde_json::json!({
+            "id": Uuid::new_v4(),
+            "name": "Existing user",
+            "email": "tester@example.com",
+            "preferences": null,
+            "password_hash": "existing-hash",
+            "role": "user",
+            "status": "active",
+            "two_factor_auth_enabled": false,
+            "two_factor_auth_secret_base32": null,
+            "two_factor_auth_pending_secret_base32": null,
+            "two_factor_auth_last_used_step": null,
+            "two_factor_auth_backup_code_hashes": null,
+            "created_at": Utc::now().fixed_offset(),
+            "updated_at": Utc::now().fixed_offset()
+        }))
+        .unwrap();
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![existing]])
+            .into_connection();
+        let error = UserService::provision_admin(
+            &db,
+            RegisterPayload {
+                name: "UI Tester".into(),
+                email: " TESTER@example.com ".into(),
+                password: "ValidSecret123!".into(),
+            },
+        )
+        .await
+        .err()
+        .expect("Existing email must be rejected");
+        assert!(matches!(error, AppError::Conflict(_)));
+        // Only the lookup runs; no INSERT or UPDATE is attempted.
+        assert_eq!(db.into_transaction_log().len(), 1);
+    }
+}
 
 impl UserService {
     async fn get_user_model(db: &impl ConnectionTrait, user_id: Uuid) -> Result<UserModel, AppError> {
@@ -178,6 +242,35 @@ impl UserService {
             },
         )
         .await
+    }
+
+    /// Provision an active administrator from a trusted local command, without an HTTP session.
+    /// This deliberately shares account normalization, uniqueness checks and password hashing.
+    pub async fn provision_admin(
+        db: &impl ConnectionTrait,
+        mut dto: RegisterPayload,
+    ) -> Result<UserSettingsDto, AppError> {
+        dto.name = dto.name.trim().to_string();
+        dto.email = Self::normalize_email(&dto.email);
+        dto.validate().map_err(|_| {
+            AppError::BadRequest(
+                "Invalid account: use a name of 2–100 characters, a valid email and a password of at least 8 characters with uppercase, lowercase, number and symbol."
+                    .to_string(),
+            )
+        })?;
+
+        let user = Self::create_user(
+            db,
+            NewUserInput {
+                name: dto.name,
+                email: dto.email,
+                password: dto.password,
+                role: UserRole::Admin,
+                status: UserStatus::Active,
+            },
+        )
+        .await?;
+        Ok(user.into())
     }
 
     pub async fn admin_search_users(
