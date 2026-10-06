@@ -18,10 +18,21 @@ use tracing_subscriber;
 
 use crate::{env::Config, state::AppState};
 
-#[tokio::main]
-async fn main() {
+fn main() {
+    // Load configuration before starting runtime threads. Exported variables win.
+    if let Err(error) = dotenvy::dotenv() {
+        if !error.not_found() {
+            panic!("CRITICAL: Could not load .env. Check its syntax and permissions.");
+        }
+    }
     tracing_subscriber::fmt::init();
 
+    tokio::runtime::Runtime::new()
+        .expect("CRITICAL: Could not initialize the async runtime.")
+        .block_on(run());
+}
+
+async fn run() {
     let config = Config::init();
 
     let db = Database::connect(&config.database_url)
@@ -84,5 +95,32 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(&config.app_uri).await.unwrap();
 
     println!("Server running at http(s)://{}", config.app_uri);
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Could not install Ctrl+C handler.");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("Could not install SIGTERM handler.")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
 }

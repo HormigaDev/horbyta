@@ -41,34 +41,20 @@ impl Config {
             )
             .expect("CRITICAL: Invalid format for environment variable TIME_TO_EXP_SESSION."),
 
-            s3_bucket: match env::var("S3_BUCKET") {
-                Ok(var) => Some(var),
-                Err(_) => None,
-            },
-            s3_endpoint: match env::var("S3_ENDPOINT") {
-                Ok(var) => Some(var),
-                Err(_) => None,
-            },
-            s3_region: match env::var("S3_REGION") {
-                Ok(var) => Some(var),
-                Err(_) => None,
-            },
-            s3_access_key: match env::var("S3_ACCESS_KEY") {
-                Ok(var) => Some(var),
-                Err(_) => None,
-            },
-            s3_secret_key: match env::var("S3_SECRET_KEY") {
-                Ok(var) => Some(var),
-                Err(_) => None,
-            },
-            upload_dir: match env::var("UPLOAD_DIR") {
-                Ok(var) => Some(var),
-                Err(_) => None,
-            },
+            s3_bucket: optional_env("S3_BUCKET"),
+            s3_endpoint: optional_env("S3_ENDPOINT"),
+            s3_region: optional_env("S3_REGION"),
+            s3_access_key: optional_env("S3_ACCESS_KEY"),
+            s3_secret_key: optional_env("S3_SECRET_KEY"),
+            upload_dir: optional_env("UPLOAD_DIR"),
             allow_registration: env::var("ALLOW_REGISTRATION")
                 .unwrap_or_else(|_| "false".to_string())
                 .to_lowercase()
                 == "true",
         }
     }
+}
+
+fn optional_env(name: &str) -> Option<String> {
+    env::var(name).ok().filter(|value| !value.trim().is_empty())
 }

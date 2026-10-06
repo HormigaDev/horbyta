@@ -1,41 +1,27 @@
-# Horbyta (frontend)
+# Horbyta frontend
 
-## Install the dependencies
+The Quasar PWA runs independently from the Rust backend during development.
+Install a Node version supported by `package.json` (Node 22.12+ within the 22.x
+series, or a supported newer major) and use npm with the committed lockfile.
 
 ```bash
-yarn
-# or
-npm install
+npm ci
+npm run dev
 ```
 
-### Start the app in development mode (hot-code reloading, error reporting, etc.)
+The dev server runs at `http://localhost:9000` and proxies `/api` and `/ws` to
+`127.0.0.1:8890`. Start the backend with `cargo run` in the repository root in
+another terminal.
 
 ```bash
-quasar dev
-```
-
-### Lint the files
-
-```bash
-yarn lint
-# or
 npm run lint
+npm run build
 ```
 
-### Format the files
+The production build is written to `dist/pwa/`. Deploy it to
+`/opt/horbyta/frontend/dist/pwa/` on the VPS; Nginx serves these files and proxies
+API/WebSocket requests to the backend. See the root README and `nginx/` configs.
 
 ```bash
-yarn format
-# or
 npm run format
 ```
-
-### Build the app for production
-
-```bash
-quasar build
-```
-
-### Customize the configuration
-
-See [Configuring quasar.config.js](https://v2.quasar.dev/quasar-cli-vite/quasar-config-js).

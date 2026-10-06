@@ -7,7 +7,6 @@
 [![ORM: SeaORM](https://img.shields.io/badge/ORM-SeaORM%201.1-darkgreen)](#tech-stack)
 [![Database: PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2016%2B-336791?logo=postgresql&logoColor=white)](#database)
 [![Frontend: Quasar](https://img.shields.io/badge/Frontend-Quasar%20PWA-1976D2?logo=quasar&logoColor=white)](#tech-stack)
-[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](#quick-start)
 [![Tests](https://img.shields.io/badge/Tests-cargo%20test-informational)](#running-tests)
 [![Storage](https://img.shields.io/badge/Storage-Local%20%7C%20S3-lightgrey)](#s3-and-attachments)
 [![Auth](https://img.shields.io/badge/Auth-JWT%20Cookies-purple)](#authentication)
@@ -18,51 +17,46 @@ The core problem it solves is operational fragmentation: freelance work often li
 
 ## Quick Start
 
-The repository is Docker-first. After `.env` is configured and the schema is applied, the one-command app start is:
+The backend runs directly on Linux with Cargo. Install Rust through rustup; the
+repository selects Rust **1.97.1** through `rust-toolchain.toml`. A native build
+also needs a C compiler/linker and `curl` (used to download Swagger UI assets).
+On Debian/Ubuntu, install `build-essential`, `pkg-config`, `curl`, and
+`ca-certificates`. Install a PostgreSQL client to apply the database schema.
+
+On the first checkout:
 
 ```bash
-make setup
-# edit .env
-psql "$DATABASE_URL" -f database/schema.sql
-make prod
+cp .env.template .env
+# Configure DATABASE_URL and both JWT secrets in .env.
+# Apply database/schema.sql to that database with psql once.
 ```
 
-For development container workflow:
+Then, from the repository root:
 
 ```bash
-make setup
-# edit .env
-make dev
-make shell
-cargo run
+cargo check --locked
+cargo build --locked
+cargo run --locked
 ```
 
-`make dev` uses the development compose overlay:
+Plain `cargo check`, `cargo build`, and `cargo run` also work. Compilation does
+not require PostgreSQL or a configured `.env`; running the backend requires a
+reachable PostgreSQL database with the schema applied and valid configuration.
+The app automatically loads `.env`, while exported environment variables take
+precedence. Missing `.env` is allowed when the environment is already configured.
+Empty S3 settings leave local attachment storage enabled.
+
+The frontend runs independently in another terminal:
 
 ```bash
-docker compose --env-file .env -f .docker/docker-compose.yml -f .docker/docker-compose.dev.yml up --build --no-deps horbyta_app -d
+cd frontend
+npm ci
+npm run dev
 ```
 
-`make prod` uses the production compose file:
-
-```bash
-docker compose --env-file .env -f .docker/docker-compose.yml up --build -d
-```
-
-The compose files live under `.docker/`, so plain `docker compose up` from the repository root is not currently the canonical command. Use the Makefile wrappers unless you intentionally pass the `-f .docker/...` files yourself.
-
-Useful Make targets:
-
-```bash
-make help
-make dev
-make prod
-make logs
-make ps
-make shell
-make down
-make clean
-```
+Quasar runs at `http://localhost:9000` and proxies `/api` and `/ws` to the Rust
+backend at `127.0.0.1:8890`. In production, Nginx serves the compiled PWA and
+proxies API/WebSocket requests to the backend.
 
 ## Tech Stack
 
@@ -86,18 +80,18 @@ Frontend:
 
 Infrastructure:
 
-- Docker / Docker Compose
-- Makefile wrappers
+- Native Rust binary supervised by systemd in production
 - Nginx sample config under `nginx/`
-- Static frontend served by the Rust binary in production
+- Static frontend served by Nginx in production
 
 ## Architecture
 
-Horbyta is a single Rust binary plus a compiled Quasar PWA.
+Horbyta is a Rust backend binary plus an independently built Quasar PWA.
 
 Runtime shape:
 
-- `src/main.rs` builds an Axum router under `/api/v1`, exposes `/ws`, and serves `STATIC_DIR` as the frontend fallback.
+- `src/main.rs` builds an Axum router under `/api/v1` and exposes `/ws`.
+- Nginx serves the compiled PWA with a history-mode SPA fallback; the Rust backend does not serve frontend files.
 - Controllers in `src/controllers/` handle HTTP extraction, request parsing, and response shape.
 - Services in `src/services/` own business rules, transactions, multi-tenant scoping, and persistence orchestration.
 - DTOs in `src/dtos/` define API payloads, validation, search fields, and response projections.
@@ -115,7 +109,7 @@ Important flows:
 
 ## Technical Decisions
 
-- **Self-hosted single binary.** The backend serves API, WebSocket, and static PWA assets. This keeps deployment simple for a small VPS.
+- **Self-hosted native backend.** One Rust binary serves the API and WebSocket endpoint. Nginx serves the static PWA assets on the VPS.
 - **PostgreSQL as the source of truth.** Constraints and triggers protect invariants that must survive application bugs, especially billing/payment rules.
 - **Service-layer authorization.** Queries filter by `user_id` and, for the client portal, by both `user_id` and `client_id`.
 - **Separate freelancer/client JWT secrets.** Freelancer and client sessions cannot be used interchangeably.
@@ -169,59 +163,56 @@ Payment rules:
 
 ## Running Locally
 
-1. Create `.env`:
+1. Copy `.env.template` to `.env` if it does not exist. Configure at least
+   `DATABASE_URL`, `JWT_SECRET`, `JWT_SECRET_CLIENT`, and `TIME_TO_EXP_SESSION`.
+   Use the PostgreSQL host reachable from your machine, for example `localhost`.
+2. Apply `database/schema.sql` to the configured database once. With `DATABASE_URL`
+   exported in your shell, run `psql "$DATABASE_URL" -f database/schema.sql`.
+   Cargo loads `.env` for the application; `psql` does not load it automatically.
+3. Run `cargo run` in the repository root.
+4. In another terminal, run `npm ci` and `npm run dev` inside `frontend/`.
+
+Stop the backend with Ctrl+C. The backend also handles SIGTERM for systemd stops.
+The default local attachment directory is `data/storage/`; it is created at
+startup. No frontend build is required to run or check the backend.
+
+## Native VPS Deployment
+
+Build the backend on a compatible Linux system and build the PWA separately:
 
 ```bash
-make setup
-```
-
-2. Edit at least:
-
-```env
-DATABASE_URL=postgresql://development:developer123@host.docker.internal:5434/hormigapm_development
-JWT_SECRET=replace-with-32-plus-random-characters
-JWT_SECRET_CLIENT=replace-with-another-32-plus-random-string
-TIME_TO_EXP_SESSION=7d
-ALLOW_REGISTRATION=true
-```
-
-Use `host.docker.internal` when the app runs inside Docker and PostgreSQL runs on the host. If you apply the schema from the host shell, use the equivalent host URL, for example `postgresql://development:developer123@localhost:5434/hormigapm_development`.
-
-3. Apply schema:
-
-```bash
-psql "$DATABASE_URL" -f database/schema.sql
-```
-
-4. Start backend container:
-
-```bash
-make dev
-make logs
-```
-
-Development compose starts the Rust container in manual/sleep mode. Enter it with:
-
-```bash
-make shell
-cargo run
-```
-
-For a production-style container build:
-
-```bash
-make prod
-```
-
-Manual source build:
-
-```bash
+cargo build --release --locked
 cd frontend
 npm ci
-npx quasar build -m pwa
-cd ..
-cargo run
+npm run build
 ```
+
+Deploy `target/release/horbyta` to `/opt/horbyta/bin/horbyta` and the contents of
+`frontend/dist/pwa/` to `/opt/horbyta/frontend/dist/pwa/`. Neither Rust nor Node
+is required on the VPS when deploying prebuilt artifacts. The binary must match
+the VPS architecture and system-library compatibility; it is not guaranteed to
+be fully statically linked.
+
+A sample service is provided in `deploy/horbyta.service`. Before enabling it:
+
+- Create a dedicated system user and group named `horbyta`.
+- Create `/etc/horbyta/horbyta.env` with the database URL, JWT secrets, session
+  duration, and public `FRONTEND_ORIGIN`. Use production values, including
+  `APP_ENV=production`, `APP_URI=127.0.0.1:8890`, and
+  `UPLOAD_DIR=/var/lib/horbyta/storage`. Restrict access to this file.
+- Ensure PostgreSQL is available and apply the schema before first startup.
+- Install the service file at `/etc/systemd/system/horbyta.service`, then run
+  `sudo systemctl daemon-reload` and `sudo systemctl enable --now horbyta`.
+
+The service creates its persistent storage directory through `StateDirectory`,
+restarts after failures, and sends application logs to the journal:
+`journalctl -u horbyta -f`. Variables in the environment file override the
+service's default environment settings.
+
+Configure Nginx using the files under `nginx/`, replace the domain placeholder,
+and configure HTTPS for the public domain. Nginx serves the PWA and proxies
+`/api/` and `/ws` to `127.0.0.1:8890`. Back up both PostgreSQL and the local
+attachment directory, or use S3 for attachments.
 
 ## Running Tests
 
@@ -254,7 +245,7 @@ npm run lint
 
 ## Environment Variables
 
-All runtime configuration is read from environment variables. `Config::init()` requires the critical values at startup.
+Runtime configuration is read from environment variables, with `.env` loaded at startup without overriding existing variables. `Config::init()` requires the critical values at startup.
 
 | Variable                | Required      | Default                 | Description                                                                |
 | ----------------------- | ------------- | ----------------------- | -------------------------------------------------------------------------- |
@@ -262,10 +253,9 @@ All runtime configuration is read from environment variables. `Config::init()` r
 | `JWT_SECRET`            | yes           | none                    | Secret used to sign freelancer/user JWTs. Use 32+ random chars.            |
 | `JWT_SECRET_CLIENT`     | yes           | none                    | Separate secret for client portal JWTs. Use 32+ random chars.              |
 | `TIME_TO_EXP_SESSION`   | yes           | none                    | Session duration parsed by `duration-str`, e.g. `7d`, `12h`, `30m`.        |
-| `APP_URI`               | no            | `127.0.0.1:8890`        | Address the Rust server binds to. In Docker this is set to `0.0.0.0:8890`. |
-| `APP_ENV`               | no            | `development`           | `production` disables development CORS behavior.                           |
-| `FRONTEND_ORIGIN`       | dev only      | `http://localhost:9000` | Allowed CORS origin outside production.                                    |
-| `STATIC_DIR`            | no            | `frontend/dist/pwa`     | Directory served as the PWA.                                               |
+| `APP_URI`               | no            | `127.0.0.1:8890`        | Address the Rust server binds to; use loopback behind Nginx. |
+| `APP_ENV`               | no            | `development`           | `production` disables Swagger UI; configure the frontend origin for the deployed domain.                           |
+| `FRONTEND_ORIGIN`       | no            | `http://localhost:9000` | Allowed browser origin for CORS and origin checks.                                    |
 | `ALLOW_REGISTRATION`    | no            | `false`                 | Enables public user registration. Turn off after creating the first user.  |
 | `UPLOAD_DIR`            | no            | `./data/storage`        | Local attachment storage path when S3 is not configured.                   |
 | `USER_STORAGE_LIMIT_GB` | no            | `2`                     | Per-user attachment storage cap.                                           |
@@ -275,11 +265,8 @@ All runtime configuration is read from environment variables. `Config::init()` r
 | `S3_ACCESS_KEY`         | no            | unset                   | S3 access key.                                                             |
 | `S3_SECRET_KEY`         | no            | unset                   | S3 secret key.                                                             |
 | `RUST_LOG`              | no            | `info`                  | Logging filter, e.g. `debug`, `info,sqlx=warn`.                            |
-| `RUST_PORT`             | compose       | `8890`                  | Host port used by Docker Compose.                                          |
-| `APP_VERSION`           | compose       | `latest`                | Docker image tag suffix.                                                   |
-| `BINARY_NAME`           | compose/build | `horbyta`               | Binary copied by the production Dockerfile.                                |
 
-`.env.template` includes extra helper values used by compose/development. Variables not read by the Rust app may still be used by Docker or scripts.
+`.env.template` contains application settings. Empty optional S3 values are treated as unset.
 
 ## Authentication
 
@@ -324,7 +311,7 @@ S3-compatible behavior:
 - Set `S3_BUCKET` to enable S3 mode.
 - Set `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`.
 - Set `S3_ENDPOINT` for non-AWS providers such as MinIO, Cloudflare R2, or Backblaze B2.
-- The S3 builder uses `with_allow_http(true)`, which is useful for local MinIO but should be treated carefully in production networks.
+- Plain HTTP S3 endpoints are allowed only outside production; production requires HTTPS.
 
 Attachment safeguards:
 
@@ -390,8 +377,6 @@ The provided config proxies to `127.0.0.1:8890` and includes WebSocket upgrade h
 
 ## Known Limitations
 
-- No root-level `compose.yml`; use `make dev` / `make prod` or pass the `.docker` compose files explicitly.
-- The dev compose service keeps the container alive; it does not automatically run `cargo run`.
 - Database schema is applied manually; there is no migration runner in the app startup path yet.
 - External billing is reference-based only. No Stripe/PayPal/MercadoPago API integration or webhook reconciliation yet.
 - Email delivery for client invites/magic links is not documented as a complete outbound mail pipeline.
@@ -401,7 +386,6 @@ The provided config proxies to `127.0.0.1:8890` and includes WebSocket upgrade h
 
 ## Roadmap
 
-- Root-level Docker Compose profile for true `docker compose up` from the repository root.
 - First-run bootstrap that can apply migrations/schema safely.
 - Proper migration history instead of a single schema file.
 - External billing provider integrations and webhook reconciliation.

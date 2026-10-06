@@ -1,0 +1,27 @@
+[Unit]
+Description=Horbyta API
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=horbyta
+Group=horbyta
+WorkingDirectory=/opt/horbyta
+ExecStart=/opt/horbyta/bin/horbyta
+Environment=APP_ENV=production
+Environment=APP_URI=127.0.0.1:8890
+Environment=UPLOAD_DIR=/var/lib/horbyta/storage
+EnvironmentFile=/etc/horbyta/horbyta.env
+StateDirectory=horbyta/storage
+StateDirectoryMode=0750
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
