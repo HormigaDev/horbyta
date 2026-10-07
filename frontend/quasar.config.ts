@@ -2,7 +2,7 @@ import { defineConfig } from '#q-app/wrappers';
 
 export default defineConfig((/* ctx */) => {
   return {
-    boot: ['i18n'],
+    boot: ['i18n', 'appearance'],
     css: ['app.scss'],
     extras: ['roboto-font', 'material-icons'],
 

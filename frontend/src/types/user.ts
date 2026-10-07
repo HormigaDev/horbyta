@@ -1,3 +1,10 @@
+export type ThemeIdentity = 'orbit' | 'linen' | 'forest';
+export type InterfaceDensity = 'comfortable' | 'compact';
+export interface AppearancePreference {
+  theme_id: ThemeIdentity;
+  density: InterfaceDensity;
+  reduced_motion: boolean;
+}
 export type UserThemePreference = 'system' | 'light' | 'dark';
 export type UserLanguagePreference = 'en' | 'es' | 'pt';
 export type UserDateFormatPreference = 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD';
@@ -43,6 +50,7 @@ export interface PinnedTask {
 }
 
 export interface UserPreferences {
+  appearance?: AppearancePreference;
   theme: UserThemePreference;
   timezone: string;
   date_format: UserDateFormatPreference;
@@ -81,6 +89,7 @@ export interface UpdateUserPasswordDto {
 }
 
 export interface UpdateUserPreferencesDto {
+  appearance?: Partial<AppearancePreference>;
   theme?: UserThemePreference;
   timezone?: string;
   date_format?: UserDateFormatPreference;

@@ -4,14 +4,43 @@
     <title><%= productName %></title>
 
     <meta charset="utf-8" />
+    <meta name="theme-color" content="#eef0f6" />
     <meta name="description" content="<%= productDescription %>" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="msapplication-tap-highlight" content="no" />
     <meta
       name="viewport"
-      content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width<% if (ctx.mode.cordova || ctx.mode.capacitor) { %>, viewport-fit=cover<% } %>"
+      content="initial-scale=1, width=device-width<% if (ctx.mode.cordova || ctx.mode.capacitor) { %>, viewport-fit=cover<% } %>"
     />
 
+    <script>
+      // Anonymous/portal appearance only; account cache is read after authentication.
+      (() => {
+        const portal =
+          location.pathname.startsWith('/client') && !location.pathname.startsWith('/clients');
+        let value = {};
+        try {
+          const saved = JSON.parse(
+            localStorage.getItem('horbyta:appearance:v1:' + (portal ? 'portal' : 'anonymous')) ||
+              'null',
+          );
+          if (saved && saved.version === 1) value = saved.value || {};
+        } catch {
+          /* Storage is optional. */
+        }
+        const dark =
+          value.mode === 'dark' ||
+          (value.mode !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+        const root = document.documentElement;
+        root.dataset.theme = dark ? 'dark' : 'light';
+        root.dataset.themeId = ['orbit', 'linen', 'forest'].includes(value.theme_id)
+          ? value.theme_id
+          : 'orbit';
+        root.dataset.density = value.density === 'compact' ? 'compact' : 'comfortable';
+        root.dataset.motion = value.reduced_motion === true ? 'reduced' : 'system';
+        root.style.colorScheme = root.dataset.theme;
+      })();
+    </script>
     <!-- Inter Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

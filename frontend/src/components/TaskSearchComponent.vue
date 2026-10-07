@@ -5,6 +5,9 @@
     outlined
     dense
     :placeholder="$t('layout.header.searchPlaceholder')"
+    :aria-label="$t('ui.search')"
+    @keydown.down.prevent="focusResult(0)"
+    @keydown.esc="menuOpen = false"
     @update:model-value="onSearch"
   >
     <q-menu
@@ -22,11 +25,14 @@
         </q-item>
 
         <q-item
-          v-for="task in results"
+          v-for="(task, index) in results"
           :key="task.id"
+          :id="`${menuId}-${index}`"
           clickable
           v-close-popup
           @click="selectTask(task)"
+          @keydown.down.prevent="focusResult(index + 1)"
+          @keydown.up.prevent="focusResult(index - 1)"
         >
           <q-item-section>
             <q-item-label> {{ normalizeId(task.record_number) }} - {{ task.title }} </q-item-label>
@@ -48,7 +54,7 @@
 </template>
 <script setup lang="ts">
 import { TasksService } from 'src/services/tasks';
-import { ref } from 'vue';
+import { ref, useId } from 'vue';
 import type { Filter, TaskSummaryDto } from 'src/types';
 import { useRouter } from 'vue-router';
 import { normalizeId } from 'src/utils/normalizeId';
@@ -57,6 +63,12 @@ const search = ref('');
 const results = ref<TaskSummaryDto[]>([]);
 const loading = ref(false);
 const menuOpen = ref(false);
+const menuId = useId();
+const focusResult = (index: number) => {
+  if (!menuOpen.value || !results.value.length) return;
+  const wrapped = (index + results.value.length) % results.value.length;
+  document.getElementById(`${menuId}-${wrapped}`)?.focus();
+};
 
 const router = useRouter();
 
@@ -83,7 +95,7 @@ const onSearch = async (value: string | number | null) => {
       }
     : {
         column: 'title',
-        operator: '<>',
+        operator: '><',
         value: query,
       };
 

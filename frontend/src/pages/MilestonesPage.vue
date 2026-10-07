@@ -9,6 +9,7 @@
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
+      :error="error"
       :filter-schema="milestoneFilterSchema"
       :initial-filters="initialFilters"
       @request="onRequest"
@@ -94,7 +95,7 @@ const {
   }),
 });
 
-const { items, total, isLoading, query, fetch } = useQuery<MilestoneSummaryDto>(
+const { items, total, isLoading, error, query, fetch } = useQuery<MilestoneSummaryDto>(
   MilestonesService.search,
   milestoneFilterSchema,
   10,

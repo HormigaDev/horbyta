@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md row items-start q-col-gutter-md">
+  <q-page class="detail-page q-pa-md row items-start q-col-gutter-md">
     <div class="col-12 col-md-2"></div>
     <div class="col-12 col-md-8">
       <q-card
@@ -15,17 +15,21 @@
               {{ project?.name ? `${project.name}` : t('common.loading') }}
             </div>
             <div class="text-h6 flex items-center" style="color: var(--text-muted)">
-              <q-icon
-                :name="idCopied ? 'check' : 'content_copy'"
+              <q-btn
+                flat
+                round
+                dense
+                :icon="idCopied ? 'check' : 'content_copy'"
                 size="xs"
-                class="q-mr-sm cursor-pointer"
+                class="q-mr-sm"
                 style="color: var(--text-color)"
                 @click="copyToClipboard(project?.record_number.toString() || '')"
+                :aria-label="t('common.copyToClipboard')"
               >
                 <q-tooltip>{{
                   idCopied ? $t('common.copied') : $t('common.copyToClipboard')
                 }}</q-tooltip>
-              </q-icon>
+              </q-btn>
               {{ project ? normalizeId(project.record_number) : '' }}
             </div>
           </div>
@@ -60,7 +64,7 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
             {{ t('projects.detail.billingTitle') }}
           </div>
 
@@ -154,7 +158,7 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
             {{ t('projects.detail.descriptionTitle') }}
           </div>
           <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
@@ -173,11 +177,18 @@
       >
         <q-card-section>
           <div class="row items-center justify-between q-mb-sm">
-            <div class="text-subtitle1 text-weight-bold" style="color: var(--q-primary)">
+            <div class="text-subtitle1 text-weight-bold" style="color: var(--text-accent)">
               {{ t('attachments.table.title') }}
             </div>
 
-            <q-btn flat round dense icon="refresh" @click="fetchAttachments">
+            <q-btn
+              flat
+              round
+              dense
+              icon="refresh"
+              :aria-label="t('common.refresh')"
+              @click="fetchAttachments"
+            >
               <q-tooltip>{{ t('common.refresh') }}</q-tooltip>
             </q-btn>
           </div>

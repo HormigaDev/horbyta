@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md row items-start q-col-gutter-md">
+  <q-page class="detail-page q-pa-md row items-start q-col-gutter-md">
     <div class="col-12 col-md-2"></div>
     <div class="col-12 col-md-8">
       <q-card
@@ -34,7 +34,7 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
             {{ $t('clients.detail.specsTitle') }}
           </div>
 
@@ -74,7 +74,7 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-sm text-weight-bold" style="color: var(--q-primary)">
+          <div class="text-subtitle1 q-mb-sm text-weight-bold" style="color: var(--text-accent)">
             {{ t('clients.detail.auth.title') }}
           </div>
           <div class="text-caption q-mb-md" style="color: var(--text-muted)">
@@ -248,7 +248,7 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
             {{ $t('clients.detail.notesTitle') }}
           </div>
           <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">

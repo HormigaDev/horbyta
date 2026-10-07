@@ -208,7 +208,9 @@ export function useUI() {
       type,
       position: 'top-right',
       timeout: 2500,
-      actions: [{ icon: 'close', color: 'white', round: true, size: 'sm' }],
+      actions: [
+        { icon: 'close', 'aria-label': t('common.close'), color: 'white', round: true, size: 'sm' },
+      ],
     });
   };
 
@@ -221,7 +223,13 @@ export function useUI() {
         handler: () => showErrorDialog(payload),
       });
     }
-    actionList.push({ icon: 'close', color: 'white', round: true, size: 'sm' });
+    actionList.push({
+      icon: 'close',
+      'aria-label': t('common.close'),
+      color: 'white',
+      round: true,
+      size: 'sm',
+    });
 
     $q.notify({
       message,
@@ -270,7 +278,13 @@ export function useUI() {
           handler: () => showErrorDialog(technicalPayload),
         });
       }
-      actionList.push({ icon: 'close', color: 'white', round: true, size: 'sm' });
+      actionList.push({
+        icon: 'close',
+        'aria-label': t('common.close'),
+        color: 'white',
+        round: true,
+        size: 'sm',
+      });
 
       notificationsStore.addNotification({
         source: 'sync',
@@ -282,7 +296,7 @@ export function useUI() {
         message: finalMessage,
         type: 'negative',
         position: 'top-right',
-        timeout: 2500,
+        timeout: 0,
         actions: actionList,
       });
     }
@@ -291,8 +305,8 @@ export function useUI() {
   const confirmAction = ({
     title,
     message,
-    okLabel = 'Confirmar',
-    cancelLabel = 'Cancelar',
+    okLabel = t('ui.confirm'),
+    cancelLabel = t('common.cancel'),
     okColor = 'primary',
   }: ConfirmActionOptions) => {
     return new Promise<boolean>((resolve) => {
@@ -316,16 +330,16 @@ export function useUI() {
     });
   };
 
-  const confirmDelete = (itemName: string = 'este registro') => {
+  const confirmDelete = (itemName: string = t('ui.record')) => {
     return confirmAction({
-      title: 'Confirmar Eliminación',
-      message: `¿Estás seguro de que deseas eliminar ${itemName}? Esta acción no se puede deshacer.`,
-      okLabel: 'Eliminar',
+      title: t('ui.deleteTitle'),
+      message: t('ui.deleteMessage', { name: itemName }),
+      okLabel: t('common.delete'),
       okColor: 'negative',
     });
   };
 
-  const showLoading = (message: string = 'Procesando datos...') => {
+  const showLoading = (message: string = t('ui.processing')) => {
     $q.loading.show({
       message,
       spinnerColor: 'primary',

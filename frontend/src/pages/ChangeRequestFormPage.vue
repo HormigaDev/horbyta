@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="form-page q-pa-md">
     <div class="padding-page">
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
@@ -154,12 +154,13 @@
         </q-card-section>
       </q-card>
 
-      <div class="row justify-end q-gutter-sm">
+      <div class="row justify-end q-gutter-sm form-actions">
         <q-btn
           v-if="!isFormLocked"
           flat
           round
           icon="push_pin"
+          :aria-label="t('common.keepFormOpen')"
           :color="pinButtonColor"
           :aria-pressed="stayOnFormAfterSave"
           @click="stayOnFormAfterSave = !stayOnFormAfterSave"
@@ -181,6 +182,7 @@
 </template>
 
 <script setup lang="ts">
+import { useFormSession } from 'src/composables/useFormSession';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -501,6 +503,20 @@ const hasValidationErrors = () => {
   );
 };
 
+const formSession = useFormSession(
+  () => ({ ...form }),
+  (draft) => {
+    Object.assign(form, draft);
+  },
+  {
+    formKey: 'changerequest',
+    enabled: () => !isSubmitting.value,
+    extraDirty: () =>
+      clientRequestMarkdownFiles.value.length > 0 ||
+      technicalAssessmentMarkdownFiles.value.length > 0,
+  },
+);
+
 const saveChangeRequest = async () => {
   hasAttemptedSubmit.value = true;
 
@@ -515,8 +531,12 @@ const saveChangeRequest = async () => {
       });
 
       notify(t('changeRequests.form.updateSuccess'), 'positive');
+      formSession.markSaved();
       await handlePinnedSaveSuccess({
-        reset: resetChangeRequestForm,
+        reset: async () => {
+          await resetChangeRequestForm();
+          formSession.markSaved();
+        },
         redirect: () => router.push(`/change-requests/${changeRequestId.value}`),
       });
     } catch (err: unknown) {
@@ -553,8 +573,12 @@ const saveChangeRequest = async () => {
 
       const created = await ChangeRequestsService.create(payload, markdownFiles);
       notify(t('changeRequests.form.createSuccess'), 'positive');
+      formSession.markSaved();
       await handlePinnedSaveSuccess({
-        reset: resetChangeRequestForm,
+        reset: async () => {
+          await resetChangeRequestForm();
+          formSession.markSaved();
+        },
         redirect: () => router.push(`/change-requests/${created.id}`),
       });
     } else {
@@ -575,8 +599,12 @@ const saveChangeRequest = async () => {
 
       await ChangeRequestsService.update(changeRequestId.value, payload, markdownFiles);
       notify(t('changeRequests.form.updateSuccess'), 'positive');
+      formSession.markSaved();
       await handlePinnedSaveSuccess({
-        reset: resetChangeRequestForm,
+        reset: async () => {
+          await resetChangeRequestForm();
+          formSession.markSaved();
+        },
         redirect: () => router.push(`/change-requests/${changeRequestId.value}`),
       });
     }
@@ -588,9 +616,9 @@ const saveChangeRequest = async () => {
   }
 };
 
-onMounted(() => {
-  void loadProjectsByTerm('');
-  void loadClientsByTerm('');
-  void loadChangeRequest();
+onMounted(async () => {
+  await Promise.all([loadProjectsByTerm(''), loadClientsByTerm('')]);
+  await loadChangeRequest();
+  await formSession.initialize();
 });
 </script>

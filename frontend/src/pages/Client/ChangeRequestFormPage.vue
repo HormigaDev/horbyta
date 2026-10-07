@@ -1,17 +1,17 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="form-page q-pa-md">
     <div>
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
-          <div class="text-h6">
+          <h1 class="text-h6 q-ma-none">
             {{
               isNew
                 ? t('client.changeRequests.form.createTitle')
                 : t('client.changeRequests.form.editTitle')
             }}
-          </div>
+          </h1>
           <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
-            {{ t('changeRequests.form.versionLabel', { version: form.version }) }}
+            {{ t('changeRequests.form.versionLabel') }} · {{ form.version }}
           </div>
         </q-card-section>
 
@@ -43,8 +43,8 @@
         </q-card-section>
 
         <q-card-section v-if="isLocked" class="q-pt-none">
-          <q-banner class="text-warning" style="border: 1px solid var(--border-color)">
-            {{ t('client.changeRequests.form.editLockedAssessed') }}
+          <q-banner class="request-readonly-note">
+            {{ t('ui.requestLocked') }}
           </q-banner>
         </q-card-section>
       </q-card>
@@ -55,17 +55,18 @@
             {{ t('client.changeRequests.form.clientRequestTitle') }}
           </div>
           <div class="row q-col-gutter-md" style="min-height: 42vh">
-            <div class="col-12 col-md-6">
-              <MarkdownRenderer
-                v-model="clientRequestMarkdown"
-                :edit-mode="true"
-              />
+            <div :class="isLocked ? 'col-12' : 'col-12 col-md-6'">
+              <MarkdownRenderer v-model="clientRequestMarkdown" :edit-mode="!isLocked" />
               <div v-if="hasClientRequestError" class="text-negative text-caption q-mt-xs">
                 {{ t('client.changeRequests.form.clientRequestTitle') }}
               </div>
             </div>
 
-            <div class="col-12 col-md-6" style="display: flex; flex-direction: column">
+            <div
+              v-if="!isLocked"
+              class="col-12 col-md-6"
+              style="display: flex; flex-direction: column"
+            >
               <div
                 class="bordered rounded-borders q-pa-md full-height"
                 style="
@@ -90,7 +91,7 @@
         </q-card-section>
       </q-card>
 
-      <div class="row justify-end q-gutter-sm">
+      <div class="row justify-end q-gutter-sm form-actions">
         <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
         <q-btn
           v-if="!isLocked"
@@ -106,6 +107,8 @@
 </template>
 
 <script setup lang="ts">
+import { useFormSession } from 'src/composables/useFormSession';
+import { useClientAuthStore } from 'src/stores/clientAuth';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -149,6 +152,17 @@ const form = reactive<ClientChangeRequestFormState>({
   client_request_description: '',
   status: 'draft',
 });
+
+const clientAuth = useClientAuthStore();
+const session = useFormSession(
+  () => ({ ...form }),
+  (draft) => Object.assign(form, draft),
+  {
+    formKey: 'client-change-request',
+    identity: `client:${clientAuth.client?.user_id}:${clientAuth.client?.client_id}`,
+    enabled: () => !isSubmitting.value && !isLocked.value,
+  },
+);
 
 const isLocked = computed(() => {
   if (isNew.value) return false;
@@ -253,6 +267,7 @@ const saveChangeRequest = async () => {
       };
 
       const created = await ClientChangeRequestsService.create(payload);
+      session.markSaved();
       notify(t('client.changeRequests.form.createSuccess'), 'positive');
       void router.push(`/client/change-requests/${created.id}`);
       return;
@@ -265,6 +280,7 @@ const saveChangeRequest = async () => {
     };
 
     await ClientChangeRequestsService.update(changeRequestId.value, payload);
+    session.markSaved();
     notify(t('client.changeRequests.form.updateSuccess'), 'positive');
     void router.push(`/client/change-requests/${changeRequestId.value}`);
   } catch (err: unknown) {
@@ -275,8 +291,17 @@ const saveChangeRequest = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   void loadProjectsByTerm('');
-  void loadChangeRequest();
+  await loadChangeRequest();
+  if (!isLocked.value) await session.initialize();
 });
 </script>
+
+<style scoped>
+.request-readonly-note {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border-radius: var(--radius-control);
+}
+</style>

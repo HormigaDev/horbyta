@@ -6,6 +6,14 @@
     auto-height
     :filters-title="t('dashboard.filters.clientChangeRequestStatus.title')"
     :open="state.dialogOpen.value"
+    :loading="state.isLoading.value"
+    :error="!!state.loadError.value"
+    :filter-count="
+      Object.values(state.appliedFilters).filter(
+        (value) => value !== null && value !== undefined && value !== '',
+      ).length
+    "
+    @retry="state.refetch().catch(() => {})"
     @open="state.openDialog"
     @close="state.dialogOpen.value = false"
     @apply="onApply"
@@ -97,7 +105,7 @@ const defaults = (): ClientChangeRequestStatusFiltersDto => ({
 const state = useChartCardState<ClientChangeRequestStatusFiltersDto, ClientChangeRequestStatusRow>({
   defaults,
   fetchRows: (filters) => ClientDashboardService.getChangeRequestStatus(filters),
-  initialRows: props.initialRows,
+  initialRows: () => props.initialRows,
 });
 
 const {

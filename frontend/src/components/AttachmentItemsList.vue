@@ -15,7 +15,7 @@
           </q-item-section>
 
           <q-item-section>
-            <q-item-label lines="1">{{ item.name }}</q-item-label>
+            <q-item-label class="attachment-name" :title="item.name">{{ item.name }}</q-item-label>
             <q-item-label caption>{{ item.sizeLabel }}</q-item-label>
           </q-item-section>
 
@@ -73,7 +73,11 @@ const onItemClick = (itemId: string) => {
 
 <style scoped>
 .attachment-item {
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
+}
+
+.attachment-name {
+  overflow-wrap: anywhere;
 }
 
 .attachment-item--clickable:hover {

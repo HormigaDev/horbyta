@@ -1,30 +1,31 @@
 <template>
   <q-page class="q-pa-md dashboard-page">
-    <div class="dashboard-header q-mb-md">
-      <div>
-        <div class="text-h5 text-weight-bold">{{ t('dashboard.title') }}</div>
-        <div class="text-caption text-muted">{{ t('dashboard.subtitle') }}</div>
-      </div>
-      <q-btn
-        flat
-        dense
-        icon="refresh"
-        :label="t('dashboard.refresh')"
-        :loading="isLoading"
-        @click="fetchDashboard"
-      />
-    </div>
+    <PageHeader
+      :title="t('dashboard.title')"
+      :subtitle="t('dashboard.subtitle')"
+      :eyebrow="t('ui.workspace')"
+    >
+      <template #actions
+        ><q-btn
+          outline
+          color="primary"
+          icon="refresh"
+          :label="t('dashboard.refresh')"
+          :loading="isLoading"
+          @click="fetchDashboard"
+      /></template>
+    </PageHeader>
 
     <div v-if="isLoading && !data" class="flex flex-center q-py-xl">
       <q-spinner color="primary" size="32px" />
       <span class="q-ml-sm text-muted">{{ t('dashboard.loading') }}</span>
     </div>
 
-    <div v-else-if="loadError" class="text-center q-py-xl text-negative">
-      {{ t('dashboard.error') }}
-    </div>
+    <EmptyState v-if="loadError" error :title="t('dashboard.error')"
+      ><q-btn outline color="primary" :label="t('ui.retry')" @click="fetchDashboard"
+    /></EmptyState>
 
-    <template v-else-if="data">
+    <template v-if="data">
       <div class="row q-col-gutter-md">
         <div class="col-12 col-sm-6 col-md-4">
           <DashboardKpiCard
@@ -51,6 +52,8 @@
           <DashboardKpiCard
             :title="t('dashboard.kpi.accountsReceivable.title')"
             :caption="t('dashboard.kpi.accountsReceivable.caption')"
+            action-to="/invoices"
+            :action-label="t('layout.drawer.invoices')"
             icon="request_quote"
             variant="warning"
           >
@@ -72,6 +75,8 @@
           <DashboardKpiCard
             :title="t('dashboard.kpi.overdueTasks.title')"
             :caption="t('dashboard.kpi.overdueTasks.caption')"
+            action-to="/tasks"
+            :action-label="t('layout.drawer.tasks')"
             icon="schedule"
             :variant="data.kpis.overdue_tasks_total > 0 ? 'negative' : 'muted'"
           >
@@ -86,6 +91,7 @@
         </div>
       </div>
 
+      <div class="dashboard-section-heading">{{ t('ui.trends') }}</div>
       <div class="row q-col-gutter-md q-mt-sm">
         <div class="col-12 col-md-8">
           <MonthlyRevenueCard
@@ -112,6 +118,7 @@
         </div>
       </div>
 
+      <div class="dashboard-section-heading">{{ t('ui.attention') }}</div>
       <div class="row q-col-gutter-md q-mt-sm">
         <div class="col-12 col-md-7">
           <TaskBottlenecksCard :initial-rows="data.task_bottlenecks" />
@@ -126,6 +133,8 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from 'src/components/PageHeader.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import { defineAsyncComponent, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 

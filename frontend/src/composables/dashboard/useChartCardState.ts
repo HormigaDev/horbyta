@@ -3,7 +3,7 @@ import { reactive, ref, watch } from 'vue';
 interface UseChartCardStateOptions<TFilters extends object, TRow> {
   defaults: () => TFilters;
   fetchRows: (filters: TFilters) => Promise<TRow[]>;
-  initialRows?: TRow[] | null;
+  initialRows?: (() => TRow[]) | TRow[] | null;
   initialFilters?: TFilters | null;
 }
 
@@ -24,7 +24,9 @@ export interface ChartCardState<TFilters extends object, TRow> {
 export function useChartCardState<TFilters extends object, TRow>(
   options: UseChartCardStateOptions<TFilters, TRow>,
 ): ChartCardState<TFilters, TRow> {
-  const rows = ref<TRow[]>(options.initialRows ?? []) as { value: TRow[] };
+  const initialRows = () =>
+    typeof options.initialRows === 'function' ? options.initialRows() : options.initialRows;
+  const rows = ref<TRow[]>(initialRows() ?? []) as { value: TRow[] };
   const appliedFilters = reactive<TFilters>(
     options.initialFilters ? { ...options.initialFilters } : options.defaults(),
   ) as TFilters;
@@ -40,18 +42,26 @@ export function useChartCardState<TFilters extends object, TRow>(
     Object.assign(target, source);
   };
 
-  const refetch = async () => {
+  let requestId = 0;
+  const fetchCandidate = async (candidate: TFilters) => {
+    const id = ++requestId;
     isLoading.value = true;
     loadError.value = null;
     try {
-      const data = await options.fetchRows({ ...appliedFilters });
+      const data = await options.fetchRows({ ...candidate });
+      if (id !== requestId) return false;
       rows.value = data;
+      return true;
     } catch (error) {
-      loadError.value = error instanceof Error ? error.message : 'Unknown error';
+      if (id === requestId)
+        loadError.value = error instanceof Error ? error.message : 'Unknown error';
       throw error;
     } finally {
-      isLoading.value = false;
+      if (id === requestId) isLoading.value = false;
     }
+  };
+  const refetch = async () => {
+    await fetchCandidate({ ...appliedFilters });
   };
 
   const openDialog = () => {
@@ -60,31 +70,32 @@ export function useChartCardState<TFilters extends object, TRow>(
   };
 
   const applyDraft = async () => {
-    assign(appliedFilters, { ...draftFilters });
-    dialogOpen.value = false;
-    await refetch();
+    const candidate = { ...draftFilters };
+    if (await fetchCandidate(candidate)) {
+      assign(appliedFilters, candidate);
+      dialogOpen.value = false;
+    }
   };
 
   const resetDraft = async () => {
     const fresh = options.defaults();
-    assign(draftFilters, fresh);
-    assign(appliedFilters, fresh);
-    dialogOpen.value = false;
-    await refetch();
+    if (await fetchCandidate(fresh)) {
+      assign(draftFilters, fresh);
+      assign(appliedFilters, fresh);
+      dialogOpen.value = false;
+    }
   };
 
   const setRows = (next: TRow[]) => {
     rows.value = next;
   };
 
-  watch(
-    () => options.initialRows,
-    (next) => {
-      if (next) {
-        rows.value = next;
-      }
-    },
-  );
+  watch(initialRows, (next) => {
+    if (next) {
+      if (JSON.stringify(appliedFilters) === JSON.stringify(options.defaults())) rows.value = next;
+      else void refetch().catch(() => {});
+    }
+  });
 
   return {
     rows,

@@ -47,4 +47,5 @@ export function useUnsavedChanges(isDirty: () => boolean) {
       resolveLeave.value = null;
     }
   });
+  return { confirmLeave: () => (isDirty() ? promptUnsaved() : Promise.resolve(true)) };
 }

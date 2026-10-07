@@ -1,121 +1,117 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
-    <q-page-container>
-      <q-page class="flex flex-center">
-        <q-card class="q-pa-md shadow-2" style="width: 100%; max-width: 400px">
-          <q-card-section class="flex items-center justify-center">
-            <q-img width="100px" height="100px" src="/logo.png" alt="Horbyta Logo" />
-          </q-card-section>
+  <AuthFrame
+    :title="t('auth.login.submit')"
+    :subtitle="isTwoFactorStep ? t('auth.login.twoFactorSubtitle') : t('auth.login.subtitle')"
+  >
+    <q-card-section>
+      <q-form @submit.prevent="handleLogin" class="q-gutter-md">
+        <q-input
+          v-if="!isTwoFactorStep"
+          v-model="email"
+          type="email"
+          name="email"
+          autocomplete="username"
+          autocapitalize="none"
+          spellcheck="false"
+          autofocus
+          :label="t('auth.login.emailLabel')"
+          outlined
+          dense
+          no-error-icon
+          :error="loginRules.emailRuleState.value.error"
+          :error-message="loginRules.emailRuleState.value.message"
+        >
+          <template #append>
+            <q-icon name="emergency" style="font-size: 12px" />
+          </template>
+        </q-input>
+        <q-input
+          v-if="!isTwoFactorStep"
+          v-model="password"
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          :label="t('auth.login.passwordLabel')"
+          outlined
+          dense
+          no-error-icon
+          :error="loginRules.passwordRuleState.value.error"
+          :error-message="loginRules.passwordRuleState.value.message"
+        >
+          <template #append>
+            <q-icon name="emergency" style="font-size: 12px" />
+          </template>
+        </q-input>
 
-          <q-card-section class="text-center">
-            <div class="text-h5 text-weight-bold">{{ t('auth.login.brand') }}</div>
-            <div class="text-subtitle2 text-grey-7">
-              {{ isTwoFactorStep ? t('auth.login.twoFactorSubtitle') : t('auth.login.subtitle') }}
-            </div>
-          </q-card-section>
+        <template v-if="isTwoFactorStep">
+          <q-tabs v-model="twoFactorMode" dense align="justify" narrow-indicator>
+            <q-tab name="totp" icon="password" :label="t('auth.login.twoFactorTab')" />
+            <q-tab name="backup" icon="vpn_key" :label="t('auth.login.backupCodeTab')" />
+          </q-tabs>
 
-          <q-card-section>
-            <q-form @submit.prevent="handleLogin" class="q-gutter-md">
-              <q-input
-                v-if="!isTwoFactorStep"
-                v-model="email"
-                type="email"
-                :label="t('auth.login.emailLabel')"
-                outlined
-                dense
-                no-error-icon
-                autocomplete="off"
-                :error="loginRules.emailRuleState.value.error"
-                :error-message="loginRules.emailRuleState.value.message"
-              >
-                <template #append>
-                  <q-icon name="emergency" style="font-size: 12px" />
-                </template>
-              </q-input>
-              <q-input
-                v-if="!isTwoFactorStep"
-                v-model="password"
-                type="password"
-                :label="t('auth.login.passwordLabel')"
-                outlined
-                dense
-                no-error-icon
-                autocomplete="off"
-                :error="loginRules.passwordRuleState.value.error"
-                :error-message="loginRules.passwordRuleState.value.message"
-              >
-                <template #append>
-                  <q-icon name="emergency" style="font-size: 12px" />
-                </template>
-              </q-input>
+          <q-input
+            v-if="twoFactorMode === 'totp'"
+            v-model="twoFactorCode"
+            name="totp"
+            autofocus
+            :label="t('auth.login.twoFactorCodeLabel')"
+            outlined
+            dense
+            no-error-icon
+            autocomplete="one-time-code"
+            inputmode="numeric"
+            maxlength="8"
+          />
 
-              <template v-if="isTwoFactorStep">
-                <q-tabs v-model="twoFactorMode" dense align="justify" narrow-indicator>
-                  <q-tab name="totp" icon="password" :label="t('auth.login.twoFactorTab')" />
-                  <q-tab name="backup" icon="vpn_key" :label="t('auth.login.backupCodeTab')" />
-                </q-tabs>
+          <q-input
+            v-else
+            v-model="backupCode"
+            name="backup-code"
+            autofocus
+            :label="t('auth.login.backupCodeLabel')"
+            outlined
+            dense
+            no-error-icon
+            autocomplete="one-time-code"
+          />
+        </template>
 
-                <q-input
-                  v-if="twoFactorMode === 'totp'"
-                  v-model="twoFactorCode"
-                  :label="t('auth.login.twoFactorCodeLabel')"
-                  outlined
-                  dense
-                  no-error-icon
-                  autocomplete="one-time-code"
-                  inputmode="numeric"
-                  maxlength="8"
-                />
+        <div v-if="errorMessage" role="alert" class="text-negative text-center text-caption">
+          {{ errorMessage }}
+        </div>
 
-                <q-input
-                  v-else
-                  v-model="backupCode"
-                  :label="t('auth.login.backupCodeLabel')"
-                  outlined
-                  dense
-                  no-error-icon
-                  autocomplete="one-time-code"
-                />
-              </template>
+        <q-btn
+          v-if="isTwoFactorStep"
+          flat
+          color="primary"
+          class="full-width"
+          :label="t('auth.login.backToCredentials')"
+          @click="resetTwoFactorStep"
+        />
 
-              <div v-if="errorMessage" class="text-negative text-center text-caption">
-                {{ errorMessage }}
-              </div>
+        <div>
+          <q-btn
+            :label="isTwoFactorStep ? t('auth.login.verifyTwoFactor') : t('auth.login.submit')"
+            type="submit"
+            unelevated
+            color="primary"
+            class="full-width"
+            :loading="isLoading"
+          />
+        </div>
+      </q-form>
+    </q-card-section>
 
-              <q-btn
-                v-if="isTwoFactorStep"
-                flat
-                color="primary"
-                class="full-width"
-                :label="t('auth.login.backToCredentials')"
-                @click="resetTwoFactorStep"
-              />
-
-              <div>
-                <q-btn
-                  :label="isTwoFactorStep ? t('auth.login.verifyTwoFactor') : t('auth.login.submit')"
-                  type="submit"
-                  color="primary"
-                  class="full-width"
-                  :loading="isLoading"
-                />
-              </div>
-            </q-form>
-          </q-card-section>
-
-          <q-card-section v-if="registrationOpen" class="text-center q-pt-none">
-            <span class="text-caption text-grey-7">{{ t('auth.login.noAccount') }} </span>
-            <router-link to="/register" class="q-ml-sm text-caption text-primary">
-              {{ t('auth.login.registerLink') }}
-            </router-link>
-          </q-card-section>
-        </q-card>
-      </q-page>
-    </q-page-container>
-  </q-layout>
+    <q-card-section v-if="registrationOpen" class="text-center q-pt-none">
+      <span class="text-caption text-grey-7">{{ t('auth.login.noAccount') }} </span>
+      <router-link to="/register" class="q-ml-sm text-caption text-primary">
+        {{ t('auth.login.registerLink') }}
+      </router-link>
+    </q-card-section>
+  </AuthFrame>
 </template>
-
 <script setup lang="ts">
+import AuthFrame from 'src/components/AuthFrame.vue';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -155,7 +151,10 @@ async function handleLogin() {
   isLoading.value = true;
   errorMessage.value = '';
 
-  if (!isTwoFactorStep.value && (loginRules.validateEmail(email.value) || loginRules.validatePassword(password.value))) {
+  if (
+    !isTwoFactorStep.value &&
+    (loginRules.validateEmail(email.value) || loginRules.validatePassword(password.value))
+  ) {
     isLoading.value = false;
     password.value = '';
     return;
@@ -210,7 +209,8 @@ async function handleLogin() {
       errorMessage.value = '';
     } else if (
       isApiHttpError(error) &&
-      (error.type === 'invalid_two_factor_auth_code' || error.type === 'replayed_two_factor_auth_code')
+      (error.type === 'invalid_two_factor_auth_code' ||
+        error.type === 'replayed_two_factor_auth_code')
     ) {
       errorMessage.value = t('auth.login.invalidTwoFactorError');
     } else if (isApiHttpError(error) && error.status === 429) {

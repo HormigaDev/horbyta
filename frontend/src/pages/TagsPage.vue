@@ -9,6 +9,7 @@
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
+      :error="error"
       :filter-schema="tagFilterSchema"
       hide-view
       @request="onRequest"
@@ -57,7 +58,7 @@ const tagFilterSchema: FilterSchema = {
   name: 'Text',
 };
 
-const { items, total, isLoading, query, fetch } = useQuery(
+const { items, total, isLoading, error, query, fetch } = useQuery(
   TagsService.search,
   tagFilterSchema,
   10,

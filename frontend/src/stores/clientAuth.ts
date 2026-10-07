@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { ClientAuthService } from 'src/services/clientAuth';
+import { useDataTableStore } from 'src/stores/datatable';
 import type {
   ClientAuthIdentity,
   ClientLoginPayload,
@@ -13,14 +14,22 @@ const PORTAL_USER_ID_STORAGE_KEY = 'client_portal_user_id';
 const readStoredPortalUserId = (): string | null => {
   if (typeof window === 'undefined') return null;
 
-  const value = window.localStorage.getItem(PORTAL_USER_ID_STORAGE_KEY)?.trim();
-  return value && value.length > 0 ? value : null;
+  try {
+    const value = window.localStorage.getItem(PORTAL_USER_ID_STORAGE_KEY)?.trim();
+    return value && value.length > 0 ? value : null;
+  } catch {
+    return null;
+  }
 };
 
 const writeStoredPortalUserId = (userId: string) => {
   if (typeof window === 'undefined') return;
 
-  window.localStorage.setItem(PORTAL_USER_ID_STORAGE_KEY, userId);
+  try {
+    window.localStorage.setItem(PORTAL_USER_ID_STORAGE_KEY, userId);
+  } catch {
+    /* Storage is optional. */
+  }
 };
 
 export const useClientAuthStore = defineStore('clientAuth', () => {
@@ -40,6 +49,11 @@ export const useClientAuthStore = defineStore('clientAuth', () => {
   function setAuthenticated(status: boolean, clientData?: ClientAuthIdentity) {
     isAuthenticated.value = status;
     if (status && clientData) {
+      if (
+        client.value?.client_id !== clientData.client_id ||
+        client.value?.user_id !== clientData.user_id
+      )
+        useDataTableStore().reset();
       client.value = clientData;
       setPortalUserId(clientData.user_id);
     } else if (!status) {
@@ -48,6 +62,7 @@ export const useClientAuthStore = defineStore('clientAuth', () => {
   }
 
   function clearAuth() {
+    useDataTableStore().reset();
     isAuthenticated.value = false;
     client.value = null;
   }

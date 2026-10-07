@@ -4,6 +4,14 @@
     :caption="t('dashboard.charts.monthlyRevenue.caption')"
     :filters-title="t('dashboard.filters.monthlyRevenue.title')"
     :open="state.dialogOpen.value"
+    :loading="state.isLoading.value"
+    :error="!!state.loadError.value"
+    :filter-count="
+      Object.values(state.appliedFilters).filter(
+        (value) => value !== null && value !== undefined && value !== '',
+      ).length
+    "
+    @retry="state.refetch().catch(() => {})"
     @open="state.openDialog"
     @close="state.dialogOpen.value = false"
     @apply="onApply"
@@ -91,7 +99,7 @@ const defaults = (): MonthlyRevenueFiltersDto => ({
 const state = useChartCardState<MonthlyRevenueFiltersDto, MonthlyRevenueRow>({
   defaults,
   fetchRows: (filters) => DashboardService.getMonthlyRevenue(filters),
-  initialRows: props.initialRows,
+  initialRows: () => props.initialRows,
 });
 
 const {

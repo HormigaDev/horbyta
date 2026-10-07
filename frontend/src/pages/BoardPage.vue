@@ -1,23 +1,37 @@
 <template>
   <q-page class="q-pa-md board-page">
-    <div class="row items-center justify-between q-mb-md q-gutter-sm">
-      <div>
-        <div class="text-h5 text-weight-medium">{{ t('board.title') }}</div>
-        <div class="text-caption board-muted">{{ t('board.subtitle') }}</div>
-      </div>
-
+    <PageHeader :title="t('board.title')" :subtitle="t('board.subtitle')" :eyebrow="t('ui.work')">
+      <q-btn
+        flat
+        icon="filter_alt"
+        :label="t('datatable.tooltip.filters')"
+        :aria-expanded="filtersOpen"
+        @click="filtersOpen = !filtersOpen"
+      />
       <q-btn
         flat
         round
-        color="primary"
         icon="refresh"
         :loading="isLoading"
         :aria-label="t('common.refresh')"
         @click="loadTasks"
       />
+      <q-btn
+        unelevated
+        color="primary"
+        icon="add"
+        :label="t('layout.drawer.newTask')"
+        to="/tasks/new"
+      />
+    </PageHeader>
+    <div class="row items-center q-gutter-sm q-mb-md" role="status">
+      <span class="text-caption text-secondary">{{ t('ui.tableSummary', { count: total }) }}</span
+      ><q-chip v-if="activeFilterCount" dense
+        >{{ t('ui.appliedFilters') }} · {{ activeFilterCount }}</q-chip
+      ><span v-if="isMovingTask" class="text-caption">{{ t('ui.moving') }}</span
+      ><span class="sr-only" aria-live="polite">{{ moveAnnouncement }}</span>
     </div>
-
-    <div class="board-filters q-mb-md">
+    <div v-show="filtersOpen" class="board-filters q-mb-md">
       <div class="row q-col-gutter-md">
         <div class="col-12 col-md-3">
           <SelectByTerm
@@ -62,7 +76,10 @@
             />
           </div>
           <div class="col-6">
-            <DashboardDateFilter v-model="filters.createdTo" :label="t('board.filters.createdTo')" />
+            <DashboardDateFilter
+              v-model="filters.createdTo"
+              :label="t('board.filters.createdTo')"
+            />
           </div>
         </div>
 
@@ -90,11 +107,13 @@
       <q-spinner color="primary" size="32px" />
     </q-inner-loading>
 
-    <KanbanBoard :columns="columns" :tasks="tasks" @task-drop="moveTask" />
+    <KanbanBoard :columns="columns" :tasks="tasks" :busy="isMovingTask" @task-drop="moveTask" />
   </q-page>
 </template>
 
 <script setup lang="ts">
+import PageHeader from 'src/components/PageHeader.vue';
+const filtersOpen = ref(false);
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import KanbanBoard from 'src/components/KanbanBoard.vue';
@@ -119,7 +138,18 @@ const columns: KanbanColumnDefinition[] = [
   { id: 'done', title: t('board.columns.done') },
 ];
 
-const { filters, tasks, isLoading, loadTasks, moveTask, resetFilters } = useKanbanBoard();
+const {
+  filters,
+  tasks,
+  total,
+  isLoading,
+  isMovingTask,
+  activeFilterCount,
+  moveAnnouncement,
+  loadTasks,
+  moveTask,
+  resetFilters,
+} = useKanbanBoard();
 
 const {
   options: projectOptions,
@@ -152,13 +182,29 @@ const displayedProjectOptions = computed(() => {
 
 const syncSelectedProjectOption = async () => {
   const projectId = filters.projectId;
-  if (!projectId) { selectedProjectOption.value = null; resolvedProjectId.value = null; return; }
+  if (!projectId) {
+    selectedProjectOption.value = null;
+    resolvedProjectId.value = null;
+    return;
+  }
   const loadedOption = projectOptions.value.find((option) => option.value === projectId);
-  if (loadedOption) { selectedProjectOption.value = loadedOption; resolvedProjectId.value = projectId; return; }
+  if (loadedOption) {
+    selectedProjectOption.value = loadedOption;
+    resolvedProjectId.value = projectId;
+    return;
+  }
   try {
     const project = await ProjectsService.getById(projectId);
-    if (filters.projectId === projectId) { selectedProjectOption.value = { label: project.name, value: project.id }; resolvedProjectId.value = projectId; }
-  } catch { if (filters.projectId === projectId) { selectedProjectOption.value = null; resolvedProjectId.value = projectId; } }
+    if (filters.projectId === projectId) {
+      selectedProjectOption.value = { label: project.name, value: project.id };
+      resolvedProjectId.value = projectId;
+    }
+  } catch {
+    if (filters.projectId === projectId) {
+      selectedProjectOption.value = null;
+      resolvedProjectId.value = projectId;
+    }
+  }
 };
 
 const {
@@ -177,21 +223,39 @@ const resolvedMilestoneId = ref<string | null>(null);
 
 const displayedMilestoneOptions = computed(() => {
   const milestoneId = filters.milestoneId;
-  if (!milestoneId || milestoneOptions.value.some((o) => o.value === milestoneId)) return milestoneOptions.value;
-  if (selectedMilestoneOption.value?.value === milestoneId) return [selectedMilestoneOption.value, ...milestoneOptions.value];
+  if (!milestoneId || milestoneOptions.value.some((o) => o.value === milestoneId))
+    return milestoneOptions.value;
+  if (selectedMilestoneOption.value?.value === milestoneId)
+    return [selectedMilestoneOption.value, ...milestoneOptions.value];
   if (resolvedMilestoneId.value === milestoneId) return milestoneOptions.value;
   return [{ label: t('common.loading'), value: milestoneId }, ...milestoneOptions.value];
 });
 
 const syncSelectedMilestoneOption = async () => {
   const milestoneId = filters.milestoneId;
-  if (!milestoneId) { selectedMilestoneOption.value = null; resolvedMilestoneId.value = null; return; }
+  if (!milestoneId) {
+    selectedMilestoneOption.value = null;
+    resolvedMilestoneId.value = null;
+    return;
+  }
   const loaded = milestoneOptions.value.find((o) => o.value === milestoneId);
-  if (loaded) { selectedMilestoneOption.value = loaded; resolvedMilestoneId.value = milestoneId; return; }
+  if (loaded) {
+    selectedMilestoneOption.value = loaded;
+    resolvedMilestoneId.value = milestoneId;
+    return;
+  }
   try {
     const milestone = await MilestonesService.getById(milestoneId);
-    if (filters.milestoneId === milestoneId) { selectedMilestoneOption.value = { label: milestone.name, value: milestone.id }; resolvedMilestoneId.value = milestoneId; }
-  } catch { if (filters.milestoneId === milestoneId) { selectedMilestoneOption.value = null; resolvedMilestoneId.value = milestoneId; } }
+    if (filters.milestoneId === milestoneId) {
+      selectedMilestoneOption.value = { label: milestone.name, value: milestone.id };
+      resolvedMilestoneId.value = milestoneId;
+    }
+  } catch {
+    if (filters.milestoneId === milestoneId) {
+      selectedMilestoneOption.value = null;
+      resolvedMilestoneId.value = milestoneId;
+    }
+  }
 };
 
 const {
@@ -210,21 +274,42 @@ const resolvedParentId = ref<string | null>(null);
 
 const displayedParentOptions = computed(() => {
   const parentId = filters.parentId;
-  if (!parentId || parentTaskOptions.value.some((o) => o.value === parentId)) return parentTaskOptions.value;
-  if (selectedParentOption.value?.value === parentId) return [selectedParentOption.value, ...parentTaskOptions.value];
+  if (!parentId || parentTaskOptions.value.some((o) => o.value === parentId))
+    return parentTaskOptions.value;
+  if (selectedParentOption.value?.value === parentId)
+    return [selectedParentOption.value, ...parentTaskOptions.value];
   if (resolvedParentId.value === parentId) return parentTaskOptions.value;
   return [{ label: t('common.loading'), value: parentId }, ...parentTaskOptions.value];
 });
 
 const syncSelectedParentOption = async () => {
   const parentId = filters.parentId;
-  if (!parentId) { selectedParentOption.value = null; resolvedParentId.value = null; return; }
+  if (!parentId) {
+    selectedParentOption.value = null;
+    resolvedParentId.value = null;
+    return;
+  }
   const loaded = parentTaskOptions.value.find((o) => o.value === parentId);
-  if (loaded) { selectedParentOption.value = loaded; resolvedParentId.value = parentId; return; }
+  if (loaded) {
+    selectedParentOption.value = loaded;
+    resolvedParentId.value = parentId;
+    return;
+  }
   try {
     const task = await TasksService.getById(parentId);
-    if (filters.parentId === parentId) { selectedParentOption.value = { label: `#${task.record_number} ${task.title}`, value: task.id }; resolvedParentId.value = parentId; }
-  } catch { if (filters.parentId === parentId) { selectedParentOption.value = null; resolvedParentId.value = parentId; } }
+    if (filters.parentId === parentId) {
+      selectedParentOption.value = {
+        label: `#${task.record_number} ${task.title}`,
+        value: task.id,
+      };
+      resolvedParentId.value = parentId;
+    }
+  } catch {
+    if (filters.parentId === parentId) {
+      selectedParentOption.value = null;
+      resolvedParentId.value = parentId;
+    }
+  }
 };
 
 const onProjectSearch = (term: string) => {
@@ -253,43 +338,58 @@ onMounted(() => {
   void loadProjectsByTerm('').then(syncSelectedProjectOption);
 });
 
-watch(() => filters.projectId, (newId, oldId) => {
-  if (resolvedProjectId.value !== newId) resolvedProjectId.value = null;
+watch(
+  () => filters.projectId,
+  (newId, oldId) => {
+    if (resolvedProjectId.value !== newId) resolvedProjectId.value = null;
+    void syncSelectedProjectOption();
+
+    if (newId !== oldId) {
+      const shouldResetDependentFilters = oldId !== null;
+
+      if (shouldResetDependentFilters) {
+        filters.milestoneId = null;
+        filters.parentId = null;
+        selectedMilestoneOption.value = null;
+        resolvedMilestoneId.value = null;
+        selectedParentOption.value = null;
+        resolvedParentId.value = null;
+      }
+
+      if (newId) {
+        const extraFilters = [{ column: 'project_id', operator: '=' as const, value: newId }];
+        void loadMilestonesByTerm('', extraFilters).then(syncSelectedMilestoneOption);
+        void loadParentTasksByTerm('', extraFilters).then(syncSelectedParentOption);
+      }
+    }
+  },
+);
+
+watch(
+  () => filters.milestoneId,
+  (newId) => {
+    if (resolvedMilestoneId.value !== newId) resolvedMilestoneId.value = null;
+    void syncSelectedMilestoneOption();
+  },
+);
+
+watch(
+  () => filters.parentId,
+  (newId) => {
+    if (resolvedParentId.value !== newId) resolvedParentId.value = null;
+    void syncSelectedParentOption();
+  },
+);
+
+watch(projectOptions, () => {
   void syncSelectedProjectOption();
-
-  if (newId !== oldId) {
-    const shouldResetDependentFilters = oldId !== null;
-
-    if (shouldResetDependentFilters) {
-      filters.milestoneId = null;
-      filters.parentId = null;
-      selectedMilestoneOption.value = null;
-      resolvedMilestoneId.value = null;
-      selectedParentOption.value = null;
-      resolvedParentId.value = null;
-    }
-
-    if (newId) {
-      const extraFilters = [{ column: 'project_id', operator: '=' as const, value: newId }];
-      void loadMilestonesByTerm('', extraFilters).then(syncSelectedMilestoneOption);
-      void loadParentTasksByTerm('', extraFilters).then(syncSelectedParentOption);
-    }
-  }
 });
-
-watch(() => filters.milestoneId, (newId) => {
-  if (resolvedMilestoneId.value !== newId) resolvedMilestoneId.value = null;
+watch(milestoneOptions, () => {
   void syncSelectedMilestoneOption();
 });
-
-watch(() => filters.parentId, (newId) => {
-  if (resolvedParentId.value !== newId) resolvedParentId.value = null;
+watch(parentTaskOptions, () => {
   void syncSelectedParentOption();
 });
-
-watch(projectOptions, () => { void syncSelectedProjectOption(); });
-watch(milestoneOptions, () => { void syncSelectedMilestoneOption(); });
-watch(parentTaskOptions, () => { void syncSelectedParentOption(); });
 </script>
 
 <style scoped>

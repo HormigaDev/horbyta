@@ -1,10 +1,10 @@
 <template>
   <q-card class="data-table-wrapper" flat bordered>
     <q-table
-      separator="cell"
+      separator="horizontal"
       :title="title"
       :rows="rows"
-      :columns="columns"
+      :columns="effectiveColumns"
       :row-key="rowKey"
       v-model:pagination="pagination"
       v-model:selected="selected"
@@ -13,6 +13,7 @@
       :rows-per-page-options="[5, 10, 20, 50, 100]"
       table-class="dt-fixed-layout"
       :visible-columns="visibleColumns"
+      :dense="themeStore.appearance.density === 'compact' && !$q.screen.lt.sm"
       :rows-per-page-label="t('datatable.rowsPerPage')"
       :no-results-label="t('datatable.noResults')"
       :loading-label="t('datatable.loading')"
@@ -53,6 +54,7 @@
               icon="refresh"
               style="color: var(--text-muted)"
               @click="emit('refresh')"
+              :aria-label="t('datatable.tooltip.refresh')"
             >
               <q-tooltip>{{ t('datatable.tooltip.refresh') }}</q-tooltip>
             </q-btn>
@@ -64,10 +66,14 @@
               icon="filter_alt"
               style="color: var(--text-muted)"
               @click="showFilters = !showFilters"
-              :style="filters.length > 0 ? 'color: var(--q-primary) !important' : ''"
+              :aria-label="t('datatable.tooltip.filters')"
+              :aria-expanded="showFilters"
+              :style="appliedFilters.length > 0 ? 'color: var(--text-accent)' : ''"
             >
               <q-tooltip>{{ t('datatable.tooltip.filters') }}</q-tooltip>
-              <q-badge v-if="filters.length > 0" color="red" floating>{{ filters.length }}</q-badge>
+              <q-badge v-if="appliedFilters.length > 0" color="primary" floating>{{
+                appliedFilters.length
+              }}</q-badge>
             </q-btn>
 
             <q-btn
@@ -77,6 +83,7 @@
               icon="view_column"
               style="color: var(--text-muted)"
               @click="openColumnDialog"
+              :aria-label="t('datatable.tooltip.columns')"
             >
               <q-tooltip>{{ t('datatable.tooltip.columns') }}</q-tooltip>
             </q-btn>
@@ -105,23 +112,45 @@
                 outline
                 color="negative"
                 icon="delete"
-                :label="$q.screen.gt.xs ? t('datatable.actions.delete') : ''"
+                :label="t('datatable.actions.delete')"
                 @click="onDelete"
               />
             </div>
-            <div v-else>
+            <div>
               <q-btn
                 v-if="!hideCreate"
                 unelevated
                 color="primary"
                 icon="add"
-                :label="$q.screen.gt.xs ? t('datatable.actions.new') : ''"
+                :label="t('datatable.actions.new')"
                 @click="onCreate"
               />
             </div>
           </div>
         </div>
 
+        <div
+          v-if="appliedFilters.length"
+          class="row items-center q-gutter-xs full-width q-mb-sm"
+          :aria-label="t('ui.appliedFilters')"
+        >
+          <q-chip
+            v-for="(filter, index) in appliedFilters"
+            :key="index"
+            removable
+            @remove="removeAppliedFilter(index)"
+            class="applied-filter"
+            >{{ filterLabel(filter) }}</q-chip
+          >
+          <q-btn flat dense :label="t('datatable.filter.clearAll')" @click="clearFilters" />
+        </div>
+        <div v-if="filterDraftChanged" class="text-caption text-secondary full-width" role="status">
+          {{ t('ui.draftFilters') }}
+        </div>
+        <div v-if="preferenceError" class="full-width preference-error q-pa-sm" role="alert">
+          {{ t('ui.preferenceError') }}
+          <q-btn flat dense :label="t('ui.retry')" @click="retryPreferences" />
+        </div>
         <q-slide-transition>
           <div
             v-show="showFilters"
@@ -197,6 +226,7 @@
                   round
                   color="negative"
                   icon="close"
+                  :aria-label="t('datatable.filter.remove')"
                   size="sm"
                   @click="removeFilter(index)"
                 >
@@ -236,32 +266,123 @@
           </div>
         </q-slide-transition>
 
+        <div v-if="error && rows.length" class="full-width preference-error q-pa-sm" role="alert">
+          {{ t('ui.loadError') }} <q-btn flat :label="t('ui.retry')" @click="emit('refresh')" />
+        </div>
         <slot name="filters"></slot>
       </template>
 
       <template #header="props">
         <q-tr :props="props">
           <q-th auto-width class="text-center" v-if="selectionMode !== 'none'">
-            <q-checkbox v-model="props.selected" />
+            <q-checkbox
+              v-model="props.selected"
+              :aria-label="t('datatable.selectedRows.multiple', { count: rows.length })"
+            />
           </q-th>
           <q-th
             v-for="col in props.cols"
             :key="col.name"
             :props="props"
-            class="text-weight-bold text-center"
+            class="text-weight-medium"
+            :tabindex="col.sortable ? 0 : undefined"
+            :aria-sort="
+              col.sortable
+                ? pagination.sortBy === col.name
+                  ? pagination.descending
+                    ? 'descending'
+                    : 'ascending'
+                  : 'none'
+                : undefined
+            "
+            @keydown.enter.prevent="col.sortable && props.sort(col)"
+            @keydown.space.prevent="col.sortable && props.sort(col)"
           >
             {{ translateLabel(col.label) }}
           </q-th>
         </q-tr>
       </template>
 
+      <template #body-selection="cell"
+        ><q-checkbox
+          v-model="cell.selected"
+          :aria-label="t('datatable.selectedRows.single') + ' ' + getRowId(cell.row)"
+      /></template>
+      <template #body-cell-open="cell">
+        <q-td :props="cell" auto-width
+          ><q-btn
+            flat
+            round
+            dense
+            icon="arrow_outward"
+            :aria-label="t('ui.open')"
+            @click.stop="onView(cell.row)"
+            ><q-tooltip>{{ t('datatable.actions.view') }}</q-tooltip></q-btn
+          ></q-td
+        >
+      </template>
+      <template #body-cell="cell">
+        <q-td :props="cell">
+          <span
+            v-if="cell.col.name === 'status'"
+            class="status-badge"
+            :data-status="getRowValue(cell.row, 'status')"
+            >{{ cell.value }}</span
+          >
+          <button
+            v-else-if="typeof cell.value === 'string' && cell.value.length > 40"
+            type="button"
+            class="cell-text"
+            :aria-label="t('ui.showText') + ': ' + cell.value"
+          >
+            {{ cell.value
+            }}<q-popup-proxy
+              ><div class="cell-full-text q-pa-md">{{ cell.value }}</div></q-popup-proxy
+            >
+          </button>
+          <span v-else>{{ cell.value }}</span>
+        </q-td>
+      </template>
       <template #no-data>
-        <div class="full-width row flex-center text-primary q-pa-xl text-center">
-          <q-icon size="4em" name="inbox" style="color: var(--text-muted)" />
-          <div class="text-h6 q-mt-sm" style="color: var(--text-muted)">
-            {{ t('datatable.noDataTitle') }}
-          </div>
-        </div>
+        <EmptyState
+          v-if="!loading"
+          class="full-width"
+          :error="!!error"
+          :title="
+            error
+              ? t('ui.loadError')
+              : appliedFilters.length
+                ? t('ui.noResults')
+                : t('ui.emptyTitle')
+          "
+          :hint="
+            error ? undefined : appliedFilters.length ? t('ui.noResultsHint') : t('ui.emptyHint')
+          "
+        >
+          <q-btn
+            v-if="error"
+            outline
+            color="primary"
+            :label="t('ui.retry')"
+            @click="emit('refresh')"
+          />
+          <q-btn
+            v-else-if="appliedFilters.length"
+            outline
+            color="primary"
+            :label="t('datatable.filter.clearAll')"
+            @click="clearFilters"
+          />
+          <q-btn
+            v-else-if="!hideCreate"
+            unelevated
+            color="primary"
+            icon="add"
+            :label="t('datatable.actions.new')"
+            @click="onCreate"
+          />
+        </EmptyState>
+        <div v-else class="full-width q-pa-lg" role="status">{{ t('datatable.loading') }}</div>
       </template>
 
       <template v-for="(_, slotName) in $slots" #[slotName]="slotProps" :key="slotName">
@@ -273,7 +394,7 @@
       <q-card flat bordered class="dt-columns-dialog">
         <q-card-section class="row items-center justify-between q-pb-sm">
           <div class="text-h6">{{ t('datatable.columnsDialogTitle') }}</div>
-          <q-btn flat round dense icon="close" v-close-popup>
+          <q-btn flat round dense icon="close" :aria-label="t('common.close')" v-close-popup>
             <q-tooltip>{{ t('common.close') }}</q-tooltip>
           </q-btn>
         </q-card-section>
@@ -292,10 +413,10 @@
               <q-item-section avatar>
                 <q-checkbox
                   v-model="draftVisibleColumns"
+                  :aria-label="column.label"
                   :val="column.value"
                   :disable="
-                    draftVisibleColumns.length === 1 &&
-                    draftVisibleColumns.includes(column.value)
+                    draftVisibleColumns.length === 1 && draftVisibleColumns.includes(column.value)
                   "
                 />
               </q-item-section>
@@ -324,6 +445,8 @@
 </template>
 
 <script setup lang="ts" generic="T extends object">
+import EmptyState from 'src/components/EmptyState.vue';
+import { useThemeStore } from 'src/stores/theme';
 import { ref, onMounted, watch, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useDataTableStore } from '../stores/datatable';
@@ -346,6 +469,7 @@ interface Props {
   columns: NonNullable<QTableProps['columns']>;
   totalItems?: number;
   loading?: boolean;
+  error?: string | null;
   rowKey?: string;
   selectionMode?: SelectionMode;
   hideCreate?: boolean;
@@ -395,6 +519,49 @@ const emit = defineEmits<{
 }>();
 
 const store = useDataTableStore();
+const themeStore = useThemeStore();
+const preferenceError = ref(false);
+const appliedFilters = ref<Filter[]>([]);
+const effectiveColumns = computed(() =>
+  props.hideView
+    ? props.columns
+    : [
+        {
+          name: 'open',
+          label: '',
+          field: props.rowKey,
+          align: 'left' as const,
+          required: true,
+          style: 'width: 56px',
+          headerStyle: 'width: 56px',
+        },
+        ...props.columns,
+      ],
+);
+const filterDraftChanged = computed(
+  () => JSON.stringify(getValidFilters()) !== JSON.stringify(appliedFilters.value),
+);
+const filterLabel = (filter: Filter) =>
+  `${filterColumnOptions.value.find((c) => c.value === filter.column)?.label ?? filter.column} ${filter.operator} ${String(filter.value)}`;
+const removeAppliedFilter = (index: number) => {
+  filters.value = appliedFilters.value.filter((_, i) => i !== index).map((f) => ({ ...f }));
+  applyFilters();
+};
+async function persistState() {
+  try {
+    await store.saveTableState(props.tableId, {
+      pagination: { ...pagination.value },
+      visibleColumns: [...visibleColumns.value],
+      filters: JSON.parse(JSON.stringify(appliedFilters.value)) as Filter[],
+    });
+    preferenceError.value = false;
+  } catch {
+    preferenceError.value = true;
+  }
+}
+const retryPreferences = () => {
+  void persistState();
+};
 const selected = ref<T[]>([]);
 const visibleColumns = ref(props.columns.map((c) => c.name));
 const draftVisibleColumns = ref<string[]>([]);
@@ -452,9 +619,12 @@ const saveColumnPreferences = async () => {
 
   try {
     const nextVisibleColumns = [...draftVisibleColumns.value];
-    visibleColumns.value = nextVisibleColumns;
     await store.saveVisibleColumns(props.tableId, nextVisibleColumns);
+    visibleColumns.value = nextVisibleColumns;
+    preferenceError.value = false;
     showColumnDialog.value = false;
+  } catch {
+    preferenceError.value = true;
   } finally {
     isSavingColumnPreferences.value = false;
   }
@@ -581,7 +751,9 @@ const clearFilters = () => {
 };
 
 const getValidFilters = (): Filter[] => {
-  return filters.value.filter((f) => f.column && f.operator && f.value !== '') as Filter[];
+  return filters.value.filter(
+    (f) => f.column && f.operator && f.value !== '' && f.value !== null && f.value !== undefined,
+  ) as Filter[];
 };
 
 const applyFilters = () => {
@@ -614,7 +786,12 @@ const defaultPagination = {
 const pagination = ref({ ...defaultPagination });
 
 onMounted(async () => {
-  const savedState = await store.getTableState(props.tableId);
+  let savedState: Awaited<ReturnType<typeof store.getTableState>> = {};
+  try {
+    savedState = await store.getTableState(props.tableId);
+  } catch {
+    preferenceError.value = true;
+  }
 
   if (savedState.pagination) {
     pagination.value = {
@@ -625,15 +802,17 @@ onMounted(async () => {
     };
   }
   if (savedState.visibleColumns && savedState.visibleColumns.length > 0) {
-    visibleColumns.value = [...savedState.visibleColumns];
+    visibleColumns.value = savedState.visibleColumns.filter((name) =>
+      props.columns.some((c) => c.name === name),
+    );
   }
 
   if (props.initialFilters.length > 0) {
-    filters.value = [...props.initialFilters] as Partial<Filter>[];
+    filters.value = props.initialFilters.map((f) => ({ ...f })) as Partial<Filter>[];
     showFilters.value = true;
     pagination.value.page = 1;
   } else if (savedState.filters) {
-    filters.value = [...savedState.filters] as Partial<Filter>[];
+    filters.value = savedState.filters.map((f) => ({ ...f })) as Partial<Filter>[];
   }
 
   onRequest({
@@ -664,7 +843,7 @@ const onRequest = (requestProps: {
   force?: boolean;
 }) => {
   const { page, rowsPerPage, sortBy, descending } = requestProps.pagination;
-  const requestFilters = requestProps.filters ?? getValidFilters();
+  const requestFilters = requestProps.filters ?? appliedFilters.value;
 
   const sortChanged =
     pagination.value.sortBy !== sortBy || pagination.value.descending !== descending;
@@ -674,14 +853,8 @@ const onRequest = (requestProps: {
   pagination.value.sortBy = sortBy;
   pagination.value.descending = descending;
 
-  void store.saveTableState(
-    props.tableId,
-    {
-      pagination: { page, rowsPerPage, sortBy, descending },
-      visibleColumns: visibleColumns.value,
-      filters: requestFilters,
-    },
-  );
+  appliedFilters.value = requestFilters.map((filter) => ({ ...filter }));
+  void persistState();
 
   emit('request', {
     pagination: { page, rowsPerPage, sortBy, descending },
@@ -710,9 +883,15 @@ watch(
   { deep: true },
 );
 
+watch(
+  () => [props.loading, props.error],
+  () => {
+    clearSelection();
+  },
+);
 const onCreate = () => emit('create');
 const onView = (row: T) => {
-  if (row) emit('view', getRowId(row));
+  if (row && !props.loading && !props.error) emit('view', getRowId(row));
 };
 const onRowDblClick = (evt: Event, row: T) => {
   if (!props.hideView) {
@@ -797,7 +976,7 @@ const onDelete = () => {
 
     .q-table__top {
       position: sticky;
-      top: 80px;
+      top: 0;
       z-index: 5;
       background-color: var(--card-bg);
     }
@@ -808,7 +987,6 @@ const onDelete = () => {
       background-color: var(--q-dark-page) !important;
       color: var(--text-color) !important;
       border-bottom: 1px solid var(--border-color) !important;
-      text-align: center !important;
     }
 
     thead tr:first-child th {
@@ -816,17 +994,17 @@ const onDelete = () => {
     }
 
     tbody tr td {
+      height: var(--row-height);
+      font-variant-numeric: tabular-nums;
       border-bottom: 1px solid var(--border-color) !important;
     }
 
     tbody tr td.q-table--col-auto-width {
-      text-align: center !important;
     }
 
     .q-table__bottom {
       border-top: 1px solid var(--border-color) !important;
     }
-
   }
 
   @media (max-width: 599px) {
@@ -850,6 +1028,107 @@ const onDelete = () => {
 
   .q-item {
     color: var(--text-color);
+  }
+}
+</style>
+
+<style>
+.data-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+.data-table-wrapper .q-table__top {
+  padding: 24px;
+}
+.data-table-wrapper .q-table__top .text-h5 {
+  font-size: 24px;
+}
+.data-table-wrapper .q-table__top .q-icon.q-mr-sm {
+  background: var(--surface-selected);
+  color: var(--text-accent);
+  padding: 8px;
+  border-radius: 10px;
+}
+.data-table-wrapper .q-table tbody tr.selected {
+  background: var(--surface-selected);
+}
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  background: var(--surface-hover);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.status-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 50%;
+}
+.status-badge[data-status='in_progress'],
+.status-badge[data-status='open'],
+.status-badge[data-status='active'] {
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+.status-badge[data-status='review'],
+.status-badge[data-status='pending'] {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+.status-badge[data-status='done'],
+.status-badge[data-status='paid'],
+.status-badge[data-status='approved'] {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+.status-badge[data-status='cancelled'],
+.status-badge[data-status='blocked'],
+.status-badge[data-status='declined'] {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+.cell-text {
+  width: 100%;
+  text-align: inherit;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cell-full-text {
+  max-width: min(480px, 85vw);
+  overflow-wrap: anywhere;
+  white-space: normal;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+.applied-filter {
+  background: var(--surface-selected);
+  color: var(--text-accent);
+}
+.preference-error {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border-radius: 8px;
+}
+@media (max-width: 599px) {
+  .data-table-wrapper .q-table__top {
+    padding: 16px;
+  }
+  .dt-actions {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 }
 </style>

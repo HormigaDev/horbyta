@@ -8,6 +8,7 @@
       :rows="items"
       :total-items="total"
       :loading="isLoading"
+      :error="error"
       :filter-schema="clientProjectFilterSchema"
       selection-mode="single"
       hide-create
@@ -39,7 +40,7 @@ const clientProjectFilterSchema: FilterSchema = {
   updated_at: { type: 'Date', label: t('projects.list.filter.updated') },
 };
 
-const { items, total, isLoading, query, fetch } = useQuery(
+const { items, total, isLoading, error, query, fetch } = useQuery(
   ClientProjectsService.search,
   clientProjectFilterSchema,
   10,

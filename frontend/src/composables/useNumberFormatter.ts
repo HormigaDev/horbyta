@@ -1,6 +1,6 @@
 import { computed } from 'vue';
 import { CURRENCY_SYMBOLS } from 'src/data/constants';
-import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useDisplayPreferences } from 'src/composables/useDisplayPreferences';
 import {
   formatCurrencyByPreferences,
   formatNumberByPreferences,
@@ -9,7 +9,7 @@ import {
 } from 'src/utils/numberFormatting';
 
 export function useNumberFormatter() {
-  const preferencesStore = useUserPreferencesStore();
+  const preferencesStore = useDisplayPreferences();
 
   const numberFormat = computed(() =>
     normalizeNumberFormat({

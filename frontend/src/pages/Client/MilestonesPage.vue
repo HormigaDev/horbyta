@@ -16,6 +16,7 @@
       :rows="items"
       :total-items="total"
       :loading="isLoading"
+      :error="loadError"
       :filter-schema="milestoneFilterSchema"
       selection-mode="single"
       hide-create
@@ -97,6 +98,7 @@ const query = reactive<QueryPayload>({
 const items = ref<ClientMilestoneSummaryDto[]>([]);
 const total = ref(0);
 const isLoading = ref(false);
+const loadError = ref<string | null>(null);
 
 const ensureProjectOption = async (projectId: string) => {
   const exists = projectOptions.value.some((option) => option.value === projectId);
@@ -107,6 +109,7 @@ const ensureProjectOption = async (projectId: string) => {
 };
 
 const fetchMilestones = async () => {
+  loadError.value = null;
   if (!selectedProjectId.value) {
     items.value = [];
     total.value = 0;
@@ -130,6 +133,7 @@ const fetchMilestones = async () => {
     items.value = response.items;
     total.value = response.total;
   } catch (err: unknown) {
+    loadError.value = t('client.milestones.list.loadError');
     notifyError(t('client.milestones.list.loadError'), err);
   } finally {
     isLoading.value = false;

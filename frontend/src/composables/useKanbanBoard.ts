@@ -1,4 +1,4 @@
-import { reactive, ref } from 'vue';
+import { reactive, ref, computed } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { TasksService } from 'src/services/tasks';
@@ -32,7 +32,13 @@ const isKanbanBoardFilters = (value: unknown): value is KanbanBoardFilters => {
   }
 
   const candidate = value as Record<string, unknown>;
-  const values = [candidate.projectId, candidate.milestoneId, candidate.parentId, candidate.createdFrom, candidate.createdTo];
+  const values = [
+    candidate.projectId,
+    candidate.milestoneId,
+    candidate.parentId,
+    candidate.createdFrom,
+    candidate.createdTo,
+  ];
   return values.every((item) => item === null || typeof item === 'string');
 };
 
@@ -55,6 +61,11 @@ export function useKanbanBoard() {
   const total = ref(0);
   const isLoading = ref(false);
   const isMovingTask = ref(false);
+  const moveAnnouncement = ref('');
+  const appliedFilters = ref<KanbanBoardFilters>(defaultFilters());
+  const activeFilterCount = computed(
+    () => Object.values(appliedFilters.value).filter(Boolean).length,
+  );
   const hasLoadedSavedFilters = ref(false);
 
   const applyFilters = (next: KanbanBoardFilters) => {
@@ -123,7 +134,11 @@ export function useKanbanBoard() {
     isLoading.value = true;
     try {
       await loadSavedUiFilters();
-      void uiState.setValue<KanbanBoardFilters>(BOARD_SCOPE, BOARD_FILTERS_KEY, { ...filters });
+      try {
+        await uiState.setValue<KanbanBoardFilters>(BOARD_SCOPE, BOARD_FILTERS_KEY, { ...filters });
+      } catch {
+        notify(t('ui.preferenceError'), 'warning');
+      }
 
       const payload: QueryPayload = {
         page: 1,
@@ -134,6 +149,7 @@ export function useKanbanBoard() {
       };
 
       const response = await TasksService.search(payload);
+      appliedFilters.value = { ...filters };
       tasks.value = response.items;
       total.value = response.total;
 
@@ -204,6 +220,8 @@ export function useKanbanBoard() {
       }
 
       await TasksService.updateTaskStatus(taskId, newColumnId);
+      moveAnnouncement.value = t('ui.moved', { status: t('tasks.form.status.' + newColumnId) });
+      notify(moveAnnouncement.value, 'positive');
     } catch (err: unknown) {
       updateTaskLocally(taskId, previousColumnId);
       notifyError(t('board.moveError'), err);
@@ -226,6 +244,8 @@ export function useKanbanBoard() {
     total,
     isLoading,
     isMovingTask,
+    activeFilterCount,
+    moveAnnouncement,
     loadTasks,
     moveTask,
     resetFilters,

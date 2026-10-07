@@ -32,7 +32,12 @@ export const getTagTextContrastColor = (hexColor: string): string => {
   const red = Number.parseInt(normalizedHexColor.slice(1, 3), 16);
   const green = Number.parseInt(normalizedHexColor.slice(3, 5), 16);
   const blue = Number.parseInt(normalizedHexColor.slice(5, 7), 16);
-  const yiq = (red * 299 + green * 587 + blue * 114) / 1000;
-
-  return yiq >= 128 ? DARK_CONTRAST_TEXT : LIGHT_CONTRAST_TEXT;
+  const linear = (channel: number) => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue);
+  return (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05)
+    ? DARK_CONTRAST_TEXT
+    : LIGHT_CONTRAST_TEXT;
 };

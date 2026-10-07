@@ -1,6 +1,6 @@
 <template>
   <q-dialog v-model="dialogModel" persistent>
-    <q-card style="min-width: 400px; max-width: 90vw">
+    <q-card style="width: min(400px, calc(100vw - 32px)); max-width: 90vw">
       <q-form @submit.prevent="emit('submit')">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">
@@ -8,7 +8,7 @@
             {{ editing ? editTitle : createTitle }}
           </div>
           <q-space />
-          <q-btn icon="close" flat round dense v-close-popup />
+          <q-btn :aria-label="cancelLabel" icon="close" flat round dense v-close-popup />
         </q-card-section>
 
         <q-card-section class="q-pt-md">

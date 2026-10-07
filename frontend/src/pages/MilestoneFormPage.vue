@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="form-page q-pa-md">
     <div class="padding-page">
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
@@ -58,7 +58,14 @@
               outlined
             >
               <template #append>
-                <q-icon name="event" class="cursor-pointer">
+                <q-btn
+                  type="button"
+                  flat
+                  round
+                  dense
+                  icon="event"
+                  :aria-label="t('tasks.form.dueDateLabel')"
+                >
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                     <q-date v-model="dueDateDisplay" :mask="qDateMask">
                       <div class="row items-center justify-end">
@@ -66,7 +73,7 @@
                       </div>
                     </q-date>
                   </q-popup-proxy>
-                </q-icon>
+                </q-btn>
               </template>
             </q-input>
           </div>
@@ -87,12 +94,13 @@
         </q-card-section>
       </q-card>
 
-      <div class="row justify-end q-gutter-sm">
+      <div class="row justify-end q-gutter-sm form-actions">
         <q-btn
           v-if="isNew"
           flat
           round
           icon="bookmarks"
+          :aria-label="t('formPreferences.title')"
           color="grey"
           @click="prefsDialogOpen = true"
         >
@@ -102,6 +110,7 @@
           flat
           round
           icon="push_pin"
+          :aria-label="t('common.keepFormOpen')"
           :color="pinButtonColor"
           :aria-pressed="stayOnFormAfterSave"
           @click="stayOnFormAfterSave = !stayOnFormAfterSave"
@@ -236,7 +245,7 @@ const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
       dueDateDisplay.value = (draft as Record<string, unknown>)._dueDateDisplay as string;
     }
   },
-  { formKey: 'milestone', enabled: () => isNew.value },
+  { formKey: 'milestone', enabled: () => !isSubmitting.value },
 );
 
 const isDirty = computed(() => {
@@ -252,7 +261,9 @@ const isDirty = computed(() => {
   );
 });
 
-useUnsavedChanges(() => isDirty.value);
+const { confirmLeave } = useUnsavedChanges(
+  () => !isSubmitting.value && (isDirty.value || markdownFiles.value.length > 0),
+);
 
 watch(
   form,
@@ -355,7 +366,8 @@ const loadMilestone = async () => {
   }
 };
 
-const goBack = () => {
+const goBack = async () => {
+  if (!(await confirmLeave())) return;
   clearDraft();
   hasChanges.value = false;
   if (isNew.value) {
@@ -429,5 +441,6 @@ onMounted(async () => {
     }
   }
   await loadMilestone();
+  if (!isNew.value) await restoreDraftIfAvailable();
 });
 </script>

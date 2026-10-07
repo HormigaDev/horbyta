@@ -9,7 +9,13 @@
             {{ statusLabel }}: {{ labelForProjectStatus(row.project_status) }}
           </div>
         </div>
-        <q-btn flat dense icon="open_in_new" @click="router.push(`/client/projects/${row.project_id}`)" />
+        <q-btn
+          flat
+          dense
+          icon="open_in_new"
+          :aria-label="t('ui.open') + ': ' + row.project_name"
+          @click="router.push(`/client/projects/${row.project_id}`)"
+        />
       </div>
 
       <div class="portfolio-row__grid">
@@ -35,7 +41,11 @@
         <q-chip dense color="warning" text-color="white">
           {{ row.upcoming_milestones }} · {{ upcomingLabel }}
         </q-chip>
-        <q-chip dense :color="row.overdue_milestones > 0 ? 'negative' : 'grey-6'" text-color="white">
+        <q-chip
+          dense
+          :color="row.overdue_milestones > 0 ? 'negative' : 'grey-6'"
+          text-color="white"
+        >
           {{ row.overdue_milestones }} · {{ overdueLabel }}
         </q-chip>
       </div>
@@ -45,9 +55,10 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import type { ProjectBillingType, ProjectStatus } from 'src/types/project';
 import type { ClientProjectPortfolioRow } from 'src/types/dashboard';
-import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useDisplayPreferences } from 'src/composables/useDisplayPreferences';
 import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 
@@ -69,7 +80,8 @@ interface Props {
 
 const props = defineProps<Props>();
 const router = useRouter();
-const preferencesStore = useUserPreferencesStore();
+const { t } = useI18n();
+const preferencesStore = useDisplayPreferences();
 const { formatCurrency } = useNumberFormatter();
 
 const formatDate = (value: string) =>

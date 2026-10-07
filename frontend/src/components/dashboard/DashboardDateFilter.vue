@@ -10,7 +10,7 @@
     @blur="handleBlur"
   >
     <template #append>
-      <q-icon name="event" class="cursor-pointer">
+      <q-btn flat round dense icon="event" :aria-label="label">
         <q-popup-proxy ref="popupRef" cover transition-show="scale" transition-hide="scale">
           <q-date :model-value="qDateValue" :mask="qDateMask" @update:model-value="onPickDate">
             <div class="row items-center justify-end">
@@ -18,16 +18,16 @@
             </div>
           </q-date>
         </q-popup-proxy>
-      </q-icon>
+      </q-btn>
     </template>
   </q-input>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useDisplayPreferences } from 'src/composables/useDisplayPreferences';
 import {
   formatIsoDateForInput,
   getDateInputMask,
@@ -47,10 +47,10 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const preferencesStore = useUserPreferencesStore();
+const preferencesStore = useDisplayPreferences();
 
-const dateInputMask = getDateInputMask(preferencesStore.dateFormat);
-const qDateMask = getQDateMask(preferencesStore.dateFormat);
+const dateInputMask = computed(() => getDateInputMask(preferencesStore.dateFormat));
+const qDateMask = computed(() => getQDateMask(preferencesStore.dateFormat));
 
 const displayValue = ref<string>(
   formatIsoDateForInput(props.modelValue, {

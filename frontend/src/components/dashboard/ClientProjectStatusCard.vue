@@ -4,6 +4,14 @@
     :caption="t('clientDashboard.projectStatus.caption')"
     :filters-title="t('dashboard.filters.clientProjectStatus.title')"
     :open="state.dialogOpen.value"
+    :loading="state.isLoading.value"
+    :error="!!state.loadError.value"
+    :filter-count="
+      Object.values(state.appliedFilters).filter(
+        (value) => value !== null && value !== undefined && value !== '',
+      ).length
+    "
+    @retry="state.refetch().catch(() => {})"
     @open="state.openDialog"
     @close="state.dialogOpen.value = false"
     @apply="onApply"
@@ -85,7 +93,7 @@ const defaults = (): ClientProjectStatusFiltersDto => ({
 const state = useChartCardState<ClientProjectStatusFiltersDto, ClientProjectStatusRow>({
   defaults,
   fetchRows: (filters) => ClientDashboardService.getProjectStatus(filters),
-  initialRows: props.initialRows,
+  initialRows: () => props.initialRows,
 });
 
 const onApply = async () => {

@@ -6,6 +6,8 @@ import {
   LegendComponent,
   TitleComponent,
   TooltipComponent,
+  AriaComponent,
+  LegendScrollComponent,
 } from 'echarts/components';
 
 let registered = false;
@@ -23,6 +25,8 @@ export function ensureEChartsRegistered(): void {
     LegendComponent,
     TitleComponent,
     TooltipComponent,
+    AriaComponent,
+    LegendScrollComponent,
   ]);
   registered = true;
 }

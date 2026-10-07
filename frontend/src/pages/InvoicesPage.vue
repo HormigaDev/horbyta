@@ -9,6 +9,7 @@
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
+      :error="error"
       :filter-schema="invoiceFilterSchema"
       @request="onRequest"
       @view="(id) => $router.push(`/invoices/${id}`)"
@@ -43,7 +44,11 @@
             :class="isInvoiceOverdue(props.row as InvoiceSummaryDto) ? 'text-negative' : ''"
             class="row items-center justify-center no-wrap q-gutter-x-xs"
           >
-            <q-icon v-if="isInvoiceOverdue(props.row as InvoiceSummaryDto)" name="schedule" size="xs" />
+            <q-icon
+              v-if="isInvoiceOverdue(props.row as InvoiceSummaryDto)"
+              name="schedule"
+              size="xs"
+            />
             <span>{{ props.value }}</span>
           </span>
           <span v-else class="text-grey-5">—</span>
@@ -90,7 +95,13 @@ const { t } = useI18n();
 const { notify, notifyError, confirmDelete } = useUI();
 
 const invoiceStatusColor = (status: string): string =>
-  ({ draft: 'grey-5', open: 'primary', paid: 'positive', void: 'grey-7', uncollectible: 'deep-orange' }[status] ?? 'grey');
+  ({
+    draft: 'grey-5',
+    open: 'primary',
+    paid: 'positive',
+    void: 'grey-7',
+    uncollectible: 'deep-orange',
+  })[status] ?? 'grey';
 
 const isInvoiceOverdue = (row: InvoiceSummaryDto): boolean => {
   if (!row.due_date || row.status !== 'open') return false;
@@ -127,7 +138,7 @@ const invoiceFilterSchema: FilterSchema = {
   updated_at: { type: 'Date', label: t('invoices.list.filter.updatedAt') },
 };
 
-const { items, total, isLoading, query, fetch } = useQuery(
+const { items, total, isLoading, error, query, fetch } = useQuery(
   InvoicesService.search,
   invoiceFilterSchema,
   10,

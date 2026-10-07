@@ -1,13 +1,13 @@
 <template>
   <q-dialog v-model="dialogModel" persistent>
-    <q-card style="min-width: 420px; max-width: 95vw; max-height: 80vh" class="column">
+    <q-card style="width: min(520px, 95vw); max-height: 80vh" class="column">
       <q-card-section class="row items-center q-pb-none">
         <div class="text-h6 flex items-center">
           <q-icon name="tune" class="q-mr-sm" />
           {{ t('formPreferences.title') }}
         </div>
         <q-space />
-        <q-btn icon="close" flat round dense v-close-popup />
+        <q-btn icon="close" :aria-label="t('common.close')" flat round dense v-close-popup />
       </q-card-section>
 
       <q-card-section class="col overflow-auto">
@@ -33,6 +33,11 @@
                 :icon="defaultId === pref.id ? 'star' : 'star_border'"
                 :color="defaultId === pref.id ? 'amber' : 'grey'"
                 :loading="isSaving"
+                :aria-label="
+                  defaultId === pref.id
+                    ? t('formPreferences.unsetDefault')
+                    : t('formPreferences.setDefault')
+                "
                 @click="toggleDefault(pref.id)"
               >
                 <q-tooltip>{{
@@ -60,7 +65,7 @@
                   :label="t('formPreferences.applyAction')"
                   @click="applyPref(pref)"
                 />
-                <q-btn flat round dense size="sm" icon="more_vert">
+                <q-btn flat round dense size="sm" icon="more_vert" :aria-label="t('ui.options')">
                   <q-menu>
                     <q-list dense style="min-width: 130px">
                       <q-item clickable v-close-popup @click="startRename(pref)">
@@ -102,11 +107,18 @@
 
   <!-- Rename / save-name dialog -->
   <q-dialog v-model="nameDialogOpen" persistent>
-    <q-card style="min-width: 340px; max-width: 90vw">
+    <q-card style="width: min(420px, 90vw)">
       <q-card-section class="row items-center q-pb-none">
         <div class="text-h6">{{ nameDialogTitle }}</div>
         <q-space />
-        <q-btn icon="close" flat round dense @click="nameDialogOpen = false" />
+        <q-btn
+          icon="close"
+          :aria-label="t('common.close')"
+          flat
+          round
+          dense
+          @click="nameDialogOpen = false"
+        />
       </q-card-section>
       <q-card-section>
         <q-input
@@ -217,9 +229,9 @@ const submitNameDialog = async () => {
   nameDialogError.value = false;
 
   if (nameDialogMode.value === 'save') {
-    await addPreference(trimmed, props.currentFields);
+    if (!(await addPreference(trimmed, props.currentFields))) return;
   } else if (renamingId.value) {
-    await renamePreference(renamingId.value, trimmed);
+    if (!(await renamePreference(renamingId.value, trimmed))) return;
     renamingId.value = null;
   }
 

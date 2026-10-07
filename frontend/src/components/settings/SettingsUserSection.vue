@@ -170,7 +170,14 @@
               {{ t('settings.user.setupDialogSubtitle') }}
             </div>
           </div>
-          <q-btn flat round dense icon="close" @click="cancelTotpSetup" />
+          <q-btn
+            flat
+            round
+            dense
+            icon="close"
+            :aria-label="t('common.close')"
+            @click="cancelTotpSetup"
+          />
         </q-card-section>
 
         <q-separator />
@@ -194,6 +201,7 @@
                     round
                     dense
                     icon="content_copy"
+                    :aria-label="t('common.copyToClipboard')"
                     @click="copyToClipboard(totpSetup.manual_entry_key)"
                   />
                 </template>

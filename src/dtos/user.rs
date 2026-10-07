@@ -140,7 +140,8 @@ fn validate_password_two_factor_payload(payload: &UpdateUserPasswordDto) -> Resu
 }
 
 fn validate_non_empty_preferences_patch(payload: &UpdateUserPreferencesDto) -> Result<(), ValidationError> {
-    if payload.theme.is_none()
+    if payload.appearance.is_none()
+        && payload.theme.is_none()
         && payload.timezone.is_none()
         && payload.date_format.is_none()
         && payload.number_format.is_none()
@@ -232,6 +233,39 @@ pub enum UserThemePreference {
     System,
     Light,
     Dark,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ThemeIdentity {
+    #[default]
+    Orbit,
+    Linen,
+    Forest,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum InterfaceDensity {
+    #[default]
+    Comfortable,
+    Compact,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
+#[serde(default)]
+pub struct AppearancePreference {
+    pub theme_id: ThemeIdentity,
+    pub density: InterfaceDensity,
+    pub reduced_motion: bool,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Validate, ToSchema)]
+#[serde(default, deny_unknown_fields)]
+pub struct AppearancePatch {
+    pub theme_id: Option<ThemeIdentity>,
+    pub density: Option<InterfaceDensity>,
+    pub reduced_motion: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, ToSchema)]
@@ -372,6 +406,7 @@ impl NotificationPreferences {
 #[serde(default)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct UserPreferences {
+    pub appearance: AppearancePreference,
     pub theme: UserThemePreference,
     pub timezone: String,
     pub date_format: UserDateFormatPreference,
@@ -389,6 +424,7 @@ fn default_max_daily_hours() -> i32 {
 impl Default for UserPreferences {
     fn default() -> Self {
         Self {
+            appearance: AppearancePreference::default(),
             theme: UserThemePreference::System,
             timezone: "UTC".to_string(),
             date_format: UserDateFormatPreference::DdMmYyyy,
@@ -413,6 +449,17 @@ impl UserPreferences {
     }
 
     pub fn apply_general_patch(&mut self, patch: &UpdateUserPreferencesDto) {
+        if let Some(appearance) = patch.appearance.as_ref() {
+            if let Some(value) = appearance.theme_id {
+                self.appearance.theme_id = value;
+            }
+            if let Some(value) = appearance.density {
+                self.appearance.density = value;
+            }
+            if let Some(value) = appearance.reduced_motion {
+                self.appearance.reduced_motion = value;
+            }
+        }
         if let Some(theme) = patch.theme {
             self.theme = theme;
         }
@@ -533,6 +580,8 @@ pub struct UpdateUserPasswordDto {
 #[serde(deny_unknown_fields)]
 #[validate(schema(function = "validate_non_empty_preferences_patch"))]
 pub struct UpdateUserPreferencesDto {
+    #[validate(nested)]
+    pub appearance: Option<AppearancePatch>,
     pub theme: Option<UserThemePreference>,
 
     #[validate(length(min = 1, max = 64, message = "timezone must be between 1 and 64 characters"))]
@@ -665,6 +714,44 @@ impl From<crate::entities::users::Model> for UserSettingsDto {
             preferences,
             created_at: model.created_at,
             updated_at: model.updated_at,
+        }
+    }
+}
+
+#[cfg(test)]
+mod appearance_tests {
+    use super::*;
+    #[test]
+    fn old_preferences_receive_appearance_defaults() {
+        let preferences: UserPreferences =
+            serde_json::from_value(serde_json::json!({"theme":"dark", "language":"pt"})).unwrap();
+        assert_eq!(preferences.theme, UserThemePreference::Dark);
+        assert_eq!(preferences.appearance, AppearancePreference::default());
+        assert_eq!(preferences.language, UserLanguagePreference::Pt);
+    }
+    #[test]
+    fn appearance_patch_preserves_siblings_and_other_preferences() {
+        let mut preferences = UserPreferences::default();
+        preferences.appearance.density = InterfaceDensity::Compact;
+        preferences.notifications.group_notifications = true;
+        let patch: UpdateUserPreferencesDto =
+            serde_json::from_value(serde_json::json!({"appearance":{"theme_id":"forest"}})).unwrap();
+        patch.validate().unwrap();
+        preferences.apply_general_patch(&patch);
+        assert_eq!(preferences.appearance.theme_id, ThemeIdentity::Forest);
+        assert_eq!(preferences.appearance.density, InterfaceDensity::Compact);
+        assert!(preferences.notifications.group_notifications);
+        let roundtrip: UserPreferences = serde_json::from_value(serde_json::to_value(&preferences).unwrap()).unwrap();
+        assert_eq!(roundtrip.appearance, preferences.appearance);
+    }
+    #[test]
+    fn unsupported_appearance_is_rejected() {
+        for value in [
+            serde_json::json!({"appearance":{"theme_id":"unknown"}}),
+            serde_json::json!({"appearance":{"density":"tiny"}}),
+            serde_json::json!({"appearance":{"secret":true}}),
+        ] {
+            assert!(serde_json::from_value::<UpdateUserPreferencesDto>(value).is_err());
         }
     }
 }

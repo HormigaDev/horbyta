@@ -7,7 +7,7 @@
           {{ t('error.badRequestDialog.title') }}
         </div>
         <q-space />
-        <q-btn icon="close" flat round dense v-close-popup />
+        <q-btn icon="close" flat round dense :aria-label="t('common.close')" v-close-popup />
       </q-card-section>
 
       <q-card-section>

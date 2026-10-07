@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md row items-start q-col-gutter-md">
+  <q-page class="detail-page q-pa-md row items-start q-col-gutter-md">
     <div class="col-12 col-md-2"></div>
 
     <div class="col-12 col-md-8">
@@ -10,9 +10,9 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
+          <h1 class="text-h5 text-weight-bold q-ma-none" style="color: var(--text-color)">
             {{ milestone?.name || t('common.loading') }}
-          </div>
+          </h1>
           <div class="text-caption" style="color: var(--text-muted)" v-if="milestone">
             {{
               t('milestones.detail.meta', {
@@ -32,9 +32,12 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+          <h2
+            class="text-subtitle1 q-mb-md q-mt-none text-weight-bold"
+            style="color: var(--text-accent)"
+          >
             {{ t('milestones.detail.specsTitle') }}
-          </div>
+          </h2>
 
           <div class="row q-col-gutter-md" v-if="milestone">
             <div class="col-12 col-md-4">
@@ -75,10 +78,13 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+          <h2
+            class="text-subtitle1 q-mb-md q-mt-none text-weight-bold"
+            style="color: var(--text-accent)"
+          >
             {{ t('milestones.detail.descriptionTitle') }}
-          </div>
-          <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
+          </h2>
+          <div class="detail-content">
             <MarkdownRenderer
               :model-value="milestone?.description || t('milestones.detail.emptyDescription')"
             />
@@ -125,7 +131,7 @@ import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useUI } from 'src/composables/useUI';
 import { ClientMilestonesService } from 'src/services/clientMilestones';
 import { ClientProjectsService } from 'src/services/clientProjects';
-import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useDisplayPreferences } from 'src/composables/useDisplayPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { ClientMilestoneDetailDto, MilestoneStatus } from 'src/types/milestone';
 
@@ -133,7 +139,7 @@ const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const { notifyError, showLoading, hideLoading } = useUI();
-const userPreferencesStore = useUserPreferencesStore();
+const userPreferencesStore = useDisplayPreferences();
 
 const milestone = ref<ClientMilestoneDetailDto | null>(null);
 const projectName = ref<string | null>(null);

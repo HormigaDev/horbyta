@@ -8,6 +8,7 @@
       :rows="items"
       :total-items="total"
       :loading="isLoading"
+      :error="error"
       :filter-schema="clientChangeRequestFilterSchema"
       selection-mode="single"
       hide-edit
@@ -41,7 +42,7 @@ const clientChangeRequestFilterSchema: FilterSchema = {
   updated_at: { type: 'Date', label: t('changeRequests.list.filter.updatedAt') },
 };
 
-const { items, total, isLoading, query, fetch } = useQuery(
+const { items, total, isLoading, error, query, fetch } = useQuery(
   ClientChangeRequestsService.search,
   clientChangeRequestFilterSchema,
   10,

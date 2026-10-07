@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="form-page q-pa-md">
     <div class="padding-page">
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
@@ -95,12 +95,13 @@
         </q-card-section>
       </q-card>
 
-      <div class="row justify-end q-gutter-sm">
+      <div class="row justify-end q-gutter-sm form-actions">
         <q-btn
           v-if="isNew"
           flat
           round
           icon="bookmarks"
+          :aria-label="t('formPreferences.title')"
           color="grey"
           @click="prefsDialogOpen = true"
         >
@@ -110,6 +111,7 @@
           flat
           round
           icon="push_pin"
+          :aria-label="t('common.keepFormOpen')"
           :color="pinButtonColor"
           :aria-pressed="stayOnFormAfterSave"
           @click="stayOnFormAfterSave = !stayOnFormAfterSave"
@@ -202,7 +204,7 @@ const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
   (draft) => {
     Object.assign(client.value, draft);
   },
-  { formKey: 'client', enabled: () => isNew.value },
+  { formKey: 'client', enabled: () => !isSubmitting.value },
 );
 
 const isDirty = computed(() => {
@@ -216,7 +218,7 @@ const isDirty = computed(() => {
   return client.value.status !== ((f.status as string) ?? 'active');
 });
 
-useUnsavedChanges(() => isDirty.value);
+const { confirmLeave } = useUnsavedChanges(() => !isSubmitting.value && isDirty.value);
 
 watch(
   client,
@@ -262,7 +264,8 @@ const loadClient = async () => {
   }
 };
 
-const goBack = () => {
+const goBack = async () => {
+  if (!(await confirmLeave())) return;
   clearDraft();
   hasChanges.value = false;
   if (isNew.value) {
@@ -340,6 +343,7 @@ onMounted(async () => {
       applyPreference(defaultPreference.value.fields);
     }
   }
-  loadClient();
+  await loadClient();
+  if (!isNew.value) await restoreDraftIfAvailable();
 });
 </script>

@@ -466,3 +466,66 @@ The provided config proxies to `127.0.0.1:8890` and includes WebSocket upgrade h
 All versions of this project have been publicly released under [AGPL-3.0-only](./LICENSE).
 
 Earlier commits referencing MIT were never publicly distributed under that license.
+
+## Laptop resource limits
+
+Cargo defaults to **2 concurrent jobs** through `.cargo/config.toml`. Rayon and
+Tokio default to two worker threads unless explicitly overridden. Keep Rust and
+frontend builds/checks sequential during development. For lower-priority Linux
+checks, use `python3 scripts/with-resource-limits.py cargo check` from the root.
+For frontend checks, run `python3 ../scripts/with-resource-limits.py npm run build`
+inside `frontend/`. On Linux the wrapper limits CPU affinity to two available
+CPUs and lowers priority; children (including linkers and workers) inherit both.
+It does not change system-wide settings.
+
+UI verification can run against the dedicated test account with backend and
+Quasar running: `UI_VERIFY=1 python3 scripts/with-resource-limits.py node scripts/capture-ui.mjs`. It requires representative
+test tasks and Spanish preferences, exercises preview/cancel, failed saves,
+live system appearance, explicit record actions and mobile layout. It writes
+`verification.json` beside the screenshots. Credentials and test artifacts stay
+under the ignored `target/ui-tests/` directory.
+
+`UI_VERIFY_FORMS=1` with the same capture command checks draft restoration,
+failed presets and task create/edit through the real form. It removes the temporary
+task afterward and only accepts the dedicated UI test account.
+
+`UI_VERIFY_WORKFLOWS=1` also exercises keyboard focus, pagination, filters,
+column persistence, financial forms with regional formats and attachment storage.
+It uses and deletes temporary records in the dedicated test account and restores
+its table/regional preferences. Use a writable `UPLOAD_DIR` for the test backend;
+existing storage owned by another OS user must have its ownership fixed separately.
+
+`UI_VERIFY_DASHBOARD_PORTAL=1` verifies chart chronology/currencies, accessible
+chart tables, refresh/filter failures, actual disposable client credentials/token
+login and portal isolation. Financial data and 2FA challenges are browser-only
+fixtures; client records are created through the real API and deleted afterward.
+It requires PostgreSQL, the backend, Quasar and the dedicated test account.
+
+`UI_VERIFY_CLIENT_STATES=1` checks client details, ES/EN/PT layouts, request
+status locks, leave guards and draft restoration using isolated browser fixtures.
+It needs Quasar and Chrome but does not authenticate against the backend or test
+server permissions. Keep this mode separate from the real-account flags above.
+Choose a separate `UI_SCREENSHOT_DIR` to preserve evidence from previous runs.
+
+`UI_VERIFY_MIGRATION=1` runs the final appearance matrix (96 list/form
+combinations at 320/360/768/1440px), page families, keyboard/touch emulation,
+regional display and real A/B account isolation. It creates disposable records
+and a temporary second user, then restores preferences and removes those records.
+Use the dedicated account and the resource wrapper; reports go to the selected
+`UI_SCREENSHOT_DIR`. Full blocked-storage behavior is checked on production:
+development Devtools itself assumes browser storage.
+
+For local production-build review, after `npm run build`, run
+`python3 scripts/with-resource-limits.py node scripts/serve-ui-build.mjs` from the
+repository root, with the test backend on port 8890. Then use
+`UI_VERIFY_PRODUCTION=1 python3 scripts/with-resource-limits.py node scripts/capture-ui.mjs http://127.0.0.1:9100 / /tasks /settings`.
+The preview server binds localhost and proxies the test API; VPS hosting remains
+Nginx. Production checks cover real login, PWA shell, local fonts, storage errors
+and modal keyboard focus. Offline business operations are not provided.
+
+`node scripts/measure-ui-build.mjs frontend/dist/pwa` reports static entry/import
+sizes and total assets. It separates the initial static graph from dynamic
+imports; PWA precaching may still download lazy chunks in the background.
+Pass a capture `report.json` as a third argument to also measure the observed
+login imports and their static dependencies. The shared component/token contracts
+are documented in [frontend/DESIGN.md](frontend/DESIGN.md).

@@ -9,6 +9,7 @@
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
+      :error="loadError"
       :filter-schema="taskFilterSchema"
       @request="onRequest"
       @view="onView"
@@ -133,15 +134,18 @@ const query = reactive<QueryPayload>({
 const items = ref<TaskSummaryDto[]>([]);
 const total = ref(0);
 const isLoading = ref(false);
+const loadError = ref<string | null>(null);
 const hasLoadedInitialView = ref(false);
 
 const loadView = async () => {
   isLoading.value = true;
+  loadError.value = null;
   try {
     const view = await TasksService.view();
     items.value = view.items;
     total.value = view.total;
   } catch (err: unknown) {
+    loadError.value = t('ui.loadError');
     notifyError(t('tasks.list.loadInitialError'), err);
   } finally {
     isLoading.value = false;
@@ -150,6 +154,7 @@ const loadView = async () => {
 
 const fetchTasks = async () => {
   isLoading.value = true;
+  loadError.value = null;
   try {
     const payload: QueryPayload = {
       page: query.page,
@@ -163,6 +168,7 @@ const fetchTasks = async () => {
     items.value = response.items;
     total.value = response.total;
   } catch (err: unknown) {
+    loadError.value = t('ui.loadError');
     notifyError(t('tasks.list.fetchError'), err);
   } finally {
     isLoading.value = false;

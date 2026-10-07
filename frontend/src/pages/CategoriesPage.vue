@@ -9,6 +9,7 @@
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
+      :error="error"
       :filter-schema="categoryFilterSchema"
       hide-view
       @request="onRequest"
@@ -63,7 +64,7 @@ const categoryFilterSchema: FilterSchema = {
   name: 'Text',
 };
 
-const { items, total, isLoading, query, fetch } = useQuery(
+const { items, total, isLoading, error, query, fetch } = useQuery(
   CategoriesService.search,
   categoryFilterSchema,
   10,

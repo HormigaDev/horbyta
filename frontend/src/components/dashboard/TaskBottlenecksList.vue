@@ -2,7 +2,9 @@
   <div v-if="rows.length === 0" class="chart-empty">{{ emptyLabel }}</div>
   <div v-else class="bottlenecks-list">
     <div v-for="row in rows" :key="row.project_id" class="bottleneck-row">
-      <div class="bottleneck-name">{{ row.project_name }}</div>
+      <router-link class="bottleneck-name text-primary" :to="`/projects/${row.project_id}`">{{
+        row.project_name
+      }}</router-link>
       <div class="bottleneck-badges">
         <q-chip dense outline color="primary" text-color="primary">
           {{ row.total_tasks }} · {{ labels.total }}

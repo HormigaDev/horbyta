@@ -1,35 +1,38 @@
 <template>
   <q-page class="q-pa-md dashboard-page">
-    <div class="dashboard-header q-mb-md">
-      <div>
-        <div class="text-h5 text-weight-bold">{{ t('clientDashboard.title') }}</div>
-        <div class="text-caption text-muted">{{ t('clientDashboard.subtitle') }}</div>
-      </div>
-      <q-btn
-        flat
-        dense
-        icon="refresh"
-        :label="t('clientDashboard.refresh')"
-        :loading="isLoading"
-        @click="fetchDashboard"
-      />
-    </div>
+    <PageHeader
+      :title="t('clientDashboard.title')"
+      :subtitle="t('clientDashboard.subtitle')"
+      :eyebrow="t('ui.workspace')"
+    >
+      <template #actions
+        ><q-btn
+          outline
+          color="primary"
+          icon="refresh"
+          :label="t('clientDashboard.refresh')"
+          :loading="isLoading"
+          @click="fetchDashboard"
+      /></template>
+    </PageHeader>
 
     <div v-if="isLoading && !data" class="flex flex-center q-py-xl">
       <q-spinner color="primary" size="32px" />
       <span class="q-ml-sm text-muted">{{ t('clientDashboard.loading') }}</span>
     </div>
 
-    <div v-else-if="loadError" class="text-center q-py-xl text-negative">
-      {{ t('clientDashboard.error') }}
-    </div>
+    <EmptyState v-if="loadError" error :title="t('clientDashboard.error')"
+      ><q-btn outline color="primary" :label="t('ui.retry')" @click="fetchDashboard"
+    /></EmptyState>
 
-    <template v-else-if="data">
+    <template v-if="data">
       <div class="row q-col-gutter-md">
         <div class="col-12 col-sm-6 col-md-3">
           <DashboardKpiCard
             :title="t('clientDashboard.kpi.activeProjects.title')"
             :caption="t('clientDashboard.kpi.activeProjects.caption')"
+            action-to="/client/projects"
+            :action-label="t('layout.drawer.projects')"
             icon="folder_open"
             variant="positive"
           >
@@ -47,6 +50,8 @@
           <DashboardKpiCard
             :title="t('clientDashboard.kpi.overdueMilestones.title')"
             :caption="t('clientDashboard.kpi.overdueMilestones.caption')"
+            action-to="/client/milestones"
+            :action-label="t('layout.drawer.milestones')"
             icon="event_busy"
             :variant="data.kpis.overdue_milestones_total > 0 ? 'negative' : 'muted'"
           >
@@ -64,6 +69,8 @@
           <DashboardKpiCard
             :title="t('clientDashboard.kpi.openChangeRequests.title')"
             :caption="t('clientDashboard.kpi.openChangeRequests.caption')"
+            action-to="/client/change-requests"
+            :action-label="t('layout.drawer.changeRequests')"
             icon="compare_arrows"
             variant="warning"
           >
@@ -99,6 +106,7 @@
         </div>
       </div>
 
+      <div class="dashboard-section-heading">{{ t('ui.overview') }}</div>
       <div class="row q-col-gutter-md q-mt-sm">
         <div class="col-12 col-md-5">
           <ClientProjectStatusCard
@@ -135,6 +143,8 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from 'src/components/PageHeader.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -143,7 +153,6 @@ import type { ClientDashboardDto } from 'src/types/dashboard';
 import type { ProjectBillingType, ProjectStatus } from 'src/types/project';
 import { ClientDashboardService } from 'src/services/clientDashboard';
 import { useUI } from 'src/composables/useUI';
-import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { useChartPalette } from 'src/composables/dashboard/useChartPalette';
 import DashboardKpiCard from 'src/components/dashboard/DashboardKpiCard.vue';
 import CurrencyAmountValue from 'src/components/dashboard/CurrencyAmountValue.vue';
@@ -154,7 +163,6 @@ import ClientProjectPortfolioCard from 'src/components/dashboard/ClientProjectPo
 
 const { t } = useI18n();
 const { notifyError } = useUI();
-const preferencesStore = useUserPreferencesStore();
 const chartPalette = useChartPalette();
 
 const data = ref<ClientDashboardDto | null>(null);
@@ -192,10 +200,10 @@ const changeRequestStatusHelperMap = computed<Record<ChangeRequestStatus, string
   cancelled: t('clientDashboard.changeRequests.helper.cancelled'),
 }));
 
-const changeRequestStatusHelper = (status: ChangeRequestStatus) => changeRequestStatusHelperMap.value[status];
+const changeRequestStatusHelper = (status: ChangeRequestStatus) =>
+  changeRequestStatusHelperMap.value[status];
 
 onMounted(() => {
-  void preferencesStore.ensureLoaded();
   void fetchDashboard();
 });
 </script>

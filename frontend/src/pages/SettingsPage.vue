@@ -1,29 +1,47 @@
 <template>
   <q-page class="q-pa-md">
     <div class="settings-container q-gutter-y-md">
-      <q-card flat bordered>
-        <q-card-section class="row items-center justify-between q-col-gutter-md">
-          <div>
-            <div class="text-h5 q-mb-xs">
-              <q-icon name="settings" size="lg" />
-              {{ t('settings.page.title') }}
-            </div>
-            <div class="text-caption" style="color: var(--text-muted)">
-              {{ t('settings.page.subtitle') }}
-            </div>
-          </div>
-          <q-btn
-            flat
-            icon="refresh"
-            :label="t('settings.page.reload')"
-            color="primary"
-            :loading="isBootstrapping"
-            @click="loadSettings"
-          />
-        </q-card-section>
-      </q-card>
-
-      <q-card flat bordered>
+      <PageHeader
+        :title="t('settings.page.title')"
+        :subtitle="t('settings.page.subtitle')"
+        :eyebrow="t('ui.workspace')"
+        ><q-btn
+          flat
+          icon="refresh"
+          :label="t('settings.page.reload')"
+          :loading="isBootstrapping"
+          :disable="preferencesDirty"
+          @click="loadSettings"
+      /></PageHeader>
+      <q-tabs
+        v-model="section"
+        align="left"
+        class="settings-tabs q-mb-md"
+        active-color="primary"
+        outside-arrows
+        mobile-arrows
+      >
+        <q-tab name="preferences" :label="t('ui.preferences')" icon="palette" />
+        <q-tab
+          :disable="preferencesDirty"
+          name="notifications"
+          :label="t('layout.header.notifications')"
+          icon="notifications_none"
+        />
+        <q-tab
+          :disable="preferencesDirty"
+          name="account"
+          :label="t('ui.profile')"
+          icon="person_outline"
+        />
+        <q-tab
+          :disable="preferencesDirty"
+          name="app"
+          :label="t('settings.storage.title')"
+          icon="storage"
+        />
+      </q-tabs>
+      <q-card v-show="section === 'app'" flat bordered>
         <q-card-section class="row items-center q-col-gutter-md">
           <div class="col-12 col-md-8">
             <div class="text-h6">{{ t('settings.storage.title') }}</div>
@@ -70,16 +88,23 @@
       </q-card>
 
       <template v-if="settings">
-        <SettingsAppSection />
+        <SettingsAppSection v-show="section === 'app'" />
 
         <SettingsPreferencesSection
+          v-show="section === 'preferences'"
           :preferences="settings.preferences"
+          @updated="handleSettingsUpdated"
+          @dirty-change="preferencesDirty = $event"
+        />
+
+        <SettingsUserSection
+          v-show="section === 'account'"
+          :user="settings"
           @updated="handleSettingsUpdated"
         />
 
-        <SettingsUserSection :user="settings" @updated="handleSettingsUpdated" />
-
         <SettingsNotificationsSection
+          v-show="section === 'notifications'"
           :notifications="settings.preferences.notifications"
           @updated="handleSettingsUpdated"
         />
@@ -98,6 +123,9 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from 'src/components/PageHeader.vue';
+const section = ref('preferences');
+const preferencesDirty = ref(false);
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import SettingsAppSection from 'src/components/settings/SettingsAppSection.vue';

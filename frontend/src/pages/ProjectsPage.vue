@@ -9,6 +9,7 @@
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
+      :error="error"
       :filter-schema="projectFilterSchema"
       @request="onRequest"
       @view="(id) => $router.push(`/projects/${id}`)"
@@ -107,7 +108,7 @@ const projectFilterSchema: FilterSchema = {
   updated_at: { type: 'Date', label: t('projects.list.filter.updated') },
 };
 
-const { items, total, isLoading, query, fetch } = useQuery(
+const { items, total, isLoading, error, query, fetch } = useQuery(
   ProjectsService.search,
   projectFilterSchema,
   10,

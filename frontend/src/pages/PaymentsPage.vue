@@ -9,6 +9,7 @@
       :rows="items"
       :totalItems="total"
       :loading="isLoading"
+      :error="error"
       :filter-schema="paymentFilterSchema"
       @request="onRequest"
       @view="(id) => $router.push(`/payments/${id}`)"
@@ -33,7 +34,11 @@
         <q-td
           :props="props"
           class="text-right text-weight-medium"
-          :class="(props.row as PaymentSummaryDto).transaction_type === 'charge' ? 'text-positive' : 'text-negative'"
+          :class="
+            (props.row as PaymentSummaryDto).transaction_type === 'charge'
+              ? 'text-positive'
+              : 'text-negative'
+          "
         >
           {{ (props.row as PaymentSummaryDto).transaction_type === 'charge' ? '+' : '−' }}
           {{ CURRENCY_SYMBOLS[(props.row as PaymentSummaryDto).currency_type] }}
@@ -44,10 +49,18 @@
       <template #body-cell-transaction_type="props">
         <q-td :props="props" class="text-center">
           <q-chip
-            :color="(props.row as PaymentSummaryDto).transaction_type === 'charge' ? 'positive' : 'deep-orange'"
+            :color="
+              (props.row as PaymentSummaryDto).transaction_type === 'charge'
+                ? 'positive'
+                : 'deep-orange'
+            "
             text-color="white"
             dense
-            :icon="(props.row as PaymentSummaryDto).transaction_type === 'charge' ? 'arrow_downward' : 'arrow_upward'"
+            :icon="
+              (props.row as PaymentSummaryDto).transaction_type === 'charge'
+                ? 'arrow_downward'
+                : 'arrow_upward'
+            "
             class="text-caption text-weight-medium"
           >
             {{ props.value }}
@@ -67,9 +80,15 @@
             <q-spinner color="primary" size="md" />
           </div>
           <template v-else>
-            <div class="text-caption q-mb-md" style="color: var(--text-muted)" v-if="selectedPaymentDetail">
+            <div
+              class="text-caption q-mb-md"
+              style="color: var(--text-muted)"
+              v-if="selectedPaymentDetail"
+            >
               {{ t('payments.detail.refundDialog.available') }}:
-              <strong>{{ formatAmount(remainingAmount, selectedPaymentDetail.currency_type) }}</strong>
+              <strong>{{
+                formatAmount(remainingAmount, selectedPaymentDetail.currency_type)
+              }}</strong>
             </div>
 
             <NumericTextInput
@@ -96,7 +115,13 @@
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat :label="t('common.cancel')" color="grey" v-close-popup :disable="isRefunding" />
+          <q-btn
+            flat
+            :label="t('common.cancel')"
+            color="grey"
+            v-close-popup
+            :disable="isRefunding"
+          />
           <q-btn
             unelevated
             :label="t('payments.detail.refundDialog.confirm')"
@@ -146,7 +171,7 @@ const paymentFilterSchema: FilterSchema = {
   updated_at: { type: 'Date', label: t('payments.list.filter.updatedAt') },
 };
 
-const { items, total, isLoading, query, fetch } = useQuery(
+const { items, total, isLoading, error, query, fetch } = useQuery(
   PaymentsService.search,
   paymentFilterSchema,
   10,
@@ -162,9 +187,9 @@ const onSelectionChange = (selected: object[]) => {
   selectedPayments.value = selected as PaymentSummaryDto[];
 };
 
-const canRefundSelected = computed(() =>
-  selectedPayments.value.length === 1 &&
-  selectedPayments.value[0]!.transaction_type === 'charge',
+const canRefundSelected = computed(
+  () =>
+    selectedPayments.value.length === 1 && selectedPayments.value[0]!.transaction_type === 'charge',
 );
 
 // Refund dialog

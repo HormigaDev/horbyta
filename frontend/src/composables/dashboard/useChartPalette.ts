@@ -10,13 +10,14 @@ export interface ChartPalette {
   text: string;
   tooltipBg: string;
   primary: string;
+  reducedMotion: boolean;
 }
 
 const readCssVar = (name: string, fallback: string): string => {
   if (typeof window === 'undefined') {
     return fallback;
   }
-  const value = getComputedStyle(document.body).getPropertyValue(name).trim();
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return value.length > 0 ? value : fallback;
 };
 
@@ -34,6 +35,9 @@ const buildPalette = (): ChartPalette => ({
   text: readCssVar('--chart-text', '#c8ccd1'),
   tooltipBg: readCssVar('--chart-tooltip-bg', 'rgba(30,30,30,0.95)'),
   primary: readCssVar('--q-primary', '#5865f2'),
+  reducedMotion:
+    document.documentElement.dataset.motion === 'reduced' ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 });
 
 export function useChartPalette(): ComputedRef<ChartPalette> {
@@ -41,6 +45,10 @@ export function useChartPalette(): ComputedRef<ChartPalette> {
   const { isDark } = storeToRefs(themeStore);
   const paletteKey = ref(0);
   const observer = ref<MutationObserver | null>(null);
+  const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const onMotionChange = () => {
+    paletteKey.value += 1;
+  };
 
   onMounted(() => {
     if (typeof window === 'undefined') {
@@ -49,16 +57,18 @@ export function useChartPalette(): ComputedRef<ChartPalette> {
     const mutationObserver = new MutationObserver(() => {
       paletteKey.value += 1;
     });
-    mutationObserver.observe(document.body, {
+    mutationObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['data-theme'],
+      attributeFilter: ['data-theme', 'data-theme-id', 'data-motion'],
     });
     observer.value = mutationObserver;
+    motion.addEventListener('change', onMotionChange);
   });
 
   onUnmounted(() => {
     observer.value?.disconnect();
     observer.value = null;
+    motion.removeEventListener('change', onMotionChange);
   });
 
   watch(isDark, () => {

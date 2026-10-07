@@ -9,6 +9,7 @@
       :rows="items"
       :total-items="total"
       :loading="isLoading"
+      :error="error"
       :filter-schema="CLIENT_FILTER_SCHEMA"
       @request="onRequest"
       @view="(id) => $router.push(`/clients/${id}`)"
@@ -35,7 +36,7 @@ import { useCrudDelete } from 'src/composables/useCrudDelete';
 const router = useRouter();
 const { notify, notifyError, confirmDelete } = useUI();
 const { t } = useI18n();
-const { items, total, isLoading, query, fetch } = useQuery(
+const { items, total, isLoading, error, query, fetch } = useQuery(
   ClientsService.search,
   CLIENT_FILTER_SCHEMA,
   10,

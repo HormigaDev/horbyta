@@ -8,7 +8,14 @@
             {{ t('layout.pinnedTasks.subtitle') }}
           </div>
         </div>
-        <q-btn flat round dense icon="close" @click="open = false" />
+        <q-btn
+          flat
+          round
+          dense
+          icon="close"
+          :aria-label="t('common.close')"
+          @click="open = false"
+        />
       </q-card-section>
 
       <q-separator />
@@ -47,6 +54,7 @@
                 dense
                 size="sm"
                 icon="push_pin"
+                :aria-label="t('layout.pinnedTasks.unpin')"
                 color="primary"
                 @click.stop="unpin(task.id)"
               >

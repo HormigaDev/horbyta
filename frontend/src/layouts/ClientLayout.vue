@@ -1,6 +1,6 @@
 <template>
   <q-layout view="hHh Lpr lFf">
-    <q-header class="q-py-xs">
+    <q-header class="q-py-xs portal-header">
       <q-toolbar>
         <q-btn
           flat
@@ -11,14 +11,14 @@
               ? 'menu_open'
               : 'menu'
           "
-          aria-label="Menu"
+          :aria-label="t('ui.navigation')"
           @click="toggleDrawer"
-          class="q-mr-lg"
+          class="q-mr-sm"
         />
 
-        <q-img alt="Logo" src="/logo.png" width="36px" height="36px" class="q-mr-md" />
-        <q-toolbar-title class="text-h6 ellipsis" v-if="clientAuthStore.client?.name">
-          {{ t('layout.header.welcome') }}
+        <q-img alt="Logo" src="/logo.png" width="36px" height="36px" class="q-mr-sm" />
+        <q-toolbar-title class="text-subtitle1 ellipsis" v-if="clientAuthStore.client?.name">
+          <span class="workspace-brand">Horbyta</span>
           <b class="text-weight-bold">{{ clientAuthStore.client.name }}</b>
         </q-toolbar-title>
         <q-toolbar-title class="text-weight-bold text-h6 ellipsis" v-else>
@@ -26,8 +26,9 @@
         </q-toolbar-title>
 
         <q-space />
+        <AppearanceMenu />
 
-        <q-btn round flat>
+        <q-btn round flat :aria-label="t('ui.profile')">
           <q-avatar size="32px" color="primary" text-color="white">
             <q-icon name="person" />
           </q-avatar>
@@ -73,6 +74,7 @@
             round
             dense
             icon="bar_chart"
+            :aria-label="t('layout.drawer.dashboard')"
             to="/client"
             exact
             :color="getMiniRouteColor('/client', true)"
@@ -87,6 +89,7 @@
             round
             dense
             icon="folder"
+            :aria-label="t('layout.drawer.projects')"
             to="/client/projects"
             :color="getMiniRouteColor('/client/projects')"
           >
@@ -100,6 +103,7 @@
             round
             dense
             icon="flag"
+            :aria-label="t('layout.drawer.milestones')"
             to="/client/milestones"
             :color="getMiniRouteColor('/client/milestones')"
           >
@@ -113,6 +117,7 @@
             round
             dense
             icon="compare_arrows"
+            :aria-label="t('layout.drawer.changeRequests')"
             to="/client/change-requests"
             :color="getMiniRouteColor('/client/change-requests')"
           >
@@ -123,7 +128,15 @@
         </div>
 
         <div class="absolute-bottom column flex-center q-pb-md q-gutter-y-sm w-100">
-          <q-btn flat round dense icon="logout" color="negative" @click="logout">
+          <q-btn
+            flat
+            round
+            dense
+            icon="logout"
+            :aria-label="t('layout.header.logout')"
+            color="negative"
+            @click="logout"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.header.logout') }}
             </q-tooltip>
@@ -133,7 +146,8 @@
 
       <template v-if="!$q.screen.lt.md">
         <div class="column justify-between full-height">
-          <q-list class="q-pt-sm">
+          <q-list class="q-pt-sm"
+            ><div class="nav-group">{{ t('ui.clientPortal') }}</div>
             <q-item clickable v-ripple to="/client" exact>
               <q-item-section avatar><q-icon name="bar_chart" /></q-item-section>
               <q-item-section>{{ t('layout.drawer.dashboard') }}</q-item-section>
@@ -245,7 +259,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import AppearanceMenu from 'src/components/AppearanceMenu.vue';
+import { ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
@@ -260,7 +275,20 @@ const { t } = useI18n();
 const $q = useQuasar();
 
 const drawer = ref(!$q.screen.lt.md);
-const drawerExpanded = ref(false);
+let storedExpanded = false;
+try {
+  storedExpanded = localStorage.getItem('horbyta:portal-drawer') === 'expanded';
+} catch {
+  /* Optional. */
+}
+const drawerExpanded = ref(storedExpanded);
+watch(drawerExpanded, (value) => {
+  try {
+    localStorage.setItem('horbyta:portal-drawer', value ? 'expanded' : 'mini');
+  } catch {
+    /* Optional. */
+  }
+});
 const appVersion = APP_VERSION;
 
 async function logout() {
@@ -294,8 +322,23 @@ function getMiniRouteColor(path: string, exact = false) {
 </script>
 
 <style scoped>
+.workspace-brand {
+  color: var(--text-accent);
+  font-weight: 700;
+  margin-right: 16px;
+}
+.portal-header :deep(.q-toolbar__title b) {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+@media (max-width: 599px) {
+  .workspace-brand {
+    display: none;
+  }
+}
 .client-version {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text-muted);
 }
 </style>

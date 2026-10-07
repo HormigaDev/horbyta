@@ -9,6 +9,7 @@
       :rows="items"
       :total-items="total"
       :loading="isLoading"
+      :error="error"
       :filter-schema="activitiesFilterSchema"
       hide-view
       @request="onRequest"
@@ -65,7 +66,7 @@ const { notify, notifyError, confirmDelete } = useUI();
 const { t } = useI18n();
 const { nameRuleState, validateName } = useActivityRules();
 
-const { items, total, isLoading, query, fetch } = useQuery(
+const { items, total, isLoading, error, query, fetch } = useQuery(
   ActivitiesService.search,
   activitiesFilterSchema,
   10,

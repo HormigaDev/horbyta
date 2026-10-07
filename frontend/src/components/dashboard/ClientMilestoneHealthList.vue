@@ -3,7 +3,11 @@
   <div v-else class="health-list">
     <div v-for="row in rows" :key="row.project_id" class="health-row">
       <div class="health-row__head">
-        <div class="health-row__name">{{ row.project_name }}</div>
+        <router-link
+          class="health-row__name text-primary"
+          :to="{ path: '/client/milestones', query: { project_id: row.project_id } }"
+          >{{ row.project_name }}</router-link
+        >
         <div class="health-row__date">
           <span class="text-caption">{{ nextDueDateLabel }}</span>
           <span>{{ row.next_due_date ? formatDate(row.next_due_date) : emptyValue }}</span>
@@ -20,7 +24,11 @@
         <q-chip dense color="warning" text-color="white">
           {{ row.upcoming_milestones }} · {{ upcomingLabel }}
         </q-chip>
-        <q-chip dense :color="row.overdue_milestones > 0 ? 'negative' : 'grey-6'" text-color="white">
+        <q-chip
+          dense
+          :color="row.overdue_milestones > 0 ? 'negative' : 'grey-6'"
+          text-color="white"
+        >
           {{ row.overdue_milestones }} · {{ overdueLabel }}
         </q-chip>
       </div>
@@ -29,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useDisplayPreferences } from 'src/composables/useDisplayPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { ClientMilestoneHealthRow } from 'src/types/dashboard';
 
@@ -45,7 +53,7 @@ interface Props {
 }
 
 defineProps<Props>();
-const preferencesStore = useUserPreferencesStore();
+const preferencesStore = useDisplayPreferences();
 
 const formatDate = (value: string) =>
   formatDateByPreferences(value, {

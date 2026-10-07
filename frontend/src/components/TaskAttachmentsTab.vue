@@ -4,7 +4,14 @@
       <div class="text-subtitle1 text-weight-bold" style="color: var(--q-primary)">
         {{ t('attachments.table.title') }}
       </div>
-      <q-btn flat round dense icon="refresh" @click="fetchAttachments">
+      <q-btn
+        flat
+        round
+        dense
+        icon="refresh"
+        :aria-label="t('common.refresh')"
+        @click="fetchAttachments"
+      >
         <q-tooltip>{{ t('common.refresh') }}</q-tooltip>
       </q-btn>
     </div>

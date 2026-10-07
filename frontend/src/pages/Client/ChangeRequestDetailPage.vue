@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md row items-start q-col-gutter-md">
+  <q-page class="detail-page q-pa-md row items-start q-col-gutter-md">
     <div class="col-12 col-md-2"></div>
 
     <div class="col-12 col-md-8">
@@ -10,9 +10,9 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
+          <h1 class="text-h5 text-weight-bold q-ma-none" style="color: var(--text-color)">
             {{ changeRequest?.title || t('common.loading') }}
-          </div>
+          </h1>
           <div class="text-caption q-mt-xs" style="color: var(--text-muted)" v-if="changeRequest">
             {{ t('common.status') }}:
             <span style="color: var(--text-color)">
@@ -38,9 +38,12 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+          <h2
+            class="text-subtitle1 q-mb-md q-mt-none text-weight-bold"
+            style="color: var(--text-accent)"
+          >
             {{ t('client.changeRequests.detail.specsTitle') }}
-          </div>
+          </h2>
 
           <div class="row q-col-gutter-md" v-if="changeRequest">
             <div class="col-12 col-md-4">
@@ -99,10 +102,13 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+          <h2
+            class="text-subtitle1 q-mb-md q-mt-none text-weight-bold"
+            style="color: var(--text-accent)"
+          >
             {{ t('client.changeRequests.detail.clientRequestTitle') }}
-          </div>
-          <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
+          </h2>
+          <div class="detail-content">
             <MarkdownRenderer
               :model-value="
                 changeRequest?.client_request_description ||
@@ -119,10 +125,13 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+          <h2
+            class="text-subtitle1 q-mb-md q-mt-none text-weight-bold"
+            style="color: var(--text-accent)"
+          >
             {{ t('client.changeRequests.detail.technicalAssessmentTitle') }}
-          </div>
-          <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
+          </h2>
+          <div class="detail-content">
             <MarkdownRenderer
               :model-value="
                 changeRequest?.technical_assessment ||
@@ -240,7 +249,7 @@ import { useI18n } from 'vue-i18n';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useUI } from 'src/composables/useUI';
 import { ClientChangeRequestsService } from 'src/services/clientChangeRequests';
-import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useDisplayPreferences } from 'src/composables/useDisplayPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { ChangeRequestStatus, ClientChangeRequestDetailDto } from 'src/types/changeRequest';
 import { getChangeRequestsDeclineReasons } from 'src/data/constants';
@@ -249,7 +258,7 @@ const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmAction, showLoading, hideLoading } = useUI();
-const userPreferencesStore = useUserPreferencesStore();
+const userPreferencesStore = useDisplayPreferences();
 
 const changeRequest = ref<ClientChangeRequestDetailDto | null>(null);
 const showDeclineDialog = ref(false);

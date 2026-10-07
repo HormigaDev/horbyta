@@ -6,6 +6,14 @@
     auto-height
     :filters-title="t('dashboard.filters.clientMilestoneHealth.title')"
     :open="state.dialogOpen.value"
+    :loading="state.isLoading.value"
+    :error="!!state.loadError.value"
+    :filter-count="
+      Object.values(state.appliedFilters).filter(
+        (value) => value !== null && value !== undefined && value !== '',
+      ).length
+    "
+    @retry="state.refetch().catch(() => {})"
     @open="state.openDialog"
     @close="state.dialogOpen.value = false"
     @apply="onApply"
@@ -108,7 +116,7 @@ const defaults = (): ClientMilestoneHealthFiltersDto => ({
 const state = useChartCardState<ClientMilestoneHealthFiltersDto, ClientMilestoneHealthRow>({
   defaults,
   fetchRows: (filters) => ClientDashboardService.getMilestoneHealth(filters),
-  initialRows: props.initialRows,
+  initialRows: () => props.initialRows,
 });
 
 const {

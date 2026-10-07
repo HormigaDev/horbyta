@@ -1,23 +1,53 @@
 <template>
-  <q-dialog :model-value="modelValue" @update:model-value="(value) => emit('update:modelValue', value)">
+  <q-dialog
+    :model-value="modelValue"
+    @update:model-value="(value) => emit('update:modelValue', value)"
+  >
     <q-card class="filter-dialog">
       <q-card-section class="filter-dialog__head">
         <div class="filter-dialog__title">{{ title }}</div>
-        <q-btn flat dense round icon="close" @click="emit('update:modelValue', false)" />
+        <q-btn
+          flat
+          dense
+          round
+          icon="close"
+          :aria-label="t('common.close')"
+          :disable="loading"
+          @click="emit('update:modelValue', false)"
+        />
       </q-card-section>
 
       <q-separator />
 
       <q-card-section class="filter-dialog__body">
+        <div v-if="error" role="alert" class="preference-error q-pa-sm">
+          {{ t('ui.loadError') }}
+        </div>
         <slot />
       </q-card-section>
 
       <q-separator />
 
       <q-card-actions align="right" class="filter-dialog__actions">
-        <q-btn flat :label="t('dashboard.filters.reset')" @click="emit('reset')" />
-        <q-btn flat :label="t('common.cancel')" @click="emit('update:modelValue', false)" />
-        <q-btn unelevated color="primary" :label="t('dashboard.filters.apply')" @click="emit('apply')" />
+        <q-btn
+          flat
+          :label="t('dashboard.filters.reset')"
+          :disable="loading"
+          @click="emit('reset')"
+        />
+        <q-btn
+          flat
+          :label="t('common.cancel')"
+          :disable="loading"
+          @click="emit('update:modelValue', false)"
+        />
+        <q-btn
+          unelevated
+          color="primary"
+          :label="t('dashboard.filters.apply')"
+          :loading="loading"
+          @click="emit('apply')"
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -29,6 +59,8 @@ import { useI18n } from 'vue-i18n';
 interface Props {
   modelValue: boolean;
   title: string;
+  loading?: boolean;
+  error?: boolean;
 }
 
 defineProps<Props>();

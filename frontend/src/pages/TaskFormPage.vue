@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="form-page q-pa-md">
     <div class="padding-page">
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
@@ -13,6 +13,7 @@
         </q-card-section>
 
         <q-card-section class="q-pt-none row q-col-gutter-md">
+          <div class="col-12 form-section-title">{{ t('ui.identification') }}</div>
           <div class="col-12 col-md-8">
             <q-input
               v-model="form.title"
@@ -52,6 +53,7 @@
               :options="milestoneOptions"
               :loading="isMilestonesLoading"
               :disable="!form.project_id"
+              :hint="!form.project_id ? t('ui.chooseProject') : undefined"
               @search="onMilestoneSearch"
             />
           </div>
@@ -63,10 +65,12 @@
               :options="parentTaskOptions"
               :loading="isParentTasksLoading"
               :disable="!form.project_id"
+              :hint="!form.project_id ? t('ui.chooseProject') : undefined"
               @search="onParentTaskSearch"
             />
           </div>
 
+          <div class="col-12 form-section-title q-mt-md">{{ t('ui.planning') }}</div>
           <div class="col-12 col-md-4">
             <q-select
               dense
@@ -98,7 +102,14 @@
               outlined
             >
               <template #append>
-                <q-icon name="event" class="cursor-pointer">
+                <q-btn
+                  type="button"
+                  flat
+                  round
+                  dense
+                  icon="event"
+                  :aria-label="t('tasks.form.dueDateLabel')"
+                >
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                     <q-date v-model="dueDateDisplay" :mask="qDateMask">
                       <div class="row items-center justify-end">
@@ -106,7 +117,7 @@
                       </div>
                     </q-date>
                   </q-popup-proxy>
-                </q-icon>
+                </q-btn>
               </template>
             </q-input>
           </div>
@@ -177,12 +188,13 @@
         </q-card-section>
       </q-card>
 
-      <div class="row justify-end q-gutter-sm">
+      <div class="row justify-end q-gutter-sm form-actions">
         <q-btn
           v-if="isNew"
           flat
           round
           icon="bookmarks"
+          :aria-label="t('formPreferences.title')"
           color="grey"
           @click="prefsDialogOpen = true"
         >
@@ -192,6 +204,7 @@
           flat
           round
           icon="push_pin"
+          :aria-label="t('common.keepFormOpen')"
           :color="pinButtonColor"
           :aria-pressed="stayOnFormAfterSave"
           @click="stayOnFormAfterSave = !stayOnFormAfterSave"
@@ -386,7 +399,7 @@ const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
     }
     isHydratingTask.value = false;
   },
-  { formKey: 'task', enabled: () => isNew.value },
+  { formKey: 'task', enabled: () => !isSubmitting.value },
 );
 
 const isDirty = computed(() => {
@@ -410,7 +423,9 @@ const isDirty = computed(() => {
   );
 });
 
-useUnsavedChanges(() => isDirty.value);
+const { confirmLeave } = useUnsavedChanges(
+  () => !isSubmitting.value && (isDirty.value || markdownFiles.value.length > 0),
+);
 
 watch(
   form,
@@ -731,7 +746,8 @@ watch(
   },
 );
 
-const goBack = () => {
+const goBack = async () => {
+  if (!(await confirmLeave())) return;
   clearDraft();
   hasChanges.value = false;
   if (isNew.value) {
@@ -831,6 +847,7 @@ onMounted(async () => {
     }
 
     await loadTask();
+    if (!isNew.value) await restoreDraftIfAvailable();
 
     if (form.project_id) {
       const milestoneFilters: Filter[] = [

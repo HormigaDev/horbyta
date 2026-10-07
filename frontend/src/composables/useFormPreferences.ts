@@ -1,5 +1,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { UiStateService } from 'src/services/uiState';
+import { useI18n } from 'vue-i18n';
+import { isApiHttpError } from 'src/boot/fetch';
 import { useUI } from 'src/composables/useUI';
 
 export type FormPrefKey = 'task' | 'project' | 'milestone' | 'client';
@@ -24,6 +26,7 @@ function generateId(): string {
 
 export function useFormPreferences(formKey: FormPrefKey) {
   const { notifyError } = useUI();
+  const { t } = useI18n();
 
   const isLoading = ref(false);
   const isSaving = ref(false);
@@ -41,7 +44,9 @@ export function useFormPreferences(formKey: FormPrefKey) {
       const entry = await UiStateService.get<FormPreferenceState>(SCOPE, formKey);
       preferences.value = entry.value.items ?? [];
       defaultId.value = entry.value.default_id ?? null;
-    } catch {
+    } catch (error) {
+      if (!isApiHttpError(error) || error.status !== 404)
+        notifyError(t('ui.preferenceError'), error);
       preferences.value = [];
       defaultId.value = null;
     } finally {
@@ -49,53 +54,51 @@ export function useFormPreferences(formKey: FormPrefKey) {
     }
   };
 
-  const save = async (): Promise<void> => {
+  const save = async (next: FormPreferenceState): Promise<boolean> => {
+    if (isSaving.value) return false;
     isSaving.value = true;
     try {
-      await UiStateService.upsert<FormPreferenceState>(SCOPE, formKey, {
-        items: preferences.value,
-        default_id: defaultId.value,
-      });
-    } catch (err) {
-      notifyError('Error saving preferences', err);
+      await UiStateService.upsert<FormPreferenceState>(SCOPE, formKey, next);
+      preferences.value = next.items;
+      defaultId.value = next.default_id;
+      return true;
+    } catch (error) {
+      notifyError(t('ui.presetError'), error);
+      return false;
     } finally {
       isSaving.value = false;
     }
   };
-
-  const addPreference = async (name: string, fields: Record<string, unknown>): Promise<void> => {
-    if (preferences.value.length >= MAX_PREFS) return;
-    preferences.value = [
-      ...preferences.value,
-      { id: generateId(), name, fields },
-    ];
-    await save();
+  const addPreference = (name: string, fields: Record<string, unknown>): Promise<boolean> => {
+    if (preferences.value.length >= MAX_PREFS) return Promise.resolve(false);
+    return save({
+      items: [
+        ...preferences.value,
+        {
+          id: generateId(),
+          name,
+          fields: JSON.parse(JSON.stringify(fields)) as Record<string, unknown>,
+        },
+      ],
+      default_id: defaultId.value,
+    });
   };
-
-  const updatePreference = async (id: string, name: string, fields: Record<string, unknown>): Promise<void> => {
-    preferences.value = preferences.value.map((p) =>
-      p.id === id ? { ...p, name, fields } : p,
-    );
-    await save();
-  };
-
-  const removePreference = async (id: string): Promise<void> => {
-    preferences.value = preferences.value.filter((p) => p.id !== id);
-    if (defaultId.value === id) defaultId.value = null;
-    await save();
-  };
-
-  const setDefault = async (id: string | null): Promise<void> => {
-    defaultId.value = id;
-    await save();
-  };
-
-  const renamePreference = async (id: string, newName: string): Promise<void> => {
-    preferences.value = preferences.value.map((p) =>
-      p.id === id ? { ...p, name: newName } : p,
-    );
-    await save();
-  };
+  const updatePreference = (id: string, name: string, fields: Record<string, unknown>) =>
+    save({
+      items: preferences.value.map((p) => (p.id === id ? { ...p, name, fields } : p)),
+      default_id: defaultId.value,
+    });
+  const removePreference = (id: string) =>
+    save({
+      items: preferences.value.filter((p) => p.id !== id),
+      default_id: defaultId.value === id ? null : defaultId.value,
+    });
+  const setDefault = (id: string | null) => save({ items: [...preferences.value], default_id: id });
+  const renamePreference = (id: string, name: string) =>
+    save({
+      items: preferences.value.map((p) => (p.id === id ? { ...p, name } : p)),
+      default_id: defaultId.value,
+    });
 
   onMounted(() => {
     void load();

@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import type { AccountsReceivableRow } from 'src/types/dashboard';
-import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useDisplayPreferences } from 'src/composables/useDisplayPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import CurrencyAmountValue from './CurrencyAmountValue.vue';
 
@@ -34,7 +34,7 @@ interface Props {
 
 defineProps<Props>();
 
-const preferencesStore = useUserPreferencesStore();
+const preferencesStore = useDisplayPreferences();
 
 const formatDueDate = (value: string | null): string => {
   if (value === null) {

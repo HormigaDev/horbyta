@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md row items-start q-col-gutter-md">
+  <q-page class="detail-page q-pa-md row items-start q-col-gutter-md">
     <div class="col-12 col-md-2"></div>
     <div class="col-12 col-md-8">
       <q-card
@@ -15,17 +15,21 @@
               {{ invoice ? normalizeId(invoice.record_number) : t('common.loading') }}
             </div>
             <div class="text-h6 flex items-center" style="color: var(--text-muted)">
-              <q-icon
-                :name="idCopied ? 'check' : 'content_copy'"
+              <q-btn
+                flat
+                round
+                dense
+                :icon="idCopied ? 'check' : 'content_copy'"
                 size="xs"
-                class="q-mr-sm cursor-pointer"
+                class="q-mr-sm"
                 style="color: var(--text-color)"
                 @click="copyToClipboard(invoice?.record_number.toString() || '')"
+                :aria-label="t('common.copyToClipboard')"
               >
                 <q-tooltip>{{
                   idCopied ? t('common.copied') : t('common.copyToClipboard')
                 }}</q-tooltip>
-              </q-icon>
+              </q-btn>
             </div>
           </div>
           <div class="text-caption q-mt-xs" style="color: var(--text-muted)" v-if="invoice">
@@ -43,6 +47,16 @@
               })
             }}
           </div>
+          <div v-if="invoice" class="finance-summary q-mt-md">
+            <strong>{{ formatAmount(invoice.amount, invoice.currency_type) }}</strong>
+            <span class="status-badge" :data-status="invoice.status">{{
+              t('invoices.status.' + invoice.status)
+            }}</span>
+            <span class="text-secondary"
+              >{{ t('invoices.detail.dueDate') }} ·
+              {{ invoice.due_date ? formatDateOnly(invoice.due_date) : '—' }}</span
+            >
+          </div>
         </q-card-section>
       </q-card>
 
@@ -53,7 +67,7 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
             {{ t('invoices.detail.invoiceDataTitle') }}
           </div>
 
@@ -125,7 +139,11 @@
                 </div>
                 <div style="color: var(--text-color)">
                   {{ t(`invoices.provider.${invoice.provider}`) }}
-                  <span v-if="invoice.provider_external_id" class="text-caption" style="color: var(--text-muted)">
+                  <span
+                    v-if="invoice.provider_external_id"
+                    class="text-caption"
+                    style="color: var(--text-muted)"
+                  >
                     · {{ invoice.provider_external_id }}
                   </span>
                 </div>
@@ -158,7 +176,7 @@
         v-if="invoice && invoice.task_groups.length > 0"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
             {{ t('invoices.detail.timeEntriesTitle') }}
           </div>
           <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
@@ -220,7 +238,7 @@
         v-if="invoice && invoice.notes"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
             {{ t('invoices.detail.notesTitle') }}
           </div>
           <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">

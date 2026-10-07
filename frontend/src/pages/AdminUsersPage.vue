@@ -1,20 +1,11 @@
 <template>
   <q-page class="q-pa-md flex column">
     <div class="admin-users-header q-mb-md">
-      <div class="row items-center justify-between q-col-gutter-md">
-        <div class="col-12 col-md">
-          <div class="row items-center q-gutter-sm q-mb-xs">
-            <q-icon name="admin_panel_settings" color="warning" size="md" />
-            <div class="text-h5 text-weight-bold">{{ t('adminUsers.page.title') }}</div>
-            <q-badge color="warning" text-color="dark">
-              {{ t('adminUsers.page.adminMode') }}
-            </q-badge>
-          </div>
-          <div class="text-caption" style="color: var(--text-muted)">
-            {{ t('adminUsers.page.subtitle') }}
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        :title="t('adminUsers.page.title')"
+        :subtitle="t('adminUsers.page.subtitle')"
+        :eyebrow="t('adminUsers.page.adminMode')"
+      />
       <q-banner rounded class="admin-users-warning q-mt-md">
         <template #avatar>
           <q-icon name="warning" color="negative" />
@@ -33,6 +24,7 @@
       :rows="items"
       :total-items="total"
       :loading="isLoading"
+      :error="error"
       :filter-schema="USER_FILTER_SCHEMA"
       hide-view
       @request="onRequest"
@@ -186,6 +178,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import PageHeader from 'src/components/PageHeader.vue';
 import DataTable from 'src/components/DataTable.vue';
 import { useCrudListHandlers } from 'src/composables/useCrudListHandlers';
 import { useQuery } from 'src/composables/useQuery';
@@ -204,7 +197,7 @@ import type {
 const { t } = useI18n();
 const { notify, notifyError } = useUI();
 
-const { items, total, isLoading, query, fetch } = useQuery(
+const { items, total, isLoading, error, query, fetch } = useQuery(
   UsersService.search,
   USER_FILTER_SCHEMA,
   10,

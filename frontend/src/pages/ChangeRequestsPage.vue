@@ -9,6 +9,7 @@
       :rows="items"
       :total-items="total"
       :loading="isLoading"
+      :error="error"
       :filter-schema="changeRequestFilterSchema"
       @request="onRequest"
       @view="(id) => $router.push(`/change-requests/${id}`)"
@@ -187,7 +188,7 @@ const changeRequestFilterSchema: FilterSchema = {
   updated_at: { type: 'Date', label: t('changeRequests.list.filter.updatedAt') },
 };
 
-const { items, total, isLoading, query, fetch } = useQuery(
+const { items, total, isLoading, error, query, fetch } = useQuery(
   ChangeRequestsService.search,
   changeRequestFilterSchema,
   10,

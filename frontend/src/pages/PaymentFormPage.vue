@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="form-page q-pa-md">
     <div class="padding-page">
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
@@ -62,7 +62,15 @@
               :disable="!isNew"
             >
               <template #append>
-                <q-icon name="event" class="cursor-pointer" v-if="isNew">
+                <q-btn
+                  type="button"
+                  flat
+                  round
+                  dense
+                  icon="event"
+                  v-if="isNew"
+                  :aria-label="t('payments.form.paymentDateLabel')"
+                >
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                     <q-date v-model="paymentDateDisplay" :mask="qDateMask">
                       <div class="row items-center justify-end">
@@ -70,7 +78,7 @@
                       </div>
                     </q-date>
                   </q-popup-proxy>
-                </q-icon>
+                </q-btn>
               </template>
             </q-input>
           </div>
@@ -123,11 +131,12 @@
         </q-card-section>
       </q-card>
 
-      <div class="row justify-end q-gutter-sm">
+      <div class="row justify-end q-gutter-sm form-actions">
         <q-btn
           flat
           round
           icon="push_pin"
+          :aria-label="t('common.keepFormOpen')"
           :color="pinButtonColor"
           :aria-pressed="stayOnFormAfterSave"
           @click="stayOnFormAfterSave = !stayOnFormAfterSave"
@@ -149,6 +158,7 @@
 </template>
 
 <script setup lang="ts">
+import { useFormSession } from 'src/composables/useFormSession';
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -355,6 +365,15 @@ const goBack = () => {
   }
 };
 
+const formSession = useFormSession(
+  () => ({ form: { ...form.value }, date: paymentDateDisplay.value }),
+  (draft) => {
+    form.value = draft.form;
+    paymentDateDisplay.value = draft.date;
+  },
+  { formKey: 'payment', enabled: () => !isSubmitting.value },
+);
+
 const savePayment = async () => {
   hasAttemptedSubmit.value = true;
 
@@ -388,8 +407,12 @@ const savePayment = async () => {
         notes: form.value.notes || null,
       });
       notify(t('payments.form.createSuccess'), 'positive');
+      formSession.markSaved();
       await handlePinnedSaveSuccess({
-        reset: resetPaymentForm,
+        reset: async () => {
+          await resetPaymentForm();
+          formSession.markSaved();
+        },
         redirect: () => router.push(`/payments/${created.id}`),
       });
     } else {
@@ -399,8 +422,12 @@ const savePayment = async () => {
         notes: form.value.notes || null,
       });
       notify(t('payments.form.updateSuccess'), 'positive');
+      formSession.markSaved();
       await handlePinnedSaveSuccess({
-        reset: resetPaymentForm,
+        reset: async () => {
+          await resetPaymentForm();
+          formSession.markSaved();
+        },
         redirect: () => router.push(`/payments/${paymentId.value}`),
       });
     }
@@ -415,5 +442,6 @@ const savePayment = async () => {
 onMounted(async () => {
   await loadProjectsByTerm('');
   await loadPayment();
+  await formSession.initialize();
 });
 </script>

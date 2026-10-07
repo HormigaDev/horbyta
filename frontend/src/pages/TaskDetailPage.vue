@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md row items-start q-col-gutter-md">
+  <q-page class="detail-page q-pa-md row items-start q-col-gutter-md">
     <div class="col-12 col-md-2"></div>
     <div class="col-12 col-md-8">
       <q-card
@@ -15,17 +15,21 @@
               {{ task?.title ? `${task.title}` : t('common.loading') }}
             </div>
             <div class="text-h6 flex items-center" style="color: var(--text-muted)">
-              <q-icon
-                :name="idCopied ? 'check' : 'content_copy'"
+              <q-btn
+                flat
+                round
+                dense
+                :icon="idCopied ? 'check' : 'content_copy'"
                 size="xs"
-                class="q-mr-sm cursor-pointer"
+                class="q-mr-sm"
                 style="color: var(--text-color)"
                 @click="copyToClipboard(task?.record_number.toString() || '')"
+                :aria-label="t('common.copyToClipboard')"
               >
                 <q-tooltip>{{
                   idCopied ? $t('common.copied') : $t('common.copyToClipboard')
                 }}</q-tooltip>
-              </q-icon>
+              </q-btn>
               {{ task ? normalizeId(task.record_number) : '' }}
             </div>
           </div>
@@ -80,7 +84,7 @@
         style="background-color: var(--card-bg); border-color: var(--border-color)"
       >
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--q-primary)">
+          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
             {{ t('tasks.detail.specsTitle') }}
           </div>
           <div class="row q-col-gutter-md q-mb-md" v-if="task">
@@ -151,11 +155,7 @@
           <q-tab name="description" :label="t('tasks.detail.tabs.description')" />
           <q-tab name="attachments" :label="t('tasks.detail.tabs.attachments')" />
           <q-tab name="time_entries" :label="t('tasks.detail.tabs.timeEntries')" />
-          <q-tab
-            v-if="hasSubtasks"
-            name="subtasks"
-            :label="t('tasks.detail.tabs.subtasks')"
-          />
+          <q-tab v-if="hasSubtasks" name="subtasks" :label="t('tasks.detail.tabs.subtasks')" />
         </q-tabs>
 
         <q-separator />
@@ -318,7 +318,7 @@
             :label="t('tasks.timeEntries.dialog.workDateLabel')"
           >
             <template #append>
-              <q-icon name="event" class="cursor-pointer">
+              <q-btn flat round dense icon="event" :aria-label="t('tasks.form.dueDateLabel')">
                 <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                   <q-date v-model="timeEntryForm.work_date" :mask="qDateMask">
                     <div class="row items-center justify-end">
@@ -326,7 +326,7 @@
                     </div>
                   </q-date>
                 </q-popup-proxy>
-              </q-icon>
+              </q-btn>
             </template>
           </q-input>
           <q-input
@@ -424,13 +424,7 @@
             <q-item-section>{{ $t('tasks.detail.action.startTask') }}</q-item-section>
           </q-item>
 
-          <q-item
-            clickable
-            v-ripple
-            class="q-pa-md"
-            v-if="task"
-            @click="openManualTimeEntryDialog"
-          >
+          <q-item clickable v-ripple class="q-pa-md" v-if="task" @click="openManualTimeEntryDialog">
             <q-item-section avatar><q-icon name="edit_note" /></q-item-section>
             <q-item-section>{{ $t('tasks.detail.action.logManualTime') }}</q-item-section>
           </q-item>
@@ -457,13 +451,7 @@
             <q-item-section>{{ t('tasks.detail.action.stopTimer') }}</q-item-section>
           </q-item>
 
-          <q-item
-            clickable
-            v-ripple
-            class="q-pa-md"
-            v-if="task"
-            @click="goToCreateSubtask"
-          >
+          <q-item clickable v-ripple class="q-pa-md" v-if="task" @click="goToCreateSubtask">
             <q-item-section avatar><q-icon name="subdirectory_arrow_right" /></q-item-section>
             <q-item-section>{{ t('tasks.detail.action.createSubtask') }}</q-item-section>
           </q-item>

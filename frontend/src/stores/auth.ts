@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia';
 import type { User } from 'src/types';
 import { ref } from 'vue';
+import { useThemeStore } from 'src/stores/theme';
+import { useDataTableStore } from 'src/stores/datatable';
 import { apiFetch } from 'src/boot/fetch';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { useUiStateStore } from 'src/stores/uiState';
@@ -14,6 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated.value = status;
     if (userData) {
       user.value = userData;
+      useThemeStore().bindAccount(userData.id);
     }
   }
 
@@ -24,6 +27,8 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated.value = false;
     user.value = null;
     userPreferencesStore.resetToDefaults();
+    useThemeStore().bindAccount(null);
+    useDataTableStore().reset();
     uiStateStore.reset();
   }
 

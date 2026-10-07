@@ -1,5 +1,5 @@
 <template>
-  <q-card class="kpi-card">
+  <q-card class="kpi-card" flat bordered>
     <q-card-section>
       <div class="kpi-head">
         <q-icon :name="icon" size="22px" :class="['kpi-icon', iconClass]" />
@@ -11,11 +11,23 @@
         </slot>
       </div>
       <div class="kpi-caption">{{ caption }}</div>
+      <q-btn
+        v-if="actionTo && actionLabel"
+        flat
+        dense
+        color="primary"
+        class="q-mt-sm"
+        :to="actionTo"
+        :label="actionLabel"
+        icon-right="arrow_forward"
+      />
     </q-card-section>
   </q-card>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+
 export type KpiIconVariant = 'default' | 'positive' | 'warning' | 'negative' | 'muted';
 
 interface Props {
@@ -23,13 +35,15 @@ interface Props {
   caption: string;
   icon: string;
   variant?: KpiIconVariant;
+  actionTo?: string;
+  actionLabel?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   variant: 'default',
 });
 
-const iconClass = `kpi-icon--${props.variant}`;
+const iconClass = computed(() => `kpi-icon--${props.variant}`);
 </script>
 
 <style scoped lang="scss">
@@ -37,11 +51,8 @@ const iconClass = `kpi-icon--${props.variant}`;
   height: 100%;
   border-radius: 12px;
   background: var(--card-bg);
-  transition: transform 0.15s ease;
-}
-
-.kpi-card:hover {
-  transform: translateY(-2px);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-panel);
 }
 
 .kpi-head {
@@ -55,8 +66,7 @@ const iconClass = `kpi-icon--${props.variant}`;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  line-height: 1.5;
 }
 
 .kpi-icon {
@@ -94,7 +104,7 @@ const iconClass = `kpi-icon--${props.variant}`;
 }
 
 .kpi-caption {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
 }
 </style>

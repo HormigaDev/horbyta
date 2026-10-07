@@ -1,6 +1,6 @@
 <template>
   <q-layout view="hHh Lpr lFf">
-    <q-header class="q-py-xs">
+    <q-header class="workspace-header">
       <q-toolbar>
         <q-btn
           flat
@@ -11,14 +11,15 @@
               ? 'menu_open'
               : 'menu'
           "
-          aria-label="Menu"
+          :aria-label="t('ui.navigation')"
           @click="toggleDrawer"
-          class="q-mr-lg"
+          class="q-mr-sm"
         />
 
         <q-img alt="Logo" src="/logo.png" width="36px" height="36px" class="q-mr-md" />
         <q-toolbar-title class="text-subtitle1 ellipsis" v-if="authStore.user">
-          {{ t('layout.header.welcome') }} <b class="text-weight-bold">{{ authStore.user.name }}</b>
+          <span class="workspace-brand">Horbyta</span>
+          <b class="text-weight-bold">{{ authStore.user.name }}</b>
         </q-toolbar-title>
         <q-toolbar-title class="text-weight-bold text-subtitle1 ellipsis" v-else>
           {{ t('layout.header.welcome') }}
@@ -34,6 +35,7 @@
             round
             dense
             icon="notifications"
+            :aria-label="t('layout.header.notifications')"
             class="q-mr-sm"
             @click="openNotificationsCenter"
           >
@@ -43,11 +45,19 @@
             <q-tooltip>{{ t('layout.header.notifications') }}</q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="push_pin" class="q-mr-md" @click="pinnedTasksOpen = true">
+          <q-btn
+            flat
+            round
+            dense
+            icon="push_pin"
+            :aria-label="t('layout.header.pinnedTasks')"
+            class="q-mr-md"
+            @click="pinnedTasksOpen = true"
+          >
             <q-tooltip>{{ t('layout.header.pinnedTasks') }}</q-tooltip>
           </q-btn>
 
-          <q-btn round flat>
+          <q-btn round flat :aria-label="t('ui.profile')">
             <q-avatar size="32px" color="primary" text-color="white">
               <q-icon name="person" />
             </q-avatar>
@@ -114,6 +124,7 @@
             to="/"
             exact
             :color="getMiniRouteColor('/', true)"
+            :aria-label="t('layout.drawer.dashboard')"
           >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.dashboard') }}
@@ -127,6 +138,7 @@
             icon="view_kanban"
             to="/board"
             :color="getMiniRouteColor('/board')"
+            :aria-label="t('layout.drawer.board')"
           >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ $t('layout.drawer.board') }}
@@ -140,6 +152,7 @@
             icon="folder"
             to="/projects"
             :color="getMiniRouteColor('/projects')"
+            :aria-label="t('layout.drawer.projects')"
           >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.projects') }}
@@ -153,13 +166,22 @@
             icon="flag"
             to="/milestones"
             :color="getMiniRouteColor('/milestones')"
+            :aria-label="t('layout.drawer.milestones')"
           >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.milestones') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="checklist" to="/tasks" :color="getMiniRouteColor('/tasks')">
+          <q-btn
+            flat
+            round
+            dense
+            icon="checklist"
+            to="/tasks"
+            :color="getMiniRouteColor('/tasks')"
+            :aria-label="t('layout.drawer.tasks')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.tasks') }}
             </q-tooltip>
@@ -172,6 +194,7 @@
             icon="compare_arrows"
             to="/change-requests"
             :color="getMiniRouteColor('/change-requests')"
+            :aria-label="t('layout.drawer.changeRequests')"
           >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.changeRequests') }}
@@ -185,6 +208,7 @@
             icon="people"
             to="/clients"
             :color="getMiniRouteColor('/clients')"
+            :aria-label="t('layout.drawer.clients')"
           >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ $t('layout.drawer.clients') }}
@@ -198,6 +222,7 @@
             icon="receipt_long"
             to="/invoices"
             :color="getMiniRouteColor('/invoices')"
+            :aria-label="t('layout.drawer.invoices')"
           >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.invoices') }}
@@ -211,6 +236,7 @@
             icon="paid"
             to="/payments"
             :color="getMiniRouteColor('/payments')"
+            :aria-label="t('layout.drawer.payments')"
           >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.payments') }}
@@ -224,6 +250,7 @@
             icon="settings"
             to="/settings"
             :color="getMiniRouteColor('/settings')"
+            :aria-label="t('layout.drawer.settings')"
           >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.settings') }}
@@ -238,6 +265,7 @@
             icon="admin_panel_settings"
             :color="getMiniRouteColor('/admin/users', true, 'warning')"
             to="/admin/users"
+            :aria-label="t('layout.drawer.adminUsers')"
           >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.adminUsers') }}
@@ -246,19 +274,43 @@
         </div>
 
         <div class="absolute-bottom column flex-center q-pb-md q-gutter-y-sm w-100">
-          <q-btn flat round dense icon="post_add" color="primary" to="/tasks/new">
+          <q-btn
+            flat
+            round
+            dense
+            icon="post_add"
+            color="primary"
+            to="/tasks/new"
+            :aria-label="t('layout.drawer.newTask')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.newTask') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="create_new_folder" color="primary" to="/projects/new">
+          <q-btn
+            flat
+            round
+            dense
+            icon="create_new_folder"
+            color="primary"
+            to="/projects/new"
+            :aria-label="t('layout.drawer.newProject')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.newProject') }}
             </q-tooltip>
           </q-btn>
 
-          <q-btn flat round dense icon="flag_circle" color="primary" to="/milestones/new">
+          <q-btn
+            flat
+            round
+            dense
+            icon="flag_circle"
+            color="primary"
+            to="/milestones/new"
+            :aria-label="t('layout.drawer.newMilestone')"
+          >
             <q-tooltip anchor="center right" self="center left" :offset="[10, 10]">
               {{ t('layout.drawer.newMilestone') }}
             </q-tooltip>
@@ -269,6 +321,7 @@
       <template v-if="!$q.screen.lt.md">
         <q-scroll-area class="fit">
           <q-list class="q-pt-sm">
+            <div class="nav-group">{{ t('ui.work') }}</div>
             <q-item clickable v-ripple to="/" exact>
               <q-item-section avatar><q-icon name="bar_chart" /></q-item-section>
               <q-item-section>{{ t('layout.drawer.dashboard') }}</q-item-section>
@@ -299,11 +352,13 @@
               <q-item-section>{{ t('layout.drawer.changeRequests') }}</q-item-section>
             </q-item>
 
+            <div class="nav-group">{{ t('ui.customers') }}</div>
             <q-item clickable v-ripple to="/clients">
               <q-item-section avatar><q-icon name="people" /></q-item-section>
               <q-item-section>{{ $t('layout.drawer.clients') }}</q-item-section>
             </q-item>
 
+            <div class="nav-group">{{ t('ui.finance') }}</div>
             <q-item clickable v-ripple to="/invoices">
               <q-item-section avatar><q-icon name="receipt_long" /></q-item-section>
               <q-item-section>{{ t('layout.drawer.invoices') }}</q-item-section>
@@ -377,6 +432,8 @@
           <q-separator />
 
           <q-list>
+            <div class="q-px-md q-py-sm"><TaskSearchComponent class="full-width" /></div>
+            <div class="nav-group">{{ t('ui.work') }}</div>
             <q-item clickable v-ripple to="/" exact>
               <q-item-section avatar>
                 <q-icon name="bar_chart" />
@@ -419,6 +476,7 @@
               <q-item-section>{{ t('layout.drawer.changeRequests') }}</q-item-section>
             </q-item>
 
+            <div class="nav-group">{{ t('ui.finance') }}</div>
             <q-item clickable v-ripple to="/invoices">
               <q-item-section avatar>
                 <q-icon name="receipt_long" />
@@ -426,6 +484,7 @@
               <q-item-section>{{ t('layout.drawer.invoices') }}</q-item-section>
             </q-item>
 
+            <div class="nav-group">{{ t('ui.customers') }}</div>
             <q-item clickable v-ripple to="/clients">
               <q-item-section avatar>
                 <q-icon name="people" />
@@ -433,9 +492,20 @@
               <q-item-section>{{ $t('layout.drawer.clients') }}</q-item-section>
             </q-item>
 
+            <q-item clickable v-ripple to="/payments"
+              ><q-item-section avatar><q-icon name="paid" /></q-item-section
+              ><q-item-section>{{ t('layout.drawer.payments') }}</q-item-section></q-item
+            >
             <q-separator class="q-my-md" />
 
-            <q-item clickable v-ripple>
+            <q-item
+              clickable
+              v-ripple
+              @click="
+                openNotificationsCenter();
+                drawer = false;
+              "
+            >
               <q-item-section avatar>
                 <q-icon name="notifications" />
               </q-item-section>
@@ -533,7 +603,14 @@
               :label="t('layout.header.markAllRead')"
               @click="markAllNotificationsAsRead"
             />
-            <q-btn flat round dense icon="close" @click="notificationsCenterOpen = false" />
+            <q-btn
+              flat
+              round
+              dense
+              icon="close"
+              :aria-label="t('common.close')"
+              @click="notificationsCenterOpen = false"
+            />
           </div>
         </q-card-section>
 
@@ -672,7 +749,14 @@
               }}
             </div>
           </div>
-          <q-btn flat round dense icon="close" @click="notificationDetailsOpen = false" />
+          <q-btn
+            flat
+            round
+            dense
+            icon="close"
+            :aria-label="t('common.close')"
+            @click="notificationDetailsOpen = false"
+          />
         </q-card-section>
 
         <q-separator />
@@ -706,7 +790,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref } from 'vue';
+import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QNotifyCreateOptions } from 'quasar';
@@ -732,7 +816,22 @@ const $q = useQuasar();
 const { t } = useI18n();
 
 const drawer = ref(!$q.screen.lt.md);
-const drawerExpanded = ref(false);
+const drawerExpanded = ref(
+  (() => {
+    try {
+      return localStorage.getItem('horbyta:drawer') === 'expanded';
+    } catch {
+      return false;
+    }
+  })(),
+);
+watch(drawerExpanded, (value) => {
+  try {
+    localStorage.setItem('horbyta:drawer', value ? 'expanded' : 'mini');
+  } catch {
+    /* Optional UI cache. */
+  }
+});
 const pinnedTasksOpen = ref(false);
 const notificationsCenterOpen = ref(false);
 const notificationDetailsOpen = ref(false);
@@ -1140,6 +1239,25 @@ function getPayloadRoute(payload: unknown): string | null {
     height: 100dvh;
     border-radius: 0;
     margin: 0;
+  }
+}
+</style>
+
+<style scoped>
+.workspace-brand {
+  font-weight: 700;
+  color: var(--text-accent);
+  letter-spacing: -0.3px;
+  margin-right: 16px;
+}
+.workspace-header :deep(.q-toolbar__title b) {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+@media (max-width: 599px) {
+  .workspace-header :deep(.q-toolbar__title b) {
+    display: none;
   }
 }
 </style>

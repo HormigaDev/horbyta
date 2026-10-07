@@ -1,115 +1,98 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
-    <q-page-container>
-      <q-page class="flex flex-center q-pa-md">
-        <q-card
-          class="q-pa-md shadow-2"
-          style="
-            width: 100%;
-            max-width: 480px;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-          "
-        >
-          <q-card-section class="flex items-center justify-center">
-            <q-img width="100px" height="100px" src="/logo.png" alt="Horbyta Logo" />
-          </q-card-section>
+  <AuthFrame
+    portal
+    :title="t('client.auth.login.brand')"
+    :subtitle="t('client.auth.login.subtitle')"
+  >
+    <q-card-section class="q-pt-md">
+      <q-tabs v-model="loginMode" dense align="justify" class="text-primary q-mb-sm">
+        <q-tab name="credentials" :label="t('client.auth.login.tabCredentials')" />
+        <q-tab name="magic_token" :label="t('client.auth.login.tabMagicToken')" />
+      </q-tabs>
 
-          <q-card-section class="text-center">
-            <div class="text-h5 text-weight-bold" style="color: var(--text-color)">
-              {{ t('client.auth.login.brand') }}
+      <q-tab-panels v-model="loginMode" animated style="background: transparent">
+        <q-tab-panel name="credentials" class="q-pa-none q-pt-sm">
+          <q-form @submit.prevent="handleCredentialsLogin" class="q-gutter-md">
+            <q-input
+              v-model="email"
+              type="email"
+              name="email"
+              autocomplete="username"
+              autocapitalize="none"
+              spellcheck="false"
+              autofocus
+              outlined
+              dense
+              no-error-icon
+              :label="t('client.auth.login.emailLabel')"
+              :error="loginRules.emailRuleState.value.error"
+              :error-message="loginRules.emailRuleState.value.message"
+            />
+
+            <q-input
+              v-model="password"
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              outlined
+              dense
+              no-error-icon
+              :label="t('client.auth.login.passwordLabel')"
+              :error="loginRules.passwordRuleState.value.error"
+              :error-message="loginRules.passwordRuleState.value.message"
+            />
+
+            <q-btn
+              type="submit"
+              unelevated
+              color="primary"
+              class="full-width"
+              :label="t('client.auth.login.submitCredentials')"
+              :loading="isLoadingCredentials"
+            />
+          </q-form>
+        </q-tab-panel>
+
+        <q-tab-panel name="magic_token" class="q-pa-none q-pt-sm">
+          <q-form @submit.prevent="handleMagicTokenLogin" class="q-gutter-md">
+            <q-input
+              v-model="magicToken"
+              type="textarea"
+              autogrow
+              outlined
+              dense
+              no-error-icon
+              :label="t('client.auth.login.magicTokenLabel')"
+            />
+
+            <div class="text-caption" style="color: var(--text-muted)">
+              {{ t('client.auth.login.magicTokenHint') }}
             </div>
-            <div class="text-subtitle2" style="color: var(--text-muted)">
-              {{ t('client.auth.login.subtitle') }}
-            </div>
-          </q-card-section>
 
-          <q-separator />
+            <q-btn
+              type="submit"
+              unelevated
+              color="secondary"
+              class="full-width"
+              :label="t('client.auth.login.submitMagicToken')"
+              :loading="isLoadingMagicToken"
+            />
+          </q-form>
+        </q-tab-panel>
+      </q-tab-panels>
 
-          <q-card-section class="q-pt-md">
-            <q-tabs v-model="loginMode" dense align="justify" class="text-primary q-mb-sm">
-              <q-tab name="credentials" :label="t('client.auth.login.tabCredentials')" />
-              <q-tab name="magic_token" :label="t('client.auth.login.tabMagicToken')" />
-            </q-tabs>
-
-            <q-tab-panels v-model="loginMode" animated style="background: transparent">
-              <q-tab-panel name="credentials" class="q-pa-none q-pt-sm">
-                <q-form @submit.prevent="handleCredentialsLogin" class="q-gutter-md">
-                  <q-input
-                    v-model="email"
-                    type="email"
-                    outlined
-                    dense
-                    no-error-icon
-                    autocomplete="off"
-                    :label="t('client.auth.login.emailLabel')"
-                    :error="loginRules.emailRuleState.value.error"
-                    :error-message="loginRules.emailRuleState.value.message"
-                  />
-
-                  <q-input
-                    v-model="password"
-                    type="password"
-                    outlined
-                    dense
-                    no-error-icon
-                    autocomplete="off"
-                    :label="t('client.auth.login.passwordLabel')"
-                    :error="loginRules.passwordRuleState.value.error"
-                    :error-message="loginRules.passwordRuleState.value.message"
-                  />
-
-                  <q-btn
-                    type="submit"
-                    color="primary"
-                    class="full-width"
-                    :label="t('client.auth.login.submitCredentials')"
-                    :loading="isLoadingCredentials"
-                  />
-                </q-form>
-              </q-tab-panel>
-
-              <q-tab-panel name="magic_token" class="q-pa-none q-pt-sm">
-                <q-form @submit.prevent="handleMagicTokenLogin" class="q-gutter-md">
-                  <q-input
-                    v-model="magicToken"
-                    type="textarea"
-                    autogrow
-                    outlined
-                    dense
-                    no-error-icon
-                    :label="t('client.auth.login.magicTokenLabel')"
-                  />
-
-                  <div class="text-caption" style="color: var(--text-muted)">
-                    {{ t('client.auth.login.magicTokenHint') }}
-                  </div>
-
-                  <q-btn
-                    type="submit"
-                    color="secondary"
-                    class="full-width"
-                    :label="t('client.auth.login.submitMagicToken')"
-                    :loading="isLoadingMagicToken"
-                  />
-                </q-form>
-              </q-tab-panel>
-            </q-tab-panels>
-
-            <div v-if="errorMessage" class="text-negative text-caption text-center q-mt-md">
-              {{ errorMessage }}
-            </div>
-          </q-card-section>
-        </q-card>
-      </q-page>
-    </q-page-container>
-  </q-layout>
+      <div v-if="errorMessage" role="alert" class="text-negative text-caption text-center q-mt-md">
+        {{ errorMessage }}
+      </div>
+    </q-card-section>
+  </AuthFrame>
 </template>
-
 <script setup lang="ts">
+import AuthFrame from 'src/components/AuthFrame.vue';
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { isApiHttpError } from 'src/boot/fetch';
 import { useLoginRules } from 'src/composables/rules/login.rules';
 import { useClientAuthStore } from 'src/stores/clientAuth';
 
@@ -134,10 +117,11 @@ const portalUserId = computed(() => {
 });
 
 const parseErrorMessage = (err: unknown): string => {
-  if (err instanceof Error && err.message) {
-    return err.message;
+  if (isApiHttpError(err)) {
+    if (err.status === 429) return t('error.rateLimited');
+    if (err.status === 401) return t('auth.login.invalidCredentialsError');
+    if (err.status === 403) return t('auth.login.blockedAccountError');
   }
-
   return t('client.auth.login.unexpectedError');
 };
 

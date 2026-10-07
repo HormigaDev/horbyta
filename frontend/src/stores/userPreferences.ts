@@ -28,9 +28,8 @@ export const useUserPreferencesStore = defineStore('userPreferences', () => {
   const thousandSeparator = ref<UserNumberFormatPreference['thousand_separator']>(
     DEFAULT_THOUSAND_SEPARATOR,
   );
-  const decimalSeparator = ref<UserNumberFormatPreference['decimal_separator']>(
-    DEFAULT_DECIMAL_SEPARATOR,
-  );
+  const decimalSeparator =
+    ref<UserNumberFormatPreference['decimal_separator']>(DEFAULT_DECIMAL_SEPARATOR);
   const decimalQuantity = ref(DEFAULT_DECIMAL_QUANTITY);
   const groupNotifications = ref(false);
   const pinnedTasks = ref<PinnedTask[]>([]);
@@ -40,13 +39,6 @@ export const useUserPreferencesStore = defineStore('userPreferences', () => {
   const uiState = useUiStateStore();
   const themeStore = useThemeStore();
 
-  function resolveIsDarkTheme(preferences: UserPreferences | null | undefined) {
-    if (preferences?.theme === 'dark') return true;
-    if (preferences?.theme === 'light') return false;
-    if (typeof window === 'undefined') return true;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  }
-
   function applyPreferences(preferences: UserPreferences | null | undefined) {
     timezone.value = normalizeTimezone(preferences?.timezone);
     dateFormat.value = normalizeDateFormat(preferences?.date_format);
@@ -55,7 +47,7 @@ export const useUserPreferencesStore = defineStore('userPreferences', () => {
     decimalSeparator.value = numberFormat.decimal_separator;
     decimalQuantity.value = numberFormat.decimal_quantity;
     groupNotifications.value = preferences?.notifications?.group_notifications ?? false;
-    themeStore.setThemePreference(resolveIsDarkTheme(preferences));
+    themeStore.applyPreferences(preferences);
     if (preferences?.language) {
       setAppLocale(preferences.language);
     }

@@ -1,6 +1,6 @@
 import type { ComposerTranslation } from 'vue-i18n';
 import type { QTableProps } from 'quasar';
-import { useUserPreferencesStore } from 'src/stores/userPreferences';
+import { useDisplayPreferences } from 'src/composables/useDisplayPreferences';
 import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import { normalizeId } from 'src/utils/normalizeId';
@@ -147,6 +147,9 @@ const withFixedColumnSizing = (columns: TableColumn[]): TableColumn[] => {
 
     return {
       ...column,
+      align: /amount|price|rate|cost|hours|total|size_bytes|decimal/.test(column.name)
+        ? 'right'
+        : (column.align ?? 'left'),
       style: appendColumnStyle(column.style, cellStyle),
       headerStyle: appendHeaderStyle(column.headerStyle, headerStyle),
     };
@@ -154,7 +157,7 @@ const withFixedColumnSizing = (columns: TableColumn[]): TableColumn[] => {
 };
 
 const useDateFormatter = () => {
-  const userPreferencesStore = useUserPreferencesStore();
+  const userPreferencesStore = useDisplayPreferences();
 
   return (value: string, fallback = '-', includeTime = true) =>
     formatDateByPreferences(value, {
@@ -731,7 +734,7 @@ export const getAttachmentColumns = (t: ComposerTranslation) => {
 };
 
 export const getTimeEntryColumns = (t: ComposerTranslation) => {
-  const userPreferencesStore = useUserPreferencesStore();
+  const userPreferencesStore = useDisplayPreferences();
 
   const formatDate = (value: string | null, fallback = '-') => {
     if (!value) return fallback;

@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="form-page q-pa-md">
     <div class="padding-page">
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
@@ -20,6 +20,7 @@
         </q-card-section>
 
         <q-card-section class="q-pt-none row q-col-gutter-md">
+          <div class="col-12 form-section-title">{{ t('ui.identification') }}</div>
           <div class="col-12">
             <q-input
               v-model="project.name"
@@ -183,12 +184,13 @@
         </q-card-section>
       </q-card>
 
-      <div class="row justify-end q-gutter-sm">
+      <div class="row justify-end q-gutter-sm form-actions">
         <q-btn
           v-if="isNew"
           flat
           round
           icon="bookmarks"
+          :aria-label="t('formPreferences.title')"
           color="grey"
           @click="prefsDialogOpen = true"
         >
@@ -198,6 +200,7 @@
           flat
           round
           icon="push_pin"
+          :aria-label="t('common.keepFormOpen')"
           :color="pinButtonColor"
           :aria-pressed="stayOnFormAfterSave"
           @click="stayOnFormAfterSave = !stayOnFormAfterSave"
@@ -434,12 +437,15 @@ const applyPreference = (fields: Record<string, unknown>) => {
   isApplyingPreference.value = false;
 };
 
+const billingBaseline = ref(JSON.stringify(billingForm.value));
 const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
-  () => ({ ...project.value }),
+  () => ({ ...project.value, _billingForm: { ...billingForm.value } }),
   (draft) => {
-    Object.assign(project.value, draft);
+    const { _billingForm, ...projectDraft } = draft;
+    Object.assign(project.value, projectDraft);
+    if (_billingForm) billingForm.value = { ..._billingForm };
   },
-  { formKey: 'project', enabled: () => isNew.value },
+  { formKey: 'project', enabled: () => !isSubmitting.value },
 );
 
 const isDirty = computed(() => {
@@ -454,7 +460,13 @@ const isDirty = computed(() => {
   );
 });
 
-useUnsavedChanges(() => isDirty.value);
+const { confirmLeave } = useUnsavedChanges(
+  () =>
+    !isSubmitting.value &&
+    (isDirty.value ||
+      markdownFiles.value.length > 0 ||
+      JSON.stringify(billingForm.value) !== billingBaseline.value),
+);
 
 watch(
   project,
@@ -476,6 +488,7 @@ const resetProjectForm = async () => {
     project.value = createEmptyProjectForm();
     billingForm.value = createDefaultBillingForm();
     markdownFiles.value = [];
+    billingBaseline.value = JSON.stringify(billingForm.value);
     clearDraft();
     if (defaultPreference.value) {
       applyPreference(defaultPreference.value.fields);
@@ -624,6 +637,7 @@ const loadProject = async () => {
     }
 
     markdownFiles.value = [];
+    billingBaseline.value = JSON.stringify(billingForm.value);
   } catch (err: unknown) {
     notifyError(t('projects.form.loadError'), err);
     void router.push('/projects');
@@ -632,7 +646,8 @@ const loadProject = async () => {
   }
 };
 
-const goBack = () => {
+const goBack = async () => {
+  if (!(await confirmLeave())) return;
   clearDraft();
   hasChanges.value = false;
   if (isNew.value) {
@@ -712,7 +727,8 @@ onMounted(async () => {
       applyPreference(defaultPreference.value.fields);
     }
   }
-  void loadProject();
+  await loadProject();
+  if (!isNew.value) await restoreDraftIfAvailable();
 });
 </script>
 

@@ -1,9 +1,9 @@
 <template>
-  <q-card class="chart-card">
+  <q-card class="chart-card" flat bordered>
     <q-card-section>
       <div class="chart-head">
         <div>
-          <div class="chart-title">{{ title }}</div>
+          <div class="chart-title" role="heading" aria-level="2">{{ title }}</div>
           <div v-if="caption" class="chart-caption">{{ caption }}</div>
         </div>
         <slot name="actions" />
@@ -40,7 +40,9 @@ withDefaults(defineProps<Props>(), {
 .chart-card {
   height: 100%;
   border-radius: 12px;
-  background: var(--card-bg);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-panel);
+  border-color: var(--border-subtle);
 }
 
 .chart-head {
@@ -63,31 +65,22 @@ withDefaults(defineProps<Props>(), {
 }
 
 .chart-container {
-  height: 320px;
-  min-height: 320px;
   width: 100%;
+  min-width: 0;
+  --chart-height: 320px;
 }
-
 .chart-container--short {
-  height: 260px;
-  min-height: 260px;
+  --chart-height: 260px;
 }
-
-.chart-container--auto {
-  height: auto;
-}
-
 @media (max-width: 600px) {
+  .chart-head {
+    flex-wrap: wrap;
+  }
   .chart-container {
-    height: 280px;
-    min-height: 280px;
+    --chart-height: 260px;
   }
   .chart-container--short {
-    height: 220px;
-    min-height: 220px;
-  }
-  .chart-container--auto {
-    height: auto;
+    --chart-height: 240px;
   }
 }
 </style>

@@ -1,7 +1,8 @@
-import { computed, onUnmounted, watch } from 'vue';
+import { onUnmounted, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
+import { useAuthStore } from 'src/stores/auth';
 
 const DRAFT_PREFIX = 'form-draft';
 const DEBOUNCE_MS = 800;
@@ -9,30 +10,41 @@ const DEBOUNCE_MS = 800;
 export function useFormDraft<T extends object>(
   getState: () => T,
   applyState: (draft: T) => void,
-  options: { formKey: string; enabled?: () => boolean },
+  options: { formKey: string; identity?: string; enabled?: () => boolean },
 ) {
   const $q = useQuasar();
   const { t } = useI18n();
   const route = useRoute();
+  const auth = useAuthStore();
+  let ready = false;
+  let cleanSnapshot = '';
+  let discardSnapshot: string | null = null;
 
-  const storageKey = computed(
-    () => `${DRAFT_PREFIX}:${options.formKey}:${(route.params.id as string) || 'new'}`,
-  );
+  // Freeze identity and record at mount: leaving a route or logging out must not
+  // write the old form into a different record/account's draft key.
+  const storageKey = `${DRAFT_PREFIX}:${options.identity ?? auth.user?.id ?? 'anonymous'}:${options.formKey}:${(route.params.id as string) || 'new'}`;
 
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const saveDraft = () => {
-    if (options.enabled && !options.enabled()) return;
+    if (!ready || (options.enabled && !options.enabled())) return;
     try {
-      localStorage.setItem(storageKey.value, JSON.stringify(getState()));
+      const value = JSON.stringify(getState());
+      if (value === cleanSnapshot || value === discardSnapshot) return;
+      localStorage.setItem(storageKey, value);
     } catch {
       // ignore
     }
   };
 
   const clearDraft = () => {
+    discardSnapshot = JSON.stringify(getState());
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
     try {
-      localStorage.removeItem(storageKey.value);
+      localStorage.removeItem(storageKey);
     } catch {
       // ignore
     }
@@ -40,8 +52,10 @@ export function useFormDraft<T extends object>(
 
   const getDraft = (): T | null => {
     try {
-      const raw = localStorage.getItem(storageKey.value);
-      return raw ? (JSON.parse(raw) as T) : null;
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return null;
+      const value: unknown = JSON.parse(raw);
+      return value && typeof value === 'object' && !Array.isArray(value) ? (value as T) : null;
     } catch {
       return null;
     }
@@ -59,8 +73,12 @@ export function useFormDraft<T extends object>(
    * Returns true if the draft was restored, false otherwise.
    */
   const restoreDraftIfAvailable = (): Promise<boolean> => {
+    cleanSnapshot = JSON.stringify(getState());
     const draft = getDraft();
-    if (!draft) return Promise.resolve(false);
+    if (!draft) {
+      ready = true;
+      return Promise.resolve(false);
+    }
 
     return new Promise<boolean>((resolve) => {
       $q.dialog({
@@ -70,11 +88,13 @@ export function useFormDraft<T extends object>(
         cancel: { label: t('common.draft.discardAction'), flat: true },
       })
         .onOk(() => {
+          ready = true;
           applyState(draft);
           resolve(true);
         })
         .onCancel(() => {
           clearDraft();
+          ready = true;
           resolve(false);
         });
     });
@@ -85,6 +105,7 @@ export function useFormDraft<T extends object>(
       clearTimeout(debounceTimer);
       debounceTimer = null;
     }
+    if (ready) saveDraft();
     stopAutoSave();
   });
 

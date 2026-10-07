@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="form-page q-pa-md">
     <div class="padding-page">
       <q-card class="q-mb-md" flat bordered>
         <q-card-section>
@@ -48,7 +48,15 @@
               :disable="!isDraft"
             >
               <template #append>
-                <q-icon name="event" class="cursor-pointer" v-if="isDraft">
+                <q-btn
+                  type="button"
+                  flat
+                  round
+                  dense
+                  icon="event"
+                  v-if="isDraft"
+                  :aria-label="t('invoices.form.dueDateLabel')"
+                >
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                     <q-date v-model="dueDateDisplay" :mask="qDateMask">
                       <div class="row items-center justify-end">
@@ -56,7 +64,7 @@
                       </div>
                     </q-date>
                   </q-popup-proxy>
-                </q-icon>
+                </q-btn>
               </template>
             </q-input>
           </div>
@@ -293,11 +301,12 @@
         </q-card-section>
       </q-card>
 
-      <div class="row justify-end q-gutter-sm">
+      <div class="row justify-end q-gutter-sm form-actions">
         <q-btn
           flat
           round
           icon="push_pin"
+          :aria-label="t('common.keepFormOpen')"
           :color="pinButtonColor"
           :aria-pressed="stayOnFormAfterSave"
           @click="stayOnFormAfterSave = !stayOnFormAfterSave"
@@ -319,6 +328,7 @@
 </template>
 
 <script setup lang="ts">
+import { useFormSession } from 'src/composables/useFormSession';
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -677,6 +687,24 @@ const goBack = () => {
   }
 };
 
+const formSession = useFormSession(
+  () => ({
+    form: { ...form.value },
+    dueDate: dueDateDisplay.value,
+    amount: manualAmount.value,
+    discount: discount.value,
+    entries: [...selectedEntryIds.value],
+  }),
+  (draft) => {
+    form.value = draft.form;
+    dueDateDisplay.value = draft.dueDate;
+    manualAmount.value = draft.amount;
+    discount.value = draft.discount;
+    selectedEntryIds.value = new Set(draft.entries);
+  },
+  { formKey: 'invoice', enabled: () => !isSubmitting.value },
+);
+
 const saveInvoice = async () => {
   hasAttemptedSubmit.value = true;
 
@@ -722,8 +750,12 @@ const saveInvoice = async () => {
         payment_link: paymentLink,
       });
       notify(t('invoices.form.createSuccess'), 'positive');
+      formSession.markSaved();
       await handlePinnedSaveSuccess({
-        reset: resetInvoiceForm,
+        reset: async () => {
+          await resetInvoiceForm();
+          formSession.markSaved();
+        },
         redirect: () => router.push(`/invoices/${created.id}`),
       });
     } else {
@@ -737,8 +769,12 @@ const saveInvoice = async () => {
         payment_link: paymentLink,
       });
       notify(t('invoices.form.updateSuccess'), 'positive');
+      formSession.markSaved();
       await handlePinnedSaveSuccess({
-        reset: resetInvoiceForm,
+        reset: async () => {
+          await resetInvoiceForm();
+          formSession.markSaved();
+        },
         redirect: () => router.push(`/invoices/${invoiceId.value}`),
       });
     }
@@ -753,5 +789,6 @@ const saveInvoice = async () => {
 onMounted(async () => {
   await loadProjectsByTerm('');
   await loadInvoice();
+  await formSession.initialize();
 });
 </script>

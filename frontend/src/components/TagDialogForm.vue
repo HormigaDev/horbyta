@@ -1,6 +1,6 @@
 <template>
   <q-dialog v-model="dialogModel" persistent @hide="onDialogClosed">
-    <q-card style="min-width: 420px; max-width: 92vw">
+    <q-card style="width: min(420px, calc(100vw - 32px)); max-width: 92vw">
       <q-form @submit.prevent="onSubmit">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6 flex items-center">
@@ -8,7 +8,14 @@
             {{ editingId ? t('tags.dialog.editTitle') : t('tags.dialog.newTitle') }}
           </div>
           <q-space />
-          <q-btn icon="close" flat round dense @click="dialogModel = false" />
+          <q-btn
+            :aria-label="t('common.close')"
+            icon="close"
+            flat
+            round
+            dense
+            @click="dialogModel = false"
+          />
         </q-card-section>
 
         <q-card-section v-if="isLoadingTag" class="q-py-xl flex flex-center">
@@ -51,7 +58,14 @@
             @update:model-value="onColorInput"
           >
             <template #append>
-              <q-icon name="palette" class="cursor-pointer" style="color: var(--q-primary)">
+              <q-btn
+                flat
+                round
+                dense
+                icon="palette"
+                :aria-label="t('tags.dialog.colorLabel')"
+                :disable="isSaving"
+              >
                 <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                   <q-color
                     :model-value="colorPickerValue"
@@ -62,7 +76,7 @@
                     @update:model-value="onColorPicked"
                   />
                 </q-popup-proxy>
-              </q-icon>
+              </q-btn>
             </template>
           </q-input>
 
