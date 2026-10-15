@@ -310,4 +310,9 @@ async fn run(db: &DatabaseConnection) {
         .unwrap();
     assert_eq!(event["kind"], "scope_consolidated");
     assert_eq!(event["context"]["change_request_id"], third.to_string());
+
+    // Revertir la migración 6 borraría consolidaciones aceptadas: se rechaza sin cambios.
+    let error = horbyta::migrations::rollback_to(db, 5).await.unwrap_err();
+    assert!(format!("{error:?}").contains("evidencia contractual"), "{error:?}");
+    horbyta::migrations::require_current(db).await.unwrap();
 }

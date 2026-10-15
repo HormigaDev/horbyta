@@ -19,3 +19,7 @@ sweep.timestamp
 
 .harness-mem/
 .claude/state/
+.claude/memory/
+.claude/sessions/
+
+out/

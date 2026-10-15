@@ -646,6 +646,28 @@ Conservar los SQL y checksums de las migraciones aplicadas (actualmente 1–7);
 añadir nuevas versiones para futuras ampliaciones. El ejecutor lleva los SQL embebidos: no requiere Rust ni archivos SQL
 externos en el servidor. La instalación real crea su administrador con `./create-user`.
 
+Cada migración tiene su reverso en `database/migrations/rollback/`, con el mismo
+nombre (la 1 es `001_schema.sql`). Toda migración nueva debe añadir el suyo y
+registrarlo en `src/migrations.rs`.
+
+```bash
+./migrate status            # aplicadas y pendientes
+./migrate up 4              # aplica las pendientes hasta la 4 inclusive
+./migrate down --yes        # revierte la última aplicada
+./migrate down 5 --yes      # revierte la 7, la 6 y la 5, en ese orden
+```
+
+Las migraciones son lineales: aplicar N aplica antes las anteriores pendientes y
+revertir N revierte antes las posteriores, porque cada una crea objetos que usan
+las siguientes. Sin `--yes`, `down` solo muestra qué revertiría. Todo el rollback
+ocurre en una transacción: si un reverso falla, no se revierte nada. Revertir
+borra los datos de las tablas y columnas que la migración creó, y el backend no
+arranca hasta volver a aplicarlas. El reverso de la 6 se niega si ya existen
+consolidaciones o correcciones de acuerdos, porque el esquema anterior no puede
+representarlas; en ese caso hay que restaurar un respaldo.
+`cargo test --locked --test migration_rollback -- --ignored` comprueba que cada
+reverso deja el esquema idéntico al previo.
+
 El seed es **opcional y exclusivo de desarrollo**. Exige `APP_ENV=development`,
 base `hormigapm_development` y almacenamiento local (`UPLOAD_DIR`, sin S3).
 No se ejecuta desde `migrate` ni desde el backend. Sin `--reset` requiere una base
