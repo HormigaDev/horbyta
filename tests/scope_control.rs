@@ -100,7 +100,7 @@ async fn run(db: &DatabaseConnection, schema: &str) {
     exec(db,&format!("INSERT INTO projects(id,user_id,client_id,name) VALUES('{project}','{owner}','{client}','Proyecto de prueba'); INSERT INTO project_billing(user_id,project_id,currency_type,billing_type,fixed_price) VALUES('{owner}','{project}','USD','fixed',100); INSERT INTO tasks(id,user_id,project_id,title) VALUES('{base_task}','{owner}','{project}','Trabajo original'); INSERT INTO milestones(id,project_id,name,due_date) VALUES('{milestone}','{project}','Entrega','2026-11-01T12:00:00Z'); INSERT INTO activities(id,user_id,name) VALUES('{activity}','{owner}','Desarrollo')")).await;
     assert_eq!(
         value(db, "SELECT count(*)::int AS data FROM horbyta_migrations").await,
-        6
+        7
     );
     assert_eq!(
         value(db, &format!("SELECT scope_task_allowed('{base_task}') AS data")).await,

@@ -15,6 +15,9 @@ pub const CONVERSATION_MIGRATION: &str = include_str!("../database/migrations/00
 pub const PROJECT_CONVERSATION_MIGRATION: &str = include_str!("../database/migrations/005_project_conversation.sql");
 pub const SCOPE_AMENDMENTS_MIGRATION: &str = include_str!("../database/migrations/006_scope_amendments.sql");
 
+pub const SCOPE_DELIVERY_SIGNALS_MIGRATION: &str =
+    include_str!("../database/migrations/007_scope_delivery_signals.sql");
+
 const MIGRATIONS: &[(i32, &[&str])] = &[
     (1, &[UUID_COMPATIBILITY, INITIAL_MIGRATION]),
     (2, &[SCOPE_MIGRATION]),
@@ -22,6 +25,7 @@ const MIGRATIONS: &[(i32, &[&str])] = &[
     (4, &[CHANGE_CONVERSATION_MIGRATION]),
     (5, &[PROJECT_CONVERSATION_MIGRATION]),
     (6, &[SCOPE_AMENDMENTS_MIGRATION]),
+    (7, &[SCOPE_DELIVERY_SIGNALS_MIGRATION]),
 ];
 
 pub fn migration_checksums() -> Vec<(i32, String)> {

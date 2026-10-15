@@ -385,3 +385,31 @@ La migración 006 incorpora cambios históricos no legacy con efectos verificabl
 no cambia firmas, facturas ni pagos anteriores. `schema.sql` y migraciones 001–005
 permanecen intactos. Aplicar `cargo run --locked --bin migrate` antes de reiniciar.
 Pruebas en esquema aislado: `cargo test --locked --test scope_amendments -- --ignored --test-threads=1`.
+
+
+## Entrega por eventos (migración 007)
+
+La cola scope_delivery conserva las decisiones antes de generar su notificación.
+El worker anterior la consultaba cada cinco segundos aun vacía. Ahora una conexión
+PostgreSQL dedicada escucha un canal por esquema, sin contenido privado. El trigger
+avisa al insertar una entrega o adelantar su fecha; PostgreSQL publica el aviso solo
+al confirmar la transacción. No se modifica ninguna migración anterior ni schema.sql.
+
+La aplicación suscribe antes de recuperar pendientes y repite la recuperación tras
+reconectar: NOTIFY es una señal, no el almacenamiento durable. La entrega y su marca
+siguen siendo atómicas. Una cola vacía espera la señal sin temporizador ni consultas;
+una entrega futura o fallida mantiene un temporizador hasta el próximo intento.
+La conexión de escucha ocupa una conexión adicional, separada del pool de consultas,
+y requiere conexión de sesión PostgreSQL (no transaction pooling para LISTEN).
+Esta modificación conserva los buses websocket del proceso; no añade distribución
+de esos buses entre réplicas del backend.
+
+El heartbeat websocket del cliente solo envía Ping. Se conserva expiración de sesión
+y autorización contra la base antes de entregar cada evento; una cuenta desactivada
+no recibe datos nuevos aunque el socket permanezca conectado hasta expirar.
+No se suprimieron logs SQL para ocultar el sondeo.
+
+Aplicar cargo run --locked --bin migrate antes de reiniciar el backend. Las pruebas
+scope_delivery usan un esquema aislado: commit/rollback, recuperación, programación,
+fallo/reintento y observación de query_start durante reposo desde otra conexión.
+Referencia: https://www.postgresql.org/docs/current/sql-listen.html

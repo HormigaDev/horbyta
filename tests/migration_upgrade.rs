@@ -87,7 +87,7 @@ async fn check(db: &DatabaseConnection, schema: &str, compatible: bool) {
     assert_eq!(query(db, &snapshot("payments")).await, before_payments);
     assert_eq!(
         query(db, "SELECT to_jsonb(count(*)) AS data FROM horbyta_migrations").await,
-        6
+        7
     );
     assert_eq!(
         query(db, "SELECT to_jsonb(count(*)) AS data FROM scope_effects").await,

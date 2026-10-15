@@ -638,7 +638,11 @@ correcciones de acuerdos aceptados y consolida automáticamente los cambios apro
 Conserva firmas y suplementos anteriores; no repite facturas ni fabrica aceptaciones.
 También incorpora los cambios históricos que disponen de efectos verificables.
 
-Conservar los SQL y checksums de las migraciones aplicadas (actualmente 1–6);
+La migración **7**, `database/migrations/007_scope_delivery_signals.sql`, sustituye
+el sondeo de entrega por señales PostgreSQL LISTEN/NOTIFY. La cola persistente
+se recupera al arrancar o reconectar; solo los pendientes activan un temporizador.
+
+Conservar los SQL y checksums de las migraciones aplicadas (actualmente 1–7);
 añadir nuevas versiones para futuras ampliaciones. El ejecutor lleva los SQL embebidos: no requiere Rust ni archivos SQL
 externos en el servidor. La instalación real crea su administrador con `./create-user`.
 
