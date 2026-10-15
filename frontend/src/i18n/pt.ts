@@ -1,6 +1,433 @@
 import type { messages as es } from './es';
 
 export const messages: Record<keyof typeof es, string> = {
+  'notifications.scope.message.title': 'Nova mensagem em {project}',
+
+  'attachments.preview.title': 'Prévia do arquivo',
+  'attachments.preview.download': 'Baixar arquivo',
+  'attachments.preview.openPdf': 'Abrir PDF em outra aba',
+  'attachments.preview.pdfHint':
+    'O PDF abre em outra aba. Se o navegador bloqueou a abertura, use o botão para abri-lo.',
+  'attachments.preview.unsupported': 'Este formato não tem prévia. Você pode baixar o arquivo.',
+  'attachments.preview.loadError':
+    'Não foi possível abrir o arquivo. Verifique seu acesso ou tente novamente.',
+  'attachments.preview.mediaError':
+    'O navegador não conseguiu reproduzir ou exibir este arquivo. Você pode baixá-lo para abrir em outro aplicativo.',
+  'attachments.preview.tooLarge':
+    'O arquivo excede o limite de prévia (2 MB para Markdown, 20 MB para imagens). Você pode baixar o original.',
+
+  'scope.fixedTerms':
+    'Adicional fixo por esta alteração. As horas são estimadas; o tempo registrado não é faturado novamente.',
+  'scope.acceptanceStatement':
+    'Aceito o escopo e os documentos incluídos nesta revisão, suas condições financeiras e datas. Os materiais de referência não ampliam os entregáveis.',
+
+  'backendErrors.El acuerdo vigente cambió; vuelva a leerlo.':
+    'O acordo vigente mudou; recarregue-o.',
+  'backendErrors.Indique el motivo de la corrección y la revisión vigente del acuerdo.':
+    'Informe o motivo da correção e a revisão vigente do acordo.',
+  'backendErrors.El motivo supera 2000 caracteres.': 'O motivo ultrapassa 2000 caracteres.',
+  'backendErrors.La consolidación requiere un cambio aprobado verificable.':
+    'A consolidação exige uma mudança aprovada verificável.',
+  'backendErrors.Consolidar no permite reescribir el acuerdo original.':
+    'A consolidação não permite reescrever o acordo original.',
+  'backendErrors.Los suplementos aprobados deben conservarse.':
+    'Os adicionais aprovados devem ser preservados.',
+  'backendErrors.Declare el motivo de la corrección y el acuerdo vigente.':
+    'Informe o motivo da correção e o acordo vigente.',
+  'backendErrors.Acci\u00f3n de negociaci\u00f3n no permitida.':
+    'Ação de negociação não permitida.',
+  'backendErrors.Asigne un cliente antes de publicar el alcance.':
+    'Atribua um cliente antes de publicar o escopo.',
+  'backendErrors.Cancele la solicitud; su historial debe conservarse.':
+    'Cancele a solicitação; seu histórico deve ser preservado.',
+  'backendErrors.Clasificar o mover la tarea no permite salir del proyecto con alcance activo.':
+    'Classificar ou mover a tarefa não permite sair do projeto com escopo ativo.',
+  'backendErrors.Clasifique nuevas tareas con el v\u00ednculo de alcance sin alterar la oferta.':
+    'Classifique novas tarefas com o vínculo de escopo sem alterar a oferta.',
+  'backendErrors.Complete las cinco secciones o incluya un documento principal completo.':
+    'Preencha as cinco seções ou inclua um documento principal completo.',
+  'backendErrors.Cree la tarea pendiente y clasifique su alcance antes de ejecutarla.':
+    'Crie a tarefa pendente e classifique seu escopo antes de executá-la.',
+  'backendErrors.Cree la tarea pendiente y justifique su preparaci\u00f3n desde el control de alcance.':
+    'Crie a tarefa pendente e justifique sua preparação no controle de escopo.',
+  'backendErrors.Declare evaluaci\u00f3n, horas, costo y d\u00edas no negativos.':
+    'Informe a avaliação e horas, custo e dias não negativos.',
+  'backendErrors.El actor no pertenece al cliente del proyecto.':
+    'O autor não pertence ao cliente do projeto.',
+  'backendErrors.El acuerdo finalizado es inmutable; cree otro cambio.':
+    'O acordo finalizado é imutável; crie outra alteração.',
+  'backendErrors.El acuerdo ya est\u00e1 activo; solicite un cambio.':
+    'O acordo já está ativo; solicite uma alteração.',
+  'backendErrors.El alcance cambi\u00f3 o ya fue aceptado.': 'O escopo mudou ou já foi aceito.',
+  'backendErrors.El alcance cambi\u00f3 o ya se acept\u00f3; vuelva a leerlo.':
+    'O escopo mudou ou já foi aceito; leia novamente.',
+  'backendErrors.El alcance cambi\u00f3; vuelva a leerlo.': 'O escopo mudou; leia novamente.',
+  'backendErrors.El alcance excede los l\u00edmites de documentos/anexos.':
+    'O escopo excede os limites de documentos ou anexos.',
+  'backendErrors.El alcance original ya est\u00e1 aceptado; documente una solicitud de cambio.':
+    'O escopo original já foi aceito; documente uma solicitação de alteração.',
+  'backendErrors.El archivo no coincide con el anexo publicado; revise su integridad.':
+    'O arquivo não corresponde ao anexo publicado; verifique sua integridade.',
+  'backendErrors.El calendario cambi\u00f3; solicite una evaluaci\u00f3n nueva.':
+    'O calendário mudou; solicite uma nova avaliação.',
+  'backendErrors.El cambio pertenece a otro proyecto o cliente.':
+    'A alteração pertence a outro projeto ou cliente.',
+  'backendErrors.El cliente forma parte del acuerdo; use otro proyecto para otro cliente.':
+    'O cliente faz parte do acordo; use outro projeto para outro cliente.',
+  'backendErrors.El cliente pertenece a la negociaci\u00f3n conservada; cree otro proyecto para otro cliente.':
+    'O cliente pertence à negociação preservada; crie outro projeto para outro cliente.',
+  'backendErrors.El conjunto de documentos supera 1 MB.': 'O conjunto de documentos excede 1 MB.',
+  'backendErrors.El documento no pertenece a esta revisi\u00f3n.':
+    'O documento não pertence a esta revisão.',
+  'backendErrors.El extra pendiente debe ser una tarea nueva sin ejecuci\u00f3n ni tiempo.':
+    'O trabalho adicional pendente deve ser uma nova tarefa sem execução nem tempo registrado.',
+  'backendErrors.El extra tiene precio fijo; registre su tiempo como no facturable.':
+    'O trabalho adicional tem preço fixo; registre seu tempo como não faturável.',
+  'backendErrors.El importe y moneda del suplemento aceptado son inmutables.':
+    'O valor e a moeda do adicional aceito são imutáveis.',
+  'backendErrors.El proyecto ahora no es facturable; solicite una evaluaci\u00f3n nueva.':
+    'O projeto agora não é faturável; solicite uma nova avaliação.',
+  'backendErrors.El requisito debe ser un documento incluido en el alcance aceptado de esta tarea.':
+    'O requisito deve ser um documento incluído no escopo aceito desta tarefa.',
+  'backendErrors.El tiempo de un suplemento conserva su origen; no se traslada para facturarlo otra vez.':
+    'O tempo de um adicional mantém sua origem; não pode ser transferido para faturá-lo novamente.',
+  'backendErrors.Elija un hito pendiente del proyecto con fecha para aplicar la extensi\u00f3n.':
+    'Escolha um marco pendente do projeto com data para aplicar a extensão.',
+  'backendErrors.Escriba la aclaraci\u00f3n.': 'Escreva o esclarecimento.',
+  'backendErrors.Esta revisi\u00f3n no est\u00e1 disponible para aceptar.':
+    'Esta revisão não está disponível para aceitação.',
+  'backendErrors.Esta revisi\u00f3n no est\u00e1 publicada.': 'Esta revisão não foi publicada.',
+  'backendErrors.Esta revisi\u00f3n ya no est\u00e1 pendiente de aceptaci\u00f3n.':
+    'Esta revisão não está mais aguardando aceitação.',
+  'backendErrors.Este adjunto forma parte de un registro conservado; no se reemplaza ni elimina.':
+    'Este anexo faz parte de um registro preservado; não pode ser substituído nem excluído.',
+  'backendErrors.Este registro conserva un acuerdo; debe archivarse o corregirse con una nueva revisi\u00f3n.':
+    'Este registro preserva um acordo; arquive-o ou corrija-o com uma nova revisão.',
+  'backendErrors.Explique la relaci\u00f3n con el alcance.': 'Explique a relação com o escopo.',
+  'backendErrors.Falta aceptar el alcance original; la ejecuci\u00f3n est\u00e1 bloqueada.':
+    'O escopo original ainda não foi aceito; a execução está bloqueada.',
+  'backendErrors.Falta un anexo publicado; recupere el archivo antes de aceptar.':
+    'Falta um anexo publicado; recupere o arquivo antes de aceitar.',
+  'backendErrors.Finalice los timers de ejecuci\u00f3n antes de publicar el alcance inicial.':
+    'Finalize os cronômetros de execução antes de publicar o escopo inicial.',
+  'backendErrors.Hay anexos duplicados.': 'Há anexos duplicados.',
+  'backendErrors.Hay recursos pendientes: suba im\u00e1genes/archivos, vincule sus anexos y sustituya los enlaces locales antes de publicar. Las im\u00e1genes remotas tambi\u00e9n deben incorporarse.':
+    'Há recursos pendentes: envie imagens ou arquivos, vincule seus anexos e substitua os links locais antes de publicar. Imagens remotas também devem ser incluídas.',
+  'backendErrors.Indique c\u00f3mo resolver contradicciones entre secciones y documentos.':
+    'Informe como resolver contradições entre seções e documentos.',
+  'backendErrors.Indique una acci\u00f3n v\u00e1lida y su explicaci\u00f3n.':
+    'Informe uma ação válida e sua explicação.',
+  'backendErrors.Justifique la preparaci\u00f3n sin ejecuci\u00f3n de entregables.':
+    'Justifique a preparação sem executar entregáveis.',
+  'backendErrors.La factura conserva un suplemento aceptado.':
+    'A fatura preserva um adicional aceito.',
+  'backendErrors.La identidad no pertenece al cliente.': 'A identidade não pertence ao cliente.',
+  'backendErrors.La oferta cambi\u00f3 o ya fue decidida; vuelva a leerla.':
+    'A oferta mudou ou já recebeu uma decisão; leia novamente.',
+  'backendErrors.La preparaci\u00f3n conserva su origen y justificaci\u00f3n.':
+    'A preparação mantém sua origem e justificativa.',
+  'backendErrors.La preparaci\u00f3n de propuesta se registra como no facturable; no ejecuta entregables acordados.':
+    'A preparação da proposta é registrada como não faturável; não executa entregáveis acordados.',
+  'backendErrors.La propuesta cambi\u00f3 o ya recibi\u00f3 una decisi\u00f3n.':
+    'A proposta mudou ou já recebeu uma decisão.',
+  'backendErrors.La propuesta cambi\u00f3; vuelva a leerla antes de continuar.':
+    'A proposta mudou; leia novamente antes de continuar.',
+  'backendErrors.La publicaci\u00f3n con anexos necesita verificar el almacenamiento.':
+    'A publicação com anexos exige a verificação do armazenamento.',
+  'backendErrors.La revisi\u00f3n cambi\u00f3 o no admite evaluaci\u00f3n; vuelva a leerla.':
+    'A revisão mudou ou não permite avaliação; leia novamente.',
+  'backendErrors.La revisi\u00f3n cambi\u00f3 o no es accesible; vuelva a leerla.':
+    'A revisão mudou ou não está acessível; leia novamente.',
+  'backendErrors.La revisi\u00f3n cambi\u00f3; vuelva a leerla.':
+    'A revisão mudou; leia novamente.',
+  'backendErrors.La revisi\u00f3n de alcance es inmutable.': 'A revisão de escopo é imutável.',
+  'backendErrors.La tarea debe referenciar el alcance aceptado.':
+    'A tarefa deve referenciar o escopo aceito.',
+  'backendErrors.La tarea necesita un alcance inicial aceptado.':
+    'A tarefa precisa de um escopo inicial aceito.',
+  'backendErrors.La tarea y el acuerdo deben pertenecer al mismo proyecto activo.':
+    'A tarefa e o acordo devem pertencer ao mesmo projeto ativo.',
+  'backendErrors.La tarea ya fue clasificada o no est\u00e1 disponible.':
+    'A tarefa já foi classificada ou não está disponível.',
+  'backendErrors.Las subtareas deben conservar el mismo origen; separe el trabajo adicional.':
+    'As subtarefas devem manter a mesma origem; separe o trabalho adicional.',
+  'backendErrors.Las tareas de la propuesta cambiaron; publique otra revisi\u00f3n.':
+    'As tarefas da proposta mudaram; publique outra revisão.',
+  'backendErrors.Las tareas de la propuesta cambiaron; publique un alcance nuevo.':
+    'As tarefas da proposta mudaram; publique um novo escopo.',
+  'backendErrors.No se a\u00f1ade trabajo a un cambio rechazado, cancelado o implementado.':
+    'Não se adiciona trabalho a uma alteração rejeitada, cancelada ou implementada.',
+  'backendErrors.No se desactiva la protecci\u00f3n del alcance.':
+    'A proteção de escopo não pode ser desativada.',
+  'backendErrors.No se permite fabricar una aceptaci\u00f3n.':
+    'Não é permitido fabricar uma aceitação.',
+  'backendErrors.No se permite quitar el origen del trabajo.':
+    'Não é permitido remover a origem do trabalho.',
+  'backendErrors.No se puede cambiar el origen de trabajo clasificado.':
+    'Não é possível alterar a origem de trabalho classificado.',
+  'backendErrors.No se puede leer un anexo; revise los archivos antes de publicar.':
+    'Não é possível ler um anexo; verifique os arquivos antes de publicar.',
+  'backendErrors.No se puede trasladar una negociaci\u00f3n a otro acuerdo.':
+    'Uma negociação não pode ser transferida para outro acordo.',
+  'backendErrors.No se registra desarrollo antes de aceptar el cambio.':
+    'Não se registra desenvolvimento antes de aceitar a alteração.',
+  'backendErrors.No se traslada ejecuci\u00f3n para eludir el acuerdo.':
+    'Não se transfere execução para contornar o acordo.',
+  'backendErrors.Publique y obtenga el aceite del alcance original antes de evaluar extras.':
+    'Publique e obtenha a aceitação do escopo original antes de avaliar trabalhos adicionais.',
+  'backendErrors.Revise t\u00edtulo, contenido, tipo e identificadores \u00fanicos de los documentos.':
+    'Revise o título, conteúdo, tipo e identificadores únicos dos documentos.',
+  'backendErrors.Se requiere la decisi\u00f3n del cliente autenticado.':
+    'É necessária a decisão do cliente autenticado.',
+  'backendErrors.Se requiere una oferta vigente y decisi\u00f3n del cliente autenticado.':
+    'É necessária uma oferta vigente e a decisão do cliente autenticado.',
+  'backendErrors.Solo se justifica preparaci\u00f3n pendiente anterior al acuerdo.':
+    'Só é possível justificar preparação pendente anterior ao acordo.',
+  'backendErrors.Solo se traslada una propuesta pendiente sin ejecuci\u00f3n a un proyecto controlado.':
+    'Só é possível transferir uma proposta pendente sem execução para um projeto controlado.',
+  'backendErrors.Trabajo adicional bloqueado hasta aceptar y aplicar el cambio.':
+    'O trabalho adicional fica bloqueado até aceitar e aplicar a alteração.',
+  'backendErrors.Transici\u00f3n de solicitud no permitida.':
+    'Transição de solicitação não permitida.',
+  'backendErrors.Transici\u00f3n final no permitida.': 'Transição final não permitida.',
+  'backendErrors.Un cambio hist\u00f3rico requiere conciliaci\u00f3n, no habilita trabajo nuevo.':
+    'Uma alteração histórica exige conciliação e não habilita trabalho novo.',
+  'backendErrors.Un suplemento con costo necesita proyecto facturable y moneda.':
+    'Um adicional com custo exige um projeto faturável e moeda.',
+  'backendErrors.Una subtarea conserva el origen de su padre; separe el extra.':
+    'Uma subtarefa mantém a origem de sua tarefa principal; separe o trabalho adicional.',
+  'backendErrors.Use im\u00e1genes Markdown vinculadas a anexos incluidos, para conservar su contenido.':
+    'Use imagens Markdown vinculadas a anexos incluídos para preservar seu conteúdo.',
+  'backendErrors.Vincule y termine todas las tareas del cambio antes de cerrar su implementaci\u00f3n.':
+    'Vincule e conclua todas as tarefas da alteração antes de encerrar sua implementação.',
+  'backendErrors.El acuerdo cambi\u00f3; vuelva a leerlo.': 'O acordo mudou; leia novamente.',
+  'backendErrors.Este registro conserva acuerdos; ci\u00e9rrelo o canc\u00e9lelo sin eliminar su historial.':
+    'Este registro preserva acordos; encerre-o ou cancele-o sem excluir seu histórico.',
+
+  'backendErrors.Invalid conversation cursor.': 'Cursor de conversa inválido.',
+  'backendErrors.Attachment does not belong to this conversation.':
+    'O arquivo não pertence a esta conversa.',
+  'backendErrors.At most 10 attachments per message.': 'Máximo de 10 arquivos por mensagem.',
+  'backendErrors.Audio attachments are not supported in conversations.':
+    'Anexos de áudio ainda não estão disponíveis.',
+
+  'scope.originalBilling': 'Condições financeiras originais',
+  'scope.originalDates': 'Datas acordadas nesta revisão',
+  'scope.currentDates': 'Marcos atuais',
+  'scope.title': 'Escopo do projeto',
+  'scope.active': 'Aceito',
+  'scope.pending': 'Aguardando aceitação',
+  'scope.historical':
+    'O projeto ainda não tem um escopo formal aceito. O trabalho anterior mantém sua condição histórica.',
+  'scope.revision': 'Revisão {version}',
+  'scope.deliverables': 'Entregáveis',
+  'scope.criteria': 'Critérios de aceitação',
+  'scope.restrictions': 'Restrições',
+  'scope.exclusions': 'Exclusões',
+  'scope.requirements': 'Requisitos funcionais e não funcionais',
+  'scope.summaryTab': 'Resumo',
+  'scope.currentAgreement': 'Acordo vigente',
+  'scope.viewAgreement': 'Ver escopo',
+  'scope.pendingChanges': 'Mudanças pendentes',
+  'scope.allPendingChanges': 'Ver todas as mudanças pendentes ({count})',
+  'scope.upcomingMilestones': 'Próximos marcos',
+  'scope.scopeTab': 'Escopo',
+  'scope.revisions': 'Revisões do escopo',
+  'scope.amendmentTitle': 'Alterar um acordo aceito',
+  'scope.amendmentWarning':
+    'Para alterar entregas, preço ou datas, crie uma solicitação de mudança. Uma revisão corrigida requer nova aceitação; o acordo vigente permanece válido até lá.',
+  'scope.amendmentReason': 'Motivo da correção',
+  'scope.amendmentReasonRequired': 'Descreva o que precisa ser corrigido no acordo.',
+  'scope.correctAgreement': 'Criar revisão corrigida',
+  'scope.createChange': 'Criar solicitação de mudança',
+  'scope.includedChanges': 'Mudanças aprovadas incluídas',
+  'scope.status.consolidated': 'Consolidado',
+  'scope.eventConsolidated': 'Escopo atualizado por mudança aprovada',
+  'scope.newRevision': 'Nova revisão',
+  'scope.publishDraft': 'Publicar rascunho',
+  'scope.editDraft': 'Editar rascunho',
+  'scope.edit': 'Preparar escopo',
+  'scope.draft': 'Salvar rascunho',
+  'scope.publish': 'Publicar para o cliente',
+  'scope.accept': 'Aceitar este escopo',
+  'scope.acceptTitle': 'Confirmar o escopo',
+  'scope.acceptText': 'Aceitar o escopo da revisão {version}?',
+  'scope.required': 'Preencha esta seção; informe explicitamente se não se aplica.',
+  'scope.saved': 'Revisão preservada',
+  'scope.accepted': 'Escopo aceito',
+  'scope.failure': 'Não foi possível concluir a operação',
+  'scope.conflict': 'A proposta mudou. Revise as condições atuais e decida novamente.',
+  'scope.loading': 'Carregando acordos',
+  'scope.retry': 'Recarregar',
+  'scope.refresh': 'Atualizar acordos',
+  'scope.tasks': 'Trabalho incluído nesta revisão',
+  'scope.attachments': 'Documentação preservada',
+  'scope.history': 'Acordo e histórico da alteração',
+  'scope.agreementTab': 'Acordo',
+  'scope.historyTab': 'Histórico',
+  'scope.evidence': 'Registro de aceite',
+  'scope.legacy':
+    'Registro histórico: nem todas as revisões ou uma moeda aceita verificável estão disponíveis.',
+  'scope.waitingAssessment':
+    'A avaliação ainda não foi publicada. O valor e as datas serão informados antes da decisão.',
+  'scope.workingAssessment': 'Rascunho de avaliação',
+  'scope.commentLabel': 'Esclarecimento',
+  'scope.actors.professional': 'Profissional',
+  'scope.actors.client': 'Cliente',
+  'scope.actors.system': 'Sistema',
+  'scope.actors.unknown': 'Sem autor verificado',
+  'scope.terms': 'Condições do adicional',
+  'scope.currencyUnknown': 'Moeda histórica não verificada',
+  'scope.noCost': 'Sem custo adicional',
+  'scope.dates': 'Alteração de data do marco',
+  'scope.noDays': 'Sem alteração de data',
+  'scope.proposed': 'Adicional proposto',
+  'scope.exact': 'Valor exato',
+  'scope.approved': 'Valor aprovado',
+  'scope.invoiced': 'Fatura do adicional',
+  'scope.paid': 'Recebido',
+  'scope.notInvoiced': 'Esta alteração não gera fatura',
+  'scope.invoiceDraft': 'Rascunho aguardando emissão',
+  'scope.work': 'Trabalho relacionado',
+  'scope.blocked': 'Aguardando aprovação',
+  'scope.enabled': 'Habilitado',
+  'scope.negotiation': 'Esclarecimentos e decisões',
+  'scope.commentRevision': 'Esclarecimento sobre a revisão {version}',
+  'scope.send': 'Enviar',
+  'scope.comment': 'Esclarecimento sobre esta revisão',
+  'scope.original': 'Descrição preservada',
+  'scope.assessment': 'Avaliação publicada',
+  'scope.hours': 'Horas estimadas',
+  'scope.days': 'Dias de impacto',
+  'scope.provenance': 'Procedência histórica',
+  'scope.taskTitle': 'Origem do trabalho',
+  'scope.unclassified': 'Classifique esta tarefa antes de executá-la ou registrar tempo.',
+  'scope.taskHistorical': 'Escopo aguardando aceitação.',
+  'scope.classify': 'Classificar trabalho',
+  'scope.base': 'Incluído no escopo aceito',
+  'scope.extra': 'Trabalho adicional de uma solicitação de alteração',
+  'scope.reason': 'Justificativa da relação com o escopo',
+  'scope.relation': 'Escopo ou solicitação',
+  'scope.pendingTitle': 'Decisões pendentes',
+  'scope.emptyPending': 'Você não tem decisões pendentes.',
+  'scope.open': 'Revisar proposta',
+  'scope.milestone': 'Marco cujo prazo será alterado',
+  'scope.milestoneHint':
+    'Uma extensão positiva exige um marco pendente com data. Somente esse marco será ajustado.',
+  'scope.fixedHint':
+    'O custo é um adicional fixo por esta alteração, inclusive em projetos por hora ou contrato recorrente. As horas são estimadas e seu tempo não é faturado novamente.',
+  'scope.documentsTitle': 'Documentos do escopo',
+  'scope.addDocument': 'Adicionar documento',
+  'scope.importMarkdown': 'Importar Markdown',
+  'scope.untitled': 'Documento sem título',
+  'scope.documentTitle': 'Título',
+  'scope.documentRole': 'Função do documento',
+  'scope.requirementId': 'Identificador do requisito (opcional, ex.: REQ-001)',
+  'scope.relatedSection': 'Seção relacionada (opcional)',
+  'scope.importedFrom': 'Arquivo: {name}',
+  'scope.dependenciesHint': 'Vincule estes recursos; importar Markdown não inclui seus arquivos.',
+  'scope.linkFile': 'Vincular arquivo',
+  'scope.removeDocument': 'Remover desta proposta',
+  'scope.precedenceLabel': 'Documento ou seção que prevalece em caso de conflito',
+  'scope.includedAttachments': 'Anexos incluídos no acordo',
+  'scope.includedFiles': 'Arquivos incluídos',
+  'scope.referenceFiles': 'Arquivos de referência (preservados, sem ampliar entregáveis)',
+  'scope.uploadResources': 'Enviar recursos ou anexos',
+  'scope.mainOption': 'Principal: define o escopo completo',
+  'scope.annexOption': 'Anexo: especificação incluída',
+  'scope.referenceOption': 'Referência: contexto sem ampliar o acordo',
+  'scope.newSpecification': 'Nova especificação',
+  'scope.markdownRequired': 'Selecione Markdown UTF-8 de até 200 KB por arquivo.',
+  'scope.emptyDocument': 'O documento está vazio.',
+  'scope.importFailure': 'Não foi possível importar',
+  'scope.uploadFailure': 'Não foi possível enviar os arquivos',
+  'scope.revisionDocuments': 'Documentos desta revisão',
+  'scope.searchDocuments': 'Buscar por título, requisito ou conteúdo',
+  'scope.documentIndex': 'Índice dos documentos do escopo',
+  'scope.precedenceTitle': 'Regra de interpretação',
+  'scope.mainRole': 'Documento principal',
+  'scope.referenceRole': 'Referência: não amplia o escopo',
+  'scope.annexRole': 'Anexo incluído',
+  'scope.legacyAttachment': 'Anexo anterior sem classificação',
+  'scope.downloadMarkdown': 'Baixar Markdown',
+  'scope.downloadOriginal': 'Baixar original importado',
+  'scope.commentDocument': 'Comentar este documento',
+  'scope.documentIntegrity': 'Integridade do documento',
+  'scope.compare': 'Comparar com outra revisão',
+  'scope.comparisonRevision': 'Revisão de comparação',
+  'scope.comparisonHint': 'Comparação {from} → {to}. Vermelho: removido. Verde: adicionado.',
+  'scope.noDifferences': 'Sem diferenças.',
+  'scope.contentDiff': '{title} — conteúdo',
+  'scope.metadataDiff': '{title} — função e identificadores',
+  'scope.financialTerms': 'Condições financeiras',
+  'scope.datesMilestones': 'Datas e marcos',
+  'scope.activeAgreement': 'Acordo ativo — revisão {version}',
+  'scope.blockedAgreement': 'Aguardando acordo: execução bloqueada',
+  'scope.legacyAgreement': 'Projeto anterior: aguardando formalização',
+  'scope.registeredIp': 'IP registrada',
+  'scope.acceptanceIp': 'IP registrada na aceitação',
+  'scope.trustedProxy': 'proxy confiável',
+  'scope.directConnection': 'conexão direta',
+  'scope.requestChanges': 'Solicitar ajustes',
+  'scope.rejectProposal': 'Rejeitar proposta',
+  'scope.preferRevision': 'Solicitar esta versão',
+  'scope.restoreProposal': 'Usar esta revisão',
+  'scope.agreementIntegrity': 'Integridade do acordo',
+  'scope.optionalSections': 'Seções do escopo',
+  'scope.publicationSnapshot': 'Condições da publicação',
+  'scope.noBilling': 'Projeto sem condições de faturamento configuradas.',
+  'scope.finishEditingToChat': 'Salve ou cancele a edição para enviar uma mensagem.',
+  'scope.conversationDraft': 'Publique o rascunho para habilitar a conversa.',
+  'scope.conversationEmpty': 'Sem mensagens.',
+  'scope.messagePlaceholder': 'Escreva uma mensagem',
+  'scope.conversationAction': 'Conversa',
+  'scope.olderMessages': 'Mensagens anteriores',
+  'scope.newerMessages': 'Mensagens seguintes',
+  'scope.latestMessages': 'Ir para as últimas mensagens',
+  'scope.attachMessageFile': 'Anexar arquivos',
+  'scope.openConversation': 'Abrir conversa',
+  'scope.fileCountLimit': 'Máximo de 10 arquivos por mensagem.',
+  'scope.audioUnsupported': 'Anexos de áudio ainda não estão disponíveis.',
+  'scope.createChangeFromMessage': 'Criar solicitação de mudança',
+  'scope.originalMessage': 'Mensagem original',
+  'scope.mentionResource': 'Mencionar recurso',
+  'scope.mentionKinds.project': 'Projeto',
+  'scope.mentionKinds.milestone': 'Marco',
+  'scope.mentionKinds.change': 'Solicitação de mudança',
+  'scope.mentionKinds.file': 'Arquivo',
+  'scope.searchResources': 'Buscar recursos',
+  'scope.eventPublished': 'Escopo publicado',
+  'scope.eventAccepted': 'Escopo aceito',
+  'scope.eventRejected': 'Escopo rejeitado',
+  'scope.eventAdjustments': 'Ajustes solicitados no escopo',
+  'scope.changeEvent': 'Solicitação de mudança: {status}',
+  'scope.unreadMessages': '{count} mensagens não lidas',
+  'scope.noUnreadMessages': 'Nenhuma mensagem não lida',
+  'scope.conversation': 'Conversa',
+  'scope.freelancer': 'Freelancer',
+  'scope.documentLabel': 'Documento',
+  'scope.writeClarification': 'Escrever esclarecimento',
+  'scope.selectedDocument': 'documento selecionado',
+  'scope.withdrawalHint': 'Esta proposta não estará mais disponível para aceitação.',
+  'scope.explanation': 'Explicação',
+  'scope.explanationRequired': 'Escreva uma explicação',
+  'scope.acceptEvidence':
+    'Serão registrados sua identidade, data e IP. Referências não ampliam o escopo.',
+  'scope.status.draft': 'Rascunho',
+  'scope.status.pending': 'Aguardando decisão',
+  'scope.status.superseded': 'Substituída',
+  'scope.status.accepted': 'Aceita',
+  'scope.status.rejected': 'Rejeitada',
+  'scope.status.changes_requested': 'Ajustes solicitados',
+  'scope.preparationDescription': 'Preparação não faturável, sem execução de entregáveis: {reason}',
+  'scope.preparationHint': 'Somente preparação não faturável até a aceitação do escopo.',
+  'scope.preparationReason': 'Justificativa de preparação',
+  'scope.reasonRequired': 'Escreva uma justificativa',
+  'scope.markPreparation': 'Marcar como preparação',
+  'scope.relatedSpecifications': 'Especificações relacionadas ao escopo',
+  'scope.linkSpecification': 'Vincular especificação aceita',
+  'scope.linkRequirement': 'Vincular requisito',
+
   'ui.requestLocked': 'Esta solicitação não permite mais edição.',
   'ui.chartData': 'Ver dados do gráfico',
   'ui.chartDescription': '{title}. Os mesmos dados estão disponíveis em uma tabela.',
@@ -14,11 +441,11 @@ export const messages: Record<keyof typeof es, string> = {
   'ui.clientPortal': 'Portal de clientes',
   'ui.portalWelcome': 'Tudo o que você precisa para avançar.',
   'ui.portalIntro': 'Consulte seus projetos, revise entregas e envie solicitações em um só lugar.',
-  'ui.portalFeature': 'Projetos · Marcos · Solicitações',
+  'ui.portalFeature': 'Projetos — Marcos — Solicitações',
   'ui.authWelcome': 'Abra espaço para seu próximo projeto.',
   'ui.authIntro':
     'Organize tarefas, acompanhe entregas e consulte suas finanças com uma visão clara do trabalho.',
-  'ui.authFeature': 'Planeje · Trabalhe · Revise',
+  'ui.authFeature': 'Planeje — Trabalhe — Revise',
   'ui.notFoundHint': 'Confira o endereço ou volte ao seu espaço de trabalho.',
   'ui.appearance': 'Aparência',
   'ui.regional': 'Idioma e formatos',
@@ -30,11 +457,11 @@ export const messages: Record<keyof typeof es, string> = {
   'ui.compact': 'Compacta',
   'ui.density': 'Densidade',
   'ui.motion': 'Reduzir movimento',
-  'ui.preview': 'Prévia · não salva',
+  'ui.preview': 'Prévia — não salva',
   'ui.appearanceHint':
     'Um espaço de trabalho do seu jeito. Experimente um tema e salve quando estiver pronto.',
   'ui.previewTask': 'Preparar a próxima entrega',
-  'ui.previewMeta': 'Projeto · Planejamento',
+  'ui.previewMeta': 'Projeto — Planejamento',
   'ui.reset': 'Redefinir',
   'ui.work': 'Trabalho',
   'ui.customers': 'Clientes',
@@ -171,8 +598,8 @@ export const messages: Record<keyof typeof es, string> = {
   'dashboard.empty': 'Sem dados disponíveis.',
   'dashboard.loading': 'Carregando indicadores...',
   'dashboard.error': 'Não foi possível carregar os indicadores do dashboard.',
-  'dashboard.kpi.scopeCreep.title': 'Dinheiro recuperado por scope creep',
-  'dashboard.kpi.scopeCreep.caption': 'Cobranças aprovadas por mudanças de escopo',
+  'dashboard.kpi.scopeCreep.title': 'Valor aprovado por mudanças de escopo',
+  'dashboard.kpi.scopeCreep.caption': 'Valores aceitos; não representam valores recebidos',
   'dashboard.kpi.accountsReceivable.title': 'Contas a receber',
   'dashboard.kpi.accountsReceivable.caption': 'Saldos pendentes por cliente',
   'dashboard.kpi.overdueTasks.title': 'Tarefas atrasadas',
@@ -342,6 +769,11 @@ export const messages: Record<keyof typeof es, string> = {
   'projects.form.status.open': 'Aberto',
   'projects.form.status.closed': 'Fechado',
   'projects.form.status.cancelled': 'Cancelado',
+  'projects.detail.quickActionsTitle': 'Ações rápidas',
+  'projects.detail.indexTitle': 'Índice',
+  'projects.detail.basicInfoTitle': 'Informações do projeto',
+  'projects.detail.noClient': 'Sem cliente atribuído',
+  'projects.detail.noCategory': 'Sem categoria',
   'projects.detail.meta': 'ID: {id} | Criado: {created} | Atualizado: {updated}',
   'projects.detail.tab.details': 'Detalhes',
   'projects.detail.tab.milestones': 'Marcos',
@@ -356,6 +788,7 @@ export const messages: Record<keyof typeof es, string> = {
   'projects.detail.retainerAmountLabel': 'Valor do retainer',
   'projects.detail.paymentDayLabel': 'Dia de pagamento',
   'projects.detail.paymentDayValue': 'Dia {day}',
+  'projects.detail.noCost': 'Sem custo',
   'projects.detail.billingEmpty': 'Este projeto não tem configuração de faturamento.',
   'projects.detail.action.back': 'Voltar à lista',
   'projects.detail.action.viewMilestones': 'Ver marcos',
@@ -832,7 +1265,7 @@ export const messages: Record<keyof typeof es, string> = {
   'attachments.table.deleteSuccess': 'Anexo excluído com sucesso',
   'attachments.table.deleteError': 'Erro ao excluir o anexo',
   'attachments.list.empty': 'Não há anexos',
-  'attachments.list.paginationMeta': 'Página {page} de {max} · {total} arquivo(s)',
+  'attachments.list.paginationMeta': 'Página {page} de {max} — {total} arquivo(s)',
   'tasks.detail.meta': 'ID: {id} | Criado: {created} | Atualizado: {updated}',
   'tasks.detail.specsTitle': 'Especificações',
   'tasks.detail.noProject': 'Sem projeto',
@@ -891,12 +1324,12 @@ export const messages: Record<keyof typeof es, string> = {
   'tasks.timeEntries.title': 'Entradas de tempo registradas',
   'tasks.timeEntries.emptyList': 'Não há entradas de tempo para esta tarefa.',
   'tasks.timeEntries.emptyNotes': 'Sem observações',
-  'tasks.timeEntries.paginationMeta': 'Página {page} de {max} · {total} registro(s)',
+  'tasks.timeEntries.paginationMeta': 'Página {page} de {max} — {total} registro(s)',
   'tasks.timeEntries.fetchError': 'Erro ao obter as entradas de tempo',
   'tasks.timeEntries.activeTimerError': 'Erro ao consultar o cronômetro ativo',
-  'tasks.timeEntries.activeTimerMeta': '{activity} · iniciado {startedAt}',
+  'tasks.timeEntries.activeTimerMeta': '{activity} — iniciado {startedAt}',
   'tasks.timeEntries.activeTimerBanner':
-    'Cronômetro ativo nesta tarefa: {activity} · iniciado {startedAt}',
+    'Cronômetro ativo nesta tarefa: {activity} — iniciado {startedAt}',
   'tasks.timeEntries.activeTimerOtherTask': 'Existe um cronômetro ativo em outra tarefa',
   'tasks.timeEntries.stoppingTimer': 'Parando cronômetro...',
   'tasks.timeEntries.manualCreateSuccess': 'Entrada de tempo registrada com sucesso',
@@ -1565,7 +1998,7 @@ export const messages: Record<keyof typeof es, string> = {
   'invoices.form.discountLabel': 'Desconto',
   'invoices.form.totalLabel': 'Total a faturar:',
   'invoices.form.timeEntriesTitle': 'Entradas de tempo faturáveis',
-  'invoices.form.selectedSummary': '{tasks} tarefa(s) · {entries} entrada(s) selecionadas',
+  'invoices.form.selectedSummary': '{tasks} tarefa(s) — {entries} entrada(s) selecionadas',
   'invoices.form.noTasksFound': 'Não há entradas de tempo faturáveis pendentes para este projeto.',
   'invoices.form.taskPagination': '{total} tarefas faturáveis no total',
   'invoices.form.freelancerNotesTitle': 'Notas do freelancer',

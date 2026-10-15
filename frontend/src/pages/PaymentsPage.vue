@@ -76,9 +76,7 @@
         </q-card-section>
 
         <q-card-section class="q-pt-none">
-          <div v-if="isLoadingDetail" class="flex justify-center q-py-md">
-            <q-spinner color="primary" size="md" />
-          </div>
+          <ContentSkeleton v-if="isLoadingDetail" variant="form" />
           <template v-else>
             <div
               class="text-caption q-mb-md"
@@ -137,6 +135,7 @@
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';

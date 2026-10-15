@@ -1,237 +1,242 @@
 <template>
   <q-page class="form-page q-pa-md">
-    <div class="padding-page">
-      <q-card class="q-mb-md" flat bordered>
-        <q-card-section>
-          <div class="text-h6 flex items-center">
-            <q-icon :name="isNew ? 'add' : 'edit'" size="md" class="q-mr-md" />
-            {{ isNew ? t('tasks.form.createTitle') : t('tasks.form.editTitle') }}
-          </div>
-          <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
-            {{ t('tasks.form.editingPrefix', { id: taskId }) }}
-          </div>
-        </q-card-section>
+    <ContentSkeleton v-if="contentLoading" variant="form" class="loading-page-region" /><template
+      v-else
+    >
+      <div class="padding-page">
+        <q-card class="q-mb-md" flat bordered>
+          <q-card-section>
+            <div class="text-h6 flex items-center">
+              <q-icon :name="isNew ? 'add' : 'edit'" size="md" class="q-mr-md" />
+              {{ isNew ? t('tasks.form.createTitle') : t('tasks.form.editTitle') }}
+            </div>
+            <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
+              {{ t('tasks.form.editingPrefix', { id: taskId }) }}
+            </div>
+          </q-card-section>
 
-        <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 form-section-title">{{ t('ui.identification') }}</div>
-          <div class="col-12 col-md-8">
-            <q-input
-              v-model="form.title"
-              :label="t('tasks.form.titleLabel')"
-              dense
-              outlined
-              :error="titleRuleState.error"
-              :error-message="titleRuleState.message"
-              @update:model-value="validateTitle(form.title)"
-            />
-          </div>
-          <div class="col-12 col-md-4">
-            <q-select
-              dense
-              v-model="form.status"
-              :label="t('tasks.form.statusLabel')"
-              outlined
-              emit-value
-              map-options
-              :options="statusOptions"
-            />
-          </div>
+          <q-card-section class="q-pt-none row q-col-gutter-md">
+            <div class="col-12 form-section-title">{{ t('ui.identification') }}</div>
+            <div class="col-12 col-md-8">
+              <q-input
+                v-model="form.title"
+                :label="t('tasks.form.titleLabel')"
+                dense
+                outlined
+                :error="titleRuleState.error"
+                :error-message="titleRuleState.message"
+                @update:model-value="validateTitle(form.title)"
+              />
+            </div>
+            <div class="col-12 col-md-4">
+              <q-select
+                dense
+                v-model="form.status"
+                :label="t('tasks.form.statusLabel')"
+                outlined
+                emit-value
+                map-options
+                :options="statusOptions"
+              />
+            </div>
 
-          <div class="col-12 col-md-6">
-            <SelectByTerm
-              v-model="form.project_id"
-              :label="t('tasks.form.projectLabel')"
-              :options="projectOptions"
-              :loading="isProjectsLoading"
-              @search="onProjectSearch"
-            />
-          </div>
-          <div class="col-12 col-md-6">
-            <SelectByTerm
-              v-model="form.milestone_id"
-              :label="t('tasks.form.milestoneLabel')"
-              :options="milestoneOptions"
-              :loading="isMilestonesLoading"
-              :disable="!form.project_id"
-              :hint="!form.project_id ? t('ui.chooseProject') : undefined"
-              @search="onMilestoneSearch"
-            />
-          </div>
+            <div class="col-12 col-md-6">
+              <SelectByTerm
+                v-model="form.project_id"
+                :label="t('tasks.form.projectLabel')"
+                :options="projectOptions"
+                :loading="isProjectsLoading"
+                @search="onProjectSearch"
+              />
+            </div>
+            <div class="col-12 col-md-6">
+              <SelectByTerm
+                v-model="form.milestone_id"
+                :label="t('tasks.form.milestoneLabel')"
+                :options="milestoneOptions"
+                :loading="isMilestonesLoading"
+                :disable="!form.project_id"
+                :hint="!form.project_id ? t('ui.chooseProject') : undefined"
+                @search="onMilestoneSearch"
+              />
+            </div>
 
-          <div class="col-12">
-            <SelectByTerm
-              v-model="form.parent_id"
-              :label="t('tasks.form.parentTaskLabel')"
-              :options="parentTaskOptions"
-              :loading="isParentTasksLoading"
-              :disable="!form.project_id"
-              :hint="!form.project_id ? t('ui.chooseProject') : undefined"
-              @search="onParentTaskSearch"
+            <div class="col-12">
+              <SelectByTerm
+                v-model="form.parent_id"
+                :label="t('tasks.form.parentTaskLabel')"
+                :options="parentTaskOptions"
+                :loading="isParentTasksLoading"
+                :disable="!form.project_id"
+                :hint="!form.project_id ? t('ui.chooseProject') : undefined"
+                @search="onParentTaskSearch"
+              />
+            </div>
+
+            <div class="col-12 form-section-title q-mt-md">{{ t('ui.planning') }}</div>
+            <div class="col-12 col-md-4">
+              <q-select
+                dense
+                v-model="form.priority"
+                :label="t('tasks.form.priorityLabel')"
+                outlined
+                emit-value
+                map-options
+                :options="priorityOptions"
+              />
+            </div>
+            <div class="col-12 col-md-4">
+              <q-select
+                dense
+                v-model="form.complexity"
+                :label="t('tasks.form.complexityLabel')"
+                outlined
+                emit-value
+                map-options
+                :options="complexityOptions"
+              />
+            </div>
+            <div class="col-12 col-md-4">
+              <q-input
+                dense
+                v-model="dueDateDisplay"
+                :mask="dateInputMask"
+                :label="t('tasks.form.dueDateLabel')"
+                outlined
+              >
+                <template #append>
+                  <q-btn
+                    type="button"
+                    flat
+                    round
+                    dense
+                    icon="event"
+                    :aria-label="t('tasks.form.dueDateLabel')"
+                  >
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date v-model="dueDateDisplay" :mask="qDateMask">
+                        <div class="row items-center justify-end">
+                          <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-btn>
+                </template>
+              </q-input>
+            </div>
+
+            <div class="col-12 col-md-8">
+              <SelectByTerm
+                v-model="form.tag_ids"
+                :label="t('tasks.form.tagsLabel')"
+                :options="tagOptions"
+                :loading="isTagsLoading"
+                multiple
+                chips
+                @search="onTagSearch"
+              >
+                <template #option="scope">
+                  <q-item v-bind="scope.itemProps">
+                    <q-item-section class="items-start">
+                      <q-chip
+                        dense
+                        square
+                        class="q-my-xs tag-option-chip"
+                        :style="getTagChipStyle(scope.opt)"
+                      >
+                        {{ scope.opt.label }}
+                      </q-chip>
+                    </q-item-section>
+                    <q-item-section side v-if="scope.selected">
+                      <q-icon name="check" color="primary" />
+                    </q-item-section>
+                  </q-item>
+                </template>
+
+                <template #selected-item="scope">
+                  <q-chip
+                    dense
+                    removable
+                    class="q-mr-xs q-my-xs"
+                    :style="getTagChipStyle(scope.opt)"
+                    @remove="scope.removeAtIndex(scope.index)"
+                  >
+                    {{ scope.opt.label }}
+                  </q-chip>
+                </template>
+              </SelectByTerm>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <q-toggle
+                v-model="form.block_parent"
+                :label="t('tasks.form.blockParentLabel')"
+                color="primary"
+              />
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <q-card flat bordered class="q-mb-md">
+          <q-card-section>
+            <div class="text-subtitle1 q-mb-sm">{{ t('tasks.form.descriptionTitle') }}</div>
+            <MarkdownRenderer
+              ref="markdownRef"
+              v-model="taskDescription"
+              v-model:pending-files="markdownFiles"
+              edit-mode
+              enable-preview-toggle
+              enable-attachments
             />
-          </div>
+          </q-card-section>
+        </q-card>
 
-          <div class="col-12 form-section-title q-mt-md">{{ t('ui.planning') }}</div>
-          <div class="col-12 col-md-4">
-            <q-select
-              dense
-              v-model="form.priority"
-              :label="t('tasks.form.priorityLabel')"
-              outlined
-              emit-value
-              map-options
-              :options="priorityOptions"
-            />
-          </div>
-          <div class="col-12 col-md-4">
-            <q-select
-              dense
-              v-model="form.complexity"
-              :label="t('tasks.form.complexityLabel')"
-              outlined
-              emit-value
-              map-options
-              :options="complexityOptions"
-            />
-          </div>
-          <div class="col-12 col-md-4">
-            <q-input
-              dense
-              v-model="dueDateDisplay"
-              :mask="dateInputMask"
-              :label="t('tasks.form.dueDateLabel')"
-              outlined
-            >
-              <template #append>
-                <q-btn
-                  type="button"
-                  flat
-                  round
-                  dense
-                  icon="event"
-                  :aria-label="t('tasks.form.dueDateLabel')"
-                >
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="dueDateDisplay" :mask="qDateMask">
-                      <div class="row items-center justify-end">
-                        <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
-                      </div>
-                    </q-date>
-                  </q-popup-proxy>
-                </q-btn>
-              </template>
-            </q-input>
-          </div>
-
-          <div class="col-12 col-md-8">
-            <SelectByTerm
-              v-model="form.tag_ids"
-              :label="t('tasks.form.tagsLabel')"
-              :options="tagOptions"
-              :loading="isTagsLoading"
-              multiple
-              chips
-              @search="onTagSearch"
-            >
-              <template #option="scope">
-                <q-item v-bind="scope.itemProps">
-                  <q-item-section class="items-start">
-                    <q-chip
-                      dense
-                      square
-                      class="q-my-xs tag-option-chip"
-                      :style="getTagChipStyle(scope.opt)"
-                    >
-                      {{ scope.opt.label }}
-                    </q-chip>
-                  </q-item-section>
-                  <q-item-section side v-if="scope.selected">
-                    <q-icon name="check" color="primary" />
-                  </q-item-section>
-                </q-item>
-              </template>
-
-              <template #selected-item="scope">
-                <q-chip
-                  dense
-                  removable
-                  class="q-mr-xs q-my-xs"
-                  :style="getTagChipStyle(scope.opt)"
-                  @remove="scope.removeAtIndex(scope.index)"
-                >
-                  {{ scope.opt.label }}
-                </q-chip>
-              </template>
-            </SelectByTerm>
-          </div>
-
-          <div class="col-12 col-md-4">
-            <q-toggle
-              v-model="form.block_parent"
-              :label="t('tasks.form.blockParentLabel')"
-              color="primary"
-            />
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat bordered class="q-mb-md">
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-sm">{{ t('tasks.form.descriptionTitle') }}</div>
-          <MarkdownRenderer
-            ref="markdownRef"
-            v-model="taskDescription"
-            v-model:pending-files="markdownFiles"
-            edit-mode
-            enable-preview-toggle
-            enable-attachments
+        <div class="row justify-end q-gutter-sm form-actions">
+          <q-btn
+            v-if="isNew"
+            flat
+            round
+            icon="bookmarks"
+            :aria-label="t('formPreferences.title')"
+            color="grey"
+            @click="prefsDialogOpen = true"
+          >
+            <q-tooltip>{{ t('formPreferences.title') }}</q-tooltip>
+          </q-btn>
+          <q-btn
+            flat
+            round
+            icon="push_pin"
+            :aria-label="t('common.keepFormOpen')"
+            :color="pinButtonColor"
+            :aria-pressed="stayOnFormAfterSave"
+            @click="stayOnFormAfterSave = !stayOnFormAfterSave"
+          >
+            <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+          </q-btn>
+          <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
+          <q-btn
+            :label="t('tasks.form.saveButton')"
+            color="primary"
+            unelevated
+            :loading="isSubmitting"
+            @click.stop="saveTask"
           />
-        </q-card-section>
-      </q-card>
+        </div>
 
-      <div class="row justify-end q-gutter-sm form-actions">
-        <q-btn
-          v-if="isNew"
-          flat
-          round
-          icon="bookmarks"
-          :aria-label="t('formPreferences.title')"
-          color="grey"
-          @click="prefsDialogOpen = true"
-        >
-          <q-tooltip>{{ t('formPreferences.title') }}</q-tooltip>
-        </q-btn>
-        <q-btn
-          flat
-          round
-          icon="push_pin"
-          :aria-label="t('common.keepFormOpen')"
-          :color="pinButtonColor"
-          :aria-pressed="stayOnFormAfterSave"
-          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
-        >
-          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
-        </q-btn>
-        <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
-        <q-btn
-          :label="t('tasks.form.saveButton')"
-          color="primary"
-          unelevated
-          :loading="isSubmitting"
-          @click.stop="saveTask"
+        <FormPreferencesDialog
+          v-model="prefsDialogOpen"
+          form-key="task"
+          :current-fields="currentPreferenceFields"
+          @apply="applyPreference"
         />
-      </div>
-
-      <FormPreferencesDialog
-        v-model="prefsDialogOpen"
-        form-key="task"
-        :current-fields="currentPreferenceFields"
-        @apply="applyPreference"
-      />
-    </div>
-  </q-page>
+      </div> </template
+  ></q-page>
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
+const contentLoading = ref(true);
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -868,6 +873,8 @@ onMounted(async () => {
   } catch (err: unknown) {
     notifyError(t('tasks.form.loadError'), err);
     void router.push('/tasks');
+  } finally {
+    contentLoading.value = false;
   }
 });
 </script>

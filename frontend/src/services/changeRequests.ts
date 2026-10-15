@@ -49,9 +49,10 @@ export const ChangeRequestsService = {
       body: JSON.stringify(data),
     }),
 
-  submit: (id: string): Promise<ChangeRequestDetailDto> =>
+  submit: (id: string, version: number): Promise<ChangeRequestDetailDto> =>
     apiFetch(`/change-requests/${id}/submit`, {
       method: 'PATCH',
+      body: JSON.stringify({ version }),
     }),
 
   assess: (id: string, data: AssessChangeRequestDto): Promise<ChangeRequestDetailDto> =>
@@ -60,14 +61,16 @@ export const ChangeRequestsService = {
       body: JSON.stringify(data),
     }),
 
-  markImplemented: (id: string): Promise<ChangeRequestDetailDto> =>
+  markImplemented: (id: string, version: number): Promise<ChangeRequestDetailDto> =>
     apiFetch(`/change-requests/${id}/implemented`, {
       method: 'PATCH',
+      body: JSON.stringify({ version }),
     }),
 
-  cancel: (id: string): Promise<ChangeRequestDetailDto> =>
+  cancel: (id: string, version: number): Promise<ChangeRequestDetailDto> =>
     apiFetch(`/change-requests/${id}/cancel`, {
       method: 'PATCH',
+      body: JSON.stringify({ version }),
     }),
 
   delete: (id: string): Promise<{ message: string }> =>

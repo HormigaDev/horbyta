@@ -36,7 +36,7 @@ pub enum Totp2FaError {
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
     #[error("database error")]
-    Database(#[from] sea_orm::DbErr),
+    Database(sea_orm::DbErr),
 
     #[error("jwt error")]
     Jwt(#[from] jsonwebtoken::errors::Error),
@@ -190,5 +190,24 @@ impl IntoResponse for AppError {
         };
 
         (status, Json(json!({ "error": error_message, "type": type_str }))).into_response()
+    }
+}
+
+impl From<sea_orm::DbErr> for AppError {
+    fn from(error: sea_orm::DbErr) -> Self {
+        let message = error.to_string();
+        if let Some((_, detail)) = message.split_once("scope_conflict: ") {
+            Self::Conflict(
+                detail
+                    .lines()
+                    .next()
+                    .unwrap_or("El acuerdo cambió; vuelva a leerlo.")
+                    .to_owned(),
+            )
+        } else if message.contains("scope_") && message.contains("foreign key") {
+            Self::Conflict("Este registro conserva acuerdos; ciérrelo o cancélelo sin eliminar su historial.".into())
+        } else {
+            Self::Database(error)
+        }
     }
 }

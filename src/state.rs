@@ -25,6 +25,7 @@ pub struct AppState {
     pub config: Config,
     pub storage: Arc<dyn ObjectStore>,
     pub notification_bus: broadcast::Sender<NotificationEvent>,
+    pub conversation_bus: broadcast::Sender<crate::dtos::scope::ConversationEvent>,
     // Rate limiters — fixed-window counters (TTL = window duration)
     pub rate_limit_auth: SyncCache<IpAddr, Arc<AtomicU32>>,
     pub rate_limit_charts: SyncCache<Uuid, Arc<AtomicU32>>,
@@ -90,6 +91,7 @@ impl AppState {
             Arc::new(local)
         };
         let (notification_bus, _) = broadcast::channel(1_024);
+        let (conversation_bus, _) = broadcast::channel(256);
 
         // 5 attempts per minute per IP (login, register, magic-token login)
         let rate_limit_auth = SyncCache::builder()
@@ -131,6 +133,7 @@ impl AppState {
             config,
             storage,
             notification_bus,
+            conversation_bus,
             rate_limit_auth,
             rate_limit_charts,
             rate_limit_uploads,

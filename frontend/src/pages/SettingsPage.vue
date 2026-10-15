@@ -13,116 +13,119 @@
           :disable="preferencesDirty"
           @click="loadSettings"
       /></PageHeader>
-      <q-tabs
-        v-model="section"
-        align="left"
-        class="settings-tabs q-mb-md"
-        active-color="primary"
-        outside-arrows
-        mobile-arrows
-      >
-        <q-tab name="preferences" :label="t('ui.preferences')" icon="palette" />
-        <q-tab
-          :disable="preferencesDirty"
-          name="notifications"
-          :label="t('layout.header.notifications')"
-          icon="notifications_none"
-        />
-        <q-tab
-          :disable="preferencesDirty"
-          name="account"
-          :label="t('ui.profile')"
-          icon="person_outline"
-        />
-        <q-tab
-          :disable="preferencesDirty"
-          name="app"
-          :label="t('settings.storage.title')"
-          icon="storage"
-        />
-      </q-tabs>
-      <q-card v-show="section === 'app'" flat bordered>
-        <q-card-section class="row items-center q-col-gutter-md">
-          <div class="col-12 col-md-8">
-            <div class="text-h6">{{ t('settings.storage.title') }}</div>
-            <div class="text-caption" style="color: var(--text-muted)">
-              {{ t('settings.storage.subtitle') }}
-            </div>
-          </div>
-
-          <div class="col-12 col-md-4 text-left text-md-right" v-if="storageUsage">
-            <div class="text-subtitle2">
-              {{
-                t('settings.storage.usageLabel', {
-                  used: formatStorageBytes(storageUsage.used_bytes),
-                  limit: formatStorageBytes(storageUsage.limit_bytes),
-                })
-              }}
-            </div>
-            <div class="text-caption" style="color: var(--text-muted)">
-              {{
-                t('settings.storage.remainingLabel', {
-                  remaining: formatStorageBytes(storageUsage.remaining_bytes),
-                })
-              }}
-            </div>
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none">
-          <q-linear-progress
-            v-if="storageUsage"
-            rounded
-            size="12px"
-            :value="storageUsageRatio"
-            :color="storageUsageColor"
-            track-color="grey-4"
+      <ContentSkeleton v-if="isBootstrapping" variant="form" /><template v-else>
+        <q-tabs
+          v-model="section"
+          align="left"
+          class="settings-tabs q-mb-md"
+          active-color="primary"
+          outside-arrows
+          mobile-arrows
+        >
+          <q-tab name="preferences" :label="t('ui.preferences')" icon="palette" />
+          <q-tab
+            :disable="preferencesDirty"
+            name="notifications"
+            :label="t('layout.header.notifications')"
+            icon="notifications_none"
           />
-          <div v-if="storageUsage" class="text-caption q-mt-xs" style="color: var(--text-muted)">
-            {{ t('settings.storage.percentLabel', { percent: storageUsagePercent }) }}
-          </div>
-          <div v-else class="text-caption" style="color: var(--text-muted)">
-            {{ t('settings.storage.unavailable') }}
-          </div>
-        </q-card-section>
-      </q-card>
+          <q-tab
+            :disable="preferencesDirty"
+            name="account"
+            :label="t('ui.profile')"
+            icon="person_outline"
+          />
+          <q-tab
+            :disable="preferencesDirty"
+            name="app"
+            :label="t('settings.storage.title')"
+            icon="storage"
+          />
+        </q-tabs>
+        <q-card v-show="section === 'app'" flat bordered>
+          <q-card-section class="row items-center q-col-gutter-md">
+            <div class="col-12 col-md-8">
+              <div class="text-h6">{{ t('settings.storage.title') }}</div>
+              <div class="text-caption" style="color: var(--text-muted)">
+                {{ t('settings.storage.subtitle') }}
+              </div>
+            </div>
 
-      <template v-if="settings">
-        <SettingsAppSection v-show="section === 'app'" />
+            <div class="col-12 col-md-4 text-left text-md-right" v-if="storageUsage">
+              <div class="text-subtitle2">
+                {{
+                  t('settings.storage.usageLabel', {
+                    used: formatStorageBytes(storageUsage.used_bytes),
+                    limit: formatStorageBytes(storageUsage.limit_bytes),
+                  })
+                }}
+              </div>
+              <div class="text-caption" style="color: var(--text-muted)">
+                {{
+                  t('settings.storage.remainingLabel', {
+                    remaining: formatStorageBytes(storageUsage.remaining_bytes),
+                  })
+                }}
+              </div>
+            </div>
+          </q-card-section>
 
-        <SettingsPreferencesSection
-          v-show="section === 'preferences'"
-          :preferences="settings.preferences"
-          @updated="handleSettingsUpdated"
-          @dirty-change="preferencesDirty = $event"
-        />
+          <q-card-section class="q-pt-none">
+            <q-linear-progress
+              v-if="storageUsage"
+              rounded
+              size="12px"
+              :value="storageUsageRatio"
+              :color="storageUsageColor"
+              track-color="grey-4"
+            />
+            <div v-if="storageUsage" class="text-caption q-mt-xs" style="color: var(--text-muted)">
+              {{ t('settings.storage.percentLabel', { percent: storageUsagePercent }) }}
+            </div>
+            <div v-else class="text-caption" style="color: var(--text-muted)">
+              {{ t('settings.storage.unavailable') }}
+            </div>
+          </q-card-section>
+        </q-card>
 
-        <SettingsUserSection
-          v-show="section === 'account'"
-          :user="settings"
-          @updated="handleSettingsUpdated"
-        />
+        <template v-if="settings">
+          <SettingsAppSection v-show="section === 'app'" />
 
-        <SettingsNotificationsSection
-          v-show="section === 'notifications'"
-          :notifications="settings.preferences.notifications"
-          @updated="handleSettingsUpdated"
-        />
+          <SettingsPreferencesSection
+            v-show="section === 'preferences'"
+            :preferences="settings.preferences"
+            @updated="handleSettingsUpdated"
+            @dirty-change="preferencesDirty = $event"
+          />
+
+          <SettingsUserSection
+            v-show="section === 'account'"
+            :user="settings"
+            @updated="handleSettingsUpdated"
+          />
+
+          <SettingsNotificationsSection
+            v-show="section === 'notifications'"
+            :notifications="settings.preferences.notifications"
+            @updated="handleSettingsUpdated"
+          />
+        </template>
+
+        <q-card v-else-if="!isBootstrapping" flat bordered>
+          <q-card-section>
+            <div class="text-subtitle1">{{ t('settings.page.emptyTitle') }}</div>
+            <div class="text-caption" style="color: var(--text-muted)">
+              {{ t('settings.page.emptySubtitle') }}
+            </div>
+          </q-card-section>
+        </q-card>
       </template>
-
-      <q-card v-else-if="!isBootstrapping" flat bordered>
-        <q-card-section>
-          <div class="text-subtitle1">{{ t('settings.page.emptyTitle') }}</div>
-          <div class="text-caption" style="color: var(--text-muted)">
-            {{ t('settings.page.emptySubtitle') }}
-          </div>
-        </q-card-section>
-      </q-card>
     </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 const section = ref('preferences');
 const preferencesDirty = ref(false);

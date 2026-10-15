@@ -31,6 +31,13 @@ pub struct Model {
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
     pub version: i32,
+    pub scope_revision: Option<i32>,
+    pub currency_type: Option<String>,
+    pub billing_terms: Option<String>,
+    pub target_milestone_id: Option<Uuid>,
+    pub schedule_before: Option<DateTimeWithTimeZone>,
+    pub schedule_after: Option<DateTimeWithTimeZone>,
+    pub legacy: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

@@ -1,7 +1,8 @@
 <template>
   <div class="attachment-items-list">
     <div class="relative-position">
-      <q-list v-if="items.length > 0" class="q-gutter-y-xs">
+      <ContentSkeleton v-if="loading" variant="list" :rows="3" />
+      <q-list v-else-if="items.length > 0" class="q-gutter-y-xs">
         <q-item
           v-for="item in items"
           :key="item.id"
@@ -35,13 +36,12 @@
       <div v-else class="text-caption q-py-md" style="color: var(--text-muted)">
         {{ emptyText }}
       </div>
-
-      <q-inner-loading :showing="loading" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
 import type { AttachmentListItem } from 'src/types/attachment';
 
 interface Props {

@@ -1,333 +1,340 @@
 <template>
   <q-page class="form-page q-pa-md">
-    <div class="padding-page">
-      <q-card class="q-mb-md" flat bordered>
-        <q-card-section>
-          <div class="text-h6 flex items-center">
-            <q-icon :name="isNew ? 'add' : 'edit'" size="md" class="q-mr-md" />
-            {{ isNew ? t('invoices.form.createTitle') : t('invoices.form.editTitle') }}
-          </div>
-          <div class="text-caption text-grey" v-if="!isNew">
-            {{ t('invoices.form.editingPrefix', { id: invoiceId }) }}
-          </div>
-        </q-card-section>
-
-        <q-banner
-          v-if="!isNew && !isDraft"
-          dense
-          class="bg-warning text-white q-mx-md q-mb-md rounded-borders"
-        >
-          <template #avatar>
-            <q-icon name="lock" />
-          </template>
-          {{
-            t('invoices.form.notDraftWarning', { status: t(`invoices.status.${invoiceStatus}`) })
-          }}
-        </q-banner>
-
-        <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 col-md-9">
-            <SelectByTerm
-              v-model="form.project_id"
-              :label="t('invoices.form.projectLabel')"
-              :options="projectOptions"
-              :loading="isProjectsLoading"
-              :disable="!isNew"
-              @update:model-value="onProjectSelected"
-              @search="onProjectSearch"
-            />
-          </div>
-
-          <div class="col-12 col-md-3">
-            <q-input
-              v-model="dueDateDisplay"
-              :mask="dateInputMask"
-              :label="t('invoices.form.dueDateLabel')"
-              dense
-              outlined
-              :disable="!isDraft"
-            >
-              <template #append>
-                <q-btn
-                  type="button"
-                  flat
-                  round
-                  dense
-                  icon="event"
-                  v-if="isDraft"
-                  :aria-label="t('invoices.form.dueDateLabel')"
-                >
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="dueDateDisplay" :mask="qDateMask">
-                      <div class="row items-center justify-end">
-                        <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
-                      </div>
-                    </q-date>
-                  </q-popup-proxy>
-                </q-btn>
-              </template>
-            </q-input>
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 col-md-4">
-            <q-select
-              v-model="form.provider"
-              :options="PROVIDER_OPTIONS"
-              :label="t('invoices.form.providerLabel')"
-              emit-value
-              map-options
-              outlined
-              dense
-              :disable="!isDraft"
-            />
-          </div>
-
-          <div class="col-12 col-md-4" v-if="isExternalProvider">
-            <q-input
-              v-model="form.provider_external_id"
-              :label="t('invoices.form.providerExternalIdLabel')"
-              :hint="t('invoices.form.providerExternalIdHint')"
-              outlined
-              dense
-              :disable="!isDraft"
-              :error="hasProviderExternalIdError"
-              :error-message="t('invoices.form.validation.providerExternalIdRequired')"
-            />
-          </div>
-
-          <div class="col-12" :class="isExternalProvider ? 'col-md-4' : 'col-md-8'">
-            <q-input
-              v-model="form.payment_link"
-              :label="t('invoices.form.paymentLinkLabel')"
-              :hint="t('invoices.form.paymentLinkHint')"
-              outlined
-              dense
-              :disable="!isDraft"
-            />
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 col-md-4">
-            <q-input
-              :model-value="calculatedAmountDisplay"
-              :label="t('invoices.form.calculatedAmountLabel')"
-              :suffix="currencySymbol"
-              readonly
-              outlined
-              dense
-              input-style="text-align: right"
-            />
-          </div>
-
-          <div class="col-12 col-md-4">
-            <NumericTextInput
-              v-model="manualAmount"
-              :label="t('invoices.form.manualAmountLabel')"
-              :decimal-places="4"
-              :error="hasManualAmountError"
-              :disable="!isDraft"
-            >
-              <template #right-icon>
-                <span class="text-caption" style="color: var(--text-muted)">{{
-                  currencySymbol
-                }}</span>
-              </template>
-            </NumericTextInput>
-            <div v-if="hasManualAmountError" class="text-negative text-caption q-mt-xs">
-              {{ t('invoices.form.validation.manualAmountRequired') }}
+    <ContentSkeleton v-if="contentLoading" variant="form" class="loading-page-region" />
+    <template v-else>
+      <div class="padding-page">
+        <q-card class="q-mb-md" flat bordered>
+          <q-card-section>
+            <div class="text-h6 flex items-center">
+              <q-icon :name="isNew ? 'add' : 'edit'" size="md" class="q-mr-md" />
+              {{ isNew ? t('invoices.form.createTitle') : t('invoices.form.editTitle') }}
             </div>
-          </div>
-
-          <div class="col-12 col-md-4">
-            <NumericTextInput
-              v-model="discount"
-              :label="t('invoices.form.discountLabel')"
-              :decimal-places="4"
-              :disable="!isDraft"
-            >
-              <template #right-icon>
-                <span class="text-caption" style="color: var(--text-muted)">{{
-                  currencySymbol
-                }}</span>
-              </template>
-            </NumericTextInput>
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none">
-          <div class="row items-center justify-end q-gutter-sm">
-            <div class="text-subtitle1 text-weight-medium">
-              {{ t('invoices.form.totalLabel') }}
+            <div class="text-caption text-grey" v-if="!isNew">
+              {{ t('invoices.form.editingPrefix', { id: invoiceId }) }}
             </div>
-            <div class="text-h5 text-weight-bold text-primary">
-              {{ finalTotalDisplay }}
+          </q-card-section>
+
+          <q-banner
+            v-if="!isNew && !isDraft"
+            dense
+            class="bg-warning text-white q-mx-md q-mb-md rounded-borders"
+          >
+            <template #avatar>
+              <q-icon name="lock" />
+            </template>
+            {{
+              t('invoices.form.notDraftWarning', { status: t(`invoices.status.${invoiceStatus}`) })
+            }}
+          </q-banner>
+
+          <q-card-section class="q-pt-none row q-col-gutter-md">
+            <div class="col-12 col-md-9">
+              <SelectByTerm
+                v-model="form.project_id"
+                :label="t('invoices.form.projectLabel')"
+                :options="projectOptions"
+                :loading="isProjectsLoading"
+                :disable="!isNew"
+                @update:model-value="onProjectSelected"
+                @search="onProjectSearch"
+              />
             </div>
-          </div>
-        </q-card-section>
-      </q-card>
 
-      <q-card class="q-mb-md" flat bordered v-if="form.project_id">
-        <q-card-section>
-          <div class="row items-center justify-between q-mb-sm">
-            <div class="text-subtitle1">{{ t('invoices.form.timeEntriesTitle') }}</div>
-            <div class="text-caption" style="color: var(--text-muted)">
-              {{
-                t('invoices.form.selectedSummary', {
-                  tasks: selectedTaskCount,
-                  entries: selectedEntryIds.size,
-                })
-              }}
-            </div>
-          </div>
-
-          <div v-if="isTasksLoading" class="row justify-center q-py-md">
-            <q-spinner color="primary" size="2em" />
-            <span class="q-ml-sm text-caption">{{ t('common.loading') }}</span>
-          </div>
-
-          <div v-else-if="taskGroups.length === 0" class="text-caption text-grey q-py-md">
-            {{ t('invoices.form.noTasksFound') }}
-          </div>
-
-          <template v-else>
-            <q-list bordered separator>
-              <q-expansion-item v-for="task in taskGroups" :key="task.task_id" expand-separator>
-                <template #header>
-                  <q-item-section side>
-                    <q-checkbox
-                      :model-value="getTaskCheckState(task)"
-                      color="primary"
-                      :disable="!isDraft"
-                      @update:model-value="toggleTask(task)"
-                      @click.stop
-                    />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>
-                      <span class="text-weight-medium">
-                        TASK-#{{ String(task.task_record_number).padStart(5, '0') }}
-                      </span>
-                      <span class="q-ml-sm text-grey">{{ task.task_title }}</span>
-                    </q-item-label>
-                    <q-item-label caption>
-                      {{ formatDurationMinutes(task.total_duration_minutes) }}
-                      <span
-                        v-if="taskContributions.get(task.task_id)"
-                        class="text-positive q-ml-sm"
-                      >
-                        ·
-                        {{ formatNumber(taskContributions.get(task.task_id), '0') }}
-                        {{ currencySymbol }}
-                      </span>
-                    </q-item-label>
-                  </q-item-section>
+            <div class="col-12 col-md-3">
+              <q-input
+                v-model="dueDateDisplay"
+                :mask="dateInputMask"
+                :label="t('invoices.form.dueDateLabel')"
+                dense
+                outlined
+                :disable="!isDraft"
+              >
+                <template #append>
+                  <q-btn
+                    type="button"
+                    flat
+                    round
+                    dense
+                    icon="event"
+                    v-if="isDraft"
+                    :aria-label="t('invoices.form.dueDateLabel')"
+                  >
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date v-model="dueDateDisplay" :mask="qDateMask">
+                        <div class="row items-center justify-end">
+                          <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-btn>
                 </template>
+              </q-input>
+            </div>
+          </q-card-section>
 
-                <q-list separator>
-                  <q-item v-for="entry in task.time_entries" :key="entry.id" dense class="q-pl-xl">
+          <q-card-section class="q-pt-none row q-col-gutter-md">
+            <div class="col-12 col-md-4">
+              <q-select
+                v-model="form.provider"
+                :options="PROVIDER_OPTIONS"
+                :label="t('invoices.form.providerLabel')"
+                emit-value
+                map-options
+                outlined
+                dense
+                :disable="!isDraft"
+              />
+            </div>
+
+            <div class="col-12 col-md-4" v-if="isExternalProvider">
+              <q-input
+                v-model="form.provider_external_id"
+                :label="t('invoices.form.providerExternalIdLabel')"
+                :hint="t('invoices.form.providerExternalIdHint')"
+                outlined
+                dense
+                :disable="!isDraft"
+                :error="hasProviderExternalIdError"
+                :error-message="t('invoices.form.validation.providerExternalIdRequired')"
+              />
+            </div>
+
+            <div class="col-12" :class="isExternalProvider ? 'col-md-4' : 'col-md-8'">
+              <q-input
+                v-model="form.payment_link"
+                :label="t('invoices.form.paymentLinkLabel')"
+                :hint="t('invoices.form.paymentLinkHint')"
+                outlined
+                dense
+                :disable="!isDraft"
+              />
+            </div>
+          </q-card-section>
+
+          <q-card-section class="q-pt-none row q-col-gutter-md">
+            <div class="col-12 col-md-4">
+              <q-input
+                :model-value="calculatedAmountDisplay"
+                :label="t('invoices.form.calculatedAmountLabel')"
+                :suffix="currencySymbol"
+                readonly
+                outlined
+                dense
+                input-style="text-align: right"
+              />
+            </div>
+
+            <div class="col-12 col-md-4">
+              <NumericTextInput
+                v-model="manualAmount"
+                :label="t('invoices.form.manualAmountLabel')"
+                :decimal-places="4"
+                :error="hasManualAmountError"
+                :disable="!isDraft"
+              >
+                <template #right-icon>
+                  <span class="text-caption" style="color: var(--text-muted)">{{
+                    currencySymbol
+                  }}</span>
+                </template>
+              </NumericTextInput>
+              <div v-if="hasManualAmountError" class="text-negative text-caption q-mt-xs">
+                {{ t('invoices.form.validation.manualAmountRequired') }}
+              </div>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <NumericTextInput
+                v-model="discount"
+                :label="t('invoices.form.discountLabel')"
+                :decimal-places="4"
+                :disable="!isDraft"
+              >
+                <template #right-icon>
+                  <span class="text-caption" style="color: var(--text-muted)">{{
+                    currencySymbol
+                  }}</span>
+                </template>
+              </NumericTextInput>
+            </div>
+          </q-card-section>
+
+          <q-card-section class="q-pt-none">
+            <div class="row items-center justify-end q-gutter-sm">
+              <div class="text-subtitle1 text-weight-medium">
+                {{ t('invoices.form.totalLabel') }}
+              </div>
+              <div class="text-h5 text-weight-bold text-primary">
+                {{ finalTotalDisplay }}
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <q-card class="q-mb-md" flat bordered v-if="form.project_id">
+          <q-card-section>
+            <div class="row items-center justify-between q-mb-sm">
+              <div class="text-subtitle1">{{ t('invoices.form.timeEntriesTitle') }}</div>
+              <div class="text-caption" style="color: var(--text-muted)">
+                {{
+                  t('invoices.form.selectedSummary', {
+                    tasks: selectedTaskCount,
+                    entries: selectedEntryIds.size,
+                  })
+                }}
+              </div>
+            </div>
+
+            <ContentSkeleton v-if="isTasksLoading" variant="list" />
+
+            <div v-else-if="taskGroups.length === 0" class="text-caption text-grey q-py-md">
+              {{ t('invoices.form.noTasksFound') }}
+            </div>
+
+            <template v-else>
+              <q-list bordered separator>
+                <q-expansion-item v-for="task in taskGroups" :key="task.task_id" expand-separator>
+                  <template #header>
                     <q-item-section side>
                       <q-checkbox
-                        :model-value="selectedEntryIds.has(entry.id)"
+                        :model-value="getTaskCheckState(task)"
                         color="primary"
-                        size="sm"
-                        @update:model-value="toggleEntry(task, entry)"
+                        :disable="!isDraft"
+                        @update:model-value="toggleTask(task)"
+                        @click.stop
                       />
                     </q-item-section>
                     <q-item-section>
-                      <div class="row wrap q-gutter-x-sm items-center">
-                        <span class="text-caption text-weight-medium">
-                          {{ formatDurationMinutes(entry.duration_minutes) }}
+                      <q-item-label>
+                        <span class="text-weight-medium">
+                          TASK-#{{ String(task.task_record_number).padStart(5, '0') }}
                         </span>
-                        <span class="text-caption" style="color: var(--text-muted)">
-                          {{ formatDateOnly(entry.work_date) }}
-                        </span>
+                        <span class="q-ml-sm text-grey">{{ task.task_title }}</span>
+                      </q-item-label>
+                      <q-item-label caption>
+                        {{ formatDurationMinutes(task.total_duration_minutes) }}
                         <span
-                          v-if="entry.activity_name"
-                          class="text-caption"
-                          style="color: var(--text-muted)"
+                          v-if="taskContributions.get(task.task_id)"
+                          class="text-positive q-ml-sm"
                         >
-                          · {{ entry.activity_name }}
+                          —
+                          {{ formatNumber(taskContributions.get(task.task_id), '0') }}
+                          {{ currencySymbol }}
                         </span>
-                        <span v-if="entry.applied_rate" class="text-caption text-positive">
-                          · {{ entry.applied_rate }} {{ currencySymbol }}/h
-                        </span>
-                        <span
-                          v-if="entry.notes"
-                          class="text-caption ellipsis"
-                          style="max-width: 200px; color: var(--text-muted)"
-                        >
-                          · {{ entry.notes }}
-                        </span>
-                      </div>
+                      </q-item-label>
                     </q-item-section>
-                  </q-item>
-                </q-list>
-              </q-expansion-item>
-            </q-list>
+                  </template>
 
-            <div v-if="totalTasks > perPage" class="row justify-center q-mt-md">
-              <q-pagination
-                v-model="currentPage"
-                :max="totalPages"
-                :max-pages="7"
-                boundary-numbers
-                color="primary"
-                @update:model-value="loadPage"
-              />
-              <div class="text-caption q-ml-md self-center" style="color: var(--text-muted)">
-                {{ t('invoices.form.taskPagination', { total: totalTasks }) }}
+                  <q-list separator>
+                    <q-item
+                      v-for="entry in task.time_entries"
+                      :key="entry.id"
+                      dense
+                      class="q-pl-xl"
+                    >
+                      <q-item-section side>
+                        <q-checkbox
+                          :model-value="selectedEntryIds.has(entry.id)"
+                          color="primary"
+                          size="sm"
+                          @update:model-value="toggleEntry(task, entry)"
+                        />
+                      </q-item-section>
+                      <q-item-section>
+                        <div class="row wrap q-gutter-x-sm items-center">
+                          <span class="text-caption text-weight-medium">
+                            {{ formatDurationMinutes(entry.duration_minutes) }}
+                          </span>
+                          <span class="text-caption" style="color: var(--text-muted)">
+                            {{ formatDateOnly(entry.work_date) }}
+                          </span>
+                          <span
+                            v-if="entry.activity_name"
+                            class="text-caption"
+                            style="color: var(--text-muted)"
+                          >
+                            — {{ entry.activity_name }}
+                          </span>
+                          <span v-if="entry.applied_rate" class="text-caption text-positive">
+                            — {{ entry.applied_rate }} {{ currencySymbol }}/h
+                          </span>
+                          <span
+                            v-if="entry.notes"
+                            class="text-caption ellipsis"
+                            style="max-width: 200px; color: var(--text-muted)"
+                          >
+                            — {{ entry.notes }}
+                          </span>
+                        </div>
+                      </q-item-section>
+                    </q-item>
+                  </q-list>
+                </q-expansion-item>
+              </q-list>
+
+              <div v-if="totalTasks > perPage" class="row justify-center q-mt-md">
+                <q-pagination
+                  v-model="currentPage"
+                  :max="totalPages"
+                  :max-pages="7"
+                  boundary-numbers
+                  color="primary"
+                  @update:model-value="loadPage"
+                />
+                <div class="text-caption q-ml-md self-center" style="color: var(--text-muted)">
+                  {{ t('invoices.form.taskPagination', { total: totalTasks }) }}
+                </div>
               </div>
-            </div>
-          </template>
-        </q-card-section>
-      </q-card>
+            </template>
+          </q-card-section>
+        </q-card>
 
-      <q-card class="q-mb-md" flat bordered>
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-sm">{{ t('invoices.form.freelancerNotesTitle') }}</div>
-          <q-input
-            v-model="form.freelancer_notes"
-            type="textarea"
-            :label="t('invoices.form.freelancerNotesLabel')"
-            :hint="t('invoices.form.freelancerNotesHint')"
-            outlined
-            dense
-            rows="4"
-            :maxlength="5000"
+        <q-card class="q-mb-md" flat bordered>
+          <q-card-section>
+            <div class="text-subtitle1 q-mb-sm">{{ t('invoices.form.freelancerNotesTitle') }}</div>
+            <q-input
+              v-model="form.freelancer_notes"
+              type="textarea"
+              :label="t('invoices.form.freelancerNotesLabel')"
+              :hint="t('invoices.form.freelancerNotesHint')"
+              outlined
+              dense
+              rows="4"
+              :maxlength="5000"
+            />
+          </q-card-section>
+        </q-card>
+
+        <div class="row justify-end q-gutter-sm form-actions">
+          <q-btn
+            flat
+            round
+            icon="push_pin"
+            :aria-label="t('common.keepFormOpen')"
+            :color="pinButtonColor"
+            :aria-pressed="stayOnFormAfterSave"
+            @click="stayOnFormAfterSave = !stayOnFormAfterSave"
+          >
+            <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+          </q-btn>
+          <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
+          <q-btn
+            :label="t('invoices.form.saveButton')"
+            color="primary"
+            unelevated
+            :loading="isSubmitting"
+            :disable="!canSave"
+            @click.stop="saveInvoice"
           />
-        </q-card-section>
-      </q-card>
-
-      <div class="row justify-end q-gutter-sm form-actions">
-        <q-btn
-          flat
-          round
-          icon="push_pin"
-          :aria-label="t('common.keepFormOpen')"
-          :color="pinButtonColor"
-          :aria-pressed="stayOnFormAfterSave"
-          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
-        >
-          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
-        </q-btn>
-        <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
-        <q-btn
-          :label="t('invoices.form.saveButton')"
-          color="primary"
-          unelevated
-          :loading="isSubmitting"
-          :disable="!canSave"
-          @click.stop="saveInvoice"
-        />
+        </div>
       </div>
-    </div>
+    </template>
   </q-page>
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
+const contentLoading = ref(true);
 import { useFormSession } from 'src/composables/useFormSession';
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -634,9 +641,12 @@ const formatDateOnly = (value: string): string =>
   });
 
 const loadInvoice = async () => {
-  if (isNew.value) return;
+  if (isNew.value) {
+    contentLoading.value = false;
+    return;
+  }
 
-  showLoading(t('invoices.form.loading'));
+  contentLoading.value = true;
   try {
     const data = await InvoicesService.getById(invoiceId.value);
 
@@ -675,7 +685,7 @@ const loadInvoice = async () => {
     notifyError(t('invoices.form.loadError'), err);
     void router.push('/invoices');
   } finally {
-    hideLoading();
+    contentLoading.value = false;
   }
 };
 

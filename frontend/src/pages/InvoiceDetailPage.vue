@@ -1,184 +1,171 @@
 <template>
   <q-page class="detail-page q-pa-md row items-start q-col-gutter-md">
-    <div class="col-12 col-md-2"></div>
-    <div class="col-12 col-md-8">
-      <q-card
-        class="q-mb-md"
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="flex justify-between">
-            <div class="text-h5 text-weight-bold q-mb-xs" style="color: var(--text-color)">
-              <q-icon name="receipt_long" size="lg" />
-              {{ invoice ? normalizeId(invoice.record_number) : t('common.loading') }}
-            </div>
-            <div class="text-h6 flex items-center" style="color: var(--text-muted)">
-              <q-btn
-                flat
-                round
-                dense
-                :icon="idCopied ? 'check' : 'content_copy'"
-                size="xs"
-                class="q-mr-sm"
-                style="color: var(--text-color)"
-                @click="copyToClipboard(invoice?.record_number.toString() || '')"
-                :aria-label="t('common.copyToClipboard')"
-              >
-                <q-tooltip>{{
-                  idCopied ? t('common.copied') : t('common.copyToClipboard')
-                }}</q-tooltip>
-              </q-btn>
-            </div>
-          </div>
-          <div class="text-caption q-mt-xs" style="color: var(--text-muted)" v-if="invoice">
-            {{ t('common.status') }}:
-            <span style="color: var(--text-color)">{{
-              t(`invoices.status.${invoice.status}`)
-            }}</span>
-          </div>
-          <div class="text-caption" style="color: var(--text-muted)" v-if="invoice">
-            {{
-              t('invoices.detail.meta', {
-                id: invoice.id,
-                created: formatTimestamp(invoice.created_at),
-                updated: formatTimestamp(invoice.updated_at),
-              })
-            }}
-          </div>
-          <div v-if="invoice" class="finance-summary q-mt-md">
-            <strong>{{ formatAmount(invoice.amount, invoice.currency_type) }}</strong>
-            <span class="status-badge" :data-status="invoice.status">{{
-              t('invoices.status.' + invoice.status)
-            }}</span>
-            <span class="text-secondary"
-              >{{ t('invoices.detail.dueDate') }} ·
-              {{ invoice.due_date ? formatDateOnly(invoice.due_date) : '—' }}</span
-            >
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <q-card
-        class="q-mb-md"
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
-            {{ t('invoices.detail.invoiceDataTitle') }}
-          </div>
-
-          <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
-            <div class="row q-col-gutter-md" v-if="invoice">
-              <div class="col-12 col-md-4">
-                <div class="text-caption" style="color: var(--text-muted)">
-                  {{ t('invoices.detail.client') }}
-                </div>
-                <div style="color: var(--text-color)">
-                  {{ invoice.client_name || '-' }}
-                </div>
+    <ContentSkeleton v-if="contentLoading" variant="detail" class="col-12 loading-page-region" />
+    <template v-else>
+      <div class="col-12 col-md-2"></div>
+      <div class="col-12 col-md-8">
+        <q-card
+          class="q-mb-md"
+          flat
+          bordered
+          style="background-color: var(--card-bg); border-color: var(--border-color)"
+        >
+          <q-card-section>
+            <div class="flex justify-between">
+              <div class="text-h5 text-weight-bold q-mb-xs" style="color: var(--text-color)">
+                <q-icon name="receipt_long" size="lg" />
+                {{ invoice ? normalizeId(invoice.record_number) : t('common.loading') }}
               </div>
-
-              <div class="col-12 col-md-4">
-                <div class="text-caption" style="color: var(--text-muted)">
-                  {{ t('common.project') }}
-                </div>
-                <div>
-                  <a
-                    class="text-primary"
-                    style="cursor: pointer; text-decoration: none"
-                    @click="router.push(`/projects/${invoice.project_id}`)"
-                  >
-                    {{ invoice.project_name }}
-                  </a>
-                </div>
-              </div>
-
-              <div class="col-12 col-md-4">
-                <div class="text-caption" style="color: var(--text-muted)">
-                  {{ t('common.status') }} ({{ t('common.project').toLowerCase() }})
-                </div>
-                <div style="color: var(--text-color)">
-                  {{ t(`projects.status.${invoice.project_status}`) }}
-                </div>
-              </div>
-
-              <div class="col-12 col-md-4">
-                <div class="text-caption" style="color: var(--text-muted)">
-                  {{ t('invoices.detail.amount') }}
-                </div>
-                <div class="text-weight-bold" style="color: var(--text-color)">
-                  {{ formatAmount(invoice.amount, invoice.currency_type) }}
-                </div>
-              </div>
-
-              <div class="col-12 col-md-4">
-                <div class="text-caption" style="color: var(--text-muted)">
-                  {{ t('invoices.detail.issuedAt') }}
-                </div>
-                <div style="color: var(--text-color)">
-                  {{ invoice.issued_at ? formatTimestamp(invoice.issued_at) : t('common.empty') }}
-                </div>
-              </div>
-
-              <div class="col-12 col-md-4">
-                <div class="text-caption" style="color: var(--text-muted)">
-                  {{ t('invoices.detail.dueDate') }}
-                </div>
-                <div style="color: var(--text-color)">
-                  {{ invoice.due_date ? formatDateOnly(invoice.due_date) : '-' }}
-                </div>
-              </div>
-
-              <div class="col-12 col-md-4" v-if="invoice.provider !== 'manual'">
-                <div class="text-caption" style="color: var(--text-muted)">
-                  {{ t('invoices.form.providerLabel') }}
-                </div>
-                <div style="color: var(--text-color)">
-                  {{ t(`invoices.provider.${invoice.provider}`) }}
-                  <span
-                    v-if="invoice.provider_external_id"
-                    class="text-caption"
-                    style="color: var(--text-muted)"
-                  >
-                    · {{ invoice.provider_external_id }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="col-12 col-md-8" v-if="invoice.payment_link">
-                <div class="text-caption" style="color: var(--text-muted)">
-                  {{ t('invoices.form.paymentLinkLabel') }}
-                </div>
-                <a
-                  :href="invoice.payment_link"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-primary"
-                  style="word-break: break-all"
+              <div class="text-h6 flex items-center" style="color: var(--text-muted)">
+                <q-btn
+                  flat
+                  round
+                  dense
+                  :icon="idCopied ? 'check' : 'content_copy'"
+                  size="xs"
+                  class="q-mr-sm"
+                  style="color: var(--text-color)"
+                  @click="copyToClipboard(invoice?.record_number.toString() || '')"
+                  :aria-label="t('common.copyToClipboard')"
                 >
-                  {{ invoice.payment_link }}
-                </a>
+                  <q-tooltip>{{
+                    idCopied ? t('common.copied') : t('common.copyToClipboard')
+                  }}</q-tooltip>
+                </q-btn>
               </div>
             </div>
-          </div>
-        </q-card-section>
-      </q-card>
+            <div class="text-caption q-mt-xs" style="color: var(--text-muted)" v-if="invoice">
+              {{ t('common.status') }}:
+              <span style="color: var(--text-color)">{{
+                t(`invoices.status.${invoice.status}`)
+              }}</span>
+            </div>
+            <div class="text-caption" style="color: var(--text-muted)" v-if="invoice">
+              {{
+                t('invoices.detail.meta', {
+                  id: invoice.id,
+                  created: formatTimestamp(invoice.created_at),
+                  updated: formatTimestamp(invoice.updated_at),
+                })
+              }}
+            </div>
+            <div v-if="invoice" class="finance-summary q-mt-md">
+              <strong>{{ formatAmount(invoice.amount, invoice.currency_type) }}</strong>
+              <span class="status-badge" :data-status="invoice.status">{{
+                t('invoices.status.' + invoice.status)
+              }}</span>
+              <span class="text-secondary"
+                >{{ t('invoices.detail.dueDate') }} —
+                {{ invoice.due_date ? formatDateOnly(invoice.due_date) : '—' }}</span
+              >
+            </div>
+          </q-card-section>
+        </q-card>
 
-      <q-card
-        class="q-mb-md"
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-        v-if="invoice && invoice.task_groups.length > 0"
-      >
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
-            {{ t('invoices.detail.timeEntriesTitle') }}
+        <ScopeSection
+          class="q-mb-md"
+          :title="t('invoices.detail.invoiceDataTitle')"
+          icon="receipt_long"
+        >
+          <div class="row q-col-gutter-md detail-meta-grid" v-if="invoice">
+            <div class="col-12 col-md-4">
+              <div class="text-caption" style="color: var(--text-muted)">
+                {{ t('invoices.detail.client') }}
+              </div>
+              <div style="color: var(--text-color)">
+                <router-link v-if="invoice.client_id" :to="`/clients/${invoice.client_id}`">{{
+                  invoice.client_name || t('common.empty')
+                }}</router-link
+                ><span v-else>{{ t('common.empty') }}</span>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <div class="text-caption" style="color: var(--text-muted)">
+                {{ t('common.project') }}
+              </div>
+              <div>
+                <router-link :to="`/projects/${invoice.project_id}`">
+                  {{ invoice.project_name }}
+                </router-link>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <div class="text-caption" style="color: var(--text-muted)">
+                {{ t('common.status') }} ({{ t('common.project').toLowerCase() }})
+              </div>
+              <div style="color: var(--text-color)">
+                {{ t(`projects.status.${invoice.project_status}`) }}
+              </div>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <div class="text-caption" style="color: var(--text-muted)">
+                {{ t('invoices.detail.amount') }}
+              </div>
+              <div class="text-weight-bold" style="color: var(--text-color)">
+                {{ formatAmount(invoice.amount, invoice.currency_type) }}
+              </div>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <div class="text-caption" style="color: var(--text-muted)">
+                {{ t('invoices.detail.issuedAt') }}
+              </div>
+              <div style="color: var(--text-color)">
+                {{ invoice.issued_at ? formatTimestamp(invoice.issued_at) : t('common.empty') }}
+              </div>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <div class="text-caption" style="color: var(--text-muted)">
+                {{ t('invoices.detail.dueDate') }}
+              </div>
+              <div style="color: var(--text-color)">
+                {{ invoice.due_date ? formatDateOnly(invoice.due_date) : '-' }}
+              </div>
+            </div>
+
+            <div class="col-12 col-md-4" v-if="invoice.provider !== 'manual'">
+              <div class="text-caption" style="color: var(--text-muted)">
+                {{ t('invoices.form.providerLabel') }}
+              </div>
+              <div style="color: var(--text-color)">
+                {{ t(`invoices.provider.${invoice.provider}`) }}
+                <span
+                  v-if="invoice.provider_external_id"
+                  class="text-caption"
+                  style="color: var(--text-muted)"
+                >
+                  — {{ invoice.provider_external_id }}
+                </span>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-8" v-if="invoice.payment_link">
+              <div class="text-caption" style="color: var(--text-muted)">
+                {{ t('invoices.form.paymentLinkLabel') }}
+              </div>
+              <a
+                :href="invoice.payment_link"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-primary"
+                style="word-break: break-all"
+              >
+                {{ invoice.payment_link }}
+              </a>
+            </div>
           </div>
+        </ScopeSection>
+
+        <ScopeSection
+          class="q-mb-md"
+          :title="t('invoices.detail.timeEntriesTitle')"
+          icon="schedule"
+          v-if="invoice && invoice.task_groups.length > 0"
+        >
           <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
             <div v-for="group in invoice.task_groups" :key="group.task_id" class="q-mb-sm">
               <div
@@ -186,8 +173,10 @@
                 style="background-color: var(--bg-hover); border-radius: 4px"
               >
                 <div class="text-weight-medium col">
-                  TASK-#{{ String(group.task_record_number).padStart(5, '0') }}
-                  <span class="q-ml-sm text-grey">{{ group.task_title }}</span>
+                  <router-link :to="`/tasks/${group.task_id}`"
+                    >#{{ String(group.task_record_number).padStart(5, '0') }} —
+                    {{ group.task_title }}</router-link
+                  >
                 </div>
                 <div class="text-caption text-weight-medium" style="color: var(--text-muted)">
                   {{ formatDurationMinutes(group.total_duration_minutes) }}
@@ -211,160 +200,155 @@
                     class="text-caption"
                     style="color: var(--text-muted)"
                   >
-                    · {{ entry.activity_name }}
+                    — {{ entry.activity_name }}
                   </span>
                   <span v-if="entry.applied_rate" class="text-caption text-positive">
-                    · @{{ entry.applied_rate }}/h
+                    — @{{ entry.applied_rate }}/h
                   </span>
                   <span
                     v-if="entry.notes"
                     class="text-caption ellipsis"
                     style="max-width: 300px; color: var(--text-muted)"
                   >
-                    · {{ entry.notes }}
+                    — {{ entry.notes }}
                   </span>
                 </div>
               </div>
             </div>
           </div>
-        </q-card-section>
-      </q-card>
+        </ScopeSection>
 
-      <q-card
-        class="q-mb-md"
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-        v-if="invoice && invoice.notes"
-      >
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
-            {{ t('invoices.detail.notesTitle') }}
-          </div>
-          <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
-            <pre
-              class="text-caption"
-              style="white-space: pre-wrap; font-family: inherit; color: var(--text-color)"
-              >{{ invoice.notes }}</pre
+        <ScopeSection
+          class="q-mb-md"
+          :title="t('invoices.detail.notesTitle')"
+          icon="description"
+          v-if="invoice && invoice.notes"
+        >
+          <pre
+            class="text-caption"
+            style="white-space: pre-wrap; font-family: inherit; color: var(--text-color)"
+            >{{ invoice.notes }}</pre
+          >
+        </ScopeSection>
+      </div>
+
+      <div class="col-12 col-md-2" style="position: sticky; top: 80px">
+        <q-card
+          flat
+          bordered
+          style="background-color: var(--card-bg); border-color: var(--border-color)"
+        >
+          <q-list separator>
+            <q-item clickable v-ripple @click="goBack" class="q-pa-md">
+              <q-item-section avatar>
+                <q-icon name="arrow_back" style="color: var(--text-color)" />
+              </q-item-section>
+              <q-item-section style="color: var(--text-color)">
+                {{ t('invoices.detail.action.back') }}
+              </q-item-section>
+            </q-item>
+
+            <q-item
+              clickable
+              v-ripple
+              class="text-primary q-pa-md"
+              @click="issueInvoice"
+              v-if="invoice && invoice.status === 'draft'"
             >
-          </div>
-        </q-card-section>
-      </q-card>
-    </div>
+              <q-item-section avatar>
+                <q-icon name="send" color="primary" />
+              </q-item-section>
+              <q-item-section>{{ t('invoices.detail.action.issue') }}</q-item-section>
+            </q-item>
 
-    <div class="col-12 col-md-2" style="position: sticky; top: 80px">
-      <q-card
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-list separator>
-          <q-item clickable v-ripple @click="goBack" class="q-pa-md">
-            <q-item-section avatar>
-              <q-icon name="arrow_back" style="color: var(--text-color)" />
-            </q-item-section>
-            <q-item-section style="color: var(--text-color)">
-              {{ t('invoices.detail.action.back') }}
-            </q-item-section>
-          </q-item>
+            <q-item
+              clickable
+              v-ripple
+              class="text-positive q-pa-md"
+              @click="openMarkPaidDialog"
+              v-if="invoice && invoice.status === 'open'"
+            >
+              <q-item-section avatar>
+                <q-icon name="check_circle" color="positive" />
+              </q-item-section>
+              <q-item-section>{{ t('invoices.detail.action.markPaid') }}</q-item-section>
+            </q-item>
 
-          <q-item
-            clickable
-            v-ripple
-            class="text-primary q-pa-md"
-            @click="issueInvoice"
-            v-if="invoice && invoice.status === 'draft'"
-          >
-            <q-item-section avatar>
-              <q-icon name="send" color="primary" />
-            </q-item-section>
-            <q-item-section>{{ t('invoices.detail.action.issue') }}</q-item-section>
-          </q-item>
+            <q-item
+              clickable
+              v-ripple
+              class="text-primary q-pa-md"
+              @click="goToEdit"
+              v-if="invoice && invoice.status === 'draft'"
+            >
+              <q-item-section avatar>
+                <q-icon name="edit" color="primary" />
+              </q-item-section>
+              <q-item-section>{{ t('common.edit') }}</q-item-section>
+            </q-item>
 
-          <q-item
-            clickable
-            v-ripple
-            class="text-positive q-pa-md"
-            @click="openMarkPaidDialog"
-            v-if="invoice && invoice.status === 'open'"
-          >
-            <q-item-section avatar>
-              <q-icon name="check_circle" color="positive" />
-            </q-item-section>
-            <q-item-section>{{ t('invoices.detail.action.markPaid') }}</q-item-section>
-          </q-item>
+            <q-item
+              clickable
+              v-ripple
+              class="text-negative q-pa-md"
+              @click="deleteInvoice"
+              v-if="invoice && invoice.status === 'draft'"
+            >
+              <q-item-section avatar>
+                <q-icon name="delete" color="negative" />
+              </q-item-section>
+              <q-item-section>{{ t('common.delete') }}</q-item-section>
+            </q-item>
+          </q-list>
+        </q-card>
+      </div>
 
-          <q-item
-            clickable
-            v-ripple
-            class="text-primary q-pa-md"
-            @click="goToEdit"
-            v-if="invoice && invoice.status === 'draft'"
-          >
-            <q-item-section avatar>
-              <q-icon name="edit" color="primary" />
-            </q-item-section>
-            <q-item-section>{{ t('common.edit') }}</q-item-section>
-          </q-item>
+      <q-dialog v-model="showMarkPaidDialog" persistent>
+        <q-card style="min-width: 360px">
+          <q-card-section>
+            <div class="text-h6">{{ t('invoices.detail.markingPaidDialog.title') }}</div>
+          </q-card-section>
 
-          <q-item
-            clickable
-            v-ripple
-            class="text-negative q-pa-md"
-            @click="deleteInvoice"
-            v-if="invoice && invoice.status === 'draft'"
-          >
-            <q-item-section avatar>
-              <q-icon name="delete" color="negative" />
-            </q-item-section>
-            <q-item-section>{{ t('common.delete') }}</q-item-section>
-          </q-item>
-        </q-list>
-      </q-card>
-    </div>
+          <q-card-section class="q-pt-none">
+            <q-input
+              v-model="markPaidForm.payment_method"
+              :label="t('invoices.detail.markingPaidDialog.paymentMethod')"
+              dense
+              outlined
+              maxlength="50"
+              class="q-mb-md"
+            />
+            <q-input
+              v-model="markPaidForm.notes"
+              type="textarea"
+              :label="t('invoices.detail.markingPaidDialog.notes')"
+              outlined
+              dense
+              rows="3"
+              :maxlength="5000"
+            />
+          </q-card-section>
 
-    <q-dialog v-model="showMarkPaidDialog" persistent>
-      <q-card style="min-width: 360px">
-        <q-card-section>
-          <div class="text-h6">{{ t('invoices.detail.markingPaidDialog.title') }}</div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none">
-          <q-input
-            v-model="markPaidForm.payment_method"
-            :label="t('invoices.detail.markingPaidDialog.paymentMethod')"
-            dense
-            outlined
-            maxlength="50"
-            class="q-mb-md"
-          />
-          <q-input
-            v-model="markPaidForm.notes"
-            type="textarea"
-            :label="t('invoices.detail.markingPaidDialog.notes')"
-            outlined
-            dense
-            rows="3"
-            :maxlength="5000"
-          />
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn flat :label="t('common.cancel')" color="grey" v-close-popup />
-          <q-btn
-            unelevated
-            :label="t('invoices.detail.markingPaidDialog.confirm')"
-            color="positive"
-            :loading="isMarkingPaid"
-            @click="markAsPaid"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+          <q-card-actions align="right">
+            <q-btn flat :label="t('common.cancel')" color="grey" v-close-popup />
+            <q-btn
+              unelevated
+              :label="t('invoices.detail.markingPaidDialog.confirm')"
+              color="positive"
+              :loading="isMarkingPaid"
+              @click="markAsPaid"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+    </template>
   </q-page>
 </template>
 
 <script setup lang="ts">
+import ScopeSection from 'src/components/ScopeSection.vue';
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
+const contentLoading = ref(true);
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -418,14 +402,14 @@ const formatDurationMinutes = (minutes: number): string => {
 };
 
 const loadInvoice = async () => {
-  showLoading(t('invoices.detail.loadInvoice'));
+  contentLoading.value = true;
   try {
     invoice.value = await InvoicesService.getById(invoiceId);
   } catch (err: unknown) {
     notifyError(t('invoices.detail.loadError'), err);
     void router.push('/invoices');
   } finally {
-    hideLoading();
+    contentLoading.value = false;
   }
 };
 

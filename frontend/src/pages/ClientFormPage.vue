@@ -1,143 +1,148 @@
 <template>
   <q-page class="form-page q-pa-md">
-    <div class="padding-page">
-      <q-card class="q-mb-md" flat bordered>
-        <q-card-section>
-          <div class="text-h6 flex items-center">
-            <q-icon :name="isNew ? 'person_add' : 'person_edit'" size="md" class="q-mr-md" />
-            {{ isNew ? $t('clients.form.createTitle') : $t('clients.form.editTitle') }}
-          </div>
-          <div class="text-caption text-grey" v-if="!isNew">
-            {{ $t('clients.form.editingPrefix', { id: client.id }) }}
-          </div>
-        </q-card-section>
+    <ContentSkeleton v-if="contentLoading" variant="form" class="loading-page-region" />
+    <template v-else>
+      <div class="padding-page">
+        <q-card class="q-mb-md" flat bordered>
+          <q-card-section>
+            <div class="text-h6 flex items-center">
+              <q-icon :name="isNew ? 'person_add' : 'person_edit'" size="md" class="q-mr-md" />
+              {{ isNew ? $t('clients.form.createTitle') : $t('clients.form.editTitle') }}
+            </div>
+            <div class="text-caption text-grey" v-if="!isNew">
+              {{ $t('clients.form.editingPrefix', { id: client.id }) }}
+            </div>
+          </q-card-section>
 
-        <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 col-md-8">
-            <q-input
-              outlined
-              dense
-              v-model="client.name"
-              :label="$t('clients.form.nameLabel')"
-              :maxlength="255"
-            />
-          </div>
-          <div class="col-12 col-md-4">
-            <q-select
-              :disable="isNew"
-              outlined
-              dense
-              emit-value
-              map-options
-              v-model="client.status"
-              :label="$t('clients.form.statusLabel')"
-              :options="[
-                { label: $t('clients.form.statusActive'), value: 'active' },
-                { label: $t('clients.form.statusInactive'), value: 'inactive' },
-                { label: $t('clients.form.statusBlocked'), value: 'blocked' },
-              ]"
-            />
-          </div>
-          <div class="col-12 col-md-4">
-            <q-input
-              outlined
-              dense
-              v-model="client.email"
-              :label="$t('clients.form.emailLabel')"
-              :maxlength="255"
-              :error="emailRuleState.error"
-              :error-message="emailRuleState.message"
-              @update:model-value="validateEmail(client.email)"
-            />
-          </div>
-          <div class="col-12 col-md-4">
-            <q-input
-              outlined
-              dense
-              v-model="client.phone"
-              :maxlength="20"
-              :label="$t('clients.form.phoneLabel')"
-              :error="phoneRuleState.error"
-              :error-message="phoneRuleState.message"
-              @update:model-value="validatePhone(client.phone)"
-            />
-          </div>
-          <div class="col-12 col-md-4">
-            <q-input
-              outlined
-              dense
-              v-model="client.company"
-              :label="$t('clients.form.companyLabel')"
-              :maxlength="255"
-            />
-          </div>
-          <div class="col-12">
-            <q-input
-              outlined
-              dense
-              v-model="client.address_line"
-              :label="$t('clients.form.addressLineLabel')"
-              :maxlength="512"
-            />
-          </div>
-        </q-card-section>
-      </q-card>
+          <q-card-section class="q-pt-none row q-col-gutter-md">
+            <div class="col-12 col-md-8">
+              <q-input
+                outlined
+                dense
+                v-model="client.name"
+                :label="$t('clients.form.nameLabel')"
+                :maxlength="255"
+              />
+            </div>
+            <div class="col-12 col-md-4">
+              <q-select
+                :disable="isNew"
+                outlined
+                dense
+                emit-value
+                map-options
+                v-model="client.status"
+                :label="$t('clients.form.statusLabel')"
+                :options="[
+                  { label: $t('clients.form.statusActive'), value: 'active' },
+                  { label: $t('clients.form.statusInactive'), value: 'inactive' },
+                  { label: $t('clients.form.statusBlocked'), value: 'blocked' },
+                ]"
+              />
+            </div>
+            <div class="col-12 col-md-4">
+              <q-input
+                outlined
+                dense
+                v-model="client.email"
+                :label="$t('clients.form.emailLabel')"
+                :maxlength="255"
+                :error="emailRuleState.error"
+                :error-message="emailRuleState.message"
+                @update:model-value="validateEmail(client.email)"
+              />
+            </div>
+            <div class="col-12 col-md-4">
+              <q-input
+                outlined
+                dense
+                v-model="client.phone"
+                :maxlength="20"
+                :label="$t('clients.form.phoneLabel')"
+                :error="phoneRuleState.error"
+                :error-message="phoneRuleState.message"
+                @update:model-value="validatePhone(client.phone)"
+              />
+            </div>
+            <div class="col-12 col-md-4">
+              <q-input
+                outlined
+                dense
+                v-model="client.company"
+                :label="$t('clients.form.companyLabel')"
+                :maxlength="255"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                outlined
+                dense
+                v-model="client.address_line"
+                :label="$t('clients.form.addressLineLabel')"
+                :maxlength="512"
+              />
+            </div>
+          </q-card-section>
+        </q-card>
 
-      <q-card flat bordered class="q-mb-md">
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-sm">{{ $t('clients.form.notesTitle') }}</div>
-          <MarkdownRenderer
-            ref="markdownRef"
-            v-model="client.notes!"
-            edit-mode
-            enable-preview-toggle
+        <q-card flat bordered class="q-mb-md">
+          <q-card-section>
+            <div class="text-subtitle1 q-mb-sm">{{ $t('clients.form.notesTitle') }}</div>
+            <MarkdownRenderer
+              ref="markdownRef"
+              v-model="client.notes!"
+              edit-mode
+              enable-preview-toggle
+            />
+          </q-card-section>
+        </q-card>
+
+        <div class="row justify-end q-gutter-sm form-actions">
+          <q-btn
+            v-if="isNew"
+            flat
+            round
+            icon="bookmarks"
+            :aria-label="t('formPreferences.title')"
+            color="grey"
+            @click="prefsDialogOpen = true"
+          >
+            <q-tooltip>{{ t('formPreferences.title') }}</q-tooltip>
+          </q-btn>
+          <q-btn
+            flat
+            round
+            icon="push_pin"
+            :aria-label="t('common.keepFormOpen')"
+            :color="pinButtonColor"
+            :aria-pressed="stayOnFormAfterSave"
+            @click="stayOnFormAfterSave = !stayOnFormAfterSave"
+          >
+            <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+          </q-btn>
+          <q-btn :label="$t('common.cancel')" flat color="grey" @click="goBack" />
+          <q-btn
+            :label="$t('clients.form.saveButton')"
+            color="primary"
+            unelevated
+            :loading="isSubmitting"
+            @click.stop="saveClient"
           />
-        </q-card-section>
-      </q-card>
+        </div>
 
-      <div class="row justify-end q-gutter-sm form-actions">
-        <q-btn
-          v-if="isNew"
-          flat
-          round
-          icon="bookmarks"
-          :aria-label="t('formPreferences.title')"
-          color="grey"
-          @click="prefsDialogOpen = true"
-        >
-          <q-tooltip>{{ t('formPreferences.title') }}</q-tooltip>
-        </q-btn>
-        <q-btn
-          flat
-          round
-          icon="push_pin"
-          :aria-label="t('common.keepFormOpen')"
-          :color="pinButtonColor"
-          :aria-pressed="stayOnFormAfterSave"
-          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
-        >
-          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
-        </q-btn>
-        <q-btn :label="$t('common.cancel')" flat color="grey" @click="goBack" />
-        <q-btn
-          :label="$t('clients.form.saveButton')"
-          color="primary"
-          unelevated
-          :loading="isSubmitting"
-          @click.stop="saveClient"
+        <FormPreferencesDialog
+          v-model="prefsDialogOpen"
+          form-key="client"
+          :current-fields="currentPreferenceFields"
+          @apply="applyPreference"
         />
       </div>
-
-      <FormPreferencesDialog
-        v-model="prefsDialogOpen"
-        form-key="client"
-        :current-fields="currentPreferenceFields"
-        @apply="applyPreference"
-      />
-    </div>
+    </template>
   </q-page>
 </template>
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
+const contentLoading = ref(true);
 import FormPreferencesDialog from 'src/components/FormPreferencesDialog.vue';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useClientRules } from 'src/composables/rules/client.rules';
@@ -248,10 +253,13 @@ const resetClientForm = async () => {
 };
 
 const loadClient = async () => {
-  if (isNew.value) return;
+  if (isNew.value) {
+    contentLoading.value = false;
+    return;
+  }
 
   const clientId = route.params.id as string;
-  showLoading(t('clients.form.loadingClient'));
+  contentLoading.value = true;
 
   try {
     const data = await ClientsService.getById(clientId);
@@ -260,7 +268,7 @@ const loadClient = async () => {
     notifyError(t('clients.form.loadError'), err);
     router.push('/clients');
   } finally {
-    hideLoading();
+    contentLoading.value = false;
   }
 };
 

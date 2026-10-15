@@ -11,9 +11,7 @@
       </q-card-section>
 
       <q-card-section class="col overflow-auto">
-        <q-inner-loading :showing="isLoading">
-          <q-spinner color="primary" size="28px" />
-        </q-inner-loading>
+        <ContentSkeleton v-if="isLoading" variant="list" :rows="3" />
 
         <div v-if="!isLoading && preferences.length === 0" class="text-center q-py-md">
           <q-icon name="bookmark_border" size="40px" style="color: var(--text-muted)" />
@@ -146,6 +144,7 @@
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
 import { computed, ref } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';

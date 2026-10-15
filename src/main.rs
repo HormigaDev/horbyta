@@ -25,9 +25,18 @@ async fn run() {
         .await
         .expect("CRITICAL: Could not connect to Postgres. Verify DATABASE_URL.");
 
+    horbyta::migrations::require_current(&db)
+        .await
+        .expect("Ejecute cargo run --locked --bin migrate antes de iniciar Horbyta.");
+
     let state = AppState::new(db, config.clone())
         .await
         .expect("CRITICAL: Failed to initialize AppState.");
+
+    let delivery_state = state.clone();
+    tokio::spawn(async move {
+        horbyta::services::scope_delivery::run(delivery_state).await;
+    });
 
     let api_routes = Router::new()
         .route(
@@ -47,6 +56,7 @@ async fn run() {
             "/change-requests",
             controllers::change_requests::change_requests_controller(),
         )
+        .nest("/scope", controllers::scope::scope_controller())
         .nest("/projects", controllers::projects::projects_controller())
         .nest("/categories", controllers::categories::categories_controller())
         .nest("/milestones", controllers::milestones::milestones_controller())
@@ -61,6 +71,7 @@ async fn run() {
         .with_state(state.clone());
 
     let ws_routes = Router::new()
+        .route("/ws/scope/client", get(controllers::conversation_ws::client))
         .route("/ws", get(controllers::websocket::websocket_handler))
         .route("/ws/", get(controllers::websocket::websocket_handler))
         .with_state(state.clone());
@@ -81,10 +92,13 @@ async fn run() {
     let listener = tokio::net::TcpListener::bind(&config.app_uri).await.unwrap();
 
     println!("Server running at http(s)://{}", config.app_uri);
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .unwrap();
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await
+    .unwrap();
 }
 
 async fn shutdown_signal() {

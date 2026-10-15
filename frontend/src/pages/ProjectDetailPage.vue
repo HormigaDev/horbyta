@@ -1,294 +1,416 @@
 <template>
   <q-page class="detail-page q-pa-md row items-start q-col-gutter-md">
-    <div class="col-12 col-md-2"></div>
-    <div class="col-12 col-md-8">
-      <q-card
-        class="q-mb-md"
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="flex justify-between">
-            <div class="text-h5 text-weight-bold q-mb-xs" style="color: var(--text-color)">
-              <q-icon name="folder" size="lg" />
-              {{ project?.name ? `${project.name}` : t('common.loading') }}
-            </div>
-            <div class="text-h6 flex items-center" style="color: var(--text-muted)">
-              <q-btn
-                flat
-                round
-                dense
-                :icon="idCopied ? 'check' : 'content_copy'"
-                size="xs"
-                class="q-mr-sm"
+    <ContentSkeleton v-if="contentLoading" variant="detail" class="col-12 loading-page-region" />
+    <template v-else>
+      <div class="col-12 col-md-2"></div>
+      <div class="col-12 col-md-8">
+        <q-card
+          class="q-mb-md"
+          flat
+          bordered
+          style="background-color: var(--card-bg); border-color: var(--border-color)"
+        >
+          <q-card-section>
+            <div class="project-header">
+              <div
+                class="text-h5 text-weight-bold q-mb-xs project-title"
                 style="color: var(--text-color)"
-                @click="copyToClipboard(project?.record_number.toString() || '')"
-                :aria-label="t('common.copyToClipboard')"
               >
-                <q-tooltip>{{
-                  idCopied ? $t('common.copied') : $t('common.copyToClipboard')
-                }}</q-tooltip>
-              </q-btn>
-              {{ project ? normalizeId(project.record_number) : '' }}
+                <q-icon name="folder" size="24px" class="q-mr-xs" />
+                {{ project?.name ? `${project.name}` : t('common.loading') }}
+              </div>
+              <div v-if="project" class="project-header-meta">
+                <router-link v-if="project.client_id" :to="`/clients/${project.client_id}`">{{
+                  project.client_name
+                }}</router-link
+                ><span v-else class="text-warning">{{ t('projects.detail.noClient') }}</span
+                ><span>{{ projectStatusLabel(project.status) }}</span>
+              </div>
+              <div class="text-h6 flex items-center" style="color: var(--text-muted)">
+                <q-btn
+                  flat
+                  round
+                  dense
+                  :icon="idCopied ? 'check' : 'content_copy'"
+                  size="xs"
+                  class="q-mr-sm"
+                  style="color: var(--text-color)"
+                  @click="copyToClipboard(project?.record_number.toString() || '')"
+                  :aria-label="t('common.copyToClipboard')"
+                >
+                  <q-tooltip>{{
+                    idCopied ? $t('common.copied') : $t('common.copyToClipboard')
+                  }}</q-tooltip>
+                </q-btn>
+                {{ project ? normalizeId(project.record_number) : '' }}
+              </div>
             </div>
-          </div>
-          <div class="text-caption q-mt-xs" style="color: var(--text-muted)" v-if="project">
-            {{ t('common.status') }}:
-            <span style="color: var(--text-color)">
-              {{ projectStatusLabel(project.status) }}
-            </span>
-          </div>
-          <div class="text-caption" style="color: var(--text-muted)" v-if="project">
-            {{ t('projects.detail.billableLabel') }}:
-            <span style="color: var(--text-color)">
-              {{ project.billable ? t('common.yes') : t('common.no') }}
-            </span>
-          </div>
-          <div class="text-caption" style="color: var(--text-muted)" v-if="project">
-            {{
-              t('projects.detail.meta', {
-                id: project.id,
-                created: formatDate(project.created_at),
-                updated: formatDate(project.updated_at),
-              })
-            }}
-          </div>
-        </q-card-section>
-      </q-card>
+          </q-card-section>
+        </q-card>
 
-      <q-card
-        class="q-mb-md"
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
-            {{ t('projects.detail.billingTitle') }}
-          </div>
-
-          <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
-            <div
-              v-if="project && project.billable && project.project_billing"
-              class="row q-col-gutter-md"
+        <ScopeProjectPanel
+          ref="scopePanel"
+          v-if="project"
+          :key="project.id"
+          :project-id="project.id"
+        >
+          <template #summary>
+            <ScopeSection
+              v-if="project"
+              class="q-mb-md project-section-anchor"
+              id="project-information"
+              tabindex="-1"
+              :title="t('projects.detail.basicInfoTitle')"
+              icon="info"
             >
-              <div class="col-12 col-md-4">
-                <div class="text-caption" style="color: var(--text-muted)">
-                  {{ t('projects.detail.currencyTypeLabel') }}
+              <div class="detail-facts">
+                <div :class="{ 'project-client-empty': !project.client_id }">
+                  <span>{{ t('projects.form.clientLabel') }}</span>
+                  <strong v-if="project.client_id">
+                    <router-link :to="`/clients/${project.client_id}`">
+                      {{ project.client_name || t('common.empty') }}
+                    </router-link>
+                  </strong>
+                  <strong v-else>
+                    <q-icon name="person_off" color="warning" class="q-mr-xs" aria-hidden="true" />
+                    {{ t('projects.detail.noClient') }}
+                  </strong>
                 </div>
-                <div style="color: var(--text-color)">
-                  {{ project.project_billing.currency_type }}
+                <div>
+                  <span>{{ t('projects.form.categoryLabel') }}</span>
+                  <strong>{{ project.category_name || t('projects.detail.noCategory') }}</strong>
                 </div>
-              </div>
-
-              <div class="col-12 col-md-4">
-                <div class="text-caption" style="color: var(--text-muted)">
-                  {{ t('projects.detail.billingTypeLabel') }}
+                <div>
+                  <span>{{ t('common.status') }}</span>
+                  <strong>{{ projectStatusLabel(project.status) }}</strong>
                 </div>
-                <div style="color: var(--text-color)">
-                  {{ projectBillingTypeLabel(project.project_billing.billing_type) }}
+                <div>
+                  <span>{{ t('common.created') }}</span>
+                  <strong>{{ formatDate(project.created_at) }}</strong>
                 </div>
-              </div>
-
-              <div class="col-12 col-md-4" v-if="project.project_billing.billing_type === 'fixed'">
-                <div class="text-caption" style="color: var(--text-muted)">
-                  {{ t('projects.detail.fixedPriceLabel') }}
-                </div>
-                <div style="color: var(--text-color)">
-                  {{
-                    formatBillingAmount(
-                      project.project_billing.fixed_price,
-                      project.project_billing.currency_type,
-                    )
-                  }}
-                </div>
-              </div>
-
-              <div class="col-12 col-md-4" v-if="project.project_billing.billing_type === 'hourly'">
-                <div class="text-caption" style="color: var(--text-muted)">
-                  {{ t('projects.detail.hourlyRateLabel') }}
-                </div>
-                <div style="color: var(--text-color)">
-                  {{
-                    formatBillingAmount(
-                      project.project_billing.hourly_rate,
-                      project.project_billing.currency_type,
-                    )
-                  }}
+                <div>
+                  <span>{{ t('common.updated') }}</span>
+                  <strong>{{ formatDate(project.updated_at) }}</strong>
                 </div>
               </div>
+            </ScopeSection>
 
-              <template v-if="project.project_billing.billing_type === 'retainer'">
-                <div class="col-12 col-md-4">
-                  <div class="text-caption" style="color: var(--text-muted)">
-                    {{ t('projects.detail.retainerAmountLabel') }}
+            <q-card
+              id="project-billing"
+              tabindex="-1"
+              class="project-section-anchor q-mb-md"
+              flat
+              bordered
+              style="background-color: var(--card-bg); border-color: var(--border-color)"
+            >
+              <q-card-section>
+                <div
+                  class="text-subtitle1 q-mb-md text-weight-bold"
+                  style="color: var(--text-accent)"
+                >
+                  {{ t('projects.detail.billingTitle') }}
+                </div>
+
+                <div class="detail-content">
+                  <div
+                    v-if="project && project.billable && project.project_billing"
+                    class="row q-col-gutter-md"
+                  >
+                    <div class="col-12 col-md-3">
+                      <div class="text-caption" style="color: var(--text-muted)">
+                        {{ t('projects.detail.currencyTypeLabel') }}
+                      </div>
+                      <div style="color: var(--text-color)">
+                        {{ project.project_billing.currency_type }}
+                      </div>
+                    </div>
+
+                    <div class="col-12 col-md-3">
+                      <div class="text-caption" style="color: var(--text-muted)">
+                        {{ t('projects.detail.billingTypeLabel') }}
+                      </div>
+                      <div style="color: var(--text-color)">
+                        {{ projectBillingTypeLabel(project.project_billing.billing_type) }}
+                      </div>
+                    </div>
+
+                    <div
+                      class="col-12 col-md-3"
+                      v-if="project.project_billing.billing_type === 'fixed'"
+                    >
+                      <div class="text-caption" style="color: var(--text-muted)">
+                        {{ t('projects.detail.fixedPriceLabel') }}
+                      </div>
+                      <div style="color: var(--text-color)">
+                        {{
+                          formatBillingAmount(
+                            project.project_billing.fixed_price,
+                            project.project_billing.currency_type,
+                          )
+                        }}
+                      </div>
+                    </div>
+
+                    <div
+                      class="col-12 col-md-3"
+                      v-if="project.project_billing.billing_type === 'hourly'"
+                    >
+                      <div class="text-caption" style="color: var(--text-muted)">
+                        {{ t('projects.detail.hourlyRateLabel') }}
+                      </div>
+                      <div style="color: var(--text-color)">
+                        {{
+                          formatBillingAmount(
+                            project.project_billing.hourly_rate,
+                            project.project_billing.currency_type,
+                          )
+                        }}
+                      </div>
+                    </div>
+
+                    <template v-if="project.project_billing.billing_type === 'retainer'">
+                      <div class="col-12 col-md-3">
+                        <div class="text-caption" style="color: var(--text-muted)">
+                          {{ t('projects.detail.retainerAmountLabel') }}
+                        </div>
+                        <div style="color: var(--text-color)">
+                          {{
+                            formatBillingAmount(
+                              project.project_billing.retainer_amount,
+                              project.project_billing.currency_type,
+                            )
+                          }}
+                        </div>
+                      </div>
+
+                      <div class="col-12 col-md-3">
+                        <div class="text-caption" style="color: var(--text-muted)">
+                          {{ t('projects.detail.paymentDayLabel') }}
+                        </div>
+                        <div style="color: var(--text-color)">
+                          {{ paymentDayLabel(project.project_billing.payment_day) }}
+                        </div>
+                      </div>
+                    </template>
                   </div>
-                  <div style="color: var(--text-color)">
+
+                  <div
+                    v-else-if="project && !project.billable"
+                    class="text-h5 text-weight-bold"
+                    style="color: var(--text-color)"
+                  >
+                    {{ t('projects.detail.noCost') }}
+                  </div>
+                  <div v-else class="text-caption" style="color: var(--text-muted)">
+                    {{ t('projects.detail.billingEmpty') }}
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+
+            <q-card
+              id="project-description"
+              tabindex="-1"
+              class="project-section-anchor"
+              flat
+              bordered
+              style="background-color: var(--card-bg); border-color: var(--border-color)"
+            >
+              <q-card-section>
+                <div
+                  class="text-subtitle1 q-mb-md text-weight-bold"
+                  style="color: var(--text-accent)"
+                >
+                  {{ t('projects.detail.descriptionTitle') }}
+                </div>
+                <div class="detail-content">
+                  <MarkdownRenderer
+                    :model-value="project?.description || t('projects.detail.emptyDescription')"
+                  />
+                </div>
+              </q-card-section>
+            </q-card>
+
+            <q-card
+              id="project-attachments"
+              tabindex="-1"
+              class="project-section-anchor q-mt-md"
+              flat
+              bordered
+              style="background-color: var(--card-bg); border-color: var(--border-color)"
+            >
+              <q-card-section>
+                <div class="row items-center justify-between q-mb-sm">
+                  <div class="text-subtitle1 text-weight-bold" style="color: var(--text-accent)">
+                    {{ t('attachments.table.title') }}
+                  </div>
+
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="refresh"
+                    :aria-label="t('common.refresh')"
+                    @click="fetchAttachments"
+                  >
+                    <q-tooltip>{{ t('common.refresh') }}</q-tooltip>
+                  </q-btn>
+                </div>
+
+                <AttachmentItemsList
+                  :items="attachmentListItems"
+                  :empty-text="t('attachments.list.empty')"
+                  :loading="isLoadingAttachments"
+                  clickable
+                  @item-click="openAttachment"
+                  item-action-icon="close"
+                  :item-action-aria-label="t('attachments.form.removeFile')"
+                  @item-action="removeAttachment"
+                />
+
+                <div
+                  v-if="attachmentTotal > 0"
+                  class="row items-center justify-between q-mt-md q-col-gutter-sm"
+                >
+                  <div class="col-12 col-sm text-caption" style="color: var(--text-muted)">
                     {{
-                      formatBillingAmount(
-                        project.project_billing.retainer_amount,
-                        project.project_billing.currency_type,
-                      )
+                      t('attachments.list.paginationMeta', {
+                        page: attachmentQuery.page,
+                        max: attachmentTotalPages,
+                        total: attachmentTotal,
+                      })
                     }}
                   </div>
-                </div>
 
-                <div class="col-12 col-md-4">
-                  <div class="text-caption" style="color: var(--text-muted)">
-                    {{ t('projects.detail.paymentDayLabel') }}
+                  <div class="col-12 col-sm-auto row justify-end">
+                    <q-pagination
+                      :model-value="attachmentQuery.page"
+                      :max="attachmentTotalPages"
+                      :max-pages="6"
+                      direction-links
+                      boundary-numbers
+                      @update:model-value="onAttachmentsPageChange"
+                    />
                   </div>
-                  <div style="color: var(--text-color)">
-                    {{ paymentDayLabel(project.project_billing.payment_day) }}
-                  </div>
                 </div>
-              </template>
-            </div>
+              </q-card-section>
+            </q-card>
+          </template>
+        </ScopeProjectPanel>
+      </div>
 
-            <div v-else class="text-caption" style="color: var(--text-muted)">
-              {{ t('projects.detail.billingEmpty') }}
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
+      <div class="col-12 col-md-2" style="position: sticky; top: 80px">
+        <q-card
+          flat
+          bordered
+          style="background-color: var(--card-bg); border-color: var(--border-color)"
+        >
+          <q-card-section class="project-sidebar-heading">{{
+            t('projects.detail.quickActionsTitle')
+          }}</q-card-section>
+          <q-list separator>
+            <q-item clickable v-ripple @click="goBack" class="q-pa-md">
+              <q-item-section avatar>
+                <q-icon name="arrow_back" style="color: var(--text-color)" />
+              </q-item-section>
+              <q-item-section style="color: var(--text-color)">
+                {{ t('projects.detail.action.back') }}
+              </q-item-section>
+            </q-item>
 
-      <q-card
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
-            {{ t('projects.detail.descriptionTitle') }}
-          </div>
-          <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
-            <MarkdownRenderer
-              :model-value="project?.description || t('projects.detail.emptyDescription')"
-            />
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <q-card
-        class="q-mt-md"
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="row items-center justify-between q-mb-sm">
-            <div class="text-subtitle1 text-weight-bold" style="color: var(--text-accent)">
-              {{ t('attachments.table.title') }}
-            </div>
-
-            <q-btn
-              flat
-              round
-              dense
-              icon="refresh"
-              :aria-label="t('common.refresh')"
-              @click="fetchAttachments"
+            <q-item
+              v-if="project"
+              clickable
+              v-ripple
+              class="q-pa-md"
+              @click="scopePanel?.focusConversation()"
             >
-              <q-tooltip>{{ t('common.refresh') }}</q-tooltip>
-            </q-btn>
-          </div>
+              <q-item-section avatar><q-icon name="forum" /></q-item-section>
+              <q-item-section
+                >{{ t('scope.conversationAction') }}
+                <ConversationUnreadBadge :project-id="project.id" class="q-ml-sm"
+              /></q-item-section>
+            </q-item>
 
-          <AttachmentItemsList
-            :items="attachmentListItems"
-            :empty-text="t('attachments.list.empty')"
-            :loading="isLoadingAttachments"
-            clickable
-            @item-click="openAttachment"
-            item-action-icon="close"
-            :item-action-aria-label="t('attachments.form.removeFile')"
-            @item-action="removeAttachment"
-          />
+            <q-item clickable v-ripple class="q-pa-md" @click="goToMilestones">
+              <q-item-section avatar>
+                <q-icon name="flag" style="color: var(--text-color)" />
+              </q-item-section>
+              <q-item-section style="color: var(--text-color)">
+                {{ t('projects.detail.action.viewMilestones') }}
+              </q-item-section>
+            </q-item>
 
-          <div
-            v-if="attachmentTotal > 0"
-            class="row items-center justify-between q-mt-md q-col-gutter-sm"
-          >
-            <div class="col-12 col-sm text-caption" style="color: var(--text-muted)">
-              {{
-                t('attachments.list.paginationMeta', {
-                  page: attachmentQuery.page,
-                  max: attachmentTotalPages,
-                  total: attachmentTotal,
-                })
-              }}
-            </div>
+            <q-item
+              clickable
+              v-ripple
+              class="text-primary q-pa-md"
+              @click="goToEdit"
+              v-if="project"
+            >
+              <q-item-section avatar>
+                <q-icon name="edit" color="primary" />
+              </q-item-section>
+              <q-item-section>{{ t('projects.detail.action.edit') }}</q-item-section>
+            </q-item>
 
-            <div class="col-12 col-sm-auto row justify-end">
-              <q-pagination
-                :model-value="attachmentQuery.page"
-                :max="attachmentTotalPages"
-                :max-pages="6"
-                direction-links
-                boundary-numbers
-                @update:model-value="onAttachmentsPageChange"
-              />
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
-    </div>
-
-    <div class="col-12 col-md-2" style="position: sticky; top: 80px">
-      <q-card
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-list separator>
-          <q-item clickable v-ripple @click="goBack" class="q-pa-md">
-            <q-item-section avatar>
-              <q-icon name="arrow_back" style="color: var(--text-color)" />
-            </q-item-section>
-            <q-item-section style="color: var(--text-color)">
-              {{ t('projects.detail.action.back') }}
-            </q-item-section>
-          </q-item>
-
-          <q-item clickable v-ripple class="q-pa-md" @click="goToMilestones">
-            <q-item-section avatar>
-              <q-icon name="flag" style="color: var(--text-color)" />
-            </q-item-section>
-            <q-item-section style="color: var(--text-color)">
-              {{ t('projects.detail.action.viewMilestones') }}
-            </q-item-section>
-          </q-item>
-
-          <q-item clickable v-ripple class="text-primary q-pa-md" @click="goToEdit" v-if="project">
-            <q-item-section avatar>
-              <q-icon name="edit" color="primary" />
-            </q-item-section>
-            <q-item-section>{{ t('projects.detail.action.edit') }}</q-item-section>
-          </q-item>
-
-          <q-item
-            clickable
-            v-ripple
-            class="text-negative q-pa-md"
-            @click="removeProject"
-            v-if="project"
-          >
-            <q-item-section avatar>
-              <q-icon name="delete" color="negative" />
-            </q-item-section>
-            <q-item-section>{{ t('projects.detail.action.delete') }}</q-item-section>
-          </q-item>
-        </q-list>
-      </q-card>
-    </div>
+            <q-item
+              clickable
+              v-ripple
+              class="text-negative q-pa-md"
+              @click="removeProject"
+              v-if="project"
+            >
+              <q-item-section avatar>
+                <q-icon name="delete" color="negative" />
+              </q-item-section>
+              <q-item-section>{{ t('projects.detail.action.delete') }}</q-item-section>
+            </q-item>
+          </q-list>
+        </q-card>
+        <q-card
+          v-if="project"
+          flat
+          bordered
+          class="q-mt-md"
+          style="background-color: var(--card-bg); border-color: var(--border-color)"
+        >
+          <q-card-section class="project-sidebar-heading">{{
+            t('projects.detail.indexTitle')
+          }}</q-card-section>
+          <nav :aria-label="t('projects.detail.indexTitle')" class="project-section-index">
+            <q-list dense>
+              <q-item
+                v-for="entry in sectionIndex"
+                :key="entry.id"
+                clickable
+                v-ripple
+                tag="a"
+                :href="`#${entry.id}`"
+                @click.prevent="goToSection(entry)"
+              >
+                <q-item-section>{{ entry.label }}</q-item-section>
+              </q-item>
+            </q-list>
+          </nav>
+        </q-card>
+      </div>
+    </template>
   </q-page>
 </template>
 
 <script setup lang="ts">
+import ConversationUnreadBadge from 'src/components/ConversationUnreadBadge.vue';
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
+const contentLoading = ref(true);
+import ScopeProjectPanel from 'src/components/ScopeProjectPanel.vue';
+import ScopeSection from 'src/components/ScopeSection.vue';
 import { computed, reactive, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import AttachmentItemsList from 'src/components/AttachmentItemsList.vue';
 import { ProjectsService } from 'src/services/projects';
+import { openAttachmentPreview } from 'src/services/attachmentPreview';
 import { AttachmentsService } from 'src/services/attachments';
 import { useUI } from 'src/composables/useUI';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
@@ -310,8 +432,26 @@ const userPreferencesStore = useUserPreferencesStore();
 const { formatCurrency } = useNumberFormatter();
 
 const { isCopied: idCopied, copyToClipboard } = useCopyClipboard();
+const scopePanel = ref<InstanceType<typeof ScopeProjectPanel> | null>(null);
 const project = ref<ProjectDetailDto | null>(null);
 const projectId = String(route.params.id || '');
+const sectionIndex = computed(() => [
+  { id: 'project-information', label: t('projects.detail.basicInfoTitle') },
+  { id: `scope-project-${projectId}-scope`, label: t('scope.title') },
+  ...(scopePanel.value?.sectionIndex ?? []),
+  { id: 'project-billing', label: t('projects.detail.billingTitle') },
+  { id: 'project-description', label: t('projects.detail.descriptionTitle') },
+  { id: 'project-attachments', label: t('attachments.table.title') },
+]);
+async function goToSection(entry: { id: string }) {
+  if (scopePanel.value) {
+    await scopePanel.value.focusSection(entry.id);
+    return;
+  }
+  const target = window.document.getElementById(entry.id);
+  target?.scrollIntoView({ behavior: 'auto', block: 'start' });
+  target?.focus({ preventScroll: true });
+}
 const attachmentItems = ref<AttachmentSummaryDto[]>([]);
 const attachmentTotal = ref(0);
 const isLoadingAttachments = ref(false);
@@ -347,7 +487,7 @@ const formatDate = (value: string, fallback = t('common.empty')) =>
   });
 
 const loadProject = async () => {
-  showLoading(t('projects.detail.loadProject'));
+  contentLoading.value = true;
   try {
     const data = await ProjectsService.getById(projectId);
     project.value = data;
@@ -355,12 +495,13 @@ const loadProject = async () => {
     notifyError(t('projects.detail.loadError'), err);
     void router.push('/projects');
   } finally {
-    hideLoading();
+    contentLoading.value = false;
   }
 };
 
 const openAttachment = (attachmentId: string) => {
-  window.open(AttachmentsService.buildRawUrl(attachmentId), '_blank', 'noopener');
+  const attachment = attachmentItems.value.find((item) => item.id === attachmentId);
+  if (attachment) openAttachmentPreview(attachment);
 };
 
 const fetchAttachments = async () => {
@@ -476,3 +617,30 @@ onMounted(() => {
   void fetchAttachments();
 });
 </script>
+
+<style scoped>
+.project-sidebar-heading {
+  padding: 12px 16px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.project-section-index {
+  max-height: 40vh;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+.project-section-index .q-item {
+  font-size: 13px;
+  padding: 8px 16px;
+}
+:deep(.project-section-anchor) {
+  scroll-margin-top: 80px;
+}
+
+.project-client-empty {
+  border: 1px solid var(--q-warning);
+}
+</style>

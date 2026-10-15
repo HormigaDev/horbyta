@@ -1,7 +1,7 @@
 <template>
   <details class="chart-data">
     <summary>
-      {{ t('ui.chartData') }} <span class="text-secondary">· {{ rows.length }}</span>
+      {{ t('ui.chartData') }} <span class="text-secondary">— {{ rows.length }}</span>
     </summary>
     <div class="chart-data__scroll" role="region" :aria-label="caption" tabindex="0">
       <table>

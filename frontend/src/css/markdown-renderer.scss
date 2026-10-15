@@ -114,10 +114,11 @@
 
     a {
       color: var(--md-color-link);
-      text-decoration: none;
+      text-decoration: underline;
+      text-underline-offset: 3px;
 
       &:hover {
-        text-decoration: underline;
+        text-decoration-thickness: 2px;
       }
     }
 

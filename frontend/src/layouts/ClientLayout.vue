@@ -26,6 +26,7 @@
         </q-toolbar-title>
 
         <q-space />
+        <ConversationNotifications />
         <AppearanceMenu />
 
         <q-btn round flat :aria-label="t('ui.profile')">
@@ -253,12 +254,16 @@
     </q-drawer>
 
     <q-page-container>
-      <router-view />
+      <router-view v-slot="{ Component, route: viewRoute }"
+        ><component :is="Component" :key="viewRoute.path"
+      /></router-view>
     </q-page-container>
   </q-layout>
 </template>
 
 <script setup lang="ts">
+import { useScopeRealtime } from 'src/composables/useScopeRealtime';
+import ConversationNotifications from 'src/components/ConversationNotifications.vue';
 import AppearanceMenu from 'src/components/AppearanceMenu.vue';
 import { ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -273,6 +278,7 @@ const router = useRouter();
 const clientAuthStore = useClientAuthStore();
 const { t } = useI18n();
 const $q = useQuasar();
+useScopeRealtime(true);
 
 const drawer = ref(!$q.screen.lt.md);
 let storedExpanded = false;

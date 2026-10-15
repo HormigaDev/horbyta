@@ -11,3 +11,7 @@ pub mod services;
 pub mod state;
 pub mod swagger;
 pub mod utils;
+
+pub mod migrations;
+
+pub mod development_seed;

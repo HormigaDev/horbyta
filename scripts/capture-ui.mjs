@@ -34,7 +34,14 @@ const account =
         password: process.env.UI_TEST_PASSWORD,
       }
     : JSON.parse(
-        await readFile(resolve("target/ui-tests/account.json"), "utf8"),
+        await readFile(
+          resolve(
+            (process.env.UI_VERIFY_DOCUMENT_PREVIEW === "1" || process.env.UI_VERIFY_PROJECT_LAYOUT === "1" || process.env.UI_VERIFY_PROJECT_CHAT === "1" || process.env.UI_VERIFY_CHANGE_UX === "1" || process.env.UI_VERIFY_SCOPE === "1" || process.env.UI_VERIFY_SCOPE_CONVERSATION === "1" || process.env.UI_VERIFY_SCOPE_REALTIME === "1" || process.env.UI_VERIFY_SCOPE_NOTIFICATION === "1")
+              ? "target/scope-tests/state.json"
+              : "target/ui-tests/account.json",
+          ),
+          "utf8",
+        ),
       );
 if (!account.email || !account.password)
   throw new Error("Test account email and password are required.");
@@ -49,7 +56,10 @@ const args = [
   "--disable-dev-shm-usage",
   "--disable-background-networking",
   "--disable-extensions",
+  "--renderer-process-limit=2",
+  "--disable-gpu",
 ];
+if (process.env.CHROME_LOW_THREAD === "1") args.push("--no-zygote", "--no-sandbox", "--renderer-process-limit=1", "--num-raster-threads=1", "--disable-threaded-animation", "--disable-threaded-scrolling", "--disable-software-rasterizer", "--disable-site-isolation-trials", "--in-process-gpu", "--enable-features=NetworkServiceInProcess", "--disable-features=IsolateOrigins,site-per-process,MediaRouter,OptimizationHints");
 if (process.env.CHROME_NO_SANDBOX === "1") args.push("--no-sandbox");
 const chrome = spawn(process.env.CHROME_BIN || "google-chrome", args, {
   stdio: ["ignore", "ignore", "pipe", "pipe", "pipe"],
@@ -111,6 +121,10 @@ chrome.stdio[4].on("data", (chunk) => {
       )
     ) {
       if (inflight.delete(message.params.requestId)) lastActivity = Date.now();
+    } else if (message.method === "Network.webSocketHandshakeResponseReceived" && message.params.response.status !== 101) {
+      console.log('Websocket handshake status:',message.params.response.status);
+    } else if (message.method === "Network.webSocketFrameError") {
+      console.log('Websocket frame error:',message.params.errorMessage);
     } else if (message.method === "Runtime.exceptionThrown") {
       diagnostics.push({
         type: "exception",
@@ -136,7 +150,7 @@ function send(method, params = {}, sessionId) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       pending.delete(id);
-      reject(new Error(`Timed out: ${method}`));
+      reject(new Error(`Timed out: ${method}. ${stderr.slice(-1000)}`));
     }, 30000);
     pending.set(id, { resolve, reject, timer });
     chrome.stdio[3].write(
@@ -175,7 +189,7 @@ try {
       awaitPromise: true,
       returnByValue: true,
     });
-    if (value.exceptionDetails) throw new Error(value.exceptionDetails.text);
+    if (value.exceptionDetails) throw new Error(value.exceptionDetails.exception?.description || value.exceptionDetails.text);
     return value.result.value;
   };
   const waitFor = async (condition, label) => {
@@ -271,6 +285,62 @@ try {
     await verifyClientStates({ call, evaluate, navigate, waitFor, output });
   }
 
+  if (process.env.UI_VERIFY_CONTENT_UX === "1") {
+    const { verifyContentUx } = await import(pathToFileURL(resolve("scripts/verify-content-ux.mjs")).href);
+    await verifyContentUx({ call, evaluate, navigate, waitFor, output });
+  }
+
+  if (process.env.UI_VERIFY_SCOPE_I18N === "1") {
+    const { verifyScopeI18n } = await import(pathToFileURL(resolve("scripts/verify-scope-i18n.mjs")).href);
+    await verifyScopeI18n({ evaluate, navigate, waitFor, output });
+  }
+
+  if (process.env.UI_VERIFY_SEED === "1") {
+    const { verifyDevelopmentSeed } = await import(pathToFileURL(resolve("scripts/verify-development-seed.mjs")).href);
+    await verifyDevelopmentSeed({ call, evaluate, navigate, waitFor, output });
+  }
+
+  if (process.env.UI_VERIFY_SCOPE_CONVERSATION === "1") {
+    const { verifyScopeConversation } = await import(pathToFileURL(resolve("scripts/verify-scope-conversation.mjs")).href);
+    await verifyScopeConversation({ evaluate, navigate, waitFor, output, account });
+  }
+
+  if (process.env.UI_VERIFY_DOCUMENT_PREVIEW === "1") {
+    const { verifyDocumentPreview } = await import(pathToFileURL(resolve("scripts/verify-document-preview.mjs")).href);
+    await verifyDocumentPreview({evaluate,navigate,waitFor,output,account,call});
+  }
+
+  if (process.env.UI_VERIFY_PROJECT_LAYOUT === "1") {
+    const { verifyProjectLayout } = await import(pathToFileURL(resolve("scripts/verify-project-layout.mjs")).href);
+    await verifyProjectLayout({evaluate,navigate,waitFor,output,account,call});
+  }
+
+  if (process.env.UI_VERIFY_PROJECT_CHAT === "1") {
+    const { verifyProjectChat } = await import(pathToFileURL(resolve("scripts/verify-project-chat.mjs")).href);
+    await verifyProjectChat({evaluate,navigate,waitFor,output,account,call,send,base,targetId});
+  }
+
+  if (process.env.UI_VERIFY_CHANGE_UX === "1") {
+    const { verifyChangeUx } = await import(pathToFileURL(resolve("scripts/verify-change-ux.mjs")).href);
+    await verifyChangeUx({evaluate,navigate,waitFor,output,account,call,send,base,targetId});
+  }
+
+  if (process.env.UI_VERIFY_SCOPE_NOTIFICATION === "1") {
+    const { verifyScopeNotificationUx } = await import(pathToFileURL(resolve("scripts/verify-scope-notification-ux.mjs")).href);
+    await verifyScopeNotificationUx({evaluate,navigate,waitFor,output,account,call});
+  }
+
+  if (process.env.UI_VERIFY_SCOPE_REALTIME === "1") {
+    const { verifyScopeRealtime } = await import(pathToFileURL(resolve("scripts/verify-scope-realtime.mjs")).href);
+    await verifyScopeRealtime({ evaluate, navigate, waitFor, output, account, call, send, base, targetId });
+  }
+
+  if (process.env.UI_VERIFY_SCOPE === "1") {
+    const { verifyScope } = await import(
+      pathToFileURL(resolve("scripts/verify-scope.mjs")).href
+    );
+    await verifyScope({ call, evaluate, navigate, waitFor, output, account });
+  }
   if (process.env.UI_VERIFY === "1") {
     const { verify } = await import(
       pathToFileURL(resolve("scripts/verify-ui.mjs")).href
@@ -384,11 +454,11 @@ try {
       /* Chrome can exit before acknowledging close. */
     }
   }
-  if (chrome.exitCode === null) {
+  if (chrome.exitCode === null && chrome.signalCode === null) {
     const closed = new Promise((resolve) => chrome.once("exit", resolve));
     chrome.kill("SIGTERM");
     await Promise.race([closed, delay(3000)]);
-    if (chrome.exitCode === null) {
+    if (chrome.exitCode === null && chrome.signalCode === null) {
       chrome.kill("SIGKILL");
       await closed;
     }

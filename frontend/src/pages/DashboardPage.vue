@@ -16,10 +16,7 @@
       /></template>
     </PageHeader>
 
-    <div v-if="isLoading && !data" class="flex flex-center q-py-xl">
-      <q-spinner color="primary" size="32px" />
-      <span class="q-ml-sm text-muted">{{ t('dashboard.loading') }}</span>
-    </div>
+    <ContentSkeleton v-if="isLoading && !data" variant="dashboard" />
 
     <EmptyState v-if="loadError" error :title="t('dashboard.error')"
       ><q-btn outline color="primary" :label="t('ui.retry')" @click="fetchDashboard"
@@ -133,6 +130,7 @@
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import EmptyState from 'src/components/EmptyState.vue';
 import { defineAsyncComponent, onMounted, ref } from 'vue';

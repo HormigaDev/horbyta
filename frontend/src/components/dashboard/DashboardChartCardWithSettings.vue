@@ -20,7 +20,9 @@
       {{ t('ui.loadError') }}
       <q-btn flat dense :label="t('ui.retry')" :loading="loading" @click="emit('retry')" />
     </div>
-    <div :aria-busy="loading"><slot /><q-inner-loading :showing="loading" /></div>
+    <div :aria-busy="loading">
+      <ContentSkeleton v-if="loading" variant="chart" /><slot v-else />
+    </div>
 
     <ChartFilterDialog
       :model-value="open"
@@ -37,6 +39,7 @@
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
 import { useI18n } from 'vue-i18n';
 import DashboardChartCard from './DashboardChartCard.vue';
 import ChartFilterDialog from './ChartFilterDialog.vue';

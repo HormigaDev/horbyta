@@ -48,6 +48,7 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 totp-rs = {version = "5.7.1", features= ["qr", "otpauth", "gen_secret", "zeroize"]}
 constant_time_eq = "0.3.1"
 rpassword = "7.5.4"
+pulldown-cmark = { version = "0.13", default-features = false }
 
 [profile.dev]
 debug = 0

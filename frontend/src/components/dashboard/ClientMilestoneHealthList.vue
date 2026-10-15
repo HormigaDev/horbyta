@@ -16,20 +16,20 @@
 
       <div class="health-row__chips">
         <q-chip dense outline color="primary" text-color="primary">
-          {{ row.total_milestones }} · {{ totalLabel }}
+          {{ row.total_milestones }} — {{ totalLabel }}
         </q-chip>
         <q-chip dense color="positive" text-color="white">
-          {{ row.completed_milestones }} · {{ completedLabel }}
+          {{ row.completed_milestones }} — {{ completedLabel }}
         </q-chip>
         <q-chip dense color="warning" text-color="white">
-          {{ row.upcoming_milestones }} · {{ upcomingLabel }}
+          {{ row.upcoming_milestones }} — {{ upcomingLabel }}
         </q-chip>
         <q-chip
           dense
           :color="row.overdue_milestones > 0 ? 'negative' : 'grey-6'"
           text-color="white"
         >
-          {{ row.overdue_milestones }} · {{ overdueLabel }}
+          {{ row.overdue_milestones }} — {{ overdueLabel }}
         </q-chip>
       </div>
     </div>

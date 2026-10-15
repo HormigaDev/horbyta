@@ -1,82 +1,74 @@
 <template>
   <q-page class="detail-page q-pa-md row items-start q-col-gutter-md">
-    <div class="col-12 col-md-2"></div>
-    <div class="col-12 col-md-8">
-      <q-card
-        flat
-        bordered
-        class="q-mb-md"
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="text-h5 text-weight-bold q-mb-xs" style="color: var(--text-color)">
-            <q-icon name="person" size="lg" />
-            {{
-              client ? `${client.name} (${clientStatusLabel(client.status)})` : t('common.loading')
-            }}
-          </div>
-          <div class="text-caption" style="color: var(--text-muted)" v-if="client">
-            {{
-              $t('clients.detail.meta', {
-                id: client.id,
-                created: formatDate(client.created_at),
-                updated: formatDate(client.updated_at),
-              })
-            }}
-          </div>
-        </q-card-section>
-      </q-card>
+    <ContentSkeleton v-if="contentLoading" variant="detail" class="col-12 loading-page-region" />
+    <template v-else>
+      <div class="col-12 col-md-2"></div>
+      <div class="col-12 col-md-8">
+        <q-card
+          flat
+          bordered
+          class="q-mb-md"
+          style="background-color: var(--card-bg); border-color: var(--border-color)"
+        >
+          <q-card-section>
+            <div class="text-h5 text-weight-bold q-mb-xs" style="color: var(--text-color)">
+              <q-icon name="person" size="lg" />
+              {{
+                client
+                  ? `${client.name} (${clientStatusLabel(client.status)})`
+                  : t('common.loading')
+              }}
+            </div>
+            <div class="text-caption" style="color: var(--text-muted)" v-if="client">
+              {{
+                $t('clients.detail.meta', {
+                  id: client.id,
+                  created: formatDate(client.created_at),
+                  updated: formatDate(client.updated_at),
+                })
+              }}
+            </div>
+          </q-card-section>
+        </q-card>
 
-      <q-card
-        flat
-        bordered
-        class="q-mb-md"
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
-            {{ $t('clients.detail.specsTitle') }}
-          </div>
-
-          <div class="row q-col-gutter-md q-mb-md" v-if="client">
+        <ScopeSection class="q-mb-md" :title="t('clients.detail.specsTitle')" icon="person">
+          <div class="row q-col-gutter-md q-mb-md detail-meta-grid" v-if="client">
             <div class="col-12 col-md-4">
               <div class="text-caption" style="color: var(--text-muted)">
                 {{ $t('clients.detail.email') }}
               </div>
-              <div style="color: var(--text-color)">{{ client.email || 'N/A' }}</div>
+              <div style="color: var(--text-color)">
+                <a v-if="client.email" :href="`mailto:${client.email}`">{{ client.email }}</a
+                ><span v-else>{{ t('common.empty') }}</span>
+              </div>
             </div>
             <div class="col-12 col-md-4">
               <div class="text-caption" style="color: var(--text-muted)">
                 {{ $t('clients.detail.phone') }}
               </div>
-              <div style="color: var(--text-color)">{{ client.phone || 'N/A' }}</div>
+              <div style="color: var(--text-color)">
+                <a v-if="client.phone" :href="`tel:${client.phone}`">{{ client.phone }}</a
+                ><span v-else>{{ t('common.empty') }}</span>
+              </div>
             </div>
             <div class="col-12 col-md-4">
               <div class="text-caption" style="color: var(--text-muted)">
                 {{ $t('clients.detail.company') }}
               </div>
-              <div style="color: var(--text-color)">{{ client.company || 'N/A' }}</div>
+              <div style="color: var(--text-color)">{{ client.company || t('common.empty') }}</div>
             </div>
             <div class="col-12">
               <div class="text-caption" style="color: var(--text-muted)">
                 {{ $t('clients.detail.addressLine') }}
               </div>
-              <div style="color: var(--text-color)">{{ client.address_line || 'N/A' }}</div>
+              <div style="color: var(--text-color)">
+                {{ client.address_line || t('common.empty') }}
+              </div>
             </div>
           </div>
-        </q-card-section>
-      </q-card>
+        </ScopeSection>
 
-      <q-card
-        flat
-        bordered
-        class="q-mb-md"
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-sm text-weight-bold" style="color: var(--text-accent)">
-            {{ t('clients.detail.auth.title') }}
-          </div>
+        <ScopeSection class="q-mb-md" :title="t('clients.detail.auth.title')" icon="info">
           <div class="text-caption q-mb-md" style="color: var(--text-muted)">
             {{ t('clients.detail.auth.subtitle') }}
           </div>
@@ -110,7 +102,7 @@
 
           <q-separator class="q-mb-md" />
 
-          <div class="row q-col-gutter-md">
+          <div class="row q-col-gutter-md detail-meta-grid">
             <div class="col-12 col-md-6">
               <div
                 class="text-subtitle2 text-weight-medium q-mb-sm"
@@ -239,66 +231,69 @@
               "
             />
           </q-banner>
-        </q-card-section>
-      </q-card>
+        </ScopeSection>
 
-      <q-card
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
-            {{ $t('clients.detail.notesTitle') }}
-          </div>
-          <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
-            <MarkdownRenderer :model-value="client?.notes || $t('clients.detail.emptyNotes')" />
-          </div>
-        </q-card-section>
-      </q-card>
-    </div>
+        <q-card
+          flat
+          bordered
+          style="background-color: var(--card-bg); border-color: var(--border-color)"
+        >
+          <q-card-section>
+            <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
+              {{ $t('clients.detail.notesTitle') }}
+            </div>
+            <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
+              <MarkdownRenderer :model-value="client?.notes || $t('clients.detail.emptyNotes')" />
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
 
-    <div class="col-12 col-md-2" style="position: sticky; top: 80px">
-      <q-card
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-list separator>
-          <q-item clickable v-ripple @click="goBack" class="q-pa-md">
-            <q-item-section avatar>
-              <q-icon name="arrow_back" style="color: var(--text-color)" />
-            </q-item-section>
-            <q-item-section style="color: var(--text-color)">{{
-              $t('clients.detail.action.back')
-            }}</q-item-section>
-          </q-item>
+      <div class="col-12 col-md-2" style="position: sticky; top: 80px">
+        <q-card
+          flat
+          bordered
+          style="background-color: var(--card-bg); border-color: var(--border-color)"
+        >
+          <q-list separator>
+            <q-item clickable v-ripple @click="goBack" class="q-pa-md">
+              <q-item-section avatar>
+                <q-icon name="arrow_back" style="color: var(--text-color)" />
+              </q-item-section>
+              <q-item-section style="color: var(--text-color)">{{
+                $t('clients.detail.action.back')
+              }}</q-item-section>
+            </q-item>
 
-          <q-item clickable v-ripple class="text-primary q-pa-md" @click="goToEdit" v-if="client">
-            <q-item-section avatar>
-              <q-icon name="edit" color="primary" />
-            </q-item-section>
-            <q-item-section>{{ $t('clients.detail.action.edit') }}</q-item-section>
-          </q-item>
+            <q-item clickable v-ripple class="text-primary q-pa-md" @click="goToEdit" v-if="client">
+              <q-item-section avatar>
+                <q-icon name="edit" color="primary" />
+              </q-item-section>
+              <q-item-section>{{ $t('clients.detail.action.edit') }}</q-item-section>
+            </q-item>
 
-          <q-item
-            clickable
-            v-ripple
-            class="text-negative q-pa-md"
-            @click="removeClient"
-            v-if="client"
-          >
-            <q-item-section avatar>
-              <q-icon name="delete" color="negative" />
-            </q-item-section>
-            <q-item-section>{{ $t('clients.detail.action.delete') }}</q-item-section>
-          </q-item>
-        </q-list>
-      </q-card>
-    </div>
+            <q-item
+              clickable
+              v-ripple
+              class="text-negative q-pa-md"
+              @click="removeClient"
+              v-if="client"
+            >
+              <q-item-section avatar>
+                <q-icon name="delete" color="negative" />
+              </q-item-section>
+              <q-item-section>{{ $t('clients.detail.action.delete') }}</q-item-section>
+            </q-item>
+          </q-list>
+        </q-card>
+      </div>
+    </template>
   </q-page>
 </template>
 <script setup lang="ts">
+import ScopeSection from 'src/components/ScopeSection.vue';
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
+const contentLoading = ref(true);
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUI } from 'src/composables/useUI';
@@ -374,7 +369,7 @@ const loadClientAuthStatus = async (notifyFailure = true) => {
 };
 
 const loadClient = async () => {
-  showLoading(t('clients.detail.loadClient'));
+  contentLoading.value = true;
 
   try {
     client.value = await ClientsService.getById(clientId);
@@ -383,7 +378,7 @@ const loadClient = async () => {
   } catch (err: unknown) {
     notifyError(t('clients.detail.loadError'), err);
   } finally {
-    hideLoading();
+    contentLoading.value = false;
   }
 };
 

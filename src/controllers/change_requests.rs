@@ -1,10 +1,10 @@
 use axum::{
     Json, Router,
-    extract::{Path, Request, State},
+    extract::{ConnectInfo, Path, Request, State},
     response::IntoResponse,
     routing::{get, post},
 };
-use sea_orm::TransactionTrait;
+use sea_orm::{ConnectionTrait, TransactionTrait};
 use serde_json::json;
 use uuid::Uuid;
 
@@ -13,8 +13,8 @@ use crate::{
         change_request::{
             AssessChangeRequestDto, AssignChangeRequestTaskDto, ClientApproveChangeRequestDto,
             ClientCancelChangeRequestDto, ClientCreateChangeRequestDto, ClientDeclineChangeRequestDto,
-            ClientUpdateChangeRequestDto, CreateChangeRequestDto, UpdateChangeRequestDto, change_request_filter_schema,
-            client_change_request_filter_schema,
+            ClientUpdateChangeRequestDto, CreateChangeRequestDto, ExpectedVersionDto, UpdateChangeRequestDto,
+            change_request_filter_schema, client_change_request_filter_schema,
         },
         client::ClientAuthDto,
         query::QueryPayload,
@@ -24,6 +24,7 @@ use crate::{
     middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
     services::{
         attachments::AttachmentService, change_requests::ChangeRequestService, notifications::NotificationService,
+        scope::ScopeService,
     },
     state::AppState,
     utils::notifications::publish_notification,
@@ -149,6 +150,7 @@ pub(crate) async fn create_change_request(
     )
     .await?;
     let tx = state.db.begin().await.map_err(AppError::Database)?;
+    ScopeService::actor(&tx, user.id, "professional").await?;
     let change_request =
         ChangeRequestService::create_with_markdown_files(&tx, state.storage.as_ref(), user.id, payload, files).await?;
 
@@ -157,6 +159,10 @@ pub(crate) async fn create_change_request(
         return Err(AppError::Database(error));
     }
 
+    if change_request.value.status != crate::dtos::change_request::ChangeRequestStatus::Draft {
+        crate::services::project_conversation::publish_latest(&state, user.id, change_request.value.project_id, None)
+            .await;
+    }
     Ok(Json(change_request.value))
 }
 
@@ -176,8 +182,12 @@ pub(crate) async fn client_create_change_request(
     client: ClientAuthDto,
     ValidatedJson(payload): ValidatedJson<ClientCreateChangeRequestDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let change_request =
-        ChangeRequestService::create_by_client(state.db.as_ref(), client.user_id, client.client_id, payload).await?;
+    let tx = state.db.begin().await?;
+    ScopeService::actor(&tx, client.id, "client").await?;
+    let change_request = ChangeRequestService::create_by_client(&tx, client.user_id, client.client_id, payload).await?;
+    tx.commit().await?;
+    crate::services::project_conversation::publish_latest(&state, client.user_id, change_request.project_id, None)
+        .await;
     match NotificationService::notify_client_change_request_created(
         state.db.as_ref(),
         client.user_id,
@@ -211,9 +221,13 @@ pub(crate) async fn client_update_change_request(
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<ClientUpdateChangeRequestDto>,
 ) -> Result<impl IntoResponse, AppError> {
+    let tx = state.db.begin().await?;
+    ScopeService::actor(&tx, client.id, "client").await?;
     let change_request =
-        ChangeRequestService::client_update_spec(state.db.as_ref(), client.user_id, client.client_id, id, payload)
-            .await?;
+        ChangeRequestService::client_update_spec(&tx, client.user_id, client.client_id, id, payload).await?;
+    tx.commit().await?;
+    crate::services::project_conversation::publish_latest(&state, client.user_id, change_request.project_id, None)
+        .await;
     match NotificationService::notify_client_change_request_updated(
         state.db.as_ref(),
         client.user_id,
@@ -254,6 +268,7 @@ pub(crate) async fn update_change_request(
     )
     .await?;
     let tx = state.db.begin().await.map_err(AppError::Database)?;
+    ScopeService::actor(&tx, user.id, "professional").await?;
     let change_request =
         ChangeRequestService::update_with_markdown_files(&tx, state.storage.as_ref(), user.id, id, payload, files)
             .await?;
@@ -263,6 +278,10 @@ pub(crate) async fn update_change_request(
         return Err(AppError::Database(error));
     }
 
+    if change_request.value.status != crate::dtos::change_request::ChangeRequestStatus::Draft {
+        crate::services::project_conversation::publish_latest(&state, user.id, change_request.value.project_id, None)
+            .await;
+    }
     Ok(Json(change_request.value))
 }
 
@@ -285,8 +304,11 @@ pub(crate) async fn assign_change_request_task(
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<AssignChangeRequestTaskDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let change_request =
-        ChangeRequestService::assign_task_for_approved(state.db.as_ref(), user.id, id, payload).await?;
+    let tx = state.db.begin().await?;
+    ScopeService::actor(&tx, user.id, "professional").await?;
+    let change_request = ChangeRequestService::assign_task_for_approved(&tx, user.id, id, payload).await?;
+    tx.commit().await?;
+    crate::services::project_conversation::publish_latest(&state, user.id, change_request.project_id, None).await;
     Ok(Json(change_request))
 }
 
@@ -305,8 +327,13 @@ pub(crate) async fn submit_change_request(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
+    ValidatedJson(payload): ValidatedJson<ExpectedVersionDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let change_request = ChangeRequestService::submit(state.db.as_ref(), user.id, id).await?;
+    let tx = state.db.begin().await?;
+    ScopeService::actor(&tx, user.id, "professional").await?;
+    let change_request = ChangeRequestService::submit(&tx, user.id, id, payload.version).await?;
+    tx.commit().await?;
+    crate::services::project_conversation::publish_latest(&state, user.id, change_request.project_id, None).await;
     Ok(Json(change_request))
 }
 
@@ -329,7 +356,11 @@ pub(crate) async fn assess_change_request(
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<AssessChangeRequestDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let change_request = ChangeRequestService::assess(state.db.as_ref(), user.id, id, payload).await?;
+    let tx = state.db.begin().await?;
+    ScopeService::actor(&tx, user.id, "professional").await?;
+    let change_request = ChangeRequestService::assess(&tx, user.id, id, payload).await?;
+    tx.commit().await?;
+    crate::services::project_conversation::publish_latest(&state, user.id, change_request.project_id, None).await;
     Ok(Json(change_request))
 }
 
@@ -348,8 +379,13 @@ pub(crate) async fn mark_change_request_implemented(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
+    ValidatedJson(payload): ValidatedJson<ExpectedVersionDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let change_request = ChangeRequestService::mark_implemented(state.db.as_ref(), user.id, id).await?;
+    let tx = state.db.begin().await?;
+    ScopeService::actor(&tx, user.id, "professional").await?;
+    let change_request = ChangeRequestService::mark_implemented(&tx, user.id, id, payload.version).await?;
+    tx.commit().await?;
+    crate::services::project_conversation::publish_latest(&state, user.id, change_request.project_id, None).await;
     Ok(Json(change_request))
 }
 
@@ -368,8 +404,13 @@ pub(crate) async fn cancel_change_request(
     State(state): State<AppState>,
     user: UserDto,
     Path(id): Path<Uuid>,
+    ValidatedJson(payload): ValidatedJson<ExpectedVersionDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let change_request = ChangeRequestService::cancel(state.db.as_ref(), user.id, id).await?;
+    let tx = state.db.begin().await?;
+    ScopeService::actor(&tx, user.id, "professional").await?;
+    let change_request = ChangeRequestService::cancel(&tx, user.id, id, payload.version).await?;
+    tx.commit().await?;
+    crate::services::project_conversation::publish_latest(&state, user.id, change_request.project_id, None).await;
     Ok(Json(change_request))
 }
 
@@ -389,7 +430,10 @@ pub(crate) async fn delete_change_request(
     user: UserDto,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    ChangeRequestService::delete(state.db.as_ref(), user.id, id).await?;
+    let tx = state.db.begin().await?;
+    ScopeService::actor(&tx, user.id, "professional").await?;
+    ChangeRequestService::delete(&tx, user.id, id).await?;
+    tx.commit().await?;
     Ok(Json(json!({ "message": "Solicitud de cambio eliminada" })))
 }
 
@@ -407,25 +451,31 @@ pub(crate) async fn delete_change_request(
     )
 )]
 pub(crate) async fn client_approve_change_request(
+    ConnectInfo(peer): ConnectInfo<std::net::SocketAddr>,
+    headers: axum::http::HeaderMap,
     State(state): State<AppState>,
     client: ClientAuthDto,
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<ClientApproveChangeRequestDto>,
 ) -> Result<impl IntoResponse, AppError> {
+    let tx = state.db.begin().await?;
+    ScopeService::actor(&tx, client.id, "client").await?;
+    let (ip, source) = crate::middlewares::acceptance_ip::acceptance_ip(
+        peer.ip(),
+        &headers,
+        &std::env::var("TRUSTED_PROXY_IPS").unwrap_or_default(),
+    );
+    tx.execute(sea_orm::Statement::from_sql_and_values(
+        sea_orm::DbBackend::Postgres,
+        "SELECT set_config('horbyta.accepted_ip',$1,true),set_config('horbyta.ip_source',$2,true)",
+        [ip.to_string().into(), source.into()],
+    ))
+    .await?;
     let change_request =
-        ChangeRequestService::client_approve(state.db.as_ref(), client.user_id, client.client_id, id, payload).await?;
-    match NotificationService::notify_client_change_request_decision(
-        state.db.as_ref(),
-        client.user_id,
-        client.client_id,
-        &change_request,
-        true,
-    )
-    .await
-    {
-        Ok(notification) => publish_notification(&state, client.user_id, notification),
-        Err(error) => tracing::error!("Failed to create change request approval notification: {}", error),
-    };
+        ChangeRequestService::client_approve(&tx, client.user_id, client.client_id, id, payload).await?;
+    tx.commit().await?;
+    crate::services::project_conversation::publish_latest(&state, client.user_id, change_request.project_id, None)
+        .await;
     Ok(Json(change_request))
 }
 
@@ -448,26 +498,13 @@ pub(crate) async fn client_decline_change_request(
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<ClientDeclineChangeRequestDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let change_request = ChangeRequestService::client_decline(
-        state.db.as_ref(),
-        client.user_id,
-        client.client_id,
-        id,
-        payload.decline_reason,
-    )
-    .await?;
-    match NotificationService::notify_client_change_request_decision(
-        state.db.as_ref(),
-        client.user_id,
-        client.client_id,
-        &change_request,
-        false,
-    )
-    .await
-    {
-        Ok(notification) => publish_notification(&state, client.user_id, notification),
-        Err(error) => tracing::error!("Failed to create change request decline notification: {}", error),
-    };
+    let tx = state.db.begin().await?;
+    ScopeService::actor(&tx, client.id, "client").await?;
+    let change_request =
+        ChangeRequestService::client_decline(&tx, client.user_id, client.client_id, id, payload).await?;
+    tx.commit().await?;
+    crate::services::project_conversation::publish_latest(&state, client.user_id, change_request.project_id, None)
+        .await;
     Ok(Json(change_request))
 }
 
@@ -490,8 +527,13 @@ pub(crate) async fn client_cancel_change_request(
     Path(id): Path<Uuid>,
     ValidatedJson(payload): ValidatedJson<ClientCancelChangeRequestDto>,
 ) -> Result<impl IntoResponse, AppError> {
+    let tx = state.db.begin().await?;
+    ScopeService::actor(&tx, client.id, "client").await?;
     let change_request =
-        ChangeRequestService::client_cancel(state.db.as_ref(), client.user_id, client.client_id, id, payload).await?;
+        ChangeRequestService::client_cancel(&tx, client.user_id, client.client_id, id, payload).await?;
+    tx.commit().await?;
+    crate::services::project_conversation::publish_latest(&state, client.user_id, change_request.project_id, None)
+        .await;
     match NotificationService::notify_client_change_request_cancelled(
         state.db.as_ref(),
         client.user_id,

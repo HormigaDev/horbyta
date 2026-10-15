@@ -3,12 +3,13 @@ use std::str::FromStr;
 use chrono::{DateTime, FixedOffset, Utc};
 use object_store::ObjectStore;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
-    Set,
+    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, DbBackend, EntityTrait, PaginatorTrait, QueryFilter,
+    QuerySelect, Set, Statement,
 };
 use uuid::Uuid;
 
 use crate::{
+    dtos::scope::ClassifyTaskDto,
     dtos::{
         attachment::StorageBackedDbWrite,
         change_request::{
@@ -16,8 +17,8 @@ use crate::{
             ChangeRequestDetailRow, ChangeRequestOrigin, ChangeRequestSearchField, ChangeRequestStatus,
             ChangeRequestSummaryDto, ClientApproveChangeRequestDto, ClientCancelChangeRequestDto,
             ClientChangeRequestDetailDto, ClientChangeRequestDetailRow, ClientChangeRequestSearchField,
-            ClientChangeRequestSummaryDto, ClientCreateChangeRequestDto, ClientUpdateChangeRequestDto,
-            CreateChangeRequestDto, UpdateChangeRequestDto,
+            ClientChangeRequestSummaryDto, ClientCreateChangeRequestDto, ClientDeclineChangeRequestDto,
+            ClientUpdateChangeRequestDto, CreateChangeRequestDto, UpdateChangeRequestDto,
         },
         project::ProjectStatus,
         query::QueryPayload,
@@ -30,6 +31,7 @@ use crate::{
     },
     error::AppError,
     services::attachments::AttachmentService,
+    services::scope::ScopeService,
     utils::{
         multipart::{
             MarkdownUploadedFile, replace_markdown_attachment_urls, replace_markdown_attachment_urls_required,
@@ -41,6 +43,29 @@ use crate::{
 pub struct ChangeRequestService;
 
 impl ChangeRequestService {
+    async fn persist(
+        db: &impl ConnectionTrait,
+        active: change_requests::ActiveModel,
+        expected: i32,
+    ) -> Result<ChangeRequestModel, AppError> {
+        let id = active.id.clone().unwrap();
+        let result = ChangeRequests::update_many()
+            .set(active)
+            .filter(change_requests::Column::Id.eq(id))
+            .filter(change_requests::Column::Version.eq(expected))
+            .exec(db)
+            .await?;
+        if result.rows_affected != 1 {
+            return Err(AppError::Conflict(
+                "La propuesta cambió; vuelva a leerla antes de continuar.".into(),
+            ));
+        }
+        ChangeRequests::find_by_id(id)
+            .one(db)
+            .await?
+            .ok_or(AppError::InternalError)
+    }
+
     pub async fn create(
         db: &impl ConnectionTrait,
         user_id: Uuid,
@@ -62,7 +87,7 @@ impl ChangeRequestService {
             ..Default::default()
         };
 
-        let created = change_request.insert(db).await.map_err(AppError::Database)?;
+        let created = change_request.insert(db).await.map_err(AppError::from)?;
         Self::get_by_id(db, user_id, created.id).await
     }
 
@@ -95,7 +120,7 @@ impl ChangeRequestService {
             ..Default::default()
         };
 
-        let created = change_request.insert(db).await.map_err(AppError::Database)?;
+        let created = change_request.insert(db).await.map_err(AppError::from)?;
         let upload = AttachmentService::create_markdown_files_with_tracking_in_tx(
             db,
             storage,
@@ -110,9 +135,10 @@ impl ChangeRequestService {
 
         let next_description =
             replace_markdown_attachment_urls_required(created.client_request_description.clone(), &upload.replacements);
+        let expected_version = created.version;
         let mut active_model: change_requests::ActiveModel = created.into();
         active_model.client_request_description = Set(next_description);
-        let updated = match active_model.update(db).await.map_err(AppError::Database) {
+        let updated = match Self::persist(db, active_model, expected_version).await {
             Ok(updated) => updated,
             Err(error) => {
                 AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
@@ -147,7 +173,7 @@ impl ChangeRequestService {
             ..Default::default()
         };
 
-        let created = change_request.insert(db).await.map_err(AppError::Database)?;
+        let created = change_request.insert(db).await.map_err(AppError::from)?;
         Self::get_client_by_id(db, user_id, client_id, created.id).await
     }
 
@@ -263,10 +289,11 @@ impl ChangeRequestService {
 
             Self::ensure_task_ownership(db, user_id, model.project_id, dto.task_id).await?;
 
+            let expected_version = model.version;
             let mut active_model: change_requests::ActiveModel = model.into();
             active_model.task_id = Set(dto.task_id);
 
-            let updated = active_model.update(db).await.map_err(AppError::Database)?;
+            let updated = Self::persist(db, active_model, expected_version).await?;
             return Ok(updated.id);
         }
 
@@ -288,6 +315,7 @@ impl ChangeRequestService {
         Self::ensure_project_client_pair(db, user_id, dto.project_id, dto.client_id).await?;
         Self::ensure_task_ownership(db, user_id, dto.project_id, dto.task_id).await?;
 
+        let expected_version = model.version;
         let mut active_model: change_requests::ActiveModel = model.into();
         active_model.project_id = Set(dto.project_id);
         active_model.client_id = Set(dto.client_id);
@@ -299,7 +327,7 @@ impl ChangeRequestService {
         active_model.impact_cost = Set(dto.impact_cost);
         active_model.schedule_impact_days = Set(dto.schedule_impact_days);
 
-        let updated = active_model.update(db).await.map_err(AppError::Database)?;
+        let updated = Self::persist(db, active_model, expected_version).await?;
         Ok(updated.id)
     }
 
@@ -379,11 +407,12 @@ impl ChangeRequestService {
             ));
         }
 
+        let expected_version = model.version;
         let mut active_model: change_requests::ActiveModel = model.into();
         active_model.title = Set(dto.title);
         active_model.client_request_description = Set(dto.client_request_description);
 
-        let updated = active_model.update(db).await.map_err(AppError::Database)?;
+        let updated = Self::persist(db, active_model, expected_version).await?;
         Self::get_client_by_id(db, user_id, client_id, updated.id).await
     }
 
@@ -406,31 +435,44 @@ impl ChangeRequestService {
             ));
         }
 
-        Self::ensure_task_ownership(db, user_id, model.project_id, dto.task_id).await?;
-
-        let mut active_model: change_requests::ActiveModel = model.into();
-        active_model.task_id = Set(dto.task_id);
-
-        let updated = active_model.update(db).await.map_err(AppError::Database)?;
-        Self::get_by_id(db, user_id, updated.id).await
+        let task_id = dto
+            .task_id
+            .ok_or_else(|| AppError::Conflict("No se permite quitar el origen del trabajo.".into()))?;
+        ScopeService::classify(
+            db,
+            user_id,
+            user_id,
+            task_id,
+            ClassifyTaskDto {
+                change_request_id: Some(id),
+                reason: "Trabajo adicional del cambio aprobado".into(),
+            },
+        )
+        .await?;
+        Self::get_by_id(db, user_id, id).await
     }
 
     pub async fn submit(
         db: &impl ConnectionTrait,
         user_id: Uuid,
         id: Uuid,
+        version: i32,
     ) -> Result<ChangeRequestDetailDto, AppError> {
         let model = Self::get_model_by_user(db, user_id, id).await?;
+        if model.version != version {
+            return Err(AppError::Conflict("La revisión cambió; vuelva a leerla.".into()));
+        }
         let status = Self::parse_status(&model.status)?;
 
         if status != ChangeRequestStatus::Draft {
             return Err(AppError::Conflict("only a draft request can be submitted".to_string()));
         }
 
+        let expected_version = model.version;
         let mut active_model: change_requests::ActiveModel = model.into();
         active_model.status = Set(ChangeRequestStatus::Submitted.to_string());
 
-        let updated = active_model.update(db).await.map_err(AppError::Database)?;
+        let updated = Self::persist(db, active_model, expected_version).await?;
         Self::get_by_id(db, user_id, updated.id).await
     }
 
@@ -443,20 +485,26 @@ impl ChangeRequestService {
         let model = Self::get_model_by_user(db, user_id, id).await?;
         let status = Self::parse_status(&model.status)?;
 
-        if status != ChangeRequestStatus::Submitted {
+        if !matches!(status, ChangeRequestStatus::Submitted | ChangeRequestStatus::Assessed)
+            || model.version != dto.version
+        {
             return Err(AppError::Conflict(
-                "only a submitted request can be assessed".to_string(),
+                "La revisión cambió o no admite evaluación; vuelva a leerla.".into(),
             ));
         }
+        db.execute_unprepared("SELECT set_config('horbyta.publish_offer','true',true)")
+            .await?;
 
+        let expected_version = model.version;
         let mut active_model: change_requests::ActiveModel = model.into();
+        active_model.target_milestone_id = Set(dto.target_milestone_id);
         active_model.technical_assessment = Set(Some(dto.technical_assessment));
         active_model.impact_hours = Set(dto.impact_hours);
         active_model.impact_cost = Set(dto.impact_cost);
         active_model.schedule_impact_days = Set(dto.schedule_impact_days);
         active_model.status = Set(ChangeRequestStatus::Assessed.to_string());
 
-        let updated = active_model.update(db).await.map_err(AppError::Database)?;
+        let updated = Self::persist(db, active_model, expected_version).await?;
         Self::get_by_id(db, user_id, updated.id).await
     }
 
@@ -464,8 +512,12 @@ impl ChangeRequestService {
         db: &impl ConnectionTrait,
         user_id: Uuid,
         id: Uuid,
+        version: i32,
     ) -> Result<ChangeRequestDetailDto, AppError> {
         let model = Self::get_model_by_user(db, user_id, id).await?;
+        if model.version != version {
+            return Err(AppError::Conflict("La revisión cambió; vuelva a leerla.".into()));
+        }
         let status = Self::parse_status(&model.status)?;
 
         if status != ChangeRequestStatus::Approved {
@@ -474,10 +526,11 @@ impl ChangeRequestService {
             ));
         }
 
+        let expected_version = model.version;
         let mut active_model: change_requests::ActiveModel = model.into();
         active_model.status = Set(ChangeRequestStatus::Implemented.to_string());
 
-        let updated = active_model.update(db).await.map_err(AppError::Database)?;
+        let updated = Self::persist(db, active_model, expected_version).await?;
         Self::get_by_id(db, user_id, updated.id).await
     }
 
@@ -485,8 +538,12 @@ impl ChangeRequestService {
         db: &impl ConnectionTrait,
         user_id: Uuid,
         id: Uuid,
+        version: i32,
     ) -> Result<ChangeRequestDetailDto, AppError> {
         let model = Self::get_model_by_user(db, user_id, id).await?;
+        if model.version != version {
+            return Err(AppError::Conflict("La revisión cambió; vuelva a leerla.".into()));
+        }
         let status = Self::parse_status(&model.status)?;
         let origin = Self::parse_origin(&model.origin)?;
 
@@ -508,10 +565,11 @@ impl ChangeRequestService {
             ));
         }
 
+        let expected_version = model.version;
         let mut active_model: change_requests::ActiveModel = model.into();
         active_model.status = Set(ChangeRequestStatus::Cancelled.to_string());
 
-        let updated = active_model.update(db).await.map_err(AppError::Database)?;
+        let updated = Self::persist(db, active_model, expected_version).await?;
         Self::get_by_id(db, user_id, updated.id).await
     }
 
@@ -525,18 +583,32 @@ impl ChangeRequestService {
         let model = Self::get_model_by_client(db, user_id, client_id, id).await?;
         let status = Self::parse_status(&model.status)?;
 
-        if status != ChangeRequestStatus::Assessed {
+        if matches!(status, ChangeRequestStatus::Approved | ChangeRequestStatus::Implemented) {
+            let same = db
+                .query_one(Statement::from_sql_and_values(
+                    DbBackend::Postgres,
+                    "SELECT 1 AS ok FROM scope_effects WHERE change_request_id=$1 AND offer_version=$2",
+                    [id.into(), dto.version.into()],
+                ))
+                .await?
+                .is_some();
+            if same {
+                return Self::get_client_by_id(db, user_id, client_id, id).await;
+            }
+        }
+        if status != ChangeRequestStatus::Assessed || model.version != dto.version {
             return Err(AppError::Conflict(
-                "only an assessed request can be approved".to_string(),
+                "La oferta cambió o ya fue decidida; vuelva a leerla.".into(),
             ));
         }
 
+        let expected_version = model.version;
         let mut active_model: change_requests::ActiveModel = model.into();
         active_model.status = Set(ChangeRequestStatus::Approved.to_string());
         active_model.client_approved_at = Set(Some(Self::now_with_offset()));
         active_model.client_signature_ip = Set(dto.client_signature_ip);
 
-        let updated = active_model.update(db).await.map_err(AppError::Database)?;
+        let updated = Self::persist(db, active_model, expected_version).await?;
         Self::get_client_by_id(db, user_id, client_id, updated.id).await
     }
 
@@ -545,24 +617,31 @@ impl ChangeRequestService {
         user_id: Uuid,
         client_id: Uuid,
         id: Uuid,
-        decline_reason: ChangeRequestDeclineReason,
+        dto: ClientDeclineChangeRequestDto,
     ) -> Result<ClientChangeRequestDetailDto, AppError> {
         let model = Self::get_model_by_client(db, user_id, client_id, id).await?;
         let status = Self::parse_status(&model.status)?;
 
-        if status != ChangeRequestStatus::Assessed {
+        if status == ChangeRequestStatus::Declined
+            && model.version == dto.version + 1
+            && model.decline_reason.as_deref() == Some(dto.decline_reason.to_string().as_str())
+        {
+            return Self::get_client_by_id(db, user_id, client_id, id).await;
+        }
+        if status != ChangeRequestStatus::Assessed || model.version != dto.version {
             return Err(AppError::Conflict(
-                "only an assessed request can be declined".to_string(),
+                "La oferta cambió o ya fue decidida; vuelva a leerla.".into(),
             ));
         }
 
+        let expected_version = model.version;
         let mut active_model: change_requests::ActiveModel = model.into();
         active_model.status = Set(ChangeRequestStatus::Declined.to_string());
         active_model.client_approved_at = Set(None);
         active_model.client_signature_ip = Set(None);
-        active_model.decline_reason = Set(Some(decline_reason.to_string()));
+        active_model.decline_reason = Set(Some(dto.decline_reason.to_string()));
 
-        let updated = active_model.update(db).await.map_err(AppError::Database)?;
+        let updated = Self::persist(db, active_model, expected_version).await?;
         Self::get_client_by_id(db, user_id, client_id, updated.id).await
     }
 
@@ -601,10 +680,11 @@ impl ChangeRequestService {
             ));
         }
 
+        let expected_version = model.version;
         let mut active_model: change_requests::ActiveModel = model.into();
         active_model.status = Set(ChangeRequestStatus::Cancelled.to_string());
 
-        let updated = active_model.update(db).await.map_err(AppError::Database)?;
+        let updated = Self::persist(db, active_model, expected_version).await?;
         Self::get_client_by_id(db, user_id, client_id, updated.id).await
     }
 

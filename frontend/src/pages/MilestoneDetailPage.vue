@@ -1,43 +1,35 @@
 <template>
   <q-page class="detail-page q-pa-md row items-start q-col-gutter-md">
-    <div class="col-12 col-md-2"></div>
+    <ContentSkeleton v-if="contentLoading" variant="detail" class="col-12 loading-page-region" />
+    <template v-else>
+      <div class="col-12 col-md-2"></div>
 
-    <div class="col-12 col-md-8">
-      <q-card
-        class="q-mb-md"
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="text-h5 text-weight-bold q-mb-xs" style="color: var(--text-color)">
-            <q-icon name="flag" size="lg" />
-            {{ milestone?.name || t('common.loading') }}
-          </div>
-          <div class="text-caption" style="color: var(--text-muted)" v-if="milestone">
-            {{
-              t('milestones.detail.meta', {
-                id: milestone.id,
-                created: formatDate(milestone.created_at),
-                updated: formatDate(milestone.updated_at),
-              })
-            }}
-          </div>
-        </q-card-section>
-      </q-card>
+      <div class="col-12 col-md-8">
+        <q-card
+          class="q-mb-md"
+          flat
+          bordered
+          style="background-color: var(--card-bg); border-color: var(--border-color)"
+        >
+          <q-card-section>
+            <div class="text-h5 text-weight-bold q-mb-xs" style="color: var(--text-color)">
+              <q-icon name="flag" size="lg" />
+              {{ milestone?.name || t('common.loading') }}
+            </div>
+            <div class="text-caption" style="color: var(--text-muted)" v-if="milestone">
+              {{
+                t('milestones.detail.meta', {
+                  id: milestone.id,
+                  created: formatDate(milestone.created_at),
+                  updated: formatDate(milestone.updated_at),
+                })
+              }}
+            </div>
+          </q-card-section>
+        </q-card>
 
-      <q-card
-        class="q-mb-md"
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
-            {{ t('milestones.detail.specsTitle') }}
-          </div>
-
-          <div class="row q-col-gutter-md" v-if="milestone">
+        <ScopeSection class="q-mb-md" :title="t('milestones.detail.specsTitle')" icon="info">
+          <div class="row q-col-gutter-md detail-meta-grid" v-if="milestone">
             <div class="col-12 col-md-4">
               <div class="text-caption" style="color: var(--text-muted)">
                 {{ t('common.status') }}
@@ -50,7 +42,11 @@
                 {{ t('common.project') }}
               </div>
               <div style="color: var(--text-color)">
-                {{ projectName || t('milestones.detail.noProject') }}
+                <router-link
+                  v-if="milestone.project_id"
+                  :to="`/projects/${milestone.project_id}`"
+                  >{{ projectName || t('common.project') }}</router-link
+                ><span v-else>{{ t('milestones.detail.noProject') }}</span>
               </div>
             </div>
 
@@ -67,75 +63,71 @@
               </div>
             </div>
           </div>
-        </q-card-section>
-      </q-card>
+        </ScopeSection>
 
-      <q-card
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-md text-weight-bold" style="color: var(--text-accent)">
-            {{ t('milestones.detail.descriptionTitle') }}
-          </div>
-          <div class="q-pa-md rounded-borders" style="border: 1px solid var(--border-color)">
-            <MarkdownRenderer
-              :model-value="milestone?.description || t('milestones.detail.emptyDescription')"
-            />
-          </div>
-        </q-card-section>
-      </q-card>
-    </div>
+        <ScopeSection
+          class="q-mb-md"
+          :title="t('milestones.detail.descriptionTitle')"
+          icon="description"
+        >
+          <MarkdownRenderer
+            :model-value="milestone?.description || t('milestones.detail.emptyDescription')"
+          />
+        </ScopeSection>
+      </div>
 
-    <div class="col-12 col-md-2" style="position: sticky; top: 80px">
-      <q-card
-        flat
-        bordered
-        style="background-color: var(--card-bg); border-color: var(--border-color)"
-      >
-        <q-list separator>
-          <q-item clickable v-ripple @click="goBack" class="q-pa-md">
-            <q-item-section avatar>
-              <q-icon name="arrow_back" style="color: var(--text-color)" />
-            </q-item-section>
-            <q-item-section style="color: var(--text-color)">
-              {{ t('milestones.detail.action.back') }}
-            </q-item-section>
-          </q-item>
+      <div class="col-12 col-md-2" style="position: sticky; top: 80px">
+        <q-card
+          flat
+          bordered
+          style="background-color: var(--card-bg); border-color: var(--border-color)"
+        >
+          <q-list separator>
+            <q-item clickable v-ripple @click="goBack" class="q-pa-md">
+              <q-item-section avatar>
+                <q-icon name="arrow_back" style="color: var(--text-color)" />
+              </q-item-section>
+              <q-item-section style="color: var(--text-color)">
+                {{ t('milestones.detail.action.back') }}
+              </q-item-section>
+            </q-item>
 
-          <q-item
-            clickable
-            v-ripple
-            class="text-primary q-pa-md"
-            @click="goToEdit"
-            v-if="milestone"
-          >
-            <q-item-section avatar>
-              <q-icon name="edit" color="primary" />
-            </q-item-section>
-            <q-item-section>{{ t('milestones.detail.action.edit') }}</q-item-section>
-          </q-item>
+            <q-item
+              clickable
+              v-ripple
+              class="text-primary q-pa-md"
+              @click="goToEdit"
+              v-if="milestone"
+            >
+              <q-item-section avatar>
+                <q-icon name="edit" color="primary" />
+              </q-item-section>
+              <q-item-section>{{ t('milestones.detail.action.edit') }}</q-item-section>
+            </q-item>
 
-          <q-item
-            clickable
-            v-ripple
-            class="text-negative q-pa-md"
-            @click="removeMilestone"
-            v-if="milestone"
-          >
-            <q-item-section avatar>
-              <q-icon name="delete" color="negative" />
-            </q-item-section>
-            <q-item-section>{{ t('milestones.detail.action.delete') }}</q-item-section>
-          </q-item>
-        </q-list>
-      </q-card>
-    </div>
+            <q-item
+              clickable
+              v-ripple
+              class="text-negative q-pa-md"
+              @click="removeMilestone"
+              v-if="milestone"
+            >
+              <q-item-section avatar>
+                <q-icon name="delete" color="negative" />
+              </q-item-section>
+              <q-item-section>{{ t('milestones.detail.action.delete') }}</q-item-section>
+            </q-item>
+          </q-list>
+        </q-card>
+      </div>
+    </template>
   </q-page>
 </template>
 
 <script setup lang="ts">
+import ScopeSection from 'src/components/ScopeSection.vue';
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
+const contentLoading = ref(true);
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -170,7 +162,7 @@ const statusLabel = (status: MilestoneStatus) => {
 };
 
 const loadMilestone = async () => {
-  showLoading(t('milestones.detail.loadMilestone'));
+  contentLoading.value = true;
   try {
     const data = await MilestonesService.getById(milestoneId);
     milestone.value = data;
@@ -185,7 +177,7 @@ const loadMilestone = async () => {
     notifyError(t('milestones.detail.loadError'), err);
     void router.push('/milestones');
   } finally {
-    hideLoading();
+    contentLoading.value = false;
   }
 };
 

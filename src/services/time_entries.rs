@@ -241,7 +241,7 @@ impl TimeEntryService {
         }
         .delete(db)
         .await
-        .map_err(AppError::Database)?;
+        .map_err(AppError::from)?;
 
         Ok(())
     }
@@ -338,7 +338,7 @@ impl TimeEntryService {
             .order_by_desc(time_entries::Column::StartTime)
             .one(db)
             .await
-            .map_err(AppError::Database)
+            .map_err(AppError::from)
     }
 
     async fn ensure_no_active_timer(db: &impl ConnectionTrait, user_id: Uuid) -> Result<(), AppError> {

@@ -48,51 +48,55 @@
 
     <q-dialog v-model="showTaskReferenceDialog" persistent>
       <q-card style="min-width: min(92vw, 560px)">
-        <q-card-section>
-          <div class="text-h6">{{ t('changeRequests.list.taskReference.title') }}</div>
-          <div class="text-caption q-mt-xs" style="color: var(--text-muted)">
-            {{ t('changeRequests.list.taskReference.subtitle') }}
-          </div>
-          <div
-            class="text-caption q-mt-sm"
-            style="color: var(--text-muted)"
-            v-if="taskReferenceChangeRequest"
-          >
-            {{ taskReferenceChangeRequest.title }}
-          </div>
-        </q-card-section>
+        <q-card-section v-if="isLoadingTaskReference"
+          ><ContentSkeleton variant="form" /></q-card-section
+        ><template v-else
+          ><q-card-section>
+            <div class="text-h6">{{ t('changeRequests.list.taskReference.title') }}</div>
+            <div class="text-caption q-mt-xs" style="color: var(--text-muted)">
+              {{ t('changeRequests.list.taskReference.subtitle') }}
+            </div>
+            <div
+              class="text-caption q-mt-sm"
+              style="color: var(--text-muted)"
+              v-if="taskReferenceChangeRequest"
+            >
+              {{ taskReferenceChangeRequest.title }}
+            </div>
+          </q-card-section>
 
-        <q-card-section class="q-pt-none">
-          <SelectByTerm
-            :model-value="taskReferenceTaskId"
-            :label="t('changeRequests.list.taskReference.taskLabel')"
-            :options="taskReferenceTaskOptions"
-            :loading="isTaskReferenceLoading"
-            @update:model-value="
-              (value) => {
-                taskReferenceTaskId = typeof value === 'string' ? value : null;
-              }
-            "
-            @search="onTaskReferenceSearch"
-          />
-        </q-card-section>
+          <q-card-section class="q-pt-none">
+            <SelectByTerm
+              :model-value="taskReferenceTaskId"
+              :label="t('changeRequests.list.taskReference.taskLabel')"
+              :options="taskReferenceTaskOptions"
+              :loading="isTaskReferenceLoading"
+              @update:model-value="
+                (value) => {
+                  taskReferenceTaskId = typeof value === 'string' ? value : null;
+                }
+              "
+              @search="onTaskReferenceSearch"
+            />
+          </q-card-section>
 
-        <q-card-actions align="right">
-          <q-btn flat :label="t('common.cancel')" @click="closeTaskReferenceDialog" />
-          <q-btn
-            color="primary"
-            unelevated
-            :label="t('changeRequests.list.taskReference.saveButton')"
-            :loading="isSavingTaskReference"
-            @click="saveTaskReference"
-          />
-        </q-card-actions>
+          <q-card-actions align="right">
+            <q-btn flat :label="t('common.cancel')" @click="closeTaskReferenceDialog" />
+            <q-btn
+              color="primary"
+              unelevated
+              :label="t('changeRequests.list.taskReference.saveButton')"
+              :loading="isSavingTaskReference"
+              @click="saveTaskReference"
+            /> </q-card-actions
+        ></template>
       </q-card>
     </q-dialog>
   </q-page>
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -120,6 +124,7 @@ const { notify, notifyError, confirmDelete, showLoading, hideLoading } = useUI()
 
 const selectedRows = ref<ChangeRequestSummaryDto[]>([]);
 const showTaskReferenceDialog = ref(false);
+const isLoadingTaskReference = ref(false);
 const taskReferenceChangeRequest = ref<ChangeRequestDetailDto | null>(null);
 const taskReferenceTaskId = ref<string | null>(null);
 const isSavingTaskReference = ref(false);
@@ -241,12 +246,14 @@ const onTaskReferenceSearch = (term: string) => {
 };
 
 const openTaskReferenceDialog = async (changeRequestId: string) => {
-  showLoading(t('changeRequests.list.taskReference.loading'));
+  isLoadingTaskReference.value = true;
+  showTaskReferenceDialog.value = true;
 
   try {
     const detail = await ChangeRequestsService.getById(changeRequestId);
 
     if (detail.status !== 'approved') {
+      showTaskReferenceDialog.value = false;
       void router.push(`/change-requests/${changeRequestId}/edit`);
       return;
     }
@@ -262,9 +269,10 @@ const openTaskReferenceDialog = async (changeRequestId: string) => {
 
     showTaskReferenceDialog.value = true;
   } catch (err: unknown) {
+    showTaskReferenceDialog.value = false;
     notifyError(t('changeRequests.list.taskReference.openError'), err);
   } finally {
-    hideLoading();
+    isLoadingTaskReference.value = false;
   }
 };
 

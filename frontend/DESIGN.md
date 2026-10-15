@@ -67,8 +67,8 @@ Presets confirm only after the API succeeds and keep retry dialogs open on error
 
 ## Verification
 
-Use `scripts/with-resource-limits.py` for Linux checks; Cargo defaults to two
-jobs. Check frontend with `npm run lint`, `npx vue-tsc --noEmit -p tsconfig.json`
+Run frontend lint directly. Cargo defaults to one
+job. Check frontend with `npm run lint`, `npx vue-tsc --noEmit -p tsconfig.json`
 and `npm run build`, sequentially. Rust contract tests use `cargo test --locked`.
 Headless `UI_VERIFY=1 node scripts/capture-ui.mjs` verifies appearance, failures,
 contrast and reflow; `UI_VERIFY_FORMS=1` checks drafts, failed presets and real task create/edit (then deletes the temporary task).
@@ -165,3 +165,95 @@ and dynamic UI imports grew 12.09% (25.66 KiB). Total build assets grew 2.19%, w
 no increase in locally bundled fonts. Chart modules remain lazy before login;
 Workbox still precaches them in the background. Sizes, captures, methods and
 limitations are saved under `target/ui-tests/f10/` and root Plans.md.
+
+
+## Acuerdos y control de alcance
+
+Los paneles `ScopeProjectPanel`, `ScopeChangePanel`, `ScopeTaskPanel` y
+`ScopePendingPanel` reutilizan tarjetas, tokens y controles Quasar. La identidad
+del registro precede al acuerdo; el detalle financiero muestra importe exacto,
+moneda conservada, fecha anterior/nueva, factura en borrador y cobro por separado.
+Una evaluación aún no publicada no se presenta como oferta gratuita. Las secciones
+Markdown del acuerdo conservado usan lectura compacta; no reservan el espacio del
+editor. Los antecedentes tienen una advertencia de procedencia histórica.
+
+El portal decide solo cuando su revisión coincide con los términos cargados.
+Un conflicto recarga y exige decisión expresa, con una explicación específica;
+no se reintenta otra oferta automáticamente. Los comentarios se guardan como
+texto con actor/revisión, y su borrador usa la identidad del rol autenticado.
+Al perder conexión, la lectura anterior permanece visible con error y reintento.
+La evidencia browserless de alcance está en `target/scope-tests/screenshots/`:
+recorrido de ambos roles, teclado, claro/oscuro y móvil, sin cuentas reales.
+
+
+## Negociación y documentos del alcance
+
+`ScopeDocumentsEditor` importa Markdown UTF-8 conservando el original, permite
+edición/previsualización y documentos por módulo/requisito. Un principal completo
+permite plegar los cinco resúmenes opcionales. Documentos y archivos distinguen
+anexo incluido y referencia de contexto; los archivos no seleccionados permanecen
+fuera del acuerdo. Los recursos locales o imágenes externas necesitan vincularse
+con anexos conservados antes de publicar. `ScopeDocumentsReader` ofrece índice,
+búsqueda y descarga de original/texto editado. `ScopeRevisionComparison` muestra
+cambios de contenido y también de condiciones, fechas, archivos y trabajo.
+
+El estado global indica la revisión del acuerdo activo; la etiqueta de la revisión
+consultada deriva de su propia aceptación/decisión. El cliente puede solicitar
+ajustes o rechazar con motivo, comentar un documento y solicitar una versión
+anterior. Restaurar prepara otra propuesta con condiciones actuales. La
+confirmación enumera el alcance de la aceptación y avisa del registro de IP;
+una IP del socket no se presenta como identidad ni firma criptográfica.
+
+
+## Internacionalización de los nuevos flujos
+
+Todos los textos de interfaz de alcance, negociación y documentos usan `t()` y
+claves planas en los catálogos existentes `src/i18n/es.ts`, `en.ts` y `pt.ts`.
+Las opciones traducidas se calculan reactivamente para responder al cambio de idioma.
+Los errores del backend pasan por `useUI().resolveErrorMessage`, con claves
+`backendErrors.*`; los mensajes desconocidos usan un fallback localizado.
+Las plantillas automáticas conocidas se traducen al mostrarlas; los documentos y
+evidencias almacenados conservan su texto original.
+
+Ejecutar `npm run test:i18n` para verificar claves, parámetros, interpolación y
+ausencia de textos estáticos en los componentes Scope. La revisión de navegador
+se activa con `UI_VERIFY_SCOPE_I18N=1` en `scripts/capture-ui.mjs` y requiere una
+cuenta ficticia con alcance aceptado y una propuesta pendiente (seed de desarrollo).
+
+## Jerarquía de alcance y carga de contenido
+
+Las cabeceras del sistema se presentan en `ScopeSection`, con icono, superficie
+propia y borde inferior. El Markdown vive dentro del cuerpo de esa sección;
+sus encabezados mantienen su significado documental sin representar controles
+del sistema. Los documentos tienen metadatos, cuerpo y pie de acciones separados.
+El índice usa enlaces con borde, iconos de navegación y foco visible; los enlaces
+Markdown permanecen subrayados. Los detalles de integridad se presentan como
+controles expandibles y las acciones de documento como botones con borde.
+No usar el punto medio como separador en textos de interfaz.
+
+`ContentSkeleton` utiliza QSkeleton en variantes detail, form, table, list,
+dashboard, board y chart. Las cargas de lectura son locales: no bloquean toda la
+pantalla con el overlay global. Los indicadores de botones/acciones se conservan
+para escrituras. Las formas decorativas llevan aria-hidden y el contenedor
+aria-busy con un mensaje localizado; respetan movimiento reducido y los tokens
+de temas. Los esqueletos se retiran en finally, también al fallar la petición.
+
+La revisión `UI_VERIFY_CONTENT_UX=1` de capture-ui simula respuestas lentas y un
+Markdown que empieza por H1 dentro de Exclusiones, sin escribir en PostgreSQL.
+
+
+## Vista previa de adjuntos
+
+`AttachmentPreviewDialog` se abre desde listas, anexos del alcance y enlaces
+locales de archivos del Markdown. Reutiliza MarkdownRenderer/DOMPurify; imágenes
+se muestran como img sin ejecutar SVG como documento; audio/vídeo usan controles
+nativos, sin autoplay y con preload metadata. PDF abre una pestaña nueva. Para
+enlaces PDF sin metadatos y apertura bloqueada por el navegador se ofrece un
+botón explícito. Formatos no admitidos conservan descarga manual.
+
+La lectura usa el endpoint autenticado existente para freelancer/cliente. No
+se hace público ningún archivo. Se abortan solicitudes y reproducción al cerrar
+y se liberan object URLs. La vista previa admite Markdown de hasta 2 MiB e
+imágenes de hasta 20 MiB, comprobando también bytes leídos cuando no hay
+Content-Length; para archivos mayores se mantiene la descarga del original.
+Los textos usan los tres catálogos i18n.

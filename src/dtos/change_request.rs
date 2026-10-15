@@ -254,6 +254,9 @@ pub struct UpdateChangeRequestDto {
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct AssessChangeRequestDto {
+    #[validate(range(min = 1))]
+    pub version: i32,
+    pub target_milestone_id: Option<Uuid>,
     #[validate(length(
         min = 1,
         max = 20000,
@@ -331,6 +334,8 @@ pub struct ClientCancelChangeRequestDto {
 #[derive(Deserialize, Validate, Default, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ClientApproveChangeRequestDto {
+    #[validate(range(min = 1))]
+    pub version: i32,
     #[validate(custom(function = "validate_signature_ip"))]
     pub client_signature_ip: Option<String>,
 }
@@ -338,6 +343,8 @@ pub struct ClientApproveChangeRequestDto {
 #[derive(Deserialize, Validate, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ClientDeclineChangeRequestDto {
+    #[validate(range(min = 1))]
+    pub version: i32,
     pub decline_reason: ChangeRequestDeclineReason,
 }
 
@@ -500,3 +507,10 @@ string_enum!(
         ThoughtItWasIncluded,
     }
 );
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ExpectedVersionDto {
+    #[validate(range(min = 1))]
+    pub version: i32,
+}

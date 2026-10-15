@@ -33,20 +33,20 @@
 
       <div class="portfolio-row__chips">
         <q-chip dense outline color="primary" text-color="primary">
-          {{ row.total_milestones }} · {{ totalMilestonesLabel }}
+          {{ row.total_milestones }} — {{ totalMilestonesLabel }}
         </q-chip>
         <q-chip dense color="positive" text-color="white">
-          {{ row.completed_milestones }} · {{ completedLabel }}
+          {{ row.completed_milestones }} — {{ completedLabel }}
         </q-chip>
         <q-chip dense color="warning" text-color="white">
-          {{ row.upcoming_milestones }} · {{ upcomingLabel }}
+          {{ row.upcoming_milestones }} — {{ upcomingLabel }}
         </q-chip>
         <q-chip
           dense
           :color="row.overdue_milestones > 0 ? 'negative' : 'grey-6'"
           text-color="white"
         >
-          {{ row.overdue_milestones }} · {{ overdueLabel }}
+          {{ row.overdue_milestones }} — {{ overdueLabel }}
         </q-chip>
       </div>
     </div>
@@ -108,11 +108,11 @@ const billingSummary = (row: ClientProjectPortfolioRow) => {
 
   switch (row.billing_type) {
     case 'fixed':
-      return `${billingType} · ${formatAmount(row.currency_type, row.fixed_price)}`;
+      return `${billingType} — ${formatAmount(row.currency_type, row.fixed_price)}`;
     case 'hourly':
-      return `${billingType} · ${formatAmount(row.currency_type, row.hourly_rate)}`;
+      return `${billingType} — ${formatAmount(row.currency_type, row.hourly_rate)}`;
     case 'retainer':
-      return `${billingType} · ${formatAmount(row.currency_type, row.retainer_amount)} · ${props.dayLabel.replace('{day}', String(row.payment_day ?? ''))}`;
+      return `${billingType} — ${formatAmount(row.currency_type, row.retainer_amount)} — ${props.dayLabel.replace('{day}', String(row.payment_day ?? ''))}`;
     default:
       return billingType;
   }
@@ -127,7 +127,7 @@ const nextMilestoneSummary = (row: ClientProjectPortfolioRow) => {
     return row.next_milestone_name;
   }
 
-  return `${row.next_milestone_name} · ${formatDate(row.next_milestone_due_date)}`;
+  return `${row.next_milestone_name} — ${formatDate(row.next_milestone_due_date)}`;
 };
 </script>
 

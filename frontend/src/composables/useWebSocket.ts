@@ -10,6 +10,7 @@ export interface UseWebSocketOptions {
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const { path = '/ws', autoConnect = true, autoReconnect = true } = options;
 
+  let disposed = false;
   const ws = ref<WebSocket | null>(null);
   const isConnected = ref(false);
   const isConnecting = ref(false);
@@ -59,6 +60,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
     await new Promise((resolve) => setTimeout(resolve, delay));
 
+    if (manuallyClosed.value || disposed) return;
     try {
       await connect(1);
       reconnectAttempts.value = 0;
@@ -69,7 +71,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   };
 
   const connect = async (retries = 3): Promise<void> => {
-    if (isConnected.value || isConnecting.value) return;
+    if (disposed || isConnected.value || isConnecting.value) return;
 
     isConnecting.value = true;
     manuallyClosed.value = false;
@@ -77,6 +79,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= retries; attempt++) {
+      if (disposed || manuallyClosed.value) return;
       try {
         const url = getWebSocketUrl();
         ws.value = new WebSocket(url);
@@ -182,7 +185,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     // Kept for compatibility with existing callers.
   };
 
+  const resumePage = (event: PageTransitionEvent) => {
+    if (event.persisted && autoConnect && !disposed) void connect().catch(() => undefined);
+  };
   onMounted(async () => {
+    window.addEventListener('pagehide', disconnect);
+    window.addEventListener('pageshow', resumePage);
     if (!autoConnect) return;
 
     try {
@@ -193,6 +201,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   });
 
   onUnmounted(() => {
+    window.removeEventListener('pagehide', disconnect);
+    window.removeEventListener('pageshow', resumePage);
+    disposed = true;
     disconnect();
   });
 

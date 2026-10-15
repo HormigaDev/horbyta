@@ -1,163 +1,168 @@
 <template>
   <q-page class="form-page q-pa-md">
-    <div class="padding-page">
-      <q-card class="q-mb-md" flat bordered>
-        <q-card-section>
-          <div class="text-h6 flex items-center">
-            <q-icon :name="isNew ? 'add' : 'edit'" size="md" class="q-mr-md" />
-            {{ isNew ? t('payments.form.createTitle') : t('payments.form.editTitle') }}
-          </div>
-          <div class="text-caption text-grey" v-if="!isNew">
-            {{ t('payments.form.editingPrefix', { id: paymentId }) }}
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 col-md-6">
-            <SelectByTerm
-              v-model="form.project_id"
-              :label="t('payments.form.projectLabel')"
-              :options="projectOptions"
-              :loading="isProjectsLoading"
-              :disable="!isNew"
-              @update:model-value="onProjectSelected"
-              @search="onProjectSearch"
-            />
-          </div>
-
-          <div class="col-12 col-md-6">
-            <SelectByTerm
-              v-model="form.invoice_id"
-              :label="t('payments.form.invoiceLabel')"
-              :options="invoiceOptions"
-              :loading="isInvoicesLoading"
-              :disable="!isNew || !form.project_id"
-              @update:model-value="onInvoiceSelected"
-              @search="onInvoiceSearch"
-            />
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 col-md-4">
-            <NumericTextInput
-              v-model="form.amount"
-              :label="t('payments.form.amountLabel')"
-              :decimal-places="4"
-              :disable="!isNew || isAmountLocked"
-              :error="hasAmountError"
-            />
-            <div v-if="hasAmountError" class="text-negative text-caption q-mt-xs">
-              {{ t('payments.form.validation.amountRequired') }}
+    <ContentSkeleton v-if="contentLoading" variant="form" class="loading-page-region" />
+    <template v-else>
+      <div class="padding-page">
+        <q-card class="q-mb-md" flat bordered>
+          <q-card-section>
+            <div class="text-h6 flex items-center">
+              <q-icon :name="isNew ? 'add' : 'edit'" size="md" class="q-mr-md" />
+              {{ isNew ? t('payments.form.createTitle') : t('payments.form.editTitle') }}
             </div>
-          </div>
+            <div class="text-caption text-grey" v-if="!isNew">
+              {{ t('payments.form.editingPrefix', { id: paymentId }) }}
+            </div>
+          </q-card-section>
 
-          <div class="col-12 col-md-4">
-            <q-input
-              v-model="paymentDateDisplay"
-              :mask="dateInputMask"
-              :label="t('payments.form.paymentDateLabel')"
-              dense
-              outlined
-              :disable="!isNew"
-            >
-              <template #append>
-                <q-btn
-                  type="button"
-                  flat
-                  round
-                  dense
-                  icon="event"
-                  v-if="isNew"
-                  :aria-label="t('payments.form.paymentDateLabel')"
-                >
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="paymentDateDisplay" :mask="qDateMask">
-                      <div class="row items-center justify-end">
-                        <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
-                      </div>
-                    </q-date>
-                  </q-popup-proxy>
-                </q-btn>
-              </template>
-            </q-input>
-          </div>
+          <q-card-section class="q-pt-none row q-col-gutter-md">
+            <div class="col-12 col-md-6">
+              <SelectByTerm
+                v-model="form.project_id"
+                :label="t('payments.form.projectLabel')"
+                :options="projectOptions"
+                :loading="isProjectsLoading"
+                :disable="!isNew"
+                @update:model-value="onProjectSelected"
+                @search="onProjectSearch"
+              />
+            </div>
 
-          <div class="col-12 col-md-4">
+            <div class="col-12 col-md-6">
+              <SelectByTerm
+                v-model="form.invoice_id"
+                :label="t('payments.form.invoiceLabel')"
+                :options="invoiceOptions"
+                :loading="isInvoicesLoading"
+                :disable="!isNew || !form.project_id"
+                @update:model-value="onInvoiceSelected"
+                @search="onInvoiceSearch"
+              />
+            </div>
+          </q-card-section>
+
+          <q-card-section class="q-pt-none row q-col-gutter-md">
+            <div class="col-12 col-md-4">
+              <NumericTextInput
+                v-model="form.amount"
+                :label="t('payments.form.amountLabel')"
+                :decimal-places="4"
+                :disable="!isNew || isAmountLocked"
+                :error="hasAmountError"
+              />
+              <div v-if="hasAmountError" class="text-negative text-caption q-mt-xs">
+                {{ t('payments.form.validation.amountRequired') }}
+              </div>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <q-input
+                v-model="paymentDateDisplay"
+                :mask="dateInputMask"
+                :label="t('payments.form.paymentDateLabel')"
+                dense
+                outlined
+                :disable="!isNew"
+              >
+                <template #append>
+                  <q-btn
+                    type="button"
+                    flat
+                    round
+                    dense
+                    icon="event"
+                    v-if="isNew"
+                    :aria-label="t('payments.form.paymentDateLabel')"
+                  >
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date v-model="paymentDateDisplay" :mask="qDateMask">
+                        <div class="row items-center justify-end">
+                          <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-btn>
+                </template>
+              </q-input>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <q-input
+                v-model="form.currency_type"
+                :label="t('payments.form.currencyLabel')"
+                dense
+                outlined
+                readonly
+                :disable="true"
+              />
+            </div>
+          </q-card-section>
+
+          <q-card-section class="q-pt-none row q-col-gutter-md">
+            <div class="col-12 col-md-6">
+              <q-input
+                v-model="form.payment_method"
+                :label="t('payments.form.paymentMethodLabel')"
+                dense
+                outlined
+                maxlength="50"
+              />
+            </div>
+
+            <div class="col-12 col-md-6">
+              <q-input
+                v-model="form.reference_code"
+                :label="t('payments.form.referenceCodeLabel')"
+                dense
+                outlined
+                maxlength="255"
+              />
+            </div>
+          </q-card-section>
+
+          <q-card-section class="q-pt-none">
             <q-input
-              v-model="form.currency_type"
-              :label="t('payments.form.currencyLabel')"
-              dense
+              v-model="form.notes"
+              type="textarea"
+              :label="t('payments.form.notesLabel')"
+              :hint="t('payments.form.notesHint')"
               outlined
-              readonly
-              :disable="true"
+              dense
+              rows="4"
+              :maxlength="5000"
             />
-          </div>
-        </q-card-section>
+          </q-card-section>
+        </q-card>
 
-        <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 col-md-6">
-            <q-input
-              v-model="form.payment_method"
-              :label="t('payments.form.paymentMethodLabel')"
-              dense
-              outlined
-              maxlength="50"
-            />
-          </div>
-
-          <div class="col-12 col-md-6">
-            <q-input
-              v-model="form.reference_code"
-              :label="t('payments.form.referenceCodeLabel')"
-              dense
-              outlined
-              maxlength="255"
-            />
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none">
-          <q-input
-            v-model="form.notes"
-            type="textarea"
-            :label="t('payments.form.notesLabel')"
-            :hint="t('payments.form.notesHint')"
-            outlined
-            dense
-            rows="4"
-            :maxlength="5000"
+        <div class="row justify-end q-gutter-sm form-actions">
+          <q-btn
+            flat
+            round
+            icon="push_pin"
+            :aria-label="t('common.keepFormOpen')"
+            :color="pinButtonColor"
+            :aria-pressed="stayOnFormAfterSave"
+            @click="stayOnFormAfterSave = !stayOnFormAfterSave"
+          >
+            <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+          </q-btn>
+          <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
+          <q-btn
+            :label="t('payments.form.saveButton')"
+            color="primary"
+            unelevated
+            :loading="isSubmitting"
+            :disable="!canSave"
+            @click.stop="savePayment"
           />
-        </q-card-section>
-      </q-card>
-
-      <div class="row justify-end q-gutter-sm form-actions">
-        <q-btn
-          flat
-          round
-          icon="push_pin"
-          :aria-label="t('common.keepFormOpen')"
-          :color="pinButtonColor"
-          :aria-pressed="stayOnFormAfterSave"
-          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
-        >
-          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
-        </q-btn>
-        <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
-        <q-btn
-          :label="t('payments.form.saveButton')"
-          color="primary"
-          unelevated
-          :loading="isSubmitting"
-          :disable="!canSave"
-          @click.stop="savePayment"
-        />
+        </div>
       </div>
-    </div>
+    </template>
   </q-page>
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
+const contentLoading = ref(true);
 import { useFormSession } from 'src/composables/useFormSession';
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -318,9 +323,12 @@ const onProjectSelected = async (projectId: string | string[] | null) => {
 };
 
 const loadPayment = async () => {
-  if (isNew.value) return;
+  if (isNew.value) {
+    contentLoading.value = false;
+    return;
+  }
 
-  showLoading(t('payments.form.loading'));
+  contentLoading.value = true;
   try {
     const data = await PaymentsService.getById(paymentId.value);
 
@@ -353,7 +361,7 @@ const loadPayment = async () => {
     notifyError(t('payments.form.loadError'), err);
     void router.push('/payments');
   } finally {
-    hideLoading();
+    contentLoading.value = false;
   }
 };
 

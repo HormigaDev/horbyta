@@ -43,7 +43,7 @@
               <q-item-label class="text-weight-medium ellipsis">{{ task.title }}</q-item-label>
               <q-item-label caption>
                 {{ normalizeId(BigInt(task.record_number)) }}
-                <span v-if="task.project_name"> · {{ task.project_name }}</span>
+                <span v-if="task.project_name"> — {{ task.project_name }}</span>
               </q-item-label>
             </q-item-section>
 

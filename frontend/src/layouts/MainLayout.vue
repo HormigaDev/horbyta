@@ -581,7 +581,9 @@
     </q-drawer>
 
     <q-page-container>
-      <router-view />
+      <router-view v-slot="{ Component, route: viewRoute }"
+        ><component :is="Component" :key="viewRoute.path"
+      /></router-view>
     </q-page-container>
 
     <q-dialog v-model="notificationsCenterOpen" maximized persistent>
@@ -666,8 +668,8 @@
                   <q-item-label class="text-weight-medium">{{
                     notif.title || notif.message
                   }}</q-item-label>
-                  <q-item-label lines="2" caption>
-                    {{ notif.body || notif.message }}
+                  <q-item-label v-if="notificationPreview(notif)" lines="2" caption>
+                    {{ notificationPreview(notif) }}
                   </q-item-label>
                   <q-item-label caption class="q-mt-xs">{{
                     formatNotificationDate(notif.createdAt)
@@ -700,8 +702,8 @@
                 <q-item-label class="text-weight-medium">{{
                   notif.title || notif.message
                 }}</q-item-label>
-                <q-item-label lines="2" caption>
-                  {{ notif.body || notif.message }}
+                <q-item-label v-if="notificationPreview(notif)" lines="2" caption>
+                  {{ notificationPreview(notif) }}
                 </q-item-label>
                 <q-item-label caption class="q-mt-xs">{{
                   formatNotificationDate(notif.createdAt)
@@ -771,7 +773,11 @@
 
         <q-card-actions align="right">
           <q-btn
-            v-if="selectedNotification?.payload"
+            v-if="
+              selectedNotification?.payload &&
+              (getPayloadRoute(selectedNotification.payload) ||
+                selectedNotification.type === 'negative')
+            "
             flat
             color="primary"
             :label="t('common.details')"
@@ -800,8 +806,10 @@ import { useNotificationsStore, type AsyncNotificationEvent } from 'src/stores/n
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { useUI } from 'src/composables/useUI';
 import { useWebSocket } from 'src/composables/useWebSocket';
+import { useScopeRealtime, isScopeConversationFocused } from 'src/composables/useScopeRealtime';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { AppNotification } from 'src/types/ui';
+import { scopeNotificationTarget, notificationPreview } from 'src/utils/notificationNavigation';
 import { apiFetch } from 'src/boot/fetch';
 import TaskSearchComponent from 'src/components/TaskSearchComponent.vue';
 
@@ -841,6 +849,7 @@ const notificationsStore = useNotificationsStore();
 const userPreferencesStore = useUserPreferencesStore();
 const { showErrorDialog } = useUI();
 const websocket = useWebSocket();
+useScopeRealtime(false, websocket);
 const isAdmin = computed(() => authStore.user?.role === 'admin');
 
 interface NotificationGroup {
@@ -876,7 +885,12 @@ websocket.on('notification', (data: unknown) => {
   const event = localizeAsyncNotificationEvent(data);
   const notification = notificationsStore.addAsyncNotificationFromEvent(event);
 
-  if (!event.silent) {
+  const target = scopeNotificationTarget(event.payload);
+  const readingConversation =
+    target &&
+    isScopeConversationFocused(target.project, target.revision, target.change ?? undefined);
+
+  if (!event.silent && !readingConversation) {
     const notifyOptions: QNotifyCreateOptions = {
       message: notification.title || notification.message,
       type: notification.type,
@@ -885,12 +899,36 @@ websocket.on('notification', (data: unknown) => {
       actions: [{ icon: 'close', color: 'white', round: true, size: 'sm' }],
     };
 
-    if (notification.body) {
-      notifyOptions.caption = notification.body;
-    }
+    const preview = notificationPreview(notification);
+    if (preview) notifyOptions.caption = preview;
+    if (target)
+      notifyOptions.actions = [
+        {
+          label: t('scope.openConversation'),
+          handler: () => handleNotificationClick(notification),
+        },
+      ];
 
     $q.notify(notifyOptions);
   }
+});
+
+websocket.on('scope.conversation.updated', (data: unknown) => {
+  if (!data || typeof data !== 'object') return;
+  const event = data as {
+    kind?: string;
+    actor_kind?: string;
+    unread_count?: number;
+    read_ids?: string[];
+  };
+  if (event.kind !== 'read' || event.actor_kind !== 'professional') return;
+  const ids = new Set(event.read_ids ?? []);
+  for (const notice of notificationsStore.asyncNotifications) {
+    if (notice.backendId && ids.has(notice.backendId) && !notice.read)
+      notificationsStore.markAsRead(notice.id);
+  }
+  if (typeof event.unread_count === 'number')
+    notificationsStore.setAsyncUnreadCount(event.unread_count);
 });
 
 websocket.on('notification.unread_count', (data: unknown) => {
@@ -985,7 +1023,32 @@ function formatNotificationDate(rawDate: string) {
 }
 
 function handleNotificationClick(notif: AppNotification) {
-  markNotificationAsRead(notif);
+  const target = scopeNotificationTarget(notif.payload);
+  if (!target) markNotificationAsRead(notif);
+  if (target) {
+    notificationDetailsOpen.value = false;
+    notificationsCenterOpen.value = false;
+    void router.push({
+      path: target.change ? `/change-requests/${target.change}` : `/projects/${target.project}`,
+      query: {
+        conversation: '1',
+        revision: String(target.revision),
+        ...(target.message
+          ? { message: target.message }
+          : notif.backendId
+            ? { notification: notif.backendId }
+            : {}),
+        focus: String(Date.now()),
+      },
+    });
+    return;
+  }
+  const route = getPayloadRoute(notif.payload);
+  if (route) {
+    notificationsCenterOpen.value = false;
+    void router.push(route);
+    return;
+  }
 
   if (notif.body && notif.body.trim().length > 0) {
     selectedNotification.value = notif;
@@ -993,7 +1056,7 @@ function handleNotificationClick(notif: AppNotification) {
     return;
   }
 
-  if (notif.payload) {
+  if (notif.type === 'negative' && notif.payload) {
     showErrorDialog(notif.payload);
   }
 }
@@ -1003,6 +1066,10 @@ function openSelectedNotificationPayload() {
     return;
   }
 
+  if (scopeNotificationTarget(selectedNotification.value.payload)) {
+    handleNotificationClick(selectedNotification.value);
+    return;
+  }
   const route = getPayloadRoute(selectedNotification.value.payload);
   if (route) {
     notificationDetailsOpen.value = false;
@@ -1011,7 +1078,8 @@ function openSelectedNotificationPayload() {
     return;
   }
 
-  showErrorDialog(selectedNotification.value.payload);
+  if (selectedNotification.value.type === 'negative')
+    showErrorDialog(selectedNotification.value.payload);
 }
 
 function markNotificationAsRead(notif: AppNotification) {

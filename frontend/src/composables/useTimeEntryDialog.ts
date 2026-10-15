@@ -32,6 +32,7 @@ export function useTimeEntryDialog(options: {
   const activeTimerEntry = ref<TimeEntryDetailDto | null>(null);
   const editingOriginalEntry = ref<{ work_date: string; duration_minutes: number } | null>(null);
   const isTimeEntryDialogOpen = ref(false);
+  const isLoadingTimeEntry = ref(false);
   const isSavingTimeEntry = ref(false);
   const timeEntryDialogMode = ref<'manual' | 'timer_start' | 'edit' | 'view'>('manual');
   const editingTimeEntryId = ref<string | null>(null);
@@ -68,13 +69,15 @@ export function useTimeEntryDialog(options: {
 
   const timeEntryDialogTitle = computed(() => {
     if (timeEntryDialogMode.value === 'manual') return t('tasks.timeEntries.dialog.manualTitle');
-    if (timeEntryDialogMode.value === 'timer_start') return t('tasks.timeEntries.dialog.timerTitle');
+    if (timeEntryDialogMode.value === 'timer_start')
+      return t('tasks.timeEntries.dialog.timerTitle');
     if (timeEntryDialogMode.value === 'edit') return t('tasks.timeEntries.dialog.editTitle');
     return t('tasks.timeEntries.dialog.viewTitle');
   });
 
   const timeEntryDialogSubmitLabel = computed(() => {
-    if (timeEntryDialogMode.value === 'manual') return t('tasks.timeEntries.dialog.saveManualAction');
+    if (timeEntryDialogMode.value === 'manual')
+      return t('tasks.timeEntries.dialog.saveManualAction');
     if (timeEntryDialogMode.value === 'edit') return t('tasks.timeEntries.dialog.saveEditAction');
     return t('tasks.timeEntries.dialog.startTimerAction');
   });
@@ -122,10 +125,13 @@ export function useTimeEntryDialog(options: {
 
   const openEditDialog = async (ids: string[]) => {
     if (!ids[0]) return;
-    showLoading(t('tasks.timeEntries.loadError'));
+    isLoadingTimeEntry.value = true;
+    isTimeEntryDialogOpen.value = true;
+    resetTimeEntryForm();
     try {
       const entry = await TimeEntriesService.getById(ids[0]);
       if (entry.start_time && !entry.end_time) {
+        isTimeEntryDialogOpen.value = false;
         notify(t('tasks.timeEntries.dialog.validation.activeTimerEdit'), 'warning');
         return;
       }
@@ -148,14 +154,17 @@ export function useTimeEntryDialog(options: {
       await loadActivitiesByTerm('');
       isTimeEntryDialogOpen.value = true;
     } catch (err) {
+      isTimeEntryDialogOpen.value = false;
       notifyError(t('tasks.timeEntries.loadError'), err);
     } finally {
-      hideLoading();
+      isLoadingTimeEntry.value = false;
     }
   };
 
   const openViewDialog = async (id: string) => {
-    showLoading(t('tasks.timeEntries.loadError'));
+    isLoadingTimeEntry.value = true;
+    isTimeEntryDialogOpen.value = true;
+    resetTimeEntryForm();
     try {
       const entry = await TimeEntriesService.getById(id);
       timeEntryDialogMode.value = 'view';
@@ -170,9 +179,10 @@ export function useTimeEntryDialog(options: {
       timeEntryForm.applied_rate = entry.applied_rate || '';
       isTimeEntryDialogOpen.value = true;
     } catch (err) {
+      isTimeEntryDialogOpen.value = false;
       notifyError(t('tasks.timeEntries.loadError'), err);
     } finally {
-      hideLoading();
+      isLoadingTimeEntry.value = false;
     }
   };
 
@@ -285,6 +295,7 @@ export function useTimeEntryDialog(options: {
 
   return {
     isTimeEntryDialogOpen,
+    isLoadingTimeEntry,
     isSavingTimeEntry,
     timeEntryDialogMode,
     timeEntryForm,

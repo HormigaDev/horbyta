@@ -16,3 +16,6 @@ Thumbs.db
 Plans.md
 
 sweep.timestamp
+
+.harness-mem/
+.claude/state/

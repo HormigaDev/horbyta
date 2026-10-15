@@ -17,12 +17,13 @@ const types = {
   ".woff2": "font/woff2",
   ".ico": "image/x-icon",
 };
+const apiPort = Number(process.env.UI_API_PORT || 8890);
 const server = createServer(async (req, res) => {
   if (req.url.startsWith("/api/")) {
     const upstream = proxyRequest(
       {
         hostname: "127.0.0.1",
-        port: 8890,
+        port: apiPort,
         path: req.url,
         method: req.method,
         headers: req.headers,
@@ -56,11 +57,12 @@ const server = createServer(async (req, res) => {
       }
       file = resolve(root, "index.html");
     }
+    const bytes = await readFile(file);
     res.writeHead(200, {
       "Content-Type": types[extname(file)] || "application/octet-stream",
       "Cache-Control": "no-cache",
     });
-    res.end(await readFile(file));
+    res.end(bytes);
   } catch {
     res.writeHead(500);
     res.end("Build preview error");
@@ -71,21 +73,27 @@ server.on("upgrade", (req, socket, head) => {
     socket.destroy();
     return;
   }
-  const upstream = createConnection({ host: "127.0.0.1", port: 8890 }, () => {
-    const headers = Object.entries(req.headers).flatMap(([name, value]) =>
-      Array.isArray(value)
-        ? value.map((v) => `${name}: ${v}`)
-        : [`${name}: ${value}`],
-    );
-    upstream.write(
-      `${req.method} ${req.url} HTTP/${req.httpVersion}\r\n${headers.join("\r\n")}\r\n\r\n`,
-    );
-    if (head.length) upstream.write(head);
-    socket.pipe(upstream);
-    upstream.pipe(socket);
-  });
+  const upstream = createConnection(
+    { host: "127.0.0.1", port: apiPort },
+    () => {
+      const headers = Object.entries(req.headers).flatMap(([name, value]) =>
+        Array.isArray(value)
+          ? value.map((v) => `${name}: ${v}`)
+          : [`${name}: ${value}`],
+      );
+      upstream.write(
+        `${req.method} ${req.url} HTTP/${req.httpVersion}\r\n${headers.join("\r\n")}\r\n\r\n`,
+      );
+      if (head.length) upstream.write(head);
+      socket.pipe(upstream);
+      upstream.pipe(socket);
+    },
+  );
   upstream.on("error", () => socket.destroy());
+  upstream.on("end", () => socket.end());
+  upstream.on("close", () => socket.destroy());
   socket.on("error", () => upstream.destroy());
+  socket.on("end", () => upstream.end());
   socket.on("close", () => upstream.destroy());
 });
 server.listen(port, "127.0.0.1", () =>

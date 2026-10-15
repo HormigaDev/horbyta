@@ -20,9 +20,7 @@
       self="top left"
     >
       <q-list style="min-width: 300px">
-        <q-item v-if="loading">
-          <q-item-section>{{ $t('common.searching') }}</q-item-section>
-        </q-item>
+        <ContentSkeleton v-if="loading" variant="list" :rows="3" />
 
         <q-item
           v-for="(task, index) in results"
@@ -53,6 +51,7 @@
   </q-input>
 </template>
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
 import { TasksService } from 'src/services/tasks';
 import { ref, useId } from 'vue';
 import type { Filter, TaskSummaryDto } from 'src/types';

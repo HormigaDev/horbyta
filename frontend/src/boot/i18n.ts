@@ -1,5 +1,6 @@
 import { defineBoot } from '#q-app/wrappers';
 import { createI18n } from 'vue-i18n';
+import { watch } from 'vue';
 
 import { messages as esMessages } from 'src/i18n/es';
 import { messages as enMessages } from 'src/i18n/en';
@@ -38,5 +39,9 @@ export default defineBoot(({ app }) => {
     applyQuasarLang(normalizedLang);
   };
 
-  applyQuasarLang(savedLocale);
+  watch(i18n.global.locale, (lang) => {
+    const normalized = isSupportedLocale(lang) ? lang : LOCALE_FALLBACK;
+    document.documentElement.lang = normalized === 'pt' ? 'pt-BR' : normalized;
+    applyQuasarLang(normalized);
+  }, { immediate: true, flush: 'sync' });
 });

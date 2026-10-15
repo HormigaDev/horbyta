@@ -58,6 +58,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useUI } from 'src/composables/useUI';
+import { openAttachmentPreview } from 'src/services/attachmentPreview';
 import { AttachmentsService } from 'src/services/attachments';
 import AttachmentItemsList from 'src/components/AttachmentItemsList.vue';
 import type { QueryPayload } from 'src/types/query';
@@ -94,7 +95,8 @@ const attachmentTotalPages = computed(() =>
 );
 
 const openAttachment = (attachmentId: string) => {
-  window.open(AttachmentsService.buildRawUrl(attachmentId), '_blank', 'noopener');
+  const attachment = attachmentItems.value.find((item) => item.id === attachmentId);
+  if (attachment) openAttachmentPreview(attachment);
 };
 
 const fetchAttachments = async () => {

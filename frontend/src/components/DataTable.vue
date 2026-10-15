@@ -3,13 +3,14 @@
     <q-table
       separator="horizontal"
       :title="title"
-      :rows="rows"
+      :rows="loading ? [] : rows"
       :columns="effectiveColumns"
       :row-key="rowKey"
       v-model:pagination="pagination"
       v-model:selected="selected"
       :selection="selectionMode"
       :loading="loading"
+      :hide-bottom="loading"
       :rows-per-page-options="[5, 10, 20, 50, 100]"
       table-class="dt-fixed-layout"
       :visible-columns="visibleColumns"
@@ -32,6 +33,9 @@
       flat
       square
     >
+      <template #loading
+        ><span class="sr-only">{{ t('datatable.loading') }}</span></template
+      >
       <template #top="_props">
         <div class="row full-width items-center q-pb-sm">
           <div class="col-xs-12 col-sm text-h5 text-weight-bold flex items-center" v-if="title">
@@ -303,6 +307,14 @@
         </q-tr>
       </template>
 
+      <template #top-row="table">
+        <q-tr v-if="loading" class="table-loading-row">
+          <q-td :colspan="table.cols.length + (selectionMode === 'none' ? 0 : 1)">
+            <ContentSkeleton variant="table" />
+          </q-td>
+        </q-tr>
+      </template>
+
       <template #body-selection="cell"
         ><q-checkbox
           v-model="cell.selected"
@@ -382,7 +394,6 @@
             @click="onCreate"
           />
         </EmptyState>
-        <div v-else class="full-width q-pa-lg" role="status">{{ t('datatable.loading') }}</div>
       </template>
 
       <template v-for="(_, slotName) in $slots" #[slotName]="slotProps" :key="slotName">
@@ -445,6 +456,7 @@
 </template>
 
 <script setup lang="ts" generic="T extends object">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
 import EmptyState from 'src/components/EmptyState.vue';
 import { useThemeStore } from 'src/stores/theme';
 import { ref, onMounted, watch, computed } from 'vue';
@@ -921,6 +933,11 @@ const onDelete = () => {
 </script>
 
 <style lang="scss">
+.table-loading-row > td {
+  height: auto;
+  padding: 8px 16px;
+}
+
 .data-table-wrapper {
   background-color: var(--card-bg) !important;
   border-color: var(--border-color) !important;

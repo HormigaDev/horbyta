@@ -1,112 +1,117 @@
 <template>
   <q-page class="form-page q-pa-md">
-    <div>
-      <q-card class="q-mb-md" flat bordered>
-        <q-card-section>
-          <h1 class="text-h6 q-ma-none">
-            {{
-              isNew
-                ? t('client.changeRequests.form.createTitle')
-                : t('client.changeRequests.form.editTitle')
-            }}
-          </h1>
-          <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
-            {{ t('changeRequests.form.versionLabel') }} · {{ form.version }}
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 col-md-4">
-            <SelectByTerm
-              v-model="form.project_id"
-              :label="t('client.changeRequests.form.projectLabel')"
-              :options="projectOptions"
-              :loading="isProjectsLoading"
-              :disable="isSubmitting || !isNew"
-              @search="onProjectSearch"
-            />
-            <div v-if="hasProjectError" class="text-negative text-caption q-mt-xs">
-              {{ t('client.changeRequests.form.projectLabel') }}
+    <ContentSkeleton v-if="contentLoading" variant="form" class="loading-page-region" />
+    <template v-else>
+      <div>
+        <q-card class="q-mb-md" flat bordered>
+          <q-card-section>
+            <h1 class="text-h6 q-ma-none">
+              {{
+                isNew
+                  ? t('client.changeRequests.form.createTitle')
+                  : t('client.changeRequests.form.editTitle')
+              }}
+            </h1>
+            <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
+              {{ t('changeRequests.form.versionLabel') }} — {{ form.version }}
             </div>
-          </div>
+          </q-card-section>
 
-          <div class="col-12 col-md-8">
-            <q-input
-              v-model="form.title"
-              :label="t('client.changeRequests.form.titleLabel')"
-              outlined
-              dense
-              :disable="isSubmitting || isLocked"
-              :error="hasTitleError"
-            />
-          </div>
-        </q-card-section>
-
-        <q-card-section v-if="isLocked" class="q-pt-none">
-          <q-banner class="request-readonly-note">
-            {{ t('ui.requestLocked') }}
-          </q-banner>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat bordered class="q-mb-md">
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-sm">
-            {{ t('client.changeRequests.form.clientRequestTitle') }}
-          </div>
-          <div class="row q-col-gutter-md" style="min-height: 42vh">
-            <div :class="isLocked ? 'col-12' : 'col-12 col-md-6'">
-              <MarkdownRenderer v-model="clientRequestMarkdown" :edit-mode="!isLocked" />
-              <div v-if="hasClientRequestError" class="text-negative text-caption q-mt-xs">
-                {{ t('client.changeRequests.form.clientRequestTitle') }}
+          <q-card-section class="q-pt-none row q-col-gutter-md">
+            <div class="col-12 col-md-4">
+              <SelectByTerm
+                v-model="form.project_id"
+                :label="t('client.changeRequests.form.projectLabel')"
+                :options="projectOptions"
+                :loading="isProjectsLoading"
+                :disable="isSubmitting || !isNew"
+                @search="onProjectSearch"
+              />
+              <div v-if="hasProjectError" class="text-negative text-caption q-mt-xs">
+                {{ t('client.changeRequests.form.projectLabel') }}
               </div>
             </div>
 
-            <div
-              v-if="!isLocked"
-              class="col-12 col-md-6"
-              style="display: flex; flex-direction: column"
-            >
-              <div
-                class="bordered rounded-borders q-pa-md full-height"
-                style="
-                  border: 1px solid var(--border-color);
-                  background-color: var(--card-bg);
-                  overflow-y: auto;
-                  flex-grow: 1;
-                "
-              >
-                <div class="text-caption q-mb-sm" style="color: var(--text-muted)">
-                  {{ t('client.changeRequests.form.markdownPreview') }}
+            <div class="col-12 col-md-8">
+              <q-input
+                v-model="form.title"
+                :label="t('client.changeRequests.form.titleLabel')"
+                outlined
+                dense
+                :disable="isSubmitting || isLocked"
+                :error="hasTitleError"
+              />
+            </div>
+          </q-card-section>
+
+          <q-card-section v-if="isLocked" class="q-pt-none">
+            <q-banner class="request-readonly-note">
+              {{ t('ui.requestLocked') }}
+            </q-banner>
+          </q-card-section>
+        </q-card>
+
+        <q-card flat bordered class="q-mb-md">
+          <q-card-section>
+            <div class="text-subtitle1 q-mb-sm">
+              {{ t('client.changeRequests.form.clientRequestTitle') }}
+            </div>
+            <div class="row q-col-gutter-md" style="min-height: 42vh">
+              <div :class="isLocked ? 'col-12' : 'col-12 col-md-6'">
+                <MarkdownRenderer v-model="clientRequestMarkdown" :edit-mode="!isLocked" />
+                <div v-if="hasClientRequestError" class="text-negative text-caption q-mt-xs">
+                  {{ t('client.changeRequests.form.clientRequestTitle') }}
                 </div>
-                <MarkdownRenderer
-                  :model-value="
-                    form.client_request_description ||
-                    t('client.changeRequests.form.emptyClientRequest')
+              </div>
+
+              <div
+                v-if="!isLocked"
+                class="col-12 col-md-6"
+                style="display: flex; flex-direction: column"
+              >
+                <div
+                  class="bordered rounded-borders q-pa-md full-height"
+                  style="
+                    border: 1px solid var(--border-color);
+                    background-color: var(--card-bg);
+                    overflow-y: auto;
+                    flex-grow: 1;
                   "
-                />
+                >
+                  <div class="text-caption q-mb-sm" style="color: var(--text-muted)">
+                    {{ t('client.changeRequests.form.markdownPreview') }}
+                  </div>
+                  <MarkdownRenderer
+                    :model-value="
+                      form.client_request_description ||
+                      t('client.changeRequests.form.emptyClientRequest')
+                    "
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        </q-card-section>
-      </q-card>
+          </q-card-section>
+        </q-card>
 
-      <div class="row justify-end q-gutter-sm form-actions">
-        <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
-        <q-btn
-          v-if="!isLocked"
-          :label="t('client.changeRequests.form.saveButton')"
-          color="primary"
-          unelevated
-          :loading="isSubmitting"
-          @click.stop="saveChangeRequest"
-        />
+        <div class="row justify-end q-gutter-sm form-actions">
+          <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
+          <q-btn
+            v-if="!isLocked"
+            :label="t('client.changeRequests.form.saveButton')"
+            color="primary"
+            unelevated
+            :loading="isSubmitting"
+            @click.stop="saveChangeRequest"
+          />
+        </div>
       </div>
-    </div>
+    </template>
   </q-page>
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
+const contentLoading = ref(true);
 import { useFormSession } from 'src/composables/useFormSession';
 import { useClientAuthStore } from 'src/stores/clientAuth';
 import { computed, onMounted, reactive, ref } from 'vue';
@@ -210,9 +215,12 @@ const ensureProjectOption = async (projectId: string) => {
 };
 
 const loadChangeRequest = async () => {
-  if (isNew.value) return;
+  if (isNew.value) {
+    contentLoading.value = false;
+    return;
+  }
 
-  showLoading(t('client.changeRequests.form.loading'));
+  contentLoading.value = true;
   try {
     const detail = await ClientChangeRequestsService.getById(changeRequestId.value);
 
@@ -228,7 +236,7 @@ const loadChangeRequest = async () => {
     notifyError(t('client.changeRequests.form.loadError'), err);
     void router.push('/client/change-requests');
   } finally {
-    hideLoading();
+    contentLoading.value = false;
   }
 };
 

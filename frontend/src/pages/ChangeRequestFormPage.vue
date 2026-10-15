@@ -1,187 +1,194 @@
 <template>
   <q-page class="form-page q-pa-md">
-    <div class="padding-page">
-      <q-card class="q-mb-md" flat bordered>
-        <q-card-section>
-          <div class="text-h6 flex items-center">
-            <q-icon :name="isNew ? 'add' : 'edit'" size="md" class="q-mr-md" />
-            {{ isNew ? t('changeRequests.form.createTitle') : t('changeRequests.form.editTitle') }}
-          </div>
-          <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
-            {{ t('changeRequests.form.editingPrefix', { id: changeRequestId }) }}
-          </div>
-          <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
-            {{ t('changeRequests.form.versionLabel', { version: form.version }) }}
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 col-md-3">
-            <SelectByTerm
-              v-model="form.project_id"
-              :label="t('changeRequests.form.projectLabel')"
-              :options="projectOptions"
-              :loading="isProjectsLoading"
-              :disable="isReadOnlyForm"
-              @search="onProjectSearch"
-            />
-            <div v-if="hasProjectError" class="text-negative text-caption q-mt-xs">
-              {{ t('changeRequests.form.projectLabel') }}
+    <ContentSkeleton v-if="contentLoading" variant="form" class="loading-page-region" />
+    <template v-else>
+      <div class="padding-page">
+        <q-card class="q-mb-md" flat bordered>
+          <q-card-section>
+            <div class="text-h6 flex items-center">
+              <q-icon :name="isNew ? 'add' : 'edit'" size="md" class="q-mr-md" />
+              {{
+                isNew ? t('changeRequests.form.createTitle') : t('changeRequests.form.editTitle')
+              }}
             </div>
-          </div>
-
-          <div class="col-12 col-md-3">
-            <SelectByTerm
-              v-model="form.client_id"
-              :label="t('changeRequests.form.clientLabel')"
-              :options="clientOptions"
-              :loading="isClientsLoading"
-              :disable="isReadOnlyForm"
-              @search="onClientSearch"
-            />
-            <div v-if="hasClientError" class="text-negative text-caption q-mt-xs">
-              {{ t('changeRequests.form.clientLabel') }}
+            <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
+              {{ t('changeRequests.form.editingPrefix', { id: changeRequestId }) }}
             </div>
-          </div>
+            <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
+              {{ t('changeRequests.form.versionLabel', { version: form.version }) }}
+            </div>
+          </q-card-section>
 
-          <div class="col-12 col-md-3">
-            <SelectByTerm
-              v-model="form.task_id"
-              :label="t('changeRequests.form.taskLabel')"
-              :options="taskOptions"
-              :loading="isTasksLoading"
-              :disable="isSubmitting || isFormLocked || !form.project_id"
-              @search="onTaskSearch"
+          <q-card-section class="q-pt-none row q-col-gutter-md">
+            <div class="col-12 col-md-3">
+              <SelectByTerm
+                v-model="form.project_id"
+                :label="t('changeRequests.form.projectLabel')"
+                :options="projectOptions"
+                :loading="isProjectsLoading"
+                :disable="isReadOnlyForm"
+                @search="onProjectSearch"
+              />
+              <div v-if="hasProjectError" class="text-negative text-caption q-mt-xs">
+                {{ t('changeRequests.form.projectLabel') }}
+              </div>
+            </div>
+
+            <div class="col-12 col-md-3">
+              <SelectByTerm
+                v-model="form.client_id"
+                :label="t('changeRequests.form.clientLabel')"
+                :options="clientOptions"
+                :loading="isClientsLoading"
+                :disable="isReadOnlyForm"
+                @search="onClientSearch"
+              />
+              <div v-if="hasClientError" class="text-negative text-caption q-mt-xs">
+                {{ t('changeRequests.form.clientLabel') }}
+              </div>
+            </div>
+
+            <div class="col-12 col-md-3">
+              <SelectByTerm
+                v-model="form.task_id"
+                :label="t('changeRequests.form.taskLabel')"
+                :options="taskOptions"
+                :loading="isTasksLoading"
+                :disable="isSubmitting || isFormLocked || !form.project_id"
+                @search="onTaskSearch"
+              />
+            </div>
+
+            <div class="col-12 col-md-3">
+              <q-input
+                v-model="form.title"
+                :label="t('changeRequests.form.titleLabel')"
+                outlined
+                dense
+                :disable="isReadOnlyForm"
+                :error="hasTitleError"
+              />
+            </div>
+          </q-card-section>
+
+          <q-card-section v-if="isFormLocked || isTaskOnlyMode" class="q-pt-none">
+            <q-banner
+              v-if="isFormLocked"
+              class="text-warning"
+              style="border: 1px solid var(--border-color)"
+            >
+              {{ t('changeRequests.form.specReadonlyClientOrigin') }}
+            </q-banner>
+
+            <q-banner
+              v-if="isTaskOnlyMode"
+              class="q-mt-sm text-primary"
+              style="border: 1px solid var(--border-color)"
+            >
+              {{ t('changeRequests.form.approvedTaskOnly') }}
+            </q-banner>
+          </q-card-section>
+        </q-card>
+
+        <q-card flat bordered class="q-mb-md">
+          <q-card-section>
+            <div class="text-subtitle1 q-mb-sm">
+              {{ t('changeRequests.form.clientRequestTitle') }}
+            </div>
+            <MarkdownRenderer
+              ref="clientRequestMarkdownRef"
+              v-model="clientRequestMarkdown"
+              v-model:pending-files="clientRequestMarkdownFiles"
+              :edit-mode="!isReadOnlyForm"
+              :enable-preview-toggle="true"
+              enable-attachments
             />
-          </div>
+            <div v-if="hasClientRequestError" class="text-negative text-caption q-mt-xs">
+              {{ t('changeRequests.form.clientRequestTitle') }}
+            </div>
+          </q-card-section>
+        </q-card>
 
-          <div class="col-12 col-md-3">
-            <q-input
-              v-model="form.title"
-              :label="t('changeRequests.form.titleLabel')"
-              outlined
-              dense
-              :disable="isReadOnlyForm"
-              :error="hasTitleError"
+        <q-card flat bordered class="q-mb-md">
+          <q-card-section>
+            <div class="text-subtitle1 q-mb-sm">
+              {{ t('changeRequests.form.technicalAssessmentTitle') }}
+            </div>
+
+            <div class="row q-col-gutter-md q-mb-md">
+              <div class="col-12 col-md-4">
+                <NumericTextInput
+                  v-model="form.impact_hours"
+                  :label="t('changeRequests.form.impactHoursLabel')"
+                  :decimal-places="2"
+                  :disable="isReadOnlyForm"
+                  :error="hasImpactHoursError"
+                />
+              </div>
+
+              <div class="col-12 col-md-4">
+                <NumericTextInput
+                  v-model="form.impact_cost"
+                  :label="t('changeRequests.form.impactCostLabel')"
+                  :decimal-places="4"
+                  :disable="isReadOnlyForm"
+                  :error="hasImpactCostError"
+                />
+              </div>
+
+              <div class="col-12 col-md-4">
+                <NumericTextInput
+                  v-model="form.schedule_impact_days"
+                  :label="t('changeRequests.form.scheduleImpactDaysLabel')"
+                  :only-integers="true"
+                  :disable="isReadOnlyForm"
+                  :error="hasScheduleImpactError"
+                />
+              </div>
+            </div>
+
+            <MarkdownRenderer
+              ref="technicalAssessmentMarkdownRef"
+              v-model="technicalAssessmentMarkdown"
+              v-model:pending-files="technicalAssessmentMarkdownFiles"
+              :edit-mode="!isReadOnlyForm"
+              :enable-preview-toggle="true"
+              enable-attachments
             />
-          </div>
-        </q-card-section>
+          </q-card-section>
+        </q-card>
 
-        <q-card-section v-if="isFormLocked || isTaskOnlyMode" class="q-pt-none">
-          <q-banner
-            v-if="isFormLocked"
-            class="text-warning"
-            style="border: 1px solid var(--border-color)"
+        <div class="row justify-end q-gutter-sm form-actions">
+          <q-btn
+            v-if="!isFormLocked"
+            flat
+            round
+            icon="push_pin"
+            :aria-label="t('common.keepFormOpen')"
+            :color="pinButtonColor"
+            :aria-pressed="stayOnFormAfterSave"
+            @click="stayOnFormAfterSave = !stayOnFormAfterSave"
           >
-            {{ t('changeRequests.form.specReadonlyClientOrigin') }}
-          </q-banner>
-
-          <q-banner
-            v-if="isTaskOnlyMode"
-            class="q-mt-sm text-primary"
-            style="border: 1px solid var(--border-color)"
-          >
-            {{ t('changeRequests.form.approvedTaskOnly') }}
-          </q-banner>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat bordered class="q-mb-md">
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-sm">
-            {{ t('changeRequests.form.clientRequestTitle') }}
-          </div>
-          <MarkdownRenderer
-            ref="clientRequestMarkdownRef"
-            v-model="clientRequestMarkdown"
-            v-model:pending-files="clientRequestMarkdownFiles"
-            :edit-mode="!isReadOnlyForm"
-            :enable-preview-toggle="true"
-            enable-attachments
+            <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+          </q-btn>
+          <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
+          <q-btn
+            v-if="!isFormLocked"
+            :label="t('changeRequests.form.saveButton')"
+            color="primary"
+            unelevated
+            :loading="isSubmitting"
+            @click.stop="saveChangeRequest"
           />
-          <div v-if="hasClientRequestError" class="text-negative text-caption q-mt-xs">
-            {{ t('changeRequests.form.clientRequestTitle') }}
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat bordered class="q-mb-md">
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-sm">
-            {{ t('changeRequests.form.technicalAssessmentTitle') }}
-          </div>
-
-          <div class="row q-col-gutter-md q-mb-md">
-            <div class="col-12 col-md-4">
-              <NumericTextInput
-                v-model="form.impact_hours"
-                :label="t('changeRequests.form.impactHoursLabel')"
-                :decimal-places="2"
-                :disable="isReadOnlyForm"
-                :error="hasImpactHoursError"
-              />
-            </div>
-
-            <div class="col-12 col-md-4">
-              <NumericTextInput
-                v-model="form.impact_cost"
-                :label="t('changeRequests.form.impactCostLabel')"
-                :decimal-places="4"
-                :disable="isReadOnlyForm"
-                :error="hasImpactCostError"
-              />
-            </div>
-
-            <div class="col-12 col-md-4">
-              <NumericTextInput
-                v-model="form.schedule_impact_days"
-                :label="t('changeRequests.form.scheduleImpactDaysLabel')"
-                :only-integers="true"
-                :disable="isReadOnlyForm"
-                :error="hasScheduleImpactError"
-              />
-            </div>
-          </div>
-
-          <MarkdownRenderer
-            ref="technicalAssessmentMarkdownRef"
-            v-model="technicalAssessmentMarkdown"
-            v-model:pending-files="technicalAssessmentMarkdownFiles"
-            :edit-mode="!isReadOnlyForm"
-            :enable-preview-toggle="true"
-            enable-attachments
-          />
-        </q-card-section>
-      </q-card>
-
-      <div class="row justify-end q-gutter-sm form-actions">
-        <q-btn
-          v-if="!isFormLocked"
-          flat
-          round
-          icon="push_pin"
-          :aria-label="t('common.keepFormOpen')"
-          :color="pinButtonColor"
-          :aria-pressed="stayOnFormAfterSave"
-          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
-        >
-          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
-        </q-btn>
-        <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
-        <q-btn
-          v-if="!isFormLocked"
-          :label="t('changeRequests.form.saveButton')"
-          color="primary"
-          unelevated
-          :loading="isSubmitting"
-          @click.stop="saveChangeRequest"
-        />
+        </div>
       </div>
-    </div>
+    </template>
   </q-page>
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
+const contentLoading = ref(true);
 import { useFormSession } from 'src/composables/useFormSession';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -434,9 +441,12 @@ watch(
 );
 
 const loadChangeRequest = async () => {
-  if (isNew.value) return;
+  if (isNew.value) {
+    contentLoading.value = false;
+    return;
+  }
 
-  showLoading(t('changeRequests.form.loading'));
+  contentLoading.value = true;
 
   try {
     const detail = await ChangeRequestsService.getById(changeRequestId.value);
@@ -478,7 +488,7 @@ const loadChangeRequest = async () => {
     notifyError(t('changeRequests.form.loadError'), err);
     void router.push('/change-requests');
   } finally {
-    hideLoading();
+    contentLoading.value = false;
   }
 };
 
@@ -619,6 +629,14 @@ const saveChangeRequest = async () => {
 onMounted(async () => {
   await Promise.all([loadProjectsByTerm(''), loadClientsByTerm('')]);
   await loadChangeRequest();
+  if (isNew.value && typeof route.query.project_id === 'string') {
+    form.project_id = route.query.project_id;
+    await ensureProjectOption(form.project_id);
+    if (typeof route.query.client_id === 'string' && route.query.client_id) {
+      form.client_id = route.query.client_id;
+      await ensureClientOption(form.client_id);
+    }
+  }
   await formSession.initialize();
 });
 </script>

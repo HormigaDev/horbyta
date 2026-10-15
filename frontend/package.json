@@ -10,6 +10,8 @@
     "lint": "eslint -c ./eslint.config.js \"./src*/**/*.{ts,js,cjs,mjs,vue}\"",
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
     "test": "echo \"No test specified\" && exit 0",
+    "test:attachments": "node ../scripts/verify-attachment-preview.mjs",
+    "test:i18n": "node ../scripts/verify-scope-i18n.mjs",
     "dev": "quasar dev -m pwa",
     "build": "quasar build -m pwa",
     "postinstall": "quasar prepare"

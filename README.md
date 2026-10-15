@@ -21,14 +21,15 @@ The backend runs directly on Linux with Cargo. Install Rust through rustup; the
 repository selects Rust **1.97.1** through `rust-toolchain.toml`. A native build
 also needs a C compiler/linker and `curl` (used to download Swagger UI assets).
 On Debian/Ubuntu, install `build-essential`, `pkg-config`, `curl`, and
-`ca-certificates`. Install a PostgreSQL client to apply the database schema.
+`ca-certificates`. Use the migration binary to initialize and update the database.
 
 On the first checkout:
 
 ```bash
 cp .env.template .env
 # Configure DATABASE_URL and both JWT secrets in .env.
-# Apply database/schema.sql to that database with psql once.
+# Initialize a new database or apply pending migrations:
+cargo run --locked --bin migrate
 ```
 
 Then, from the repository root:
@@ -166,9 +167,9 @@ Payment rules:
 1. Copy `.env.template` to `.env` if it does not exist. Configure at least
    `DATABASE_URL`, `JWT_SECRET`, `JWT_SECRET_CLIENT`, and `TIME_TO_EXP_SESSION`.
    Use the PostgreSQL host reachable from your machine, for example `localhost`.
-2. Apply `database/schema.sql` to the configured database once. With `DATABASE_URL`
-   exported in your shell, run `psql "$DATABASE_URL" -f database/schema.sql`.
-   Cargo loads `.env` for the application; `psql` does not load it automatically.
+2. Run `cargo run --locked --bin migrate`. The first migration reads the base
+   `database/schema.sql` automatically; new databases need no separate psql step.
+   Later releases add incremental migrations; never reapply the schema manually.
 3. Run `cargo run` in the repository root.
 4. In another terminal, run `npm ci` and `npm run dev` inside `frontend/`.
 
@@ -411,11 +412,16 @@ Payments:
 
 ## Database
 
-Apply schema manually:
+Initialize or update the schema:
 
 ```bash
-psql "$DATABASE_URL" -f database/schema.sql
+cargo run --locked --bin migrate
 ```
+
+Migration 1 embeds the original `database/schema.sql`; migration 2 combines the
+previous scope and negotiation extensions in one additional file.
+The runner records its checksum and executes it atomically under an advisory lock.
+Already initialized databases receive only unapplied migrations.
 
 The schema includes:
 
@@ -443,7 +449,7 @@ The provided config proxies to `127.0.0.1:8890` and includes WebSocket upgrade h
 
 ## Known Limitations
 
-- Database schema is applied manually; there is no migration runner in the app startup path yet.
+- Migrations run explicitly with `cargo run --locked --bin migrate`; this includes first-run initialization. Startup checks the required schema version.
 - External billing is reference-based only. No Stripe/PayPal/MercadoPago API integration or webhook reconciliation yet.
 - Email delivery for client invites/magic links is not documented as a complete outbound mail pipeline.
 - Local attachment storage requires you to back up `UPLOAD_DIR` yourself.
@@ -452,8 +458,6 @@ The provided config proxies to `127.0.0.1:8890` and includes WebSocket upgrade h
 
 ## Roadmap
 
-- First-run bootstrap that can apply migrations/schema safely.
-- Proper migration history instead of a single schema file.
 - External billing provider integrations and webhook reconciliation.
 - Outbound email configuration for invites, magic links, and billing events.
 - Broader authorization and state-machine tests across services.
@@ -469,17 +473,19 @@ Earlier commits referencing MIT were never publicly distributed under that licen
 
 ## Laptop resource limits
 
-Cargo defaults to **2 concurrent jobs** through `.cargo/config.toml`. Rayon and
-Tokio default to two worker threads unless explicitly overridden. Keep Rust and
-frontend builds/checks sequential during development. For lower-priority Linux
-checks, use `python3 scripts/with-resource-limits.py cargo check` from the root.
-For frontend checks, run `python3 ../scripts/with-resource-limits.py npm run build`
-inside `frontend/`. On Linux the wrapper limits CPU affinity to two available
-CPUs and lowers priority; children (including linkers and workers) inherit both.
-It does not change system-wide settings.
+Cargo uses **one job** and one Rayon, Tokio and test worker through
+`.cargo/config.toml`. Frontend lint runs directly with `npm run lint`.
+For laptop backend checks, apply Linux limits directly, without a wrapper or
+available-memory gate:
 
+```sh
+systemd-run --user --scope -p CPUQuota=50% -p MemoryMax=1536M -p MemorySwapMax=0 nice -n 19 cargo check --locked
+```
+
+The same prefix applies to `cargo test` and builds; use `--test-threads=1` for tests.
+Run backend and frontend builds sequentially.
 UI verification can run against the dedicated test account with backend and
-Quasar running: `UI_VERIFY=1 python3 scripts/with-resource-limits.py node scripts/capture-ui.mjs`. It requires representative
+Quasar running: `UI_VERIFY=1 node scripts/capture-ui.mjs`. It requires representative
 test tasks and Spanish preferences, exercises preview/cancel, failed saves,
 live system appearance, explicit record actions and mobile layout. It writes
 `verification.json` beside the screenshots. Credentials and test artifacts stay
@@ -516,9 +522,9 @@ Use the dedicated account and the resource wrapper; reports go to the selected
 development Devtools itself assumes browser storage.
 
 For local production-build review, after `npm run build`, run
-`python3 scripts/with-resource-limits.py node scripts/serve-ui-build.mjs` from the
+`node scripts/serve-ui-build.mjs` from the
 repository root, with the test backend on port 8890. Then use
-`UI_VERIFY_PRODUCTION=1 python3 scripts/with-resource-limits.py node scripts/capture-ui.mjs http://127.0.0.1:9100 / /tasks /settings`.
+`UI_VERIFY_PRODUCTION=1 node scripts/capture-ui.mjs http://127.0.0.1:9100 / /tasks /settings`.
 The preview server binds localhost and proxies the test API; VPS hosting remains
 Nginx. Production checks cover real login, PWA shell, local fonts, storage errors
 and modal keyboard focus. Offline business operations are not provided.
@@ -529,3 +535,164 @@ imports; PWA precaching may still download lazy chunks in the background.
 Pass a capture `report.json` as a third argument to also measure the observed
 login imports and their static dependencies. The shared component/token contracts
 are documented in [frontend/DESIGN.md](frontend/DESIGN.md).
+
+## Control formal de alcance
+
+El alcance original se publica y acepta desde el detalle del proyecto. Las tareas
+posteriores se clasifican en su detalle como incluidas o adicionales de un cambio.
+Los extras permanecen bloqueados hasta aprobar su revisión exacta. La aprobación
+genera un suplemento fijo en una factura nueva en borrador y ajusta únicamente
+el hito indicado; las horas del extra se registran como no facturables para evitar
+duplicar el cobro. El portal muestra revisiones, aclaraciones y decisiones pendientes.
+
+Ver [contratos, migraciones y conservación](docs/scope-control.md). Los acuerdos
+se conservan al cerrar/cancelar; las eliminaciones que destruirían evidencia se
+rechazan. Los antecedentes migrados no reciben aceptaciones ni efectos inventados.
+
+Validación con PostgreSQL, siempre en un esquema aislado que se elimina al terminar:
+
+```bash
+cargo test --locked --test scope_control -- --ignored --test-threads=1
+```
+
+Puede usarse `SCOPE_TEST_DATABASE_URL` para indicar una base de pruebas diferente.
+La cuenta de conexión necesita permiso para crear un esquema; las pruebas no
+actualizan las tablas habituales. `KEEP_SCOPE_TEST_SCHEMA=1` conserva el esquema
+de laboratorio para la validación browserless; no usar esa opción en producción.
+
+Para revisar el portal contra un PostgreSQL de laboratorio accesible (sin reutilizar
+cuentas reales), indicar **la misma** `SCOPE_TEST_DATABASE_URL` en la creación del
+esquema y al iniciar el backend auxiliar:
+
+```bash
+export SCOPE_TEST_DATABASE_URL='postgresql://scope_test@127.0.0.1:55439/postgres'
+KEEP_SCOPE_TEST_SCHEMA=1 cargo test --locked --test scope_control -- --ignored --test-threads=1
+cargo build --locked --bin horbyta
+python3 scripts/start-scope-test-server.py
+```
+
+El helper inicia el API en `127.0.0.1:8897` con secretos temporales y el esquema
+identificado en `target/scope-tests/state.json`; sin la variable de conexión usa
+el laboratorio local `postgresql://scope_test@127.0.0.1:55439/postgres`.
+En otras terminales, tras construir Quasar en `frontend`:
+
+```bash
+UI_API_PORT=8897 node scripts/serve-ui-build.mjs frontend/dist/pwa 9107
+UI_VERIFY_SCOPE=1 UI_SCREENSHOT_DIR=target/scope-tests/screenshots node scripts/capture-ui.mjs http://127.0.0.1:9107 / /projects /tasks
+```
+
+Chrome opera sin ventana ni perfil personal. El recorrido genera sus proyectos y
+cambios, admite repetición y escribe evidencia en `scope-verification.json`.
+Al terminar, detener los dos servidores y eliminar únicamente el esquema
+`scope_test_…` creado para ese laboratorio. La validación normal sin `KEEP` lo
+elimina automáticamente. El ensayo adicional de backup local se describe en
+[docs/scope-control.md](docs/scope-control.md).
+
+
+El alcance documental permite importar Markdown completo o requisitos separados,
+elegir anexos incluidos, conservar originales/versiones/hashes y negociar ajustes,
+rechazo o preferencia por una revisión histórica. Los proyectos nuevos requieren
+acuerdo antes de ejecutar; las tareas de preparación se justifican y son no
+facturables. La única ampliación consolidada de alcance incluye también la negociación documental. La aceptación
+registra IP del socket; detrás de Nginx configurar `TRUSTED_PROXY_IPS=127.0.0.1,::1`
+y mantener cerrado el acceso directo al API. Ver el procedimiento y reglas en
+[docs/scope-control.md](docs/scope-control.md).
+
+
+## Instalación self-hosted y datos de desarrollo
+
+La instalación vacía y las futuras actualizaciones usan el mismo comando:
+`cargo run --locked --bin migrate`, o `./migrate` al distribuir binarios compilados.
+La migración **1** apunta a `database/schema.sql`, que conserva el esquema base
+original; incluye compatibilidad UUIDv7 para PostgreSQL 16/17 mediante
+`database/uuidv7.sql` y usa la función nativa cuando está disponible. La migración
+**2**, `database/migrations/002_scope_control.sql`, reúne las dos ampliaciones
+anteriores de alcance y negociación en **una sola migración adicional**.
+La migración **3**, `database/migrations/003_scope_conversation.sql`, añade el
+índice de paginación y los adjuntos inmutables de conversaciones. No altera las
+migraciones 1 y 2.
+
+No ejecutar `schema.sql` sobre una base existente: sus `CREATE TABLE` darán errores.
+Si la base ya contiene el esquema base sin historial, `migrate` compara tablas,
+columnas, restricciones, índices, vistas, funciones y triggers con una copia
+transaccional del esquema original. Solo si coincide registra el paso base como
+aplicado y ejecuta la ampliación pendiente, conservando los datos. Una estructura
+incompatible se rechaza con la operación revertida. Esta comprobación necesita
+permiso para crear un esquema temporal en la misma base.
+
+Se consolidó el historial experimental antes del lanzamiento. Bases con los
+checksums de aquel historial no se reetiquetan silenciosamente; necesitan una
+transición explícita. En desarrollo autorizado se reconstruyen con el seed.
+La migración **4**, `database/migrations/004_change_conversation.sql`, añade el índice
+para consultar mensajes de solicitudes de cambio por revisión y los adjuntos
+inmutables de esos mensajes. Se aplica con `cargo run --bin migrate` sin reescribir
+las migraciones anteriores ni alterar `database/schema.sql`.
+
+La migración **5**, `database/migrations/005_project_conversation.sql`, unifica
+la conversación del proyecto mediante una vista sobre el historial existente y
+mensajes nuevos. Añade lecturas privadas persistentes y vínculos entre solicitudes
+y sus mensajes originales. No modifica los acuerdos ni las migraciones anteriores.
+
+La migración **6**, `database/migrations/006_scope_amendments.sql`, permite proponer
+correcciones de acuerdos aceptados y consolida automáticamente los cambios aprobados.
+Conserva firmas y suplementos anteriores; no repite facturas ni fabrica aceptaciones.
+También incorpora los cambios históricos que disponen de efectos verificables.
+
+Conservar los SQL y checksums de las migraciones aplicadas (actualmente 1–6);
+añadir nuevas versiones para futuras ampliaciones. El ejecutor lleva los SQL embebidos: no requiere Rust ni archivos SQL
+externos en el servidor. La instalación real crea su administrador con `./create-user`.
+
+El seed es **opcional y exclusivo de desarrollo**. Exige `APP_ENV=development`,
+base `hormigapm_development` y almacenamiento local (`UPLOAD_DIR`, sin S3).
+No se ejecuta desde `migrate` ni desde el backend. Sin `--reset` requiere una base
+sin usuarios. Para regenerar datos ficticios de esta base:
+
+```bash
+cargo run --locked --bin seed -- --reset
+```
+
+`--reset` sustituye el esquema `public` de desarrollo y vuelve a aplicar migración
+más seed dentro de una transacción. Hacer backup antes de regenerarlo si hay datos
+que interesa conservar. Mantiene archivos anteriores ajenos al seed; sustituye
+únicamente archivos con prefijo `development-seed/` de un seed anterior.
+
+- Administrador: **admin@horbyta.test / Admin@123**.
+- Clientes del portal: **cliente1@horbyta.test** hasta **cliente8@horbyta.test**,
+  contraseña **Cliente@123**. El portal también pide el ID del administrador,
+  que puede consultarse desde la cuenta o en PostgreSQL.
+- 12 proyectos, clientes activos/inactivos/bloqueados, categorías y etiquetas,
+  tareas y subtareas, hitos, tiempo de los últimos 90 días, archivos reales de ejemplo,
+  facturas en distintos estados, cargos y reembolsos en EUR/USD/BRL.
+- Alcances en borrador, pendientes, con ajustes/rechazo y aceptados; documentos
+  versionados, requisitos vinculados, comentarios y solicitudes de cambio en
+  todos los estados. La aprobación produce sus efectos mediante los disparadores
+  normales, sin desactivarlos ni fabricar registros finales.
+- Notificaciones leídas/pendientes, preferencias, estado de interfaz y conversación
+  ficticia. Fechas relativas al día de ejecución mantienen utilidad visual.
+
+Pruebas aisladas del seed: `cargo test --locked --test development_seed -- --ignored
+--test-threads=1`. La actualización del esquema antiguo se comprueba con
+`cargo test --locked --test migration_upgrade -- --ignored --test-threads=1`. Requieren conexión a la base de desarrollo; crean y eliminan
+su propio esquema. No vacían `public`. Las credenciales de ejemplo nunca se instalan
+como parte de una instalación de producción.
+
+
+Para preparar los binarios de una distribución de producción (sin el seed),
+construir para la arquitectura y sistema soportados:
+
+```bash
+cargo build --release --locked --bin horbyta --bin migrate --bin create-user
+```
+
+Entregar esos tres binarios, la configuración de ejemplo, el build Quasar servido
+por Nginx y las instrucciones de instalación. No incluir `.env`, `data/storage`,
+`target/ui-tests`, dumps ni resultados de desarrollo. El cliente configura su
+conexión y secretos, ejecuta `migrate`, crea su administrador con `create-user` y
+arranca `horbyta`. No necesita Rust para ejecutar los binarios.
+
+
+La reconstrucción realizada en desarrollo conserva un respaldo previo completo en
+`target/development-seed/before-bootstrap-reset.dump` (privado, ignorado por Git).
+La validación headless del seed usa `UI_VERIFY_SEED=1` en `scripts/capture-ui.mjs`,
+con `target/ui-tests/account.json` generado para la cuenta ficticia. Solo consulta
+listas/documentos y comprueba los accesos; no crea proyectos para esta verificación.

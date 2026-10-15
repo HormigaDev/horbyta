@@ -104,6 +104,8 @@ export interface UpdateChangeRequestDto {
 }
 
 export interface AssessChangeRequestDto {
+  version: number;
+  target_milestone_id?: string | null;
   technical_assessment: string;
   impact_hours: string;
   impact_cost: string;
@@ -132,5 +134,6 @@ export interface ClientCancelChangeRequestDto {
 }
 
 export interface ClientApproveChangeRequestDto {
+  version: number;
   client_signature_ip?: string | null;
 }

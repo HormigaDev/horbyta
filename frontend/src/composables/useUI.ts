@@ -356,6 +356,7 @@ export function useUI() {
   };
 
   return {
+    resolveErrorMessage,
     notify,
     notifyAsync,
     notifyError,

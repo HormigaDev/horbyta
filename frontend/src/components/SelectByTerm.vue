@@ -4,7 +4,7 @@
     :options="options"
     :label="label"
     :multiple="multiple"
-    :loading="loading"
+    :aria-busy="loading"
     :disable="disable"
     :clearable="clearable"
     :use-chips="chips && multiple"
@@ -20,6 +20,8 @@
     @filter="onFilter"
     @popup-show="onPopupShow"
   >
+    <template #before-options><ContentSkeleton v-if="loading" variant="list" :rows="3" /></template>
+    <template #no-option><ContentSkeleton v-if="loading" variant="list" :rows="3" /></template>
     <template #option="scope">
       <slot name="option" v-bind="scope">
         <q-item v-bind="scope.itemProps">
@@ -57,6 +59,7 @@
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
 import { onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { SelectByTermOption } from 'src/composables/useSelectByTerm';

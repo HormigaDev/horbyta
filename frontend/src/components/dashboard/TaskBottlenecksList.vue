@@ -7,19 +7,19 @@
       }}</router-link>
       <div class="bottleneck-badges">
         <q-chip dense outline color="primary" text-color="primary">
-          {{ row.total_tasks }} · {{ labels.total }}
+          {{ row.total_tasks }} — {{ labels.total }}
         </q-chip>
         <q-chip dense color="grey-7" text-color="white">
-          {{ row.tasks_todo }} · {{ labels.todo }}
+          {{ row.tasks_todo }} — {{ labels.todo }}
         </q-chip>
         <q-chip dense color="primary" text-color="white">
-          {{ row.tasks_in_progress }} · {{ labels.inProgress }}
+          {{ row.tasks_in_progress }} — {{ labels.inProgress }}
         </q-chip>
         <q-chip dense color="warning" text-color="white">
-          {{ row.tasks_in_review }} · {{ labels.review }}
+          {{ row.tasks_in_review }} — {{ labels.review }}
         </q-chip>
         <q-chip dense :color="row.overdue_tasks > 0 ? 'negative' : 'grey-6'" text-color="white">
-          {{ row.overdue_tasks }} · {{ labels.overdue }}
+          {{ row.overdue_tasks }} — {{ labels.overdue }}
         </q-chip>
       </div>
     </div>

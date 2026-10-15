@@ -1,143 +1,148 @@
 <template>
   <q-page class="form-page q-pa-md">
-    <div class="padding-page">
-      <q-card class="q-mb-md" flat bordered>
-        <q-card-section>
-          <div class="text-h6 flex items-center">
-            <q-icon name="flag" class="q-mr-md" size="md" />
-            {{ isNew ? t('milestones.form.createTitle') : t('milestones.form.editTitle') }}
-          </div>
-          <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
-            {{ t('milestones.form.editingPrefix', { id: milestoneId }) }}
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 col-md-6">
-            <q-input
-              v-model="form.name"
-              :label="t('milestones.form.nameLabel')"
-              outlined
-              dense
-              :error="hasNameError"
-              :error-message="t('milestones.form.nameRequired')"
-            />
-          </div>
-
-          <div class="col-12 col-md-6">
-            <SelectByTerm
-              v-model="form.project_id"
-              :label="t('milestones.form.projectLabel')"
-              :options="projectOptions"
-              :loading="isProjectsLoading"
-              @search="onProjectSearch"
-            />
-            <div v-if="hasProjectError" class="text-negative text-caption q-mt-xs">
-              {{ t('milestones.form.projectRequired') }}
+    <ContentSkeleton v-if="contentLoading" variant="form" class="loading-page-region" />
+    <template v-else>
+      <div class="padding-page">
+        <q-card class="q-mb-md" flat bordered>
+          <q-card-section>
+            <div class="text-h6 flex items-center">
+              <q-icon name="flag" class="q-mr-md" size="md" />
+              {{ isNew ? t('milestones.form.createTitle') : t('milestones.form.editTitle') }}
             </div>
-          </div>
+            <div class="text-caption" style="color: var(--text-muted)" v-if="!isNew">
+              {{ t('milestones.form.editingPrefix', { id: milestoneId }) }}
+            </div>
+          </q-card-section>
 
-          <div class="col-12 col-md-4">
-            <q-select
-              v-model="form.status"
-              :options="statusOptions"
-              :label="t('milestones.form.statusLabel')"
-              dense
-              outlined
-              emit-value
-              map-options
+          <q-card-section class="q-pt-none row q-col-gutter-md">
+            <div class="col-12 col-md-6">
+              <q-input
+                v-model="form.name"
+                :label="t('milestones.form.nameLabel')"
+                outlined
+                dense
+                :error="hasNameError"
+                :error-message="t('milestones.form.nameRequired')"
+              />
+            </div>
+
+            <div class="col-12 col-md-6">
+              <SelectByTerm
+                v-model="form.project_id"
+                :label="t('milestones.form.projectLabel')"
+                :options="projectOptions"
+                :loading="isProjectsLoading"
+                @search="onProjectSearch"
+              />
+              <div v-if="hasProjectError" class="text-negative text-caption q-mt-xs">
+                {{ t('milestones.form.projectRequired') }}
+              </div>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <q-select
+                v-model="form.status"
+                :options="statusOptions"
+                :label="t('milestones.form.statusLabel')"
+                dense
+                outlined
+                emit-value
+                map-options
+              />
+            </div>
+
+            <div class="col-12 col-md-4">
+              <q-input
+                v-model="dueDateDisplay"
+                :mask="dateInputMask"
+                :label="t('milestones.form.dueDateLabel')"
+                dense
+                outlined
+              >
+                <template #append>
+                  <q-btn
+                    type="button"
+                    flat
+                    round
+                    dense
+                    icon="event"
+                    :aria-label="t('tasks.form.dueDateLabel')"
+                  >
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date v-model="dueDateDisplay" :mask="qDateMask">
+                        <div class="row items-center justify-end">
+                          <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-btn>
+                </template>
+              </q-input>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <q-card flat bordered class="q-mb-md">
+          <q-card-section>
+            <div class="text-subtitle1 q-mb-sm">{{ t('milestones.form.descriptionTitle') }}</div>
+            <MarkdownRenderer
+              ref="markdownRef"
+              v-model="milestoneDescription"
+              v-model:pending-files="markdownFiles"
+              edit-mode
+              enable-preview-toggle
+              enable-attachments
             />
-          </div>
+          </q-card-section>
+        </q-card>
 
-          <div class="col-12 col-md-4">
-            <q-input
-              v-model="dueDateDisplay"
-              :mask="dateInputMask"
-              :label="t('milestones.form.dueDateLabel')"
-              dense
-              outlined
-            >
-              <template #append>
-                <q-btn
-                  type="button"
-                  flat
-                  round
-                  dense
-                  icon="event"
-                  :aria-label="t('tasks.form.dueDateLabel')"
-                >
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="dueDateDisplay" :mask="qDateMask">
-                      <div class="row items-center justify-end">
-                        <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
-                      </div>
-                    </q-date>
-                  </q-popup-proxy>
-                </q-btn>
-              </template>
-            </q-input>
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat bordered class="q-mb-md">
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-sm">{{ t('milestones.form.descriptionTitle') }}</div>
-          <MarkdownRenderer
-            ref="markdownRef"
-            v-model="milestoneDescription"
-            v-model:pending-files="markdownFiles"
-            edit-mode
-            enable-preview-toggle
-            enable-attachments
+        <div class="row justify-end q-gutter-sm form-actions">
+          <q-btn
+            v-if="isNew"
+            flat
+            round
+            icon="bookmarks"
+            :aria-label="t('formPreferences.title')"
+            color="grey"
+            @click="prefsDialogOpen = true"
+          >
+            <q-tooltip>{{ t('formPreferences.title') }}</q-tooltip>
+          </q-btn>
+          <q-btn
+            flat
+            round
+            icon="push_pin"
+            :aria-label="t('common.keepFormOpen')"
+            :color="pinButtonColor"
+            :aria-pressed="stayOnFormAfterSave"
+            @click="stayOnFormAfterSave = !stayOnFormAfterSave"
+          >
+            <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+          </q-btn>
+          <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
+          <q-btn
+            :label="t('milestones.form.saveButton')"
+            color="primary"
+            unelevated
+            :loading="isSubmitting"
+            @click.stop="saveMilestone"
           />
-        </q-card-section>
-      </q-card>
+        </div>
 
-      <div class="row justify-end q-gutter-sm form-actions">
-        <q-btn
-          v-if="isNew"
-          flat
-          round
-          icon="bookmarks"
-          :aria-label="t('formPreferences.title')"
-          color="grey"
-          @click="prefsDialogOpen = true"
-        >
-          <q-tooltip>{{ t('formPreferences.title') }}</q-tooltip>
-        </q-btn>
-        <q-btn
-          flat
-          round
-          icon="push_pin"
-          :aria-label="t('common.keepFormOpen')"
-          :color="pinButtonColor"
-          :aria-pressed="stayOnFormAfterSave"
-          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
-        >
-          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
-        </q-btn>
-        <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
-        <q-btn
-          :label="t('milestones.form.saveButton')"
-          color="primary"
-          unelevated
-          :loading="isSubmitting"
-          @click.stop="saveMilestone"
+        <FormPreferencesDialog
+          v-model="prefsDialogOpen"
+          form-key="milestone"
+          :current-fields="currentPreferenceFields"
+          @apply="applyPreference"
         />
       </div>
-
-      <FormPreferencesDialog
-        v-model="prefsDialogOpen"
-        form-key="milestone"
-        :current-fields="currentPreferenceFields"
-        @apply="applyPreference"
-      />
-    </div>
+    </template>
   </q-page>
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
+const contentLoading = ref(true);
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -343,9 +348,12 @@ const ensureProjectOption = async (projectId: string) => {
 };
 
 const loadMilestone = async () => {
-  if (isNew.value) return;
+  if (isNew.value) {
+    contentLoading.value = false;
+    return;
+  }
 
-  showLoading(t('milestones.form.loadingMilestone'));
+  contentLoading.value = true;
   try {
     const milestone = await MilestonesService.getById(milestoneId.value);
 
@@ -362,7 +370,7 @@ const loadMilestone = async () => {
     notifyError(t('milestones.form.loadError'), err);
     void router.push('/milestones');
   } finally {
-    hideLoading();
+    contentLoading.value = false;
   }
 };
 

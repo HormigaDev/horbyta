@@ -62,7 +62,7 @@
         >
         <span v-if="task.due_date" class="task-due" :class="{ 'task-due--overdue': overdue }"
           ><q-icon name="event" size="14px" /> {{ dueLabel }}
-          <span v-if="overdue">· {{ $t('ui.overdue') }}</span></span
+          <span v-if="overdue">— {{ $t('ui.overdue') }}</span></span
         >
       </div>
       <div v-if="task.project_name || task.milestone_name" class="text-caption task-muted q-mt-sm">

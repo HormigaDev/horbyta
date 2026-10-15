@@ -1,233 +1,238 @@
 <template>
   <q-page class="form-page q-pa-md">
-    <div class="padding-page">
-      <q-card class="q-mb-md" flat bordered>
-        <q-card-section>
-          <div class="text-h6 flex items-center">
-            <q-icon v-if="isNew" name="create_new_folder" size="md" class="q-mr-md" />
-            <q-img
-              src="/icons/bookmark_manager.svg"
-              v-else
-              width="32px"
-              height="32px"
-              class="q-mr-md"
-            />
-            {{ isNew ? t('projects.form.createTitle') : t('projects.form.editTitle') }}
-          </div>
-          <div class="text-caption text-grey" v-if="!isNew">
-            {{ t('projects.form.editingPrefix', { id: project.id }) }}
-          </div>
-        </q-card-section>
+    <ContentSkeleton v-if="contentLoading" variant="form" class="loading-page-region" />
+    <template v-else>
+      <div class="padding-page">
+        <q-card class="q-mb-md" flat bordered>
+          <q-card-section>
+            <div class="text-h6 flex items-center">
+              <q-icon v-if="isNew" name="create_new_folder" size="md" class="q-mr-md" />
+              <q-img
+                src="/icons/bookmark_manager.svg"
+                v-else
+                width="32px"
+                height="32px"
+                class="q-mr-md"
+              />
+              {{ isNew ? t('projects.form.createTitle') : t('projects.form.editTitle') }}
+            </div>
+            <div class="text-caption text-grey" v-if="!isNew">
+              {{ t('projects.form.editingPrefix', { id: project.id }) }}
+            </div>
+          </q-card-section>
 
-        <q-card-section class="q-pt-none row q-col-gutter-md">
-          <div class="col-12 form-section-title">{{ t('ui.identification') }}</div>
-          <div class="col-12">
-            <q-input
-              v-model="project.name"
-              :label="t('projects.form.nameLabel')"
-              outlined
-              dense
-              :error="nameRuleState.error"
-              :error-message="nameRuleState.message"
-              @update:model-value="validateName(project.name)"
-            />
-          </div>
-          <div class="col-12 col-md-4">
-            <SelectByTerm
-              v-model="project.category_id"
-              :label="t('projects.form.categoryLabel')"
-              :options="categoryOptions"
-              :loading="isCategoriesLoading"
-              @search="onCategorySearch"
-            />
-          </div>
-          <div class="col-12 col-md-4">
-            <SelectByTerm
-              v-model="project.client_id"
-              :label="$t('projects.form.clientLabel')"
-              :options="clientOptions"
-              :loading="isClientsLoading"
-              @search="onClientSearch"
-            />
-          </div>
-          <div class="col-12 col-md-4" v-if="!isNew">
-            <q-select
-              v-model="project.status"
-              :label="$t('projects.form.statusLabel')"
-              :options="getProjectStatusOptions($t)"
-              emit-value
-              map-options
-              outlined
-              dense
-            />
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-none">
-          <q-separator spaced />
-
-          <div class="text-subtitle1 q-mb-sm">{{ t('projects.form.billingTitle') }}</div>
-
-          <div class="row q-col-gutter-md">
+          <q-card-section class="q-pt-none row q-col-gutter-md">
+            <div class="col-12 form-section-title">{{ t('ui.identification') }}</div>
             <div class="col-12">
-              <q-toggle
-                v-model="project.billable"
-                :label="t('projects.form.billableLabel')"
-                color="primary"
-              />
-              <div class="text-caption" style="color: var(--text-muted)">
-                {{ t('projects.form.billableHint') }}
-              </div>
-            </div>
-
-            <div class="col-12 col-md-4" v-if="project.billable">
-              <q-select
-                v-model="billingForm.currency_type"
-                :label="t('projects.form.currencyTypeLabel')"
-                :options="CURRENCY_TYPE_OPTIONS"
+              <q-input
+                v-model="project.name"
+                :label="t('projects.form.nameLabel')"
                 outlined
                 dense
-                emit-value
-                map-options
-                :error="hasCurrencyTypeError"
-                :error-message="t('projects.form.billingValidation.currencyType')"
-                @update:model-value="onCurrencyTypeInput"
+                :error="nameRuleState.error"
+                :error-message="nameRuleState.message"
+                @update:model-value="validateName(project.name)"
               />
             </div>
-
-            <div class="col-12 col-md-4" v-if="project.billable">
+            <div class="col-12 col-md-4">
+              <SelectByTerm
+                v-model="project.category_id"
+                :label="t('projects.form.categoryLabel')"
+                :options="categoryOptions"
+                :loading="isCategoriesLoading"
+                @search="onCategorySearch"
+              />
+            </div>
+            <div class="col-12 col-md-4">
+              <SelectByTerm
+                v-model="project.client_id"
+                :label="$t('projects.form.clientLabel')"
+                :options="clientOptions"
+                :loading="isClientsLoading"
+                @search="onClientSearch"
+              />
+            </div>
+            <div class="col-12 col-md-4" v-if="!isNew">
               <q-select
-                v-model="billingForm.billing_type"
-                :label="t('projects.form.billingTypeLabel')"
-                :options="billingTypeOptions"
+                v-model="project.status"
+                :label="$t('projects.form.statusLabel')"
+                :options="getProjectStatusOptions($t)"
                 emit-value
                 map-options
                 outlined
                 dense
               />
             </div>
+          </q-card-section>
 
-            <div
-              class="col-12 col-md-4"
-              v-if="project.billable && billingForm.billing_type === 'fixed'"
-            >
-              <NumericTextInput
-                v-model="billingForm.fixed_price"
-                :label="t('projects.form.fixedPriceLabel')"
-                :decimal-places="4"
-                :error="hasFixedPriceError"
-              />
-              <div v-if="hasFixedPriceError" class="text-negative text-caption q-mt-xs">
-                {{ t('projects.form.billingValidation.fixedPrice') }}
+          <q-card-section class="q-pt-none">
+            <q-separator spaced />
+
+            <div class="text-subtitle1 q-mb-sm">{{ t('projects.form.billingTitle') }}</div>
+
+            <div class="row q-col-gutter-md">
+              <div class="col-12">
+                <q-toggle
+                  v-model="project.billable"
+                  :label="t('projects.form.billableLabel')"
+                  color="primary"
+                />
+                <div class="text-caption" style="color: var(--text-muted)">
+                  {{ t('projects.form.billableHint') }}
+                </div>
               </div>
-            </div>
 
-            <div
-              class="col-12 col-md-4"
-              v-if="project.billable && billingForm.billing_type === 'hourly'"
-            >
-              <NumericTextInput
-                v-model="billingForm.hourly_rate"
-                :label="t('projects.form.hourlyRateLabel')"
-                :decimal-places="4"
-                :error="hasHourlyRateError"
-              />
-              <div v-if="hasHourlyRateError" class="text-negative text-caption q-mt-xs">
-                {{ t('projects.form.billingValidation.hourlyRate') }}
+              <div class="col-12 col-md-4" v-if="project.billable">
+                <q-select
+                  v-model="billingForm.currency_type"
+                  :label="t('projects.form.currencyTypeLabel')"
+                  :options="CURRENCY_TYPE_OPTIONS"
+                  outlined
+                  dense
+                  emit-value
+                  map-options
+                  :error="hasCurrencyTypeError"
+                  :error-message="t('projects.form.billingValidation.currencyType')"
+                  @update:model-value="onCurrencyTypeInput"
+                />
               </div>
-            </div>
 
-            <template v-if="project.billable && billingForm.billing_type === 'retainer'">
-              <div class="col-12 col-md-4">
+              <div class="col-12 col-md-4" v-if="project.billable">
+                <q-select
+                  v-model="billingForm.billing_type"
+                  :label="t('projects.form.billingTypeLabel')"
+                  :options="billingTypeOptions"
+                  emit-value
+                  map-options
+                  outlined
+                  dense
+                />
+              </div>
+
+              <div
+                class="col-12 col-md-4"
+                v-if="project.billable && billingForm.billing_type === 'fixed'"
+              >
                 <NumericTextInput
-                  v-model="billingForm.retainer_amount"
-                  :label="t('projects.form.retainerAmountLabel')"
+                  v-model="billingForm.fixed_price"
+                  :label="t('projects.form.fixedPriceLabel')"
                   :decimal-places="4"
-                  :error="hasRetainerAmountError"
+                  :error="hasFixedPriceError"
                 />
-                <div v-if="hasRetainerAmountError" class="text-negative text-caption q-mt-xs">
-                  {{ t('projects.form.billingValidation.retainerAmount') }}
+                <div v-if="hasFixedPriceError" class="text-negative text-caption q-mt-xs">
+                  {{ t('projects.form.billingValidation.fixedPrice') }}
                 </div>
               </div>
 
-              <div class="col-12 col-md-4">
+              <div
+                class="col-12 col-md-4"
+                v-if="project.billable && billingForm.billing_type === 'hourly'"
+              >
                 <NumericTextInput
-                  v-model="billingForm.payment_day"
-                  :label="t('projects.form.paymentDayLabel')"
-                  :only-integers="true"
-                  :error="hasPaymentDayError"
+                  v-model="billingForm.hourly_rate"
+                  :label="t('projects.form.hourlyRateLabel')"
+                  :decimal-places="4"
+                  :error="hasHourlyRateError"
                 />
-                <div v-if="hasPaymentDayError" class="text-negative text-caption q-mt-xs">
-                  {{ t('projects.form.billingValidation.paymentDay') }}
+                <div v-if="hasHourlyRateError" class="text-negative text-caption q-mt-xs">
+                  {{ t('projects.form.billingValidation.hourlyRate') }}
                 </div>
               </div>
-            </template>
-          </div>
-        </q-card-section>
-      </q-card>
 
-      <q-card flat bordered class="q-mb-md">
-        <q-card-section>
-          <div class="text-subtitle1 q-mb-sm">{{ t('projects.form.descriptionTitle') }}</div>
-          <MarkdownRenderer
-            ref="markdownRef"
-            v-model="projectDescription"
-            v-model:pending-files="markdownFiles"
-            edit-mode
-            enable-preview-toggle
-            enable-attachments
-            @update:model-value="(val) => validateDescription(val ? val : null)"
+              <template v-if="project.billable && billingForm.billing_type === 'retainer'">
+                <div class="col-12 col-md-4">
+                  <NumericTextInput
+                    v-model="billingForm.retainer_amount"
+                    :label="t('projects.form.retainerAmountLabel')"
+                    :decimal-places="4"
+                    :error="hasRetainerAmountError"
+                  />
+                  <div v-if="hasRetainerAmountError" class="text-negative text-caption q-mt-xs">
+                    {{ t('projects.form.billingValidation.retainerAmount') }}
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                  <NumericTextInput
+                    v-model="billingForm.payment_day"
+                    :label="t('projects.form.paymentDayLabel')"
+                    :only-integers="true"
+                    :error="hasPaymentDayError"
+                  />
+                  <div v-if="hasPaymentDayError" class="text-negative text-caption q-mt-xs">
+                    {{ t('projects.form.billingValidation.paymentDay') }}
+                  </div>
+                </div>
+              </template>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <q-card flat bordered class="q-mb-md">
+          <q-card-section>
+            <div class="text-subtitle1 q-mb-sm">{{ t('projects.form.descriptionTitle') }}</div>
+            <MarkdownRenderer
+              ref="markdownRef"
+              v-model="projectDescription"
+              v-model:pending-files="markdownFiles"
+              edit-mode
+              enable-preview-toggle
+              enable-attachments
+              @update:model-value="(val) => validateDescription(val ? val : null)"
+            />
+            <div v-if="descriptionRuleState.error" class="text-negative text-caption q-mt-xs">
+              {{ descriptionRuleState.message }}
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <div class="row justify-end q-gutter-sm form-actions">
+          <q-btn
+            v-if="isNew"
+            flat
+            round
+            icon="bookmarks"
+            :aria-label="t('formPreferences.title')"
+            color="grey"
+            @click="prefsDialogOpen = true"
+          >
+            <q-tooltip>{{ t('formPreferences.title') }}</q-tooltip>
+          </q-btn>
+          <q-btn
+            flat
+            round
+            icon="push_pin"
+            :aria-label="t('common.keepFormOpen')"
+            :color="pinButtonColor"
+            :aria-pressed="stayOnFormAfterSave"
+            @click="stayOnFormAfterSave = !stayOnFormAfterSave"
+          >
+            <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
+          </q-btn>
+          <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
+          <q-btn
+            :label="t('projects.form.saveButton')"
+            color="primary"
+            unelevated
+            :loading="isSubmitting"
+            @click.stop="saveProject"
           />
-          <div v-if="descriptionRuleState.error" class="text-negative text-caption q-mt-xs">
-            {{ descriptionRuleState.message }}
-          </div>
-        </q-card-section>
-      </q-card>
+        </div>
 
-      <div class="row justify-end q-gutter-sm form-actions">
-        <q-btn
-          v-if="isNew"
-          flat
-          round
-          icon="bookmarks"
-          :aria-label="t('formPreferences.title')"
-          color="grey"
-          @click="prefsDialogOpen = true"
-        >
-          <q-tooltip>{{ t('formPreferences.title') }}</q-tooltip>
-        </q-btn>
-        <q-btn
-          flat
-          round
-          icon="push_pin"
-          :aria-label="t('common.keepFormOpen')"
-          :color="pinButtonColor"
-          :aria-pressed="stayOnFormAfterSave"
-          @click="stayOnFormAfterSave = !stayOnFormAfterSave"
-        >
-          <q-tooltip>{{ t('common.keepFormOpen') }}</q-tooltip>
-        </q-btn>
-        <q-btn :label="t('common.cancel')" flat color="grey" @click="goBack" />
-        <q-btn
-          :label="t('projects.form.saveButton')"
-          color="primary"
-          unelevated
-          :loading="isSubmitting"
-          @click.stop="saveProject"
+        <FormPreferencesDialog
+          v-model="prefsDialogOpen"
+          form-key="project"
+          :current-fields="currentPreferenceFields"
+          @apply="applyPreference"
         />
       </div>
-
-      <FormPreferencesDialog
-        v-model="prefsDialogOpen"
-        form-key="project"
-        :current-fields="currentPreferenceFields"
-        @apply="applyPreference"
-      />
-    </div>
+    </template>
   </q-page>
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
+const contentLoading = ref(true);
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -588,10 +593,13 @@ const buildProjectBillingPayload = (): UpsertProjectBillingDto | null => {
 };
 
 const loadProject = async () => {
-  if (isNew.value) return;
+  if (isNew.value) {
+    contentLoading.value = false;
+    return;
+  }
 
   const projectId = route.params.id as string;
-  showLoading(t('projects.form.loadingProject'));
+  contentLoading.value = true;
   try {
     const data = await ProjectsService.getById(projectId);
     project.value = {
@@ -642,7 +650,7 @@ const loadProject = async () => {
     notifyError(t('projects.form.loadError'), err);
     void router.push('/projects');
   } finally {
-    hideLoading();
+    contentLoading.value = false;
   }
 };
 

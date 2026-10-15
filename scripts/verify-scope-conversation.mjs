@@ -1,0 +1,103 @@
+import assert from 'node:assert/strict';
+import { readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
+// Solo escribe en un proyecto nuevo de la cuenta del laboratorio aislado.
+export async function verifyScopeConversation({ evaluate, navigate, waitFor, output, account }) {
+  const state = JSON.parse(await readFile('target/scope-tests/state.json', 'utf8'));
+  const checks = [];
+  const api = async (path, body) => {
+    const result = await evaluate(`fetch('/api/v1'+${JSON.stringify(path)}, {credentials:'include',${body ? `method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(${JSON.stringify(body)}),` : ''}}).then(async r=>({status:r.status,body:await r.json()}))`);
+    assert.equal(result.status, 200, JSON.stringify(result.body));
+    return result.body;
+  };
+  const owner = await api('/users/me');
+  assert.equal(owner.id, state.owner);
+  assert.equal(owner.email, 'scope-tests@horbyta.test');
+  const click = async (label, within = '.scope-document') => {
+    const expr = `Array.from(document.querySelectorAll(${JSON.stringify(within + ' :is(button,.q-item,.q-tab)')})).find(b=>b.checkVisibility()&&b.textContent.trim()===${JSON.stringify(label)})`;
+    await waitFor(`!!(${expr})`, label);
+    await evaluate(`(${expr}).click()`);
+  };
+  const project = await api('/projects', { name: '[Laboratorio] Borrador y conversación', description: 'Regresión aislada', client_id: state.client, billable: false });
+  const document = Object.fromEntries(['deliverables','criteria','restrictions','exclusions','requirements'].map(key=>[key, `Contenido de ${key}`]));
+  await api(`/scope/projects/${project.id}`, { expected_revision: 0, publish: false, document });
+  await navigate(`/projects/${project.id}`);
+  await waitFor("document.querySelector('.scope-draft-actions')", 'Borrador recuperable');
+  assert.equal(await evaluate("document.documentElement.lang"), 'es');
+  assert.equal(await evaluate("!!document.querySelector('.scope-composer')"), false);
+  checks.push('Idioma HTML español y conversación bloqueada en borrador');
+  await click('Editar borrador');
+  await waitFor("document.querySelectorAll('.scope-document form textarea').length===5", 'Cinco secciones editables');
+  await evaluate("(()=>{const input=document.querySelectorAll('.scope-document form textarea')[1];input.value='Criterios específicos del borrador recuperado';input.dispatchEvent(new Event('input',{bubbles:true}));})()");
+  await click('Guardar borrador');
+  await waitFor("!!document.querySelector('.scope-draft-actions')", 'Borrador guardado');
+  await navigate(`/projects/${project.id}`);
+  await waitFor("document.querySelector('.scope-document').textContent.includes('Criterios específicos del borrador recuperado')", 'Borrador persistido tras recarga');
+  await click('Publicar borrador');
+  await waitFor("!document.querySelector('.scope-draft-actions')", 'Publicación del borrador');
+  const published = await api(`/scope/projects/${project.id}`);
+  assert.equal(published.published_revision, 3);
+  assert.equal(published.revisions[0].document.criteria, 'Criterios específicos del borrador recuperado');
+  assert.equal(published.revisions[1].published, false);
+  checks.push('Editar, guardar, recuperar y publicar conserva contenido e historial');
+  await click('Conversación', '.detail-page .q-list');
+  await waitFor("!!document.querySelector('.scope-composer')", 'Compositor en pestaña de conversación');
+  assert.equal(await evaluate("document.querySelector('.scope-conversation h3').textContent"), 'Conversación — Revisión 3');
+  assert.equal(await evaluate("!!document.querySelector('.scope-composer p.text-weight-medium')"), false);
+  checks.push('Pestaña con revisión en cabecera y sin etiqueta de aclaración repetida');
+  assert.equal(await evaluate("document.activeElement===document.querySelector('.scope-composer textarea')"), true);
+  assert.equal(await evaluate("getComputedStyle(document.activeElement).outlineStyle"), 'none');
+  assert.equal(await evaluate("document.activeElement.spellcheck"), true);
+  checks.push('Atajo enfoca el compositor sin doble outline y con corrector habilitado');
+  await evaluate(`(()=>{
+    const original=window.fetch;
+    window.fetch=(url,options)=>{
+      if(String(url).endsWith('/feedback')) { window.fetch=original; return Promise.resolve(new Response(JSON.stringify({error:'test unavailable'}),{status:503,headers:{'Content-Type':'application/json'}})); }
+      return original(url,options);
+    };
+    const input=document.querySelector('.scope-composer textarea');
+    input.value='Mensaje del freelancer para verificar persistencia';input.dispatchEvent(new Event('input',{bubbles:true}));
+  })()`);
+  await click('Enviar');
+  await waitFor("!!document.querySelector('.scope-composer [role=alert]')", 'Error junto al compositor');
+  assert.equal(await evaluate("document.querySelector('.scope-composer textarea').value"), 'Mensaje del freelancer para verificar persistencia');
+  checks.push('El fallo de envío muestra un error local y conserva el mensaje');
+  await click('Enviar');
+  await waitFor("document.querySelector('.scope-composer textarea').value===''", 'Mensaje enviado');
+  const saved = await api(`/scope/projects/${project.id}`);
+  assert.equal(saved.events.find(e=>e.text==='Mensaje del freelancer para verificar persistencia').actor_name, owner.name);
+  checks.push('Nombre del profesional resuelto por la API');
+  assert(saved.events.some(e=>e.actor_kind==='professional' && e.revision===3 && e.text==='Mensaje del freelancer para verificar persistencia'));
+  await navigate(`/projects/${project.id}`);
+  await click('Conversación', '.scope-tabs');
+  await waitFor("document.querySelector('.scope-messages')?.textContent.includes('Mensaje del freelancer para verificar persistencia')", 'Mensaje visible después de recargar');
+  checks.push('Mensaje profesional guardado y visible tras recarga');
+  await click('Enviar');
+  await waitFor("!!document.querySelector('.scope-message-input.q-field--error')", 'Error de mensaje vacío');
+  assert(await evaluate("document.querySelector('.scope-message-input .q-field__bottom').getBoundingClientRect().bottom < document.querySelector('.scope-composer-actions').getBoundingClientRect().top"));
+  checks.push('El error de validación no se solapa con Enviar');
+  await click('Cancelar');
+  await evaluate("document.querySelector('.scope-revision-toolbar .q-select').click()");
+  await waitFor("Array.from(document.querySelectorAll('.q-menu .q-item')).some(e=>e.textContent.trim()==='Revisión 2 — Borrador')", 'Revisión borrador en selector');
+  await evaluate("Array.from(document.querySelectorAll('.q-menu .q-item')).find(e=>e.textContent.trim()==='Revisión 2 — Borrador').click()");
+  await waitFor("document.querySelector('.scope-conversation h3').textContent==='Conversación — Revisión 2'", 'Revisión de conversación cambia');
+  assert.equal(await evaluate("document.querySelectorAll('.scope-messages .q-message').length"), 0);
+  checks.push('Mensajes filtrados por la revisión seleccionada');
+  const customer = await api(`/clients/${state.client}`);
+  await api('/auth/login-client', { user_id:state.owner, email:state.client_email, password:account.password });
+  await navigate(`/client/projects/${project.id}`);
+  await waitFor("document.querySelectorAll('.scope-client-actions button').length===3", 'Tres acciones del cliente');
+  assert(await evaluate("(()=>{const boxes=Array.from(document.querySelectorAll('.scope-client-actions button')).map(b=>b.getBoundingClientRect());return Math.max(...boxes.map(b=>b.top))-Math.min(...boxes.map(b=>b.top))<2})()"));
+  checks.push('Aceptar, solicitar ajustes y rechazar alineados en una fila');
+  await click('Conversación', '.scope-tabs');
+  await evaluate("(()=>{const input=document.querySelector('.scope-composer textarea');input.value='Respuesta del cliente con su nombre';input.dispatchEvent(new Event('input',{bubbles:true}));})()");
+  await click('Enviar');
+  await waitFor("document.querySelector('.scope-composer textarea').value===''", 'Respuesta del cliente enviada');
+  const clientScope = await api(`/scope/client/projects/${project.id}`);
+  assert.equal(clientScope.events.find(e=>e.text==='Respuesta del cliente con su nombre').actor_name, customer.name);
+  assert(await evaluate(`Array.from(document.querySelectorAll('.scope-messages .q-message-name')).some(e=>e.textContent===${JSON.stringify(customer.name)})`));
+  checks.push('Nombre del cliente en API y burbuja del portal');
+  await writeFile(join(output, 'scope-conversation.json'), JSON.stringify({ project:project.id, checks }, null, 2));
+  console.log(`Scope conversation: ${checks.length} checks`);
+}

@@ -21,3 +21,5 @@ pub mod ui_state;
 pub mod user;
 pub mod utils;
 pub mod websocket;
+
+pub mod scope;

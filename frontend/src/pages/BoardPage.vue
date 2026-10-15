@@ -27,7 +27,7 @@
     <div class="row items-center q-gutter-sm q-mb-md" role="status">
       <span class="text-caption text-secondary">{{ t('ui.tableSummary', { count: total }) }}</span
       ><q-chip v-if="activeFilterCount" dense
-        >{{ t('ui.appliedFilters') }} · {{ activeFilterCount }}</q-chip
+        >{{ t('ui.appliedFilters') }} — {{ activeFilterCount }}</q-chip
       ><span v-if="isMovingTask" class="text-caption">{{ t('ui.moving') }}</span
       ><span class="sr-only" aria-live="polite">{{ moveAnnouncement }}</span>
     </div>
@@ -103,15 +103,20 @@
       </div>
     </div>
 
-    <q-inner-loading :showing="isLoading">
-      <q-spinner color="primary" size="32px" />
-    </q-inner-loading>
+    <ContentSkeleton v-if="isLoading" variant="board" />
 
-    <KanbanBoard :columns="columns" :tasks="tasks" :busy="isMovingTask" @task-drop="moveTask" />
+    <KanbanBoard
+      v-else
+      :columns="columns"
+      :tasks="tasks"
+      :busy="isMovingTask"
+      @task-drop="moveTask"
+    />
   </q-page>
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 const filtersOpen = ref(false);
 import { computed, onMounted, ref, watch } from 'vue';

@@ -47,10 +47,19 @@ pub async fn websocket_handler(
     }
 
     let ws_connections = state.ws_connections.clone();
+    let conversation_rx = state.conversation_bus.subscribe();
 
     Ok(ws.on_upgrade(move |socket| {
         let service = WebSocketService::new(state.db.clone(), state.config.clone(), state.notification_bus.clone());
-        handle_socket(socket, user_id, session_id, service, ws_connections)
+        handle_socket(
+            socket,
+            user_id,
+            session_id,
+            service,
+            ws_connections,
+            state,
+            conversation_rx,
+        )
     }))
 }
 
@@ -60,6 +69,8 @@ async fn handle_socket(
     session_id: String,
     service: WebSocketService,
     ws_connections: Arc<DashMap<Uuid, AtomicUsize>>,
+    state: AppState,
+    mut conversation_rx: tokio::sync::broadcast::Receiver<crate::dtos::scope::ConversationEvent>,
 ) {
     let (mut sender, mut receiver) = socket.split();
 
@@ -97,6 +108,20 @@ async fn handle_socket(
                             tracing::error!("WebSocket receive error: {}", error);
                             break;
                         }
+                    }
+                }
+                conversation_event = conversation_rx.recv() => {
+                    match conversation_event {
+                        Ok(event) if event.user_id == user_id => {
+                            if event.data["kind"] == "read" && event.data["actor_id"].as_str() != Some(user_id.to_string().as_str()) { continue; }
+                            if !crate::controllers::conversation_ws::allowed(&state, user_id, None, user_id, Some(event.project_id)).await { continue; }
+                            if service.send_scope_conversation(&mut sender, event.data).await.is_err() { break; }
+                        }
+                        Ok(_) => {}
+                        Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
+                            if service.resync_scope_conversation(&mut sender).await.is_err() { break; }
+                        }
+                        Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                     }
                 }
                 bus_event = notification_rx.recv() => {

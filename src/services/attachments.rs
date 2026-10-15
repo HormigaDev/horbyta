@@ -53,7 +53,7 @@ impl AttachmentService {
         scope: AttachmentUploadScope,
         multipart: Multipart,
     ) -> Result<StorageBackedDbWrite<AttachmentUploadResponseDto>, AppError> {
-        let (files, total_upload_bytes) = Self::parse_uploaded_files(multipart).await?;
+        let (files, total_upload_bytes) = Self::parse_uploaded_files(multipart, false).await?;
         Self::guard_upload_capacity(
             db,
             user_id,
@@ -90,6 +90,41 @@ impl AttachmentService {
                 items: created_attachments,
             },
             storage_keys: created_storage_keys,
+        })
+    }
+
+    pub async fn upload_conversation_files(
+        db: &impl ConnectionTrait,
+        storage: &dyn ObjectStore,
+        user_id: Uuid,
+        project_id: Uuid,
+        multipart: Multipart,
+    ) -> Result<StorageBackedDbWrite<AttachmentUploadResponseDto>, AppError> {
+        let (files, total) = Self::parse_uploaded_files(multipart, true).await?;
+        Self::guard_upload_capacity(db, user_id, Some(project_id), None, None, None, total).await?;
+        let scope = AttachmentUploadScope::project(project_id);
+        let mut items = Vec::new();
+        let mut storage_keys = Vec::new();
+        for file in files {
+            let (dto, bytes) = scope.into_create_attachment_dto(file);
+            match Self::create_in_tx(db, storage, user_id, dto, bytes).await {
+                Ok(created) => {
+                    storage_keys.push(created.storage_key.clone());
+                    items.push(created);
+                }
+                Err(error) => {
+                    Self::cleanup_storage_objects(storage, &storage_keys).await;
+                    return Err(error);
+                }
+            }
+        }
+        Ok(StorageBackedDbWrite {
+            value: AttachmentUploadResponseDto {
+                uploaded_count: items.len(),
+                uploaded_bytes: total,
+                items,
+            },
+            storage_keys,
         })
     }
 
@@ -140,6 +175,16 @@ impl AttachmentService {
             .await
             .map_err(|error| AppError::Internal(format!("could not read file: {}", error)))?;
 
+        let preserved=db.query_one(sea_orm::Statement::from_sql_and_values(sea_orm::DbBackend::Postgres,
+            "SELECT a->>'sha256' AS hash FROM scope_revisions r CROSS JOIN jsonb_array_elements(r.attachment_snapshot) a WHERE a->>'id'=$1 AND a->>'sha256' IS NOT NULL AND r.published ORDER BY r.created_at DESC LIMIT 1",[attachment_id.to_string().into()])).await?;
+        if let Some(row) = preserved {
+            use sha2::{Digest, Sha256};
+            if hex::encode(Sha256::digest(&bytes)) != row.try_get::<String>("", "hash")? {
+                return Err(AppError::Conflict(
+                    "El archivo no coincide con el anexo publicado; revise su integridad.".into(),
+                ));
+            }
+        }
         Ok(AttachmentRawFileDto {
             mime_type: attachment.mime_type.clone(),
             content_disposition: Self::build_content_disposition(&attachment.original_name, &attachment.mime_type),
@@ -447,6 +492,14 @@ impl AttachmentService {
         let location = ObjectPath::parse(model.storage_key.as_str())
             .map_err(|error| AppError::Internal(format!("invalid storage key: {}", error)))?;
 
+        attachments::ActiveModel {
+            id: Set(model.id),
+            ..Default::default()
+        }
+        .delete(db)
+        .await
+        .map_err(AppError::from)?;
+
         if let Err(error) = storage.delete(&location).await {
             tracing::warn!(
                 attachment_id = %model.id,
@@ -455,14 +508,6 @@ impl AttachmentService {
                 "Failed to remove attachment from storage, continuing with DB delete"
             );
         }
-
-        attachments::ActiveModel {
-            id: Set(model.id),
-            ..Default::default()
-        }
-        .delete(db)
-        .await
-        .map_err(AppError::Database)?;
 
         Ok(())
     }
@@ -537,7 +582,10 @@ impl AttachmentService {
         Ok(AttachmentSearchResponseDto { payload, items, total })
     }
 
-    async fn parse_uploaded_files(mut multipart: Multipart) -> Result<(Vec<UploadedFile>, i64), AppError> {
+    async fn parse_uploaded_files(
+        mut multipart: Multipart,
+        conversation: bool,
+    ) -> Result<(Vec<UploadedFile>, i64), AppError> {
         let mut files = Vec::new();
         let mut total_upload_bytes: i64 = 0;
 
@@ -552,6 +600,24 @@ impl AttachmentService {
 
             let original_name = field.file_name().unwrap_or("archivo").to_string();
             let mime_type = field.content_type().map(|value| value.to_string());
+            if conversation {
+                let extension = original_name.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+                if mime_type
+                    .as_deref()
+                    .is_some_and(|mime| mime.to_ascii_lowercase().starts_with("audio/"))
+                    || [
+                        "mp3", "wav", "ogg", "oga", "opus", "m4a", "aac", "flac", "aiff", "aif", "amr", "wma",
+                    ]
+                    .contains(&extension.as_str())
+                {
+                    return Err(AppError::BadRequest(
+                        "Audio attachments are not supported in conversations.".into(),
+                    ));
+                }
+                if files.len() >= 10 {
+                    return Err(AppError::BadRequest("At most 10 attachments per message.".into()));
+                }
+            }
             let bytes = field
                 .bytes()
                 .await
@@ -568,6 +634,9 @@ impl AttachmentService {
                 .checked_add(file_size)
                 .ok_or_else(|| AppError::BadRequest("total file size exceeds the allowed limit".to_string()))?;
 
+            if conversation && total_upload_bytes > MAX_ATTACHMENT_SCOPE_BYTES {
+                return Err(AppError::BadRequest("total file size exceeds the allowed limit".into()));
+            }
             files.push(UploadedFile {
                 original_name,
                 mime_type,

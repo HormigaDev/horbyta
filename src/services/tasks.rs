@@ -327,7 +327,7 @@ impl TaskService {
             ..Default::default()
         };
 
-        let created_task = task.insert(db).await.map_err(AppError::Database)?;
+        let created_task = task.insert(db).await.map_err(AppError::from)?;
 
         if !safe_tag_ids.is_empty() {
             let links: Vec<task_tags::ActiveModel> = safe_tag_ids
@@ -339,10 +339,7 @@ impl TaskService {
                 })
                 .collect();
 
-            TaskTags::insert_many(links)
-                .exec(db)
-                .await
-                .map_err(AppError::Database)?;
+            TaskTags::insert_many(links).exec(db).await.map_err(AppError::from)?;
         }
 
         Ok(created_task)
@@ -395,7 +392,7 @@ impl TaskService {
         let next_description = replace_markdown_attachment_urls(created_task.description.clone(), &upload.replacements);
         let mut active_task: tasks::ActiveModel = created_task.into();
         active_task.description = Set(next_description);
-        let updated_task = match active_task.update(db).await.map_err(AppError::Database) {
+        let updated_task = match active_task.update(db).await.map_err(AppError::from) {
             Ok(updated_task) => updated_task,
             Err(error) => {
                 AttachmentService::cleanup_storage_objects(storage, &upload.storage_keys).await;
@@ -446,13 +443,13 @@ impl TaskService {
         active_task.block_parent = Set(dto.block_parent);
         active_task.due_date = Set(dto.due_date);
 
-        let updated_task = active_task.update(db).await.map_err(AppError::Database)?;
+        let updated_task = active_task.update(db).await.map_err(AppError::from)?;
 
         TaskTags::delete_many()
             .filter(task_tags::Column::TaskId.eq(updated_task.id))
             .exec(db)
             .await
-            .map_err(AppError::Database)?;
+            .map_err(AppError::from)?;
 
         if !safe_tag_ids.is_empty() {
             let links: Vec<task_tags::ActiveModel> = safe_tag_ids
@@ -464,10 +461,7 @@ impl TaskService {
                 })
                 .collect();
 
-            TaskTags::insert_many(links)
-                .exec(db)
-                .await
-                .map_err(AppError::Database)?;
+            TaskTags::insert_many(links).exec(db).await.map_err(AppError::from)?;
         }
 
         Ok(updated_task)
@@ -539,7 +533,7 @@ impl TaskService {
 
         let mut active_task: tasks::ActiveModel = task.into();
         active_task.status = Set(dto.status.to_string());
-        let _ = active_task.update(db).await.map_err(AppError::Database)?;
+        let _ = active_task.update(db).await.map_err(AppError::from)?;
 
         Ok(())
     }
@@ -551,7 +545,7 @@ impl TaskService {
             .filter(tasks::Column::Status.ne(TaskStatus::Done.to_string()))
             .count(db)
             .await
-            .map_err(AppError::Database)?;
+            .map_err(AppError::from)?;
 
         if blocking_count > 0 {
             return Err(AppError::BadRequest(

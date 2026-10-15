@@ -191,6 +191,35 @@ impl WebSocketService {
         }
     }
 
+    pub async fn send_scope_conversation(
+        &self,
+        sender: &mut futures::stream::SplitSink<WebSocket, Message>,
+        data: serde_json::Value,
+    ) -> Result<(), AppError> {
+        self.send_ws_message(
+            sender,
+            &WsMessage {
+                msg_type: "scope.conversation.updated".into(),
+                data: Some(data),
+                id: None,
+            },
+        )
+        .await
+    }
+    pub async fn resync_scope_conversation(
+        &self,
+        sender: &mut futures::stream::SplitSink<WebSocket, Message>,
+    ) -> Result<(), AppError> {
+        self.send_ws_message(
+            sender,
+            &WsMessage {
+                msg_type: "scope.conversation.resync".into(),
+                data: None,
+                id: None,
+            },
+        )
+        .await
+    }
     pub async fn send_processing_error(&self, sender: &mut futures::stream::SplitSink<WebSocket, Message>) {
         let _ = self
             .send_ws_message(

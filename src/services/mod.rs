@@ -15,3 +15,11 @@ pub mod time_entries;
 pub mod ui_state;
 pub mod users;
 pub mod websocket;
+
+pub mod scope;
+
+pub mod scope_delivery;
+
+pub mod scope_conversation;
+
+pub mod project_conversation;

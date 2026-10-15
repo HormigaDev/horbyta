@@ -18,9 +18,7 @@
           />
         </q-card-section>
 
-        <q-card-section v-if="isLoadingTag" class="q-py-xl flex flex-center">
-          <q-spinner-dots color="primary" size="32px" />
-        </q-card-section>
+        <q-card-section v-if="isLoadingTag"><ContentSkeleton variant="form" /></q-card-section>
 
         <q-card-section v-else class="q-pt-md q-gutter-md">
           <div
@@ -106,6 +104,7 @@
 </template>
 
 <script setup lang="ts">
+import ContentSkeleton from 'src/components/ContentSkeleton.vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useUI } from 'src/composables/useUI';

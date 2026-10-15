@@ -2,7 +2,7 @@ import { defineConfig } from '#q-app/wrappers';
 
 export default defineConfig((/* ctx */) => {
   return {
-    boot: ['i18n', 'appearance'],
+    boot: ['i18n', 'appearance', 'attachmentPreview'],
     css: ['app.scss'],
     extras: ['roboto-font', 'material-icons'],
 
@@ -20,6 +20,7 @@ export default defineConfig((/* ctx */) => {
         [
           'vite-plugin-checker',
           {
+            enableBuild: process.env.HORBYTA_BUILD_PRECHECKED !== '1',
             vueTsc: true,
             eslint: {
               lintCommand: 'eslint -c ./eslint.config.js "./src*/**/*.{ts,js,mjs,cjs,vue}"',

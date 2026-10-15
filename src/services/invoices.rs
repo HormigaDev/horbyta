@@ -169,7 +169,7 @@ impl InvoiceService {
             .filter(project_billing::Column::UserId.eq(user_id))
             .one(db)
             .await
-            .map_err(AppError::Database)?
+            .map_err(AppError::from)?
             .map(|b| b.currency_type)
             .unwrap_or_else(|| "USD".to_string());
 
@@ -201,7 +201,7 @@ impl InvoiceService {
             ..Default::default()
         };
 
-        let created = invoice.insert(db).await.map_err(AppError::Database)?;
+        let created = invoice.insert(db).await.map_err(AppError::from)?;
 
         Self::link_time_entries(db, &dto.time_entry_ids, created.id).await?;
 
@@ -241,7 +241,7 @@ impl InvoiceService {
         active.provider_external_id = Set(normalized_external_id);
         active.payment_link = Set(normalized_payment_link);
         active.notes = Set(Some(notes));
-        active.update(db).await.map_err(AppError::Database)?;
+        active.update(db).await.map_err(AppError::from)?;
 
         Self::get_by_id(db, user_id, id).await
     }
@@ -263,7 +263,7 @@ impl InvoiceService {
             active.issued_at = Set(Some(Utc::now().fixed_offset()));
         }
 
-        active.update(db).await.map_err(AppError::Database)?;
+        active.update(db).await.map_err(AppError::from)?;
 
         Self::get_by_id(db, user_id, id).await
     }
@@ -278,7 +278,7 @@ impl InvoiceService {
         }
         .delete(db)
         .await
-        .map_err(AppError::Database)?;
+        .map_err(AppError::from)?;
 
         Ok(())
     }
@@ -539,7 +539,7 @@ impl InvoiceService {
             .filter(time_entries::Column::Id.is_in(ids.to_vec()))
             .exec(db)
             .await
-            .map_err(AppError::Database)?;
+            .map_err(AppError::from)?;
 
         Ok(())
     }
@@ -550,7 +550,7 @@ impl InvoiceService {
             .filter(time_entries::Column::InvoiceId.eq(invoice_id))
             .exec(db)
             .await
-            .map_err(AppError::Database)?;
+            .map_err(AppError::from)?;
 
         Ok(())
     }
@@ -591,7 +591,7 @@ impl InvoiceService {
             .into_model::<InvoiceTimeEntryDto>()
             .all(db)
             .await
-            .map_err(AppError::Database)
+            .map_err(AppError::from)
     }
 
     fn group_time_entries_by_task(entries: Vec<InvoiceTimeEntryDto>) -> Vec<InvoiceTaskGroupDto> {
