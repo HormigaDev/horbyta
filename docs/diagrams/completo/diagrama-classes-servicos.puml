@@ -1,0 +1,338 @@
+@startuml diagrama-classes-servicos
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam roundCorner 6
+skinparam ArrowColor #4B5563
+skinparam ArrowThickness 1.1
+skinparam packageStyle rectangle
+skinparam nodesep 70
+skinparam ranksep 90
+' Visual sóbrio, adequado a um trabalho acadêmico (independe do tema padrão do PlantUML).
+skinparam BackgroundColor white
+skinparam ClassBackgroundColor white
+skinparam ClassBorderColor #374151
+skinparam ClassHeaderBackgroundColor #F3F4F6
+skinparam EntityBackgroundColor white
+skinparam EntityBorderColor #374151
+skinparam UsecaseBackgroundColor white
+skinparam UsecaseBorderColor #374151
+skinparam ActorBackgroundColor white
+skinparam ActorBorderColor #374151
+skinparam PackageBorderColor #6B7280
+skinparam RectangleBorderColor #374151
+skinparam LegendBackgroundColor #F9FAFB
+skinparam LegendBorderColor #9CA3AF
+skinparam TitleFontSize 16
+skinparam TitleFontStyle bold
+
+title Horbyta — Diagrama de Classes (serviços de aplicação)
+skinparam classAttributeIconSize 0
+hide empty members
+left to right direction
+
+package "Serviços (src/services)" {
+  class ActivityService <<service>> {
+    + create(user_id, dto)
+    + get_by_id(user_id, id)
+    + update(user_id, id, dto)
+    + delete(user_id, id)
+    + search(user_id, payload)
+  }
+  class AttachmentService <<service>> {
+    + upload_files_to_scope(user_id, scope, multipart)
+    + upload_conversation_files(user_id, project_id, multipart)
+    + search_project(user_id, project_id, payload)
+    + search_task(user_id, task_id, payload)
+    + get_raw_file_for_cookies(jwt_secret, jwt_secret_client, jar, attachment_id)
+    + delete_with_response(user_id, attachment_id)
+    + create_markdown_files_in_tx(user_id, project_id, task_id, milestone_id, change_request_id, files)
+    + create_markdown_files_with_tracking_in_tx(user_id, project_id, task_id, milestone_id, change_request_id, files)
+    + create(user_id, dto, file_bytes)
+    + create_in_tx(user_id, dto, file_bytes)
+    + get_user_storage_usage(user_id)
+    + guard_upload_capacity(user_id, project_id, task_id, milestone_id, change_request_id, upload_bytes)
+    + get_by_id(user_id, attachment_id)
+    + get_by_id_for_client(user_id, client_id, attachment_id)
+    + delete(user_id, attachment_id)
+    + search(user_id, payload)
+    + cleanup_storage_objects(storage_keys)
+  }
+  class CategoryService <<service>> {
+    + create(user_id, dto)
+    + get_by_id(user_id, id)
+    + update(user_id, id, dto)
+    + delete(user_id, id)
+    + search(user_id, payload)
+  }
+  class ChangeRequestService <<service>> {
+    + create(user_id, dto)
+    + create_with_markdown_files(user_id, dto, files)
+    + create_by_client(user_id, client_id, dto)
+    + get_by_id(user_id, id)
+    + get_client_by_id(user_id, client_id, id)
+    + update(user_id, id, dto)
+    + update_with_markdown_files(user_id, id, dto, files)
+    + client_update_spec(user_id, client_id, id, dto)
+    + assign_task_for_approved(user_id, id, dto)
+    + submit(user_id, id, version)
+    + assess(user_id, id, dto)
+    + reopen(user_id, id, version)
+    + mark_implemented(user_id, id, version)
+    + cancel(user_id, id, version)
+    + client_approve(user_id, client_id, id, dto)
+    + client_decline(user_id, client_id, id, dto)
+    + client_cancel(user_id, client_id, id, dto)
+    + delete(user_id, id)
+    + search(user_id, payload)
+    + client_search(user_id, client_id, payload)
+  }
+  class ClientService <<service>> {
+    + create(user_id, dto)
+    + get_by_id(user_id, id)
+    + update(user_id, id, dto)
+    + update_client_status(user_id, id, dto)
+    + delete(user_id, id)
+    + search(user_id, payload)
+    + generate_client_magic_token(magic_token_ttl, user_id, client_id)
+    + save_client_credentials(user_id, client_id, dto)
+    + get_client_auth_status(user_id, client_id)
+  }
+  class DashboardService <<service>> {
+    + get_overview(user_id)
+    + get_client_overview(user_id, client_id)
+    + query_monthly_revenue(user_id, filters)
+    + query_accounts_receivable(user_id, filters)
+    + query_time_by_activity(user_id, filters)
+    + query_billable_ratio(user_id, filters)
+    + query_task_bottlenecks(user_id, filters)
+    + query_client_project_status(user_id, client_id, filters)
+    + query_client_milestone_health(user_id, client_id, filters)
+    + query_client_change_request_status(user_id, client_id, filters)
+    + query_client_project_portfolio(user_id, client_id, filters)
+  }
+  class InvoiceService <<service>> {
+    + search(user_id, payload)
+    + get_by_id(user_id, id)
+    + create(user_id, dto)
+    + update(user_id, id, dto)
+    + update_status(user_id, id, dto)
+    + delete(user_id, id)
+    + get_billable_tasks(user_id, project_id, include_invoice_id, page, per_page)
+  }
+  class MilestoneService <<service>> {
+    + create(user_id, dto)
+    + create_with_markdown_files(user_id, dto, files)
+    + get_by_id(user_id, id)
+    + update(user_id, id, dto)
+    + update_with_markdown_files(user_id, id, dto, files)
+    + delete(user_id, id)
+    + search(user_id, payload)
+    + search_by_project(user_id, project_id, payload)
+    + client_search_project_milestones(user_id, client_id, project_id, payload)
+    + list_project_milestones_preview(user_id, project_id)
+    + list_client_project_milestones_preview(user_id, client_id, project_id)
+  }
+  class NotificationService <<service>> {
+    + create(input)
+    + mark_as_read(user_id, id)
+    + mark_all_as_read(user_id)
+    + delete_all(user_id)
+    + mark_as_received(user_id, ids)
+    + mark_unread_as_received(user_id)
+    + notify_client_change_request_created(user_id, client_id, change_request)
+    + notify_client_change_request_updated(user_id, client_id, change_request)
+    + notify_client_change_request_decision(user_id, client_id, change_request, approved)
+    + notify_client_change_request_cancelled(user_id, client_id, change_request)
+    + notify_invoice_opened(invoice)
+    + notify_invoice_paid(invoice)
+    + notify_payment_received(user_id, payment)
+    + notify_milestone_released(user_id, milestone)
+  }
+  class PaymentService <<service>> {
+    + search(user_id, payload)
+    + get_by_id(user_id, id)
+    + create(user_id, dto)
+    + create_refund(user_id, dto)
+    + update(user_id, id, dto)
+    + delete(user_id, id)
+  }
+  class ProjectService <<service>> {
+    + create_in_tx(user_id, dto)
+    + create(user_id, dto)
+    + create_with_attachments(user_id, dto, files)
+    + create_with_markdown_files(user_id, dto, files)
+    + get_by_id(user_id, id)
+    + get_client_project_by_id(user_id, client_id, project_id)
+    + update(user_id, id, dto)
+    + update_with_markdown_files(user_id, id, dto, files)
+    + update_billable(user_id, id, dto)
+    + upsert_billing(user_id, id, dto)
+    + update_category(user_id, id, dto)
+    + update_status(user_id, id, dto)
+    + delete(user_id, id)
+    + search(user_id, payload)
+    + client_search_projects(user_id, client_id, payload)
+  }
+  class ScopeService <<service>> {
+    + actor(id, kind)
+    + project(owner, client, id)
+    + publish(owner, id, dto)
+    + publish_with_storage(owner, id, dto)
+    + verify_bundle_assets(owner, client, id, revision)
+    + accept(owner, client, actor, id, revision)
+    + change(owner, client, id)
+    + comment(owner, client, actor, id, dto)
+    + task(owner, id)
+    + classify(owner, actor, id, dto)
+    + feedback(owner, client, actor, id, dto)
+    + preparation(owner, id, reason)
+    + requirement(owner, id, document_id, revision)
+    + notices(owner, client)
+    + pending(owner, client)
+  }
+  class TagService <<service>> {
+    + create(user_id, dto)
+    + get_by_id(user_id, id)
+    + update(user_id, id, dto)
+    + delete(user_id, id)
+    + search(user_id, payload)
+  }
+  class TaskService <<service>> {
+    + create_in_tx(user_id, dto)
+    + create(user_id, dto)
+    + create_with_markdown_files(user_id, dto, files)
+    + get_by_id(user_id, id)
+    + update(user_id, id, dto)
+    + update_with_markdown_files(user_id, id, dto, files)
+    + change_status(user_id, id, dto)
+    + delete(user_id, id)
+    + search(user_id, payload)
+    + view(user_id)
+  }
+  class TimeEntryService <<service>> {
+    + create_manual(user_id, dto)
+    + start_timer(user_id, dto)
+    + stop_timer(user_id, id, dto)
+    + update(user_id, id, dto)
+    + get_active_timer(user_id)
+    + get_by_id(user_id, id)
+    + delete(user_id, id)
+    + search(user_id, payload)
+  }
+  class UiStateService <<service>> {
+    + list_scope(user_id, scope)
+    + get_one(user_id, scope, key)
+    + upsert(user_id, scope, key, value)
+    + delete_one(user_id, scope, key)
+    + delete_scope(user_id, scope)
+    + batch_upsert(user_id, scope, entries)
+  }
+  class UserService <<service>> {
+    + ensure_user_can_authenticate(user)
+    + get_me(user_id)
+    + register(dto)
+    + provision_admin(dto)
+    + admin_search_users(admin_id, payload)
+    + admin_create_user(admin_id, dto)
+    + admin_update_user(admin_id, target_user_id, dto)
+    + admin_delete_user(admin_id, target_user_id)
+    + update_profile(user_id, dto)
+    + update_password(user_id, policy, dto)
+    + update_preferences(user_id, dto)
+    + update_notifications(user_id, dto)
+    + get_totp_status(user_id)
+    + start_totp_setup(user_id, policy)
+    + enable_totp(user_id, policy, dto)
+    + cancel_totp_setup(user_id)
+    + disable_totp(user_id, policy, dto)
+    + verify_totp_for_login(user, policy, code, backup_code)
+  }
+  class WebSocketService <<service>> {
+    + new(config, notification_bus)
+    + authenticate_handshake(headers)
+    + subscribe_notifications()
+    + send_unread_notifications(user_id, sender)
+    + process_message(text, _user_id, _session_id, sender)
+    + send_scope_conversation(sender, data)
+    + resync_scope_conversation(sender)
+    + send_processing_error(sender)
+    + send_notification_event(sender, notification)
+    + send_notification_event_and_mark_received(sender, notification)
+  }
+}
+package "Entidades (src/entities)" {
+  class Activity <<entity>>
+  class Attachment <<entity>>
+  class Category <<entity>>
+  class ChangeRequest <<entity>>
+  class ClientAuth <<entity>>
+  class Client <<entity>>
+  class Invoice <<entity>>
+  class Milestone <<entity>>
+  class Notification <<entity>>
+  class Payment <<entity>>
+  class ProjectBilling <<entity>>
+  class Project <<entity>>
+  class Tag <<entity>>
+  class TaskTag <<entity>>
+  class Task <<entity>>
+  class TimeEntry <<entity>>
+  class UserUiState <<entity>>
+  class User <<entity>>
+}
+ActivityService ..> Activity
+AttachmentService ..> Attachment
+AttachmentService ..> ChangeRequest
+AttachmentService ..> ClientAuth
+AttachmentService ..> Client
+AttachmentService ..> Milestone
+AttachmentService ..> Project
+AttachmentService ..> Task
+CategoryService ..> Category
+ChangeRequestService ..> ChangeRequest
+ChangeRequestService ..> Client
+ChangeRequestService ..> Project
+ChangeRequestService ..> Task
+ClientService ..> ClientAuth
+ClientService ..> Client
+InvoiceService ..> Activity
+InvoiceService ..> Client
+InvoiceService ..> Invoice
+InvoiceService ..> ProjectBilling
+InvoiceService ..> Project
+InvoiceService ..> Task
+InvoiceService ..> TimeEntry
+MilestoneService ..> Milestone
+MilestoneService ..> Project
+NotificationService ..> Milestone
+NotificationService ..> Notification
+PaymentService ..> Client
+PaymentService ..> Invoice
+PaymentService ..> Payment
+PaymentService ..> ProjectBilling
+PaymentService ..> Project
+ProjectService ..> Category
+ProjectService ..> Client
+ProjectService ..> Milestone
+ProjectService ..> ProjectBilling
+ProjectService ..> Project
+TagService ..> Tag
+TaskService ..> Milestone
+TaskService ..> Project
+TaskService ..> Tag
+TaskService ..> TaskTag
+TaskService ..> Task
+TimeEntryService ..> Activity
+TimeEntryService ..> ProjectBilling
+TimeEntryService ..> Project
+TimeEntryService ..> Task
+TimeEntryService ..> TimeEntry
+UiStateService ..> UserUiState
+UserService ..> User
+WebSocketService ..> Notification
+
+legend right
+  Gerado de src/services. O parâmetro de conexão (db/tx), comum a todas as operações, é omitido.
+endlegend
+@enduml

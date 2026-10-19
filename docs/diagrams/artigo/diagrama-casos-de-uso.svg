@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="1521px" preserveAspectRatio="none" style="width:823px;height:1521px;" version="1.1" viewBox="0 0 823 1521" width="823px" zoomAndPan="magnify"><defs/><g><text fill="#000000" font-family="Arial" font-size="16" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="445" x="192" y="17.104">Horbyta — Diagrama de Casos de Uso (escopo do artigo)</text><!--MD5=[046ed4006a62a8d10da9e747850a3e63]
+cluster Horbyta--><rect fill="#FFFFFF" height="1465" rx="3" ry="3" style="stroke: #374151; stroke-width: 1.5;" width="582" x="128" y="45.792"/><text fill="#000000" font-family="Arial" font-size="12" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="48" x="395" y="60.6201">Horbyta</text><!--MD5=[919ab58ec464393f037939efc2a6d473]
+cluster Gestão de projetos--><path d="M173,653.792 L284,653.792 A4.5,4.5 0 0 1 287,656.792 L294,676.1362 L338,676.1362 A3,3 0 0 1 341,679.1362 L341,1041.792 A3,3 0 0 1 338,1044.792 L173,1044.792 A3,3 0 0 1 170,1041.792 L170,656.792 A3,3 0 0 1 173,653.792 " fill="#FFFFFF" style="stroke: #6B7280; stroke-width: 1.5;"/><line style="stroke: #6B7280; stroke-width: 1.5;" x1="170" x2="294" y1="676.1362" y2="676.1362"/><text fill="#000000" font-family="Arial" font-size="12" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="111" x="174" y="668.6201">Gestão de projetos</text><!--MD5=[a25fa87cfa37af8e6827de95ee413a01]
+cluster Tempo e faturamento--><path d="M163,1068.792 L293,1068.792 A4.5,4.5 0 0 1 296,1071.792 L303,1091.1362 L348,1091.1362 A3,3 0 0 1 351,1094.1362 L351,1360.792 A3,3 0 0 1 348,1363.792 L163,1363.792 A3,3 0 0 1 160,1360.792 L160,1071.792 A3,3 0 0 1 163,1068.792 " fill="#FFFFFF" style="stroke: #6B7280; stroke-width: 1.5;"/><line style="stroke: #6B7280; stroke-width: 1.5;" x1="160" x2="303" y1="1091.1362" y2="1091.1362"/><text fill="#000000" font-family="Arial" font-size="12" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="130" x="164" y="1083.6201">Tempo e faturamento</text><!--MD5=[bdd48a9f9be3623f8f1c4b99fbcad455]
+cluster Solicitações de mudança--><path d="M155,88.792 L302,88.792 A4.5,4.5 0 0 1 305,91.792 L312,111.1362 L683,111.1362 A3,3 0 0 1 686,114.1362 L686,426.792 A3,3 0 0 1 683,429.792 L155,429.792 A3,3 0 0 1 152,426.792 L152,91.792 A3,3 0 0 1 155,88.792 " fill="#FFFFFF" style="stroke: #6B7280; stroke-width: 1.5;"/><line style="stroke: #6B7280; stroke-width: 1.5;" x1="152" x2="312" y1="111.1362" y2="111.1362"/><text fill="#000000" font-family="Arial" font-size="12" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="147" x="156" y="103.6201">Solicitações de mudança</text><!--MD5=[85e6932b0cf14e38ddb46f54a785a79a]
+cluster Portal do cliente--><path d="M162,1387.792 L260,1387.792 A4.5,4.5 0 0 1 263,1390.792 L270,1410.1362 L349,1410.1362 A3,3 0 0 1 352,1413.1362 L352,1483.792 A3,3 0 0 1 349,1486.792 L162,1486.792 A3,3 0 0 1 159,1483.792 L159,1390.792 A3,3 0 0 1 162,1387.792 " fill="#FFFFFF" style="stroke: #6B7280; stroke-width: 1.5;"/><line style="stroke: #6B7280; stroke-width: 1.5;" x1="159" x2="270" y1="1410.1362" y2="1410.1362"/><text fill="#000000" font-family="Arial" font-size="12" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="98" x="163" y="1402.6201">Portal do cliente</text><ellipse cx="255.533" cy="497.8491" fill="#FFFFFF" rx="56.033" ry="14.557" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="75" x="218.033" y="502.5211">Autenticar-se</text><ellipse cx="255.2534" cy="600.6427" fill="#FFFFFF" rx="77.2534" ry="17.8507" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="124" x="193.2534" y="605.3148">Consultar notificações</text><ellipse cx="255.3495" cy="704.862" fill="#FFFFFF" rx="68.3495" ry="16.0699" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="102" x="204.3495" y="709.534">Gerenciar clientes</text><ellipse cx="255.5268" cy="807.5974" fill="#FFFFFF" rx="69.5268" ry="16.3054" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="105" x="203.0268" y="812.2695">Gerenciar projetos</text><ellipse cx="255.6858" cy="910.6292" fill="#FFFFFF" rx="67.1858" ry="15.8372" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="99" x="206.1858" y="915.3013">Gerenciar tarefas</text><ellipse cx="255.4601" cy="1012.7841" fill="#FFFFFF" rx="67.9601" ry="15.992" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="101" x="204.9601" y="1017.4561">Gerenciar marcos</text><ellipse cx="255.2829" cy="1118.9486" fill="#FFFFFF" rx="63.7829" ry="15.1566" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="90" x="210.2829" y="1123.6207">Registrar tempo</text><ellipse cx="255.3532" cy="1222.5627" fill="#FFFFFF" rx="79.3532" ry="18.2706" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="129" x="190.8532" y="1227.2347">Gerenciar faturamento</text><ellipse cx="255.2534" cy="1329.6427" fill="#FFFFFF" rx="77.2534" ry="17.8507" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="124" x="193.2534" y="1334.3148">Registrar pagamentos</text><ellipse cx="255.4052" cy="388.6711" fill="#FFFFFF" rx="76.9052" ry="24.379" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="113" x="198.9052" y="387.7336">Registrar solicitação</text><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="69" x="220.9052" y="404.0777">de mudança</text><ellipse cx="255.3269" cy="269.9203" fill="#FFFFFF" rx="69.8269" ry="24.6282" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="101" x="204.8269" y="268.5993">Avaliar solicitação</text><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="69" x="220.8269" y="284.9434">de mudança</text><ellipse cx="578.5473" cy="269.687" fill="#FFFFFF" rx="84.0473" ry="24.895" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="91" x="533.0473" y="264.4121">Estimar impacto</text><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="121" x="518.0473" y="280.7562">(horas, custo e prazo)</text><ellipse cx="578.7234" cy="149.9311" fill="#FFFFFF" rx="91.7234" ry="25.139" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="106" x="525.7234" y="145.0203">Aprovar ou rejeitar</text><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="131" x="513.2234" y="161.3644">solicitação de mudança</text><ellipse cx="255.6367" cy="149.6035" fill="#FFFFFF" rx="87.6367" ry="25.3115" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="124" x="193.6367" y="147.2598">Liberar mudança para</text><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="105" x="203.1367" y="163.6039">o desenvolvimento</text><ellipse cx="255.3333" cy="1446.6837" fill="#FFFFFF" rx="80.3333" ry="23.8916" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="121" x="194.8333" y="1446.5151">Acompanhar projetos</text><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="52" x="229.3333" y="1462.8592">e marcos</text><!--MD5=[0f25eb3014a1dc1190273549e0d9da35]
+entity Freelancer--><ellipse cx="36" cy="778.292" fill="#FFFFFF" rx="8" ry="8" style="stroke: #374151; stroke-width: 1.5;"/><path d="M36,786.292 L36,813.292 M23,794.292 L49,794.292 M36,813.292 L23,828.292 M36,813.292 L49,828.292 " fill="none" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="60" x="6" y="843.6201">Freelancer</text><!--MD5=[d9f75b78703733959770a1bae7362de0]
+entity Cliente--><ellipse cx="791.5" cy="513.292" fill="#FFFFFF" rx="8" ry="8" style="stroke: #374151; stroke-width: 1.5;"/><path d="M791.5,521.292 L791.5,548.292 M778.5,529.292 L804.5,529.292 M791.5,548.292 L778.5,563.292 M791.5,548.292 L804.5,563.292 " fill="none" style="stroke: #374151; stroke-width: 1.5;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="39" x="772" y="578.6201">Cliente</text><!--MD5=[0079eff28b383c80e7666e7ce232215e]
+link Freelancer to UC_LOGIN--><path d="M39.08,768.502 C44.1,712.392 61.29,609.332 120,547.792 C142.7,524.002 177.75,511.452 206.38,504.872 " fill="none" id="Freelancer-UC_LOGIN" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[b1e9abddc7ec669b5ed2529b84281823]
+link Freelancer to UC_CLIENTS--><path d="M66.24,785.652 C79.45,776.282 95.55,765.722 111,757.792 C143.85,740.942 183.33,726.762 212.56,717.322 " fill="none" id="Freelancer-UC_CLIENTS" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[83186bb3207f4cf21199af5ba8a51ec9]
+link Freelancer to UC_PROJECTS--><path d="M66.33,807.792 C96.83,807.792 145.64,807.792 185.91,807.792 " fill="none" id="Freelancer-UC_PROJECTS" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[ded524fa02c70c3ee444d7f0c9be9e07]
+link Freelancer to UC_TASKS--><path d="M66.14,828.032 C81.7,838.322 101.42,850.562 120,859.792 C150.86,875.122 187.54,888.742 214.79,898.042 " fill="none" id="Freelancer-UC_TASKS" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[28ff26e1ebaf3edcf520dbd83920cc23]
+link Freelancer to UC_MILESTONES--><path d="M49.27,846.972 C61.93,881.502 84.82,930.972 120,961.792 C143.39,982.282 175.84,994.902 203,1002.462 " fill="none" id="Freelancer-UC_MILESTONES" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[2e14928d8298107a6b1adadf227f4957]
+link Freelancer to UC_TIME--><path d="M40.81,846.972 C47.85,899.812 67.36,994.142 120,1053.792 C144.11,1081.112 182.27,1098.022 211.79,1107.722 " fill="none" id="Freelancer-UC_TIME" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[42cdc6f9f9bbbe31e378669395cc0001]
+link Freelancer to UC_INVOICES--><path d="M41.4,846.902 C51.46,929.962 78.52,1120.282 120,1168.792 C138.48,1190.402 166.85,1203.452 192.78,1211.292 " fill="none" id="Freelancer-UC_INVOICES" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[1e2257eb5b028e15da0b722e39dc876d]
+link Freelancer to UC_PAYMENTS--><path d="M39.09,846.932 C45.2,947.342 66.1,1210.852 120,1276.792 C137.95,1298.752 166.26,1311.652 192.29,1319.212 " fill="none" id="Freelancer-UC_PAYMENTS" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[bfb33a8923aa3f492d2d9cd5a380f5c2]
+link Freelancer to UC_CR_CREATE--><path d="M39.98,768.552 C47.54,679.512 70.53,466.072 120,416.792 C135.46,401.392 157.05,393.422 178.42,389.542 " fill="none" id="Freelancer-UC_CR_CREATE" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[df4c4ea626b04ef4031e6e67fbea1007]
+link Freelancer to UC_CR_ASSESS--><path d="M39,768.622 C44.93,666.762 65.52,396.812 120,328.792 C138.73,305.412 168.6,291.062 195.44,282.382 " fill="none" id="Freelancer-UC_CR_ASSESS" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[ed8822b4db6a7e1905d0850a996265f4]
+link Freelancer to UC_NOTIFY--><path d="M51.78,768.592 C65.41,736.892 88.34,692.882 120,663.792 C144.78,641.032 179.25,625.102 207.09,614.952 " fill="none" id="Freelancer-UC_NOTIFY" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[dcca1bcd0d05b987010bae77ee32f909]
+link UC_LOGIN to Cliente--><path d="M309.16,502.232 C425.2,512.012 698.44,535.032 771.99,541.232 " fill="none" id="UC_LOGIN-Cliente" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[b457bfec5a929afdd68d1deb5634d12a]
+link UC_FOLLOW to Cliente--><path d="M302.63,1427.112 C398.62,1383.492 619.09,1268.722 718,1096.792 C768.73,1008.612 785,693.022 789.22,581.872 " fill="none" id="UC_FOLLOW-Cliente" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[1afa2a407b7f35d4a2c2e3d3b6c49f07]
+link UC_CR_CREATE to Cliente--><path d="M327.31,379.782 C422.97,371.192 595.57,368.642 718,440.792 C742.43,455.182 760.79,481.412 772.92,503.662 " fill="none" id="UC_CR_CREATE-Cliente" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[46d739f2b5650b7ec0990725d10b1f7a]
+link UC_CR_DECIDE to Cliente--><path d="M649.33,165.742 C674.34,174.762 700.61,188.642 718,209.792 C754.78,254.522 777.7,425.552 786.45,503.572 " fill="none" id="UC_CR_DECIDE-Cliente" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[6842cbce4b85fd94f987fd2756ce559b]
+link UC_NOTIFY to Cliente--><path d="M330.09,595.642 C422.9,588.682 587.26,574.782 727,554.792 C742.22,552.612 759.33,549.332 771.96,546.752 " fill="none" id="UC_NOTIFY-Cliente" style="stroke: #4B5563; stroke-width: 1.1;"/><!--MD5=[56264d100a33cf582574bcd28e22dbbf]
+link UC_CR_ASSESS to UC_CR_IMPACT--><path d="M325.76,269.792 C373.6,269.792 437.64,269.792 489.16,269.792 " fill="none" id="UC_CR_ASSESS-&gt;UC_CR_IMPACT" style="stroke: #4B5563; stroke-width: 1.1; stroke-dasharray: 7.0,7.0;"/><polygon fill="#4B5563" points="494.42,269.792,485.42,265.792,489.42,269.792,485.42,273.792,494.42,269.792" style="stroke: #4B5563; stroke-width: 1.1;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="52" x="389" y="265.6201">«include»</text><!--MD5=[0dae706c548ee7c7f8a91af080891b6b]
+link UC_CR_RELEASE to UC_CR_DECIDE--><path d="M343.37,149.792 C386.19,149.792 437.93,149.792 481.88,149.792 " fill="none" id="UC_CR_RELEASE-&gt;UC_CR_DECIDE" style="stroke: #4B5563; stroke-width: 1.1; stroke-dasharray: 7.0,7.0;"/><polygon fill="#4B5563" points="486.92,149.792,477.92,145.792,481.92,149.792,477.92,153.792,486.92,149.792" style="stroke: #4B5563; stroke-width: 1.1;"/><text fill="#000000" font-family="Arial" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="50" x="390" y="145.6201">«extend»</text><!--MD5=[535eb6058f0252c2fb1bcc7e97b56742]
+@startuml diagrama-casos-de-uso
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam roundCorner 6
+skinparam ArrowColor #4B5563
+skinparam ArrowThickness 1.1
+skinparam packageStyle rectangle
+skinparam nodesep 70
+skinparam ranksep 90
+skinparam BackgroundColor white
+skinparam ClassBackgroundColor white
+skinparam ClassBorderColor #374151
+skinparam ClassHeaderBackgroundColor #F3F4F6
+skinparam EntityBackgroundColor white
+skinparam EntityBorderColor #374151
+skinparam UsecaseBackgroundColor white
+skinparam UsecaseBorderColor #374151
+skinparam ActorBackgroundColor white
+skinparam ActorBorderColor #374151
+skinparam PackageBorderColor #6B7280
+skinparam RectangleBorderColor #374151
+skinparam LegendBackgroundColor #F9FAFB
+skinparam LegendBorderColor #9CA3AF
+skinparam TitleFontSize 16
+skinparam TitleFontStyle bold
+
+title Horbyta — Diagrama de Casos de Uso (escopo do artigo)
+left to right direction
+
+actor "Freelancer" as Freelancer
+actor "Cliente" as Cliente
+
+rectangle "Horbyta" {
+  usecase "Autenticar-se" as UC_LOGIN
+  usecase "Consultar notificações" as UC_NOTIFY
+  package "Gestão de projetos" {
+    usecase "Gerenciar clientes" as UC_CLIENTS
+    usecase "Gerenciar projetos" as UC_PROJECTS
+    usecase "Gerenciar tarefas" as UC_TASKS
+    usecase "Gerenciar marcos" as UC_MILESTONES
+  }
+  package "Tempo e faturamento" {
+    usecase "Registrar tempo" as UC_TIME
+    usecase "Gerenciar faturamento" as UC_INVOICES
+    usecase "Registrar pagamentos" as UC_PAYMENTS
+  }
+  package "Solicitações de mudança" {
+    usecase "Registrar solicitação\nde mudança" as UC_CR_CREATE
+    usecase "Avaliar solicitação\nde mudança" as UC_CR_ASSESS
+    usecase "Estimar impacto\n(horas, custo e prazo)" as UC_CR_IMPACT
+    usecase "Aprovar ou rejeitar\nsolicitação de mudança" as UC_CR_DECIDE
+    usecase "Liberar mudança para\no desenvolvimento" as UC_CR_RELEASE
+  }
+  package "Portal do cliente" {
+    usecase "Acompanhar projetos\ne marcos" as UC_FOLLOW
+  }
+}
+
+Freelancer - - UC_LOGIN
+Freelancer - - UC_CLIENTS
+Freelancer - - UC_PROJECTS
+Freelancer - - UC_TASKS
+Freelancer - - UC_MILESTONES
+Freelancer - - UC_TIME
+Freelancer - - UC_INVOICES
+Freelancer - - UC_PAYMENTS
+Freelancer - - UC_CR_CREATE
+Freelancer - - UC_CR_ASSESS
+Freelancer - - UC_NOTIFY
+UC_LOGIN - - Cliente
+UC_FOLLOW - - Cliente
+UC_CR_CREATE - - Cliente
+UC_CR_DECIDE - - Cliente
+UC_NOTIFY - - Cliente
+UC_CR_ASSESS ..> UC_CR_IMPACT : <<include>>
+UC_CR_RELEASE ..> UC_CR_DECIDE : <<extend>>
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 07:22:07 BRT 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 21.0.12.1+1-1-24.04.4-Ubuntu
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

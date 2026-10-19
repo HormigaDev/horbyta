@@ -1,0 +1,280 @@
+@startuml diagrama-er
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam roundCorner 6
+skinparam ArrowColor #4B5563
+skinparam ArrowThickness 1.1
+skinparam packageStyle rectangle
+skinparam nodesep 70
+skinparam ranksep 90
+' Visual sóbrio, adequado a um trabalho acadêmico (independe do tema padrão do PlantUML).
+skinparam BackgroundColor white
+skinparam ClassBackgroundColor white
+skinparam ClassBorderColor #374151
+skinparam ClassHeaderBackgroundColor #F3F4F6
+skinparam EntityBackgroundColor white
+skinparam EntityBorderColor #374151
+skinparam UsecaseBackgroundColor white
+skinparam UsecaseBorderColor #374151
+skinparam ActorBackgroundColor white
+skinparam ActorBorderColor #374151
+skinparam PackageBorderColor #6B7280
+skinparam RectangleBorderColor #374151
+skinparam LegendBackgroundColor #F9FAFB
+skinparam LegendBorderColor #9CA3AF
+skinparam TitleFontSize 16
+skinparam TitleFontStyle bold
+
+title Horbyta — Diagrama Entidade-Relacionamento (escopo do artigo)
+hide circle
+skinparam linetype ortho
+
+package "Solicitações de mudança" {
+  entity "change_requests" as change_requests {
+    * id : uuid <<PK>>
+    --
+    * record_number : bigint
+    * user_id : uuid <<FK>>
+    * project_id : uuid <<FK>>
+    * client_id : uuid <<FK>>
+      task_id : uuid <<FK>>
+    * origin : character varying(30)
+    * title : character varying(255)
+    * client_request_description : text
+      technical_assessment : text
+    * impact_hours : numeric(6,2)
+    * impact_cost : numeric(15,4)
+    * schedule_impact_days : integer
+    * status : character varying(30)
+      decline_reason : character varying(100)
+      client_approved_at : timestamp with time zone
+      client_signature_ip : character varying(45)
+    * created_at : timestamp with time zone
+    * updated_at : timestamp with time zone
+    * version : integer
+  }
+  entity "scope_change_revisions" as scope_change_revisions {
+    * change_request_id : uuid <<PK>> <<FK>>
+    * version : integer <<PK>>
+    --
+    * snapshot : jsonb
+      actor_id : uuid
+    * actor_kind : text
+    * recorded_at : timestamp with time zone
+    * provenance : text
+  }
+}
+
+package "Usuários e acesso" {
+  entity "client_auth" as client_auth {
+    * id : uuid <<PK>>
+    --
+    * client_id : uuid <<FK>> <<UQ>>
+    * user_id : uuid <<FK>>
+      email : character varying(255)
+      password_hash : text
+      magic_link_hash : bytea
+      magic_link_exp : timestamp with time zone
+    * created_at : timestamp with time zone
+    * updated_at : timestamp with time zone
+  }
+  entity "notifications" as notifications {
+    * id : uuid <<PK>>
+    --
+    * user_id : uuid <<FK>>
+    * preference_key : character varying(80)
+    * event_type : character varying(80)
+    * title : character varying(255)
+      body : text
+      payload : jsonb
+    * severity : character varying(20)
+    * source : character varying(40)
+      entity_type : character varying(40)
+      entity_id : uuid
+    * is_read : boolean
+      read_at : timestamp with time zone
+      received_at : timestamp with time zone
+    * created_at : timestamp with time zone
+    * updated_at : timestamp with time zone
+  }
+  entity "users" as users {
+    * id : uuid <<PK>>
+    --
+    * name : character varying(100) <<UQ>>
+    * email : character varying(255)
+      preferences : jsonb
+    * password_hash : text
+    * role : character varying(20)
+    * status : character varying(20)
+    * two_factor_auth_enabled : boolean
+      two_factor_auth_secret_base32 : text
+      two_factor_auth_pending_secret_base32 : text
+      two_factor_auth_last_used_step : bigint
+      two_factor_auth_backup_code_hashes : jsonb
+    * created_at : timestamp with time zone
+    * updated_at : timestamp with time zone
+  }
+}
+
+package "Gestão de projetos" {
+  entity "clients" as clients {
+    * id : uuid <<PK>>
+    --
+    * user_id : uuid <<FK>>
+    * name : character varying(255)
+    * status : character varying(50)
+      email : character varying(255)
+      phone : character varying(20)
+      address_line : character varying(512)
+      company : character varying(255)
+      notes : text
+    * created_at : timestamp with time zone
+    * updated_at : timestamp with time zone
+  }
+  entity "milestones" as milestones {
+    * id : uuid <<PK>>
+    --
+    * project_id : uuid <<FK>>
+    * name : character varying(255)
+      description : text
+    * status : character varying(20)
+      due_date : timestamp with time zone
+    * created_at : timestamp with time zone
+    * updated_at : timestamp with time zone
+  }
+  entity "projects" as projects {
+    * id : uuid <<PK>>
+    --
+    * record_number : bigint
+    * user_id : uuid <<FK>>
+      client_id : uuid <<FK>>
+      category_id : uuid
+    * name : character varying(255)
+      description : text
+    * status : character varying(20)
+    * billable : boolean
+    * created_at : timestamp with time zone
+    * updated_at : timestamp with time zone
+  }
+  entity "tasks" as tasks {
+    * id : uuid <<PK>>
+    --
+    * record_number : bigint
+    * user_id : uuid <<FK>>
+      project_id : uuid <<FK>>
+      parent_id : uuid <<FK>>
+      milestone_id : uuid <<FK>>
+    * title : character varying(255)
+      description : text
+    * status : character varying(50)
+    * priority : smallint
+    * complexity : smallint
+    * block_parent : boolean
+      due_date : timestamp with time zone
+    * created_at : timestamp with time zone
+    * updated_at : timestamp with time zone
+  }
+}
+
+package "Tempo e faturamento" {
+  entity "invoices" as invoices {
+    * id : uuid <<PK>>
+    --
+    * record_number : bigint
+    * user_id : uuid <<FK>>
+    * project_id : uuid <<FK>>
+    * amount : numeric(15,4)
+    * currency_type : character varying(3)
+    * status : character varying(30)
+      due_date : date
+      issued_at : timestamp with time zone
+    * provider : character varying(30)
+      provider_external_id : character varying(255)
+      payment_link : character varying(1024)
+      notes : text
+    * created_at : timestamp with time zone
+    * updated_at : timestamp with time zone
+  }
+  entity "payments" as payments {
+    * id : uuid <<PK>>
+    --
+    * record_number : bigint
+    * user_id : uuid <<FK>>
+    * project_id : uuid <<FK>>
+      invoice_id : uuid <<FK>>
+      parent_payment_id : uuid <<FK>>
+    * amount : numeric(15,4)
+    * currency_type : character varying(3)
+    * transaction_type : character varying(20)
+    * payment_date : date
+    * provider : character varying(30)
+      provider_external_id : character varying(255)
+      payment_method : character varying(50)
+      reference_code : character varying(255)
+      notes : text
+    * created_at : timestamp with time zone
+    * updated_at : timestamp with time zone
+  }
+  entity "project_billing" as project_billing {
+    * id : uuid <<PK>>
+    --
+    * user_id : uuid <<FK>>
+    * project_id : uuid <<FK>>
+    * currency_type : character varying(3)
+    * billing_type : character varying(30)
+      hourly_rate : numeric(15,4)
+      fixed_price : numeric(15,4)
+      retainer_amount : numeric(15,4)
+      payment_day : smallint
+    * created_at : timestamp with time zone
+    * updated_at : timestamp with time zone
+  }
+  entity "time_entries" as time_entries {
+    * id : uuid <<PK>>
+    --
+    * user_id : uuid <<FK>>
+    * task_id : uuid <<FK>>
+    * activity : uuid
+      invoice_id : uuid <<FK>>
+      start_time : timestamp with time zone
+      end_time : timestamp with time zone
+    * duration_minutes : integer
+    * work_date : date
+    * billable : boolean
+      applied_rate : numeric(15,4)
+      notes : text
+    * created_at : timestamp with time zone
+    * updated_at : timestamp with time zone
+  }
+}
+
+users ||--o{ clients
+clients ||--o| client_auth
+users ||--o{ client_auth
+users ||--o{ projects
+clients |o--o{ projects
+projects ||--o{ project_billing
+projects ||--o{ milestones
+projects ||--o{ invoices
+projects ||--o{ payments
+invoices |o--o{ payments
+payments |o--o{ payments
+invoices |o--o{ time_entries
+projects |o--o{ tasks
+tasks |o--o{ tasks
+milestones |o--o{ tasks
+tasks ||--o{ time_entries
+projects ||--o{ change_requests
+clients ||--o{ change_requests
+tasks |o--o{ change_requests
+users ||--o{ notifications
+change_requests ||--o{ scope_change_revisions
+
+legend right
+  * obrigatório (NOT NULL)   <<PK>> chave primária   <<FK>> chave estrangeira   <<UQ>> única
+  user_id (freelancer proprietário) existe em quase todas as tabelas; essas ligações a users
+  são omitidas para legibilidade, exceto em clients, projects, notifications e client_auth.
+  Gerado do catálogo do PostgreSQL por scripts/generate-diagrams.py
+endlegend
+@enduml

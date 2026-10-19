@@ -206,21 +206,21 @@ export async function verifyWorkflows({
     await type("Valor", "[UI] Workflow 0");
     await check(
       "Unapplied filter stays a draft",
-      "!document.querySelector('.applied-filter') && Array.from(document.querySelectorAll('[role=status]')).some(el=>el.textContent.includes('sin aplicar'))",
+      "!document.querySelector('.dt-filter-count') && Array.from(document.querySelectorAll('[role=status]')).some(el=>el.textContent.includes('sin aplicar'))",
     );
     await click(".data-table-wrapper button", "Aplicar filtros");
     await waitFor(
-      "document.querySelectorAll('.q-table tbody tr').length===1 && !!document.querySelector('.applied-filter')",
+      "document.querySelectorAll('.q-table tbody tr').length===1 && !!document.querySelector('.dt-filter-count')",
       "filter application",
     );
     await navigate("/tasks");
     await check(
       "Applied filters survive reload",
-      "!!document.querySelector('.applied-filter') && document.querySelectorAll('.q-table tbody tr').length===1",
+      "!!document.querySelector('.dt-filter-count') && document.querySelectorAll('.q-table tbody tr').length===1",
     );
     await click(".data-table-wrapper button", "Limpiar todos");
     await waitFor(
-      "!document.querySelector('.applied-filter') && document.querySelectorAll('.q-table tbody tr').length>1",
+      "!document.querySelector('.dt-filter-count') && document.querySelectorAll('.q-table tbody tr').length>1",
       "filter reset",
     );
     checks.push("Table clears filters");

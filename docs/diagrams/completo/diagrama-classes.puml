@@ -1,0 +1,321 @@
+@startuml diagrama-classes
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam roundCorner 6
+skinparam ArrowColor #4B5563
+skinparam ArrowThickness 1.1
+skinparam packageStyle rectangle
+skinparam nodesep 70
+skinparam ranksep 90
+' Visual sóbrio, adequado a um trabalho acadêmico (independe do tema padrão do PlantUML).
+skinparam BackgroundColor white
+skinparam ClassBackgroundColor white
+skinparam ClassBorderColor #374151
+skinparam ClassHeaderBackgroundColor #F3F4F6
+skinparam EntityBackgroundColor white
+skinparam EntityBorderColor #374151
+skinparam UsecaseBackgroundColor white
+skinparam UsecaseBorderColor #374151
+skinparam ActorBackgroundColor white
+skinparam ActorBorderColor #374151
+skinparam PackageBorderColor #6B7280
+skinparam RectangleBorderColor #374151
+skinparam LegendBackgroundColor #F9FAFB
+skinparam LegendBorderColor #9CA3AF
+skinparam TitleFontSize 16
+skinparam TitleFontStyle bold
+
+title Horbyta — Diagrama de Classes (modelo de domínio completo)
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+hide empty methods
+
+class Activity {
+  - id: Uuid  «PK»
+  - user_id: Uuid
+  - name: String
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class Attachment {
+  - id: Uuid  «PK»
+  - user_id: Uuid
+  - project_id: Uuid?
+  - task_id: Uuid?
+  - milestone_id: Uuid?
+  - change_request_id: Uuid?
+  - original_name: String
+  - storage_key: String
+  - mime_type: String
+  - size_bytes: i64
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class Category {
+  - id: Uuid  «PK»
+  - user_id: Uuid
+  - name: String
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class ChangeRequest {
+  - id: Uuid  «PK»
+  - record_number: i64
+  - user_id: Uuid
+  - project_id: Uuid
+  - client_id: Uuid
+  - task_id: Uuid?
+  - origin: String
+  - title: String
+  - client_request_description: String
+  - technical_assessment: String?
+  - impact_hours: Decimal
+  - impact_cost: Decimal
+  - schedule_impact_days: i32
+  - status: String
+  - decline_reason: String?
+  - decline_comment: String?
+  - client_approved_at: DateTime?
+  - client_signature_ip: String?
+  - created_at: DateTime
+  - updated_at: DateTime
+  - version: i32
+  - scope_revision: i32?
+  - currency_type: String?
+  - billing_terms: String?
+  - target_milestone_id: Uuid?
+  - schedule_before: DateTime?
+  - schedule_after: DateTime?
+  - legacy: bool
+}
+class ClientAuth {
+  - id: Uuid  «PK»
+  - client_id: Uuid
+  - user_id: Uuid
+  - email: String?
+  - password_hash: String?
+  - magic_link_hash: Vec<u8>?
+  - magic_link_exp: DateTime?
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class Client {
+  - id: Uuid  «PK»
+  - user_id: Uuid
+  - name: String
+  - status: String
+  - email: String?
+  - phone: String?
+  - address_line: String?
+  - company: String?
+  - notes: String?
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class ConversationHistory {
+  - id: Uuid  «PK»
+  - user_id: Uuid
+  - session_id: Uuid
+  - title: String
+  - messages: Json
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class Invoice {
+  - id: Uuid  «PK»
+  - record_number: i64
+  - user_id: Uuid
+  - project_id: Uuid
+  - amount: Decimal
+  - currency_type: String
+  - status: String
+  - due_date: Date?
+  - issued_at: DateTime?
+  - provider: String
+  - provider_external_id: String?
+  - payment_link: String?
+  - notes: String?
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class Milestone {
+  - id: Uuid  «PK»
+  - project_id: Uuid
+  - name: String
+  - description: String?
+  - status: String
+  - due_date: DateTime?
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class Notification {
+  - id: Uuid  «PK»
+  - user_id: Uuid
+  - preference_key: String
+  - event_type: String
+  - title: String
+  - body: String?
+  - payload: Json?
+  - severity: String
+  - source: String
+  - entity_type: String?
+  - entity_id: Uuid?
+  - is_read: bool
+  - read_at: DateTime?
+  - received_at: DateTime?
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class Payment {
+  - id: Uuid  «PK»
+  - record_number: i64
+  - user_id: Uuid
+  - project_id: Uuid
+  - invoice_id: Uuid?
+  - parent_payment_id: Uuid?
+  - amount: Decimal
+  - currency_type: String
+  - transaction_type: String
+  - payment_date: Date
+  - provider: String
+  - provider_external_id: String?
+  - payment_method: String?
+  - reference_code: String?
+  - notes: String?
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class ProjectBilling {
+  - id: Uuid  «PK»
+  - user_id: Uuid
+  - project_id: Uuid
+  - currency_type: String
+  - billing_type: String
+  - hourly_rate: Decimal?
+  - fixed_price: Decimal?
+  - retainer_amount: Decimal?
+  - payment_day: i16?
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class Project {
+  - id: Uuid  «PK»
+  - record_number: i64
+  - user_id: Uuid
+  - client_id: Uuid?
+  - category_id: Uuid?
+  - name: String
+  - description: String?
+  - status: String
+  - billable: bool
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class SeqByUser {
+  - user_id: Uuid  «PK»
+  - entity: String  «PK»
+  - last_value: i64
+}
+class Tag {
+  - id: Uuid  «PK»
+  - user_id: Uuid
+  - name: String
+  - color: String
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class TaskTag {
+  - task_id: Uuid  «PK»
+  - tag_id: Uuid  «PK»
+}
+class Task {
+  - id: Uuid  «PK»
+  - record_number: i64
+  - user_id: Uuid
+  - project_id: Uuid?
+  - parent_id: Uuid?
+  - milestone_id: Uuid?
+  - title: String
+  - description: String?
+  - status: String
+  - priority: i16
+  - complexity: i16
+  - block_parent: bool
+  - due_date: DateTime?
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class TimeEntry {
+  - id: Uuid  «PK»
+  - user_id: Uuid
+  - task_id: Uuid
+  - activity: Uuid
+  - invoice_id: Uuid?
+  - start_time: DateTime?
+  - end_time: DateTime?
+  - duration_minutes: i32
+  - work_date: Date
+  - billable: bool
+  - applied_rate: Decimal?
+  - notes: String?
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+class UserUiState {
+  - user_id: Uuid  «PK»
+  - scope: String  «PK»
+  - key: String  «PK»
+  - value: Json
+  - updated_at: DateTime
+}
+class User {
+  - id: Uuid  «PK»
+  - name: String
+  - email: String
+  - preferences: Json?
+  - password_hash: String
+  - role: String
+  - status: String
+  - two_factor_auth_enabled: bool
+  - two_factor_auth_secret_base32: String?
+  - two_factor_auth_pending_secret_base32: String?
+  - two_factor_auth_last_used_step: i64?
+  - two_factor_auth_backup_code_hashes: Json?
+  - created_at: DateTime
+  - updated_at: DateTime
+}
+
+Project "0..1" -- "0..*" Attachment : project_id
+Task "0..1" -- "0..*" Attachment : task_id
+Milestone "0..1" -- "0..*" Attachment : milestone_id
+ChangeRequest "0..1" -- "0..*" Attachment : change_request_id
+Client "1" -- "0..*" ChangeRequest : client_id
+Project "1" -- "0..*" ChangeRequest : project_id
+Task "0..1" -- "0..*" ChangeRequest : task_id
+Client "1" -- "0..*" ClientAuth : client_id
+User "1" -- "0..*" ClientAuth : user_id
+User "1" -- "0..*" Client : user_id
+Project "1" -- "0..*" Invoice : project_id
+Project "1" -- "0..*" Milestone : project_id
+User "1" -- "0..*" Notification : user_id
+Invoice "0..1" -- "0..*" Payment : invoice_id
+Project "1" -- "0..*" Payment : project_id
+Project "1" -- "0..*" ProjectBilling : project_id
+Category "0..1" -- "0..*" Project : category_id
+Client "0..1" -- "0..*" Project : client_id
+User "1" -- "0..*" Project : user_id
+Tag "1" -- "0..*" TaskTag : tag_id
+Task "1" -- "0..*" TaskTag : task_id
+Milestone "0..1" -- "0..*" Task : milestone_id
+Project "0..1" -- "0..*" Task : project_id
+Activity "1" -- "0..*" TimeEntry : activity
+Invoice "0..1" -- "0..*" TimeEntry : invoice_id
+Task "1" -- "0..*" TimeEntry : task_id
+
+legend right
+  Gerado de src/entities (SeaORM) por scripts/generate-diagrams.py. Tipo com ? = opcional.
+  O vínculo user_id com o Freelancer existe em quase todas as classes; desenhado apenas
+  O vínculo user_id com User existe em quase todas as classes; desenhado apenas onde é central.
+endlegend
+@enduml

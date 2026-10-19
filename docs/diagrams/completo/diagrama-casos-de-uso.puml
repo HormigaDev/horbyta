@@ -1,0 +1,134 @@
+@startuml diagrama-casos-de-uso
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam roundCorner 6
+skinparam ArrowColor #4B5563
+skinparam ArrowThickness 1.1
+skinparam packageStyle rectangle
+skinparam nodesep 70
+skinparam ranksep 90
+' Visual sóbrio, adequado a um trabalho acadêmico (independe do tema padrão do PlantUML).
+skinparam BackgroundColor white
+skinparam ClassBackgroundColor white
+skinparam ClassBorderColor #374151
+skinparam ClassHeaderBackgroundColor #F3F4F6
+skinparam EntityBackgroundColor white
+skinparam EntityBorderColor #374151
+skinparam UsecaseBackgroundColor white
+skinparam UsecaseBorderColor #374151
+skinparam ActorBackgroundColor white
+skinparam ActorBorderColor #374151
+skinparam PackageBorderColor #6B7280
+skinparam RectangleBorderColor #374151
+skinparam LegendBackgroundColor #F9FAFB
+skinparam LegendBorderColor #9CA3AF
+skinparam TitleFontSize 16
+skinparam TitleFontStyle bold
+
+title Horbyta — Diagrama de Casos de Uso (sistema completo)
+left to right direction
+
+actor "Freelancer" as Freelancer
+actor "Cliente" as Cliente
+actor "Administrador" as Administrador
+actor "Sistema" as Sistema <<sistema>>
+Administrador -|> Freelancer
+
+rectangle "Horbyta" {
+  package "Acesso" {
+    usecase "Autenticar-se" as UC_LOGIN
+    usecase "Configurar autenticação\nde dois fatores" as UC_2FA
+    usecase "Gerenciar perfil\ne preferências" as UC_PROFILE
+    usecase "Administrar usuários" as UC_USERS
+  }
+  package "Gestão de projetos" {
+    usecase "Gerenciar clientes" as UC_CLIENTS
+    usecase "Habilitar acesso do\ncliente ao portal" as UC_PORTAL
+    usecase "Gerenciar projetos" as UC_PROJECTS
+    usecase "Configurar faturamento\ndo projeto" as UC_BILLING_CFG
+    usecase "Gerenciar marcos" as UC_MILESTONES
+    usecase "Gerenciar tarefas\n(quadro Kanban)" as UC_TASKS
+    usecase "Gerenciar categorias,\netiquetas e atividades" as UC_CATALOGS
+    usecase "Anexar arquivos" as UC_FILES
+  }
+  package "Tempo e faturamento" {
+    usecase "Registrar tempo\n(cronômetro ou manual)" as UC_TIME
+    usecase "Gerenciar faturas" as UC_INVOICES
+    usecase "Registrar pagamentos\ne estornos" as UC_PAYMENTS
+    usecase "Consultar painel" as UC_DASHBOARD
+  }
+  package "Controle de escopo" {
+    usecase "Publicar revisão\nde escopo" as UC_PUBLISH
+    usecase "Corrigir o acordo\nvigente" as UC_AMEND
+    usecase "Revisar proposta\nde escopo" as UC_REVIEW
+    usecase "Aceitar escopo" as UC_ACCEPT
+    usecase "Registrar evidência\nde aceite (data, IP)" as UC_EVIDENCE
+    usecase "Solicitar ajustes\nou rejeitar proposta" as UC_ADJUST
+    usecase "Informar motivo" as UC_REASON
+    usecase "Classificar tarefas no\nescopo ou como extra" as UC_CLASSIFY
+  }
+  package "Solicitações de mudança" {
+    usecase "Registrar solicitação\nde mudança" as UC_CR_CREATE
+    usecase "Criar solicitação a\npartir da conversa" as UC_CR_FROM_MSG
+    usecase "Avaliar solicitação\n(publicar oferta)" as UC_CR_ASSESS
+    usecase "Aprovar oferta\nde mudança" as UC_CR_APPROVE
+    usecase "Rejeitar oferta\nde mudança" as UC_CR_DECLINE
+    usecase "Reabrir negociação de\numa mudança rejeitada" as UC_CR_REOPEN
+    usecase "Consolidar a mudança\nno acordo" as UC_CONSOLIDATE
+    usecase "Gerar fatura em rascunho\ndo suplemento" as UC_DRAFT_INVOICE
+  }
+  package "Comunicação" {
+    usecase "Conversar no projeto" as UC_CHAT
+    usecase "Consultar ações pendentes\ne notificações" as UC_PENDING
+    usecase "Notificar em tempo real" as UC_NOTIFY
+    usecase "Acompanhar projetos,\nmarcos e painel" as UC_CLIENT_VIEW
+  }
+}
+
+Freelancer -- UC_LOGIN
+Freelancer -- UC_2FA
+Freelancer -- UC_PROFILE
+Freelancer -- UC_CLIENTS
+Freelancer -- UC_PROJECTS
+Freelancer -- UC_MILESTONES
+Freelancer -- UC_TASKS
+Freelancer -- UC_CATALOGS
+Freelancer -- UC_FILES
+Freelancer -- UC_TIME
+Freelancer -- UC_INVOICES
+Freelancer -- UC_PAYMENTS
+Freelancer -- UC_DASHBOARD
+Freelancer -- UC_PUBLISH
+Freelancer -- UC_CLASSIFY
+Freelancer -- UC_CR_CREATE
+Freelancer -- UC_CR_FROM_MSG
+Freelancer -- UC_CR_ASSESS
+Freelancer -- UC_CR_REOPEN
+Freelancer -- UC_CHAT
+Administrador -- UC_USERS
+UC_LOGIN -- Cliente
+UC_CLIENT_VIEW -- Cliente
+UC_REVIEW -- Cliente
+UC_ACCEPT -- Cliente
+UC_ADJUST -- Cliente
+UC_CR_CREATE -- Cliente
+UC_CR_APPROVE -- Cliente
+UC_CR_DECLINE -- Cliente
+UC_CHAT -- Cliente
+UC_PENDING -- Cliente
+UC_NOTIFY -- Sistema
+UC_CONSOLIDATE -- Sistema
+UC_DRAFT_INVOICE -- Sistema
+UC_PORTAL ..> UC_CLIENTS : <<extend>>
+UC_BILLING_CFG ..> UC_PROJECTS : <<extend>>
+UC_AMEND ..> UC_PUBLISH : <<extend>>
+UC_ACCEPT ..> UC_EVIDENCE : <<include>>
+UC_ADJUST ..> UC_REASON : <<include>>
+UC_CR_DECLINE ..> UC_REASON : <<include>>
+UC_CR_APPROVE ..> UC_CONSOLIDATE : <<include>>
+UC_CR_APPROVE ..> UC_DRAFT_INVOICE : <<include>>
+UC_CR_REOPEN ..> UC_CR_ASSESS : <<include>>
+UC_CR_FROM_MSG ..> UC_CR_CREATE : <<extend>>
+UC_CHAT ..> UC_NOTIFY : <<include>>
+@enduml
