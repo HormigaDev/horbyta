@@ -13,6 +13,7 @@
       :hide-bottom="loading"
       :rows-per-page-options="[5, 10, 20, 50, 100]"
       table-class="dt-fixed-layout"
+      :class="{ 'dt-selectable': selectionMode !== 'none' }"
       :visible-columns="visibleColumns"
       :dense="themeStore.appearance.density === 'compact' && !$q.screen.lt.sm"
       :rows-per-page-label="t('datatable.rowsPerPage')"
@@ -1000,8 +1001,9 @@ const onDelete = () => {
     }
 
     // Casillas del encabezado y de las filas: mismo ancho y centradas en la misma columna.
+    // Sin :has(), para que funcione en cualquier navegador.
     .dt-selection-cell,
-    tbody tr td.q-table--col-auto-width:first-child:has(> .q-checkbox) {
+    .dt-selectable tbody tr td.q-table--col-auto-width:first-child {
       width: 56px;
       min-width: 56px;
       padding-inline: 8px;
