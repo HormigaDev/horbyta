@@ -320,24 +320,24 @@ npm run lint
 
 Runtime configuration is read from environment variables, with `.env` loaded at startup without overriding existing variables. `Config::init()` requires the critical values at startup.
 
-| Variable                | Required      | Default                 | Description                                                                |
-| ----------------------- | ------------- | ----------------------- | -------------------------------------------------------------------------- |
-| `DATABASE_URL`          | yes           | none                    | PostgreSQL connection string.                                              |
-| `JWT_SECRET`            | yes           | none                    | Secret used to sign freelancer/user JWTs. Use 32+ random chars.            |
-| `JWT_SECRET_CLIENT`     | yes           | none                    | Separate secret for client portal JWTs. Use 32+ random chars.              |
-| `TIME_TO_EXP_SESSION`   | yes           | none                    | Session duration parsed by `duration-str`, e.g. `7d`, `12h`, `30m`.        |
-| `APP_URI`               | no            | `127.0.0.1:8890`        | Address the Rust server binds to; use loopback behind Nginx. |
-| `APP_ENV`               | no            | `development`           | `production` disables Swagger UI; configure the frontend origin for the deployed domain.                           |
-| `FRONTEND_ORIGIN`       | no            | `http://localhost:9000` | Allowed browser origin for CORS and origin checks.                                    |
-| `ALLOW_REGISTRATION`    | no            | `false`                 | Enables public user registration. Turn off after creating the first user.  |
-| `UPLOAD_DIR`            | no            | `./data/storage`        | Local attachment storage path when S3 is not configured.                   |
-| `USER_STORAGE_LIMIT_GB` | no            | `2`                     | Per-user attachment storage cap.                                           |
-| `S3_BUCKET`             | no            | unset                   | Enables S3-compatible storage when set.                                    |
-| `S3_REGION`             | no            | unset                   | S3 region.                                                                 |
-| `S3_ENDPOINT`           | no            | unset                   | Custom S3 endpoint for MinIO, Cloudflare R2, Backblaze B2, etc.            |
-| `S3_ACCESS_KEY`         | no            | unset                   | S3 access key.                                                             |
-| `S3_SECRET_KEY`         | no            | unset                   | S3 secret key.                                                             |
-| `RUST_LOG`              | no            | `info`                  | Logging filter, e.g. `debug`, `info,sqlx=warn`.                            |
+| Variable                | Required | Default                 | Description                                                                              |
+| ----------------------- | -------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | yes      | none                    | PostgreSQL connection string.                                                            |
+| `JWT_SECRET`            | yes      | none                    | Secret used to sign freelancer/user JWTs. Use 32+ random chars.                          |
+| `JWT_SECRET_CLIENT`     | yes      | none                    | Separate secret for client portal JWTs. Use 32+ random chars.                            |
+| `TIME_TO_EXP_SESSION`   | yes      | none                    | Session duration parsed by `duration-str`, e.g. `7d`, `12h`, `30m`.                      |
+| `APP_URI`               | no       | `127.0.0.1:8890`        | Address the Rust server binds to; use loopback behind Nginx.                             |
+| `APP_ENV`               | no       | `development`           | `production` disables Swagger UI; configure the frontend origin for the deployed domain. |
+| `FRONTEND_ORIGIN`       | no       | `http://localhost:9000` | Allowed browser origin for CORS and origin checks.                                       |
+| `ALLOW_REGISTRATION`    | no       | `false`                 | Enables public user registration. Turn off after creating the first user.                |
+| `UPLOAD_DIR`            | no       | `./data/storage`        | Local attachment storage path when S3 is not configured.                                 |
+| `USER_STORAGE_LIMIT_GB` | no       | `2`                     | Per-user attachment storage cap.                                                         |
+| `S3_BUCKET`             | no       | unset                   | Enables S3-compatible storage when set.                                                  |
+| `S3_REGION`             | no       | unset                   | S3 region.                                                                               |
+| `S3_ENDPOINT`           | no       | unset                   | Custom S3 endpoint for MinIO, Cloudflare R2, Backblaze B2, etc.                          |
+| `S3_ACCESS_KEY`         | no       | unset                   | S3 access key.                                                                           |
+| `S3_SECRET_KEY`         | no       | unset                   | S3 secret key.                                                                           |
+| `RUST_LOG`              | no       | `info`                  | Logging filter, e.g. `debug`, `info,sqlx=warn`.                                          |
 
 `.env.template` contains application settings. Empty optional S3 values are treated as unset.
 
@@ -594,7 +594,6 @@ Al terminar, detener los dos servidores y eliminar únicamente el esquema
 elimina automáticamente. El ensayo adicional de backup local se describe en
 [docs/scope-control.md](docs/scope-control.md).
 
-
 El alcance documental permite importar Markdown completo o requisitos separados,
 elegir anexos incluidos, conservar originales/versiones/hashes y negociar ajustes,
 rechazo o preferencia por una revisión histórica. Los proyectos nuevos requieren
@@ -603,7 +602,6 @@ facturables. La única ampliación consolidada de alcance incluye también la ne
 registra IP del socket; detrás de Nginx configurar `TRUSTED_PROXY_IPS=127.0.0.1,::1`
 y mantener cerrado el acceso directo al API. Ver el procedimiento y reglas en
 [docs/scope-control.md](docs/scope-control.md).
-
 
 ## Instalación self-hosted y datos de desarrollo
 
@@ -688,7 +686,7 @@ representarlas; en ese caso hay que restaurar un respaldo.
 reverso deja el esquema idéntico al previo.
 
 El seed es **opcional y exclusivo de desarrollo**. Exige `APP_ENV=development`,
-base `hormigapm_development` y almacenamiento local (`UPLOAD_DIR`, sin S3).
+base `horbyta_development` y almacenamiento local (`UPLOAD_DIR`, sin S3).
 No se ejecuta desde `migrate` ni desde el backend. Sin `--reset` requiere una base
 sin usuarios. Para regenerar datos ficticios de esta base:
 
@@ -721,7 +719,6 @@ Pruebas aisladas del seed: `cargo test --locked --test development_seed -- --ign
 su propio esquema. No vacían `public`. Las credenciales de ejemplo nunca se instalan
 como parte de una instalación de producción.
 
-
 Para preparar los binarios de una distribución de producción (sin el seed),
 construir para la arquitectura y sistema soportados:
 
@@ -734,7 +731,6 @@ por Nginx y las instrucciones de instalación. No incluir `.env`, `data/storage`
 `target/ui-tests`, dumps ni resultados de desarrollo. El cliente configura su
 conexión y secretos, ejecuta `migrate`, crea su administrador con `create-user` y
 arranca `horbyta`. No necesita Rust para ejecutar los binarios.
-
 
 La reconstrucción realizada en desarrollo conserva un respaldo previo completo en
 `target/development-seed/before-bootstrap-reset.dump` (privado, ignorado por Git).

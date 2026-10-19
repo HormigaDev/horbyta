@@ -8,7 +8,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = env::args().skip(1).collect();
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
         println!(
-            "Datos ficticios solo para APP_ENV=development y hormigapm_development.\n\nUso: cargo run --locked --bin seed [-- --reset]\n\nSin --reset requiere una base sin usuarios y aplica la migración inicial.\n--reset reemplaza el esquema public y los datos de desarrollo en una transacción.\nAdmin: admin@horbyta.test / Admin@123\nPortal: cliente1@horbyta.test / Cliente@123\nNo se ejecuta automáticamente al instalar ni al arrancar. Requiere almacenamiento local."
+            "Datos ficticios solo para APP_ENV=development y horbyta_development.\n\nUso: cargo run --locked --bin seed [-- --reset]\n\nSin --reset requiere una base sin usuarios y aplica la migración inicial.\n--reset reemplaza el esquema public y los datos de desarrollo en una transacción.\nAdmin: admin@horbyta.test / Admin@123\nPortal: cliente1@horbyta.test / Cliente@123\nNo se ejecuta automáticamente al instalar ni al arrancar. Requiere almacenamiento local."
         );
         return Ok(());
     }

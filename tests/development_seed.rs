@@ -1,4 +1,4 @@
-//! Instalación limpia y seed en un esquema aislado de hormigapm_development.
+//! Instalación limpia y seed en un esquema aislado de horbyta_development.
 use futures::FutureExt;
 use horbyta::{development_seed, migrations, utils::crypto::compare_password};
 use object_store::{ObjectStoreExt, memory::InMemory, path::Path};
@@ -16,7 +16,7 @@ async fn count(db: &DatabaseConnection, query: &str) -> i64 {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-#[ignore = "Requiere hormigapm_development; solo crea y elimina su esquema aislado"]
+#[ignore = "Requiere horbyta_development; solo crea y elimina su esquema aislado"]
 async fn instalacion_limpia_y_seed_completo() {
     dotenvy::dotenv().ok();
     let url = std::env::var("SEED_TEST_DATABASE_URL")

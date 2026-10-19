@@ -78,7 +78,7 @@ lanzamiento no modificar los SQL registrados: añadir versiones incrementales. L
 SQL quedan embebidos en los binarios de la distribución self-hosted.
 
 La migración no instala cuentas ni datos ficticios. El comando `seed` exige modo
-desarrollo y `hormigapm_development`; `--reset` reconstruye solo su esquema public.
+desarrollo y `horbyta_development`; `--reset` reconstruye solo su esquema public.
 Para licencias self-hosted: ejecutar `./migrate`, crear el administrador con
 `./create-user` y arrancar el servidor. Usar backup de base y objetos antes de
 actualizaciones. Las reglas históricas y el indicador `legacy` se mantienen en el
@@ -110,7 +110,7 @@ Ejecutar compilación/pruebas del backend con un job y un hilo; en Linux usar
    acuerdos y efectos; volver a código anterior no elimina las tablas nuevas.
 
 La implementación inicial A1–A7 no migró las tablas habituales. La ampliación B
-usa la autorización posterior para migrar únicamente `hormigapm_development`. El ensayo de restauración usa PostgreSQL local desechable:
+usa la autorización posterior para migrar únicamente `horbyta_development`. El ensayo de restauración usa PostgreSQL local desechable:
 comprueba registros, checksums y restricciones, pero no acredita una restauración
 del bucket o de archivos reales de una VPS. Ese ensayo corresponde a su entorno.
 
@@ -156,7 +156,6 @@ Los endpoints de cambios existentes conservan su autenticación y añaden `versi
 a la evaluación y a ambas decisiones del cliente. La evaluación añade un hito
 opcional `target_milestone_id`. Un conflicto exige lectura nueva y decisión
 expresa; nunca se reintenta automáticamente sobre una revisión distinta.
-
 
 ## Negociación inicial y documentos — ampliación consolidada
 
@@ -226,13 +225,12 @@ reciben IP ni hashes retrospectivos inventados.
 `migrate` reconoce/instala el esquema base y aplica la ampliación consolidada, comprobando sus checksums. No modificar una
 migración aplicada en producción. Hacer backup consistente de base y objetos,
 ensayar restauración y publicar backend/Quasar juntos. La modificación directa
-de `hormigapm_development` está autorizada por el usuario; esta autorización no
+de `horbyta_development` está autorizada por el usuario; esta autorización no
 incluye aplicar migraciones en producción. El respaldo privado previo a 002 se
 conserva en `target/scope-tests/development-before-002.dump`. La reconstrucción
 consolidada posterior guarda su respaldo completo en
 `target/development-seed/before-bootstrap-reset.dump`. El comando de seed y los
 datos de acceso están documentados en README.
-
 
 ### Conversación del proyecto
 
@@ -285,7 +283,6 @@ Para avisos anteriores sin message_id, `notification=<UUID>` busca una coinciden
 la conversación sin señalar un mensaje arbitrario. Esta recuperación solo admite
 el rol profesional, propietario de la notificación. La migración 005 conserva las referencias anteriores.
 
-
 ## Conversación única por proyecto (migración 005)
 
 La conversación del proyecto sustituye las conversaciones separadas por revisión.
@@ -309,7 +306,6 @@ Las novedades refrescan badges y campana del cliente mediante WebSocket, y la
 consulta persistente del inbox restaura el estado al reconectar. La lectura de una
 identidad no revela confirmaciones públicas de lectura ni presencia.
 
-
 API activa: `GET /scope/conversation/inbox`, `GET/POST /scope/projects/{id}/conversation`,
 `POST .../conversation/read`, `GET .../conversation/resources?search=`,
 `POST .../conversation/files` y `POST .../conversation/{message}/change`.
@@ -320,7 +316,6 @@ Comprobación de extremo a extremo: `UI_VERIFY_PROJECT_CHAT=1 python3 scripts/ve
 usando el esquema aislado creado por `scope_control`. En esta laptop se ejecuta dentro
 de una cuota nativa `systemd-run --user --scope -p CPUQuota=50% -p MemoryMax=1024M -p MemorySwapMax=0`.
 Incluye ambos roles, websocket, historial limitado, referencias, formalización y lecturas persistentes.
-
 
 ### Menciones inline y justificativas
 
@@ -385,7 +380,6 @@ La migración 006 incorpora cambios históricos no legacy con efectos verificabl
 no cambia firmas, facturas ni pagos anteriores. `schema.sql` y migraciones 001–005
 permanecen intactos. Aplicar `cargo run --locked --bin migrate` antes de reiniciar.
 Pruebas en esquema aislado: `cargo test --locked --test scope_amendments -- --ignored --test-threads=1`.
-
 
 ## Entrega por eventos (migración 007)
 

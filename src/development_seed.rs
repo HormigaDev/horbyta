@@ -46,8 +46,8 @@ pub async fn seed(
 ) -> Result<serde_json::Value, AppError> {
     require_development(mode)?;
     let database: String = scalar(db, "SELECT current_database() AS value").await?;
-    if database != "hormigapm_development" {
-        return Err(conflict("El seed está limitado a la base hormigapm_development."));
+    if database != "horbyta_development" {
+        return Err(conflict("El seed está limitado a la base horbyta_development."));
     }
     let tx = db.begin().await?;
     tx.execute_unprepared("SET LOCAL lock_timeout='5s'; SELECT pg_advisory_xact_lock(719327401)")
@@ -532,7 +532,15 @@ async fn populate(
         let (project, client, actor, milestone, currency) = accepted[i % accepted.len()];
         let id = Uuid::now_v7();
         let task = Uuid::now_v7();
-        let title = ["Explorar exportación de informes","Añadir buscador de contenidos","Configurar segunda lengua","Exportar resultados a CSV","Añadir pagos en línea","Ampliar filtros del catálogo","Campaña temporal de lanzamiento"][i];
+        let title = [
+            "Explorar exportación de informes",
+            "Añadir buscador de contenidos",
+            "Configurar segunda lengua",
+            "Exportar resultados a CSV",
+            "Añadir pagos en línea",
+            "Ampliar filtros del catálogo",
+            "Campaña temporal de lanzamiento",
+        ][i];
         ScopeService::actor(tx, owner, "professional").await?;
         execute(tx,"INSERT INTO change_requests(id,user_id,project_id,client_id,title,client_request_description,origin,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,now()-($8::int*interval '1 day'))",
             vec![id.into(),owner.into(),project.into(),client.into(),title.into(),"Solicitud adicional fuera del alcance aceptado. Revisar costo, plazo y trabajo antes de ejecutar.".into(),if i%2==0 {"client_portal"} else {"freelancer_dashboard"}.into(),(25-i as i32*2).into()]).await?;
