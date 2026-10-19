@@ -1,61 +1,189 @@
 <template>
-  <q-card flat bordered class="q-my-md"
-    ><q-card-section
-      ><div class="row justify-between items-center">
-        <h2 class="text-subtitle1 text-weight-bold">{{ t('scope.pendingTitle') }}</h2>
-        <q-btn flat icon="refresh" :label="t('scope.refresh')" :loading="loading" @click="load" />
+  <!-- Las decisiones pendientes son lo primero que el cliente debe ver al entrar. -->
+  <section
+    class="pending-panel q-my-md"
+    :class="{ 'pending-panel--active': items.length }"
+    :role="items.length ? 'alert' : undefined"
+    :aria-busy="loading"
+  >
+    <header class="pending-panel__header">
+      <q-icon
+        :name="items.length ? 'notification_important' : 'task_alt'"
+        size="26px"
+        class="pending-panel__icon"
+        aria-hidden="true"
+      />
+      <div class="pending-panel__heading">
+        <h2>
+          {{ t('scope.pendingTitle') }}
+          <span v-if="items.length" class="pending-panel__count">{{ items.length }}</span>
+        </h2>
+        <p>{{ items.length ? t('clientNotices.pendingHint') : t('scope.emptyPending') }}</p>
       </div>
-      <q-banner v-if="error" class="bg-warning text-dark" role="alert">{{ error }}</q-banner>
-      <p v-if="!loading && !error && !items.length">{{ t('scope.emptyPending') }}</p>
-      <ContentSkeleton v-if="loading" variant="list" :rows="3" />
-      <q-list v-else separator
-        ><q-item v-for="notice in items" :key="notice.id"
-          ><q-item-section
-            ><q-item-label>{{ notice.title }}</q-item-label
-            ><q-item-label caption>{{
-              t('scope.revision', { version: notice.revision })
-            }}</q-item-label></q-item-section
-          ><q-item-section side
-            ><q-btn
-              flat
-              color="primary"
-              :label="t('scope.open')"
-              :to="
-                notice.kind === 'baseline'
-                  ? `/client/projects/${notice.record_id}`
-                  : `/client/change-requests/${notice.record_id}`
-              " /></q-item-section></q-item
-      ></q-list> </q-card-section
-  ></q-card>
+      <q-btn
+        flat
+        round
+        icon="refresh"
+        :aria-label="t('scope.refresh')"
+        :loading="loading"
+        @click="load"
+        ><q-tooltip>{{ t('scope.refresh') }}</q-tooltip></q-btn
+      >
+    </header>
+    <ul v-if="items.length" class="pending-panel__list">
+      <li v-for="notice in items" :key="notice.id">
+        <q-icon
+          :name="notice.kind === 'baseline' ? 'fact_check' : 'compare_arrows'"
+          size="20px"
+          class="pending-panel__item-icon"
+          aria-hidden="true"
+        />
+        <div class="pending-panel__item-text">
+          <strong>{{
+            notice.kind === 'baseline'
+              ? t('clientNotices.baseline', { version: notice.revision })
+              : t('clientNotices.change', { title: notice.title })
+          }}</strong>
+          <span>{{
+            [notice.project_name, date(notice.created_at)].filter(Boolean).join(' — ')
+          }}</span>
+        </div>
+        <q-btn
+          unelevated
+          color="primary"
+          no-caps
+          :label="t('clientNotices.review')"
+          :to="
+            notice.kind === 'baseline'
+              ? { path: `/client/projects/${notice.record_id}`, query: { tab: 'scope' } }
+              : `/client/change-requests/${notice.record_id}`
+          "
+        />
+      </li>
+    </ul>
+  </section>
 </template>
 <script setup lang="ts">
-import ContentSkeleton from 'src/components/ContentSkeleton.vue';
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { ScopeService } from 'src/services/scope';
-import type { ScopeNotice } from 'src/types/scope';
+import { useConversationStore } from 'src/stores/conversation';
+import { useDisplayPreferences } from 'src/composables/useDisplayPreferences';
+import { formatDateByPreferences } from 'src/utils/dateFormatting';
 const { t } = useI18n();
-import { useUI } from 'src/composables/useUI';
-const { resolveErrorMessage } = useUI();
-const items = ref<ScopeNotice[]>([]),
-  loading = ref(false),
-  error = ref('');
-let generation = 0;
+// Misma fuente que la campana: se actualiza en tiempo real, al reconectar y al volver.
+const inbox = useConversationStore();
+const items = computed(() => inbox.pendingActions);
+const loading = ref(false);
+const prefs = useDisplayPreferences();
+const date = (value: string) =>
+  formatDateByPreferences(value, {
+    timezone: prefs.timezone,
+    dateFormat: prefs.dateFormat,
+    includeTime: true,
+  });
 async function load() {
-  const current = ++generation;
   loading.value = true;
-  error.value = '';
   try {
-    const result = await ScopeService.pending();
-    if (current === generation) items.value = result;
-  } catch (e) {
-    if (current === generation) error.value = resolveErrorMessage(t('scope.failure'), e);
+    await inbox.refresh();
   } finally {
-    if (current === generation) loading.value = false;
+    loading.value = false;
   }
 }
 onMounted(() => void load());
-onUnmounted(() => {
-  generation++;
-});
 </script>
+<style scoped>
+.pending-panel {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-panel);
+  background: var(--surface-panel);
+  overflow: hidden;
+}
+.pending-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+}
+.pending-panel__icon {
+  color: var(--success-text);
+}
+.pending-panel__heading {
+  flex: 1;
+  min-width: 0;
+}
+.pending-panel__heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.pending-panel__heading p {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.pending-panel--active {
+  border: 2px solid var(--warning-text);
+  background: var(--warning-bg);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--warning-text) 14%, transparent);
+}
+.pending-panel--active .pending-panel__icon {
+  color: var(--warning-text);
+}
+.pending-panel__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 14px;
+  color: var(--text-on-action);
+  background: var(--q-negative);
+}
+.pending-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 12px;
+  display: grid;
+  gap: 8px;
+}
+.pending-panel__list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-control);
+  background: var(--surface-panel);
+  border: 1px solid color-mix(in srgb, var(--warning-text) 35%, var(--border-subtle));
+}
+.pending-panel__item-icon {
+  color: var(--warning-text);
+}
+.pending-panel__item-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.pending-panel__item-text strong {
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.pending-panel__item-text span {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+@media (max-width: 599px) {
+  .pending-panel__list li {
+    flex-wrap: wrap;
+  }
+  .pending-panel__list li .q-btn {
+    width: 100%;
+  }
+}
+</style>

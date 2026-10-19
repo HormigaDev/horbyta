@@ -54,247 +54,97 @@
           :key="project.id"
           :project-id="project.id"
         >
-          <template #summary>
-            <ScopeSection
-              v-if="project"
-              class="q-mb-md project-section-anchor"
-              id="project-information"
-              tabindex="-1"
-              :title="t('projects.detail.basicInfoTitle')"
-              icon="info"
-            >
-              <div class="detail-facts">
-                <div :class="{ 'project-client-empty': !project.client_id }">
-                  <span>{{ t('projects.form.clientLabel') }}</span>
-                  <strong v-if="project.client_id">
-                    <router-link :to="`/clients/${project.client_id}`">
-                      {{ project.client_name || t('common.empty') }}
-                    </router-link>
-                  </strong>
-                  <strong v-else>
-                    <q-icon name="person_off" color="warning" class="q-mr-xs" aria-hidden="true" />
-                    {{ t('projects.detail.noClient') }}
-                  </strong>
-                </div>
-                <div>
-                  <span>{{ t('projects.form.categoryLabel') }}</span>
-                  <strong>{{ project.category_name || t('projects.detail.noCategory') }}</strong>
-                </div>
-                <div>
-                  <span>{{ t('common.status') }}</span>
-                  <strong>{{ projectStatusLabel(project.status) }}</strong>
-                </div>
-                <div>
-                  <span>{{ t('common.created') }}</span>
-                  <strong>{{ formatDate(project.created_at) }}</strong>
-                </div>
-                <div>
-                  <span>{{ t('common.updated') }}</span>
-                  <strong>{{ formatDate(project.updated_at) }}</strong>
-                </div>
+          <template #facts>
+            <ProjectFacts :project="project">
+              <div>
+                <dt>{{ t('projects.form.clientLabel') }}</dt>
+                <dd v-if="project.client_id">
+                  <router-link :to="`/clients/${project.client_id}`">
+                    {{ project.client_name || t('common.empty') }}
+                  </router-link>
+                </dd>
+                <dd v-else class="text-warning">
+                  <q-icon name="person_off" class="q-mr-xs" aria-hidden="true" />
+                  {{ t('projects.detail.noClient') }}
+                </dd>
               </div>
-            </ScopeSection>
-
-            <q-card
-              id="project-billing"
-              tabindex="-1"
-              class="project-section-anchor q-mb-md"
-              flat
-              bordered
-              style="background-color: var(--card-bg); border-color: var(--border-color)"
-            >
-              <q-card-section>
-                <div
-                  class="text-subtitle1 q-mb-md text-weight-bold"
-                  style="color: var(--text-accent)"
-                >
-                  {{ t('projects.detail.billingTitle') }}
-                </div>
-
-                <div class="detail-content">
-                  <div
-                    v-if="project && project.billable && project.project_billing"
-                    class="row q-col-gutter-md"
-                  >
-                    <div class="col-12 col-md-3">
-                      <div class="text-caption" style="color: var(--text-muted)">
-                        {{ t('projects.detail.currencyTypeLabel') }}
-                      </div>
-                      <div style="color: var(--text-color)">
-                        {{ project.project_billing.currency_type }}
-                      </div>
-                    </div>
-
-                    <div class="col-12 col-md-3">
-                      <div class="text-caption" style="color: var(--text-muted)">
-                        {{ t('projects.detail.billingTypeLabel') }}
-                      </div>
-                      <div style="color: var(--text-color)">
-                        {{ projectBillingTypeLabel(project.project_billing.billing_type) }}
-                      </div>
-                    </div>
-
-                    <div
-                      class="col-12 col-md-3"
-                      v-if="project.project_billing.billing_type === 'fixed'"
-                    >
-                      <div class="text-caption" style="color: var(--text-muted)">
-                        {{ t('projects.detail.fixedPriceLabel') }}
-                      </div>
-                      <div style="color: var(--text-color)">
-                        {{
-                          formatBillingAmount(
-                            project.project_billing.fixed_price,
-                            project.project_billing.currency_type,
-                          )
-                        }}
-                      </div>
-                    </div>
-
-                    <div
-                      class="col-12 col-md-3"
-                      v-if="project.project_billing.billing_type === 'hourly'"
-                    >
-                      <div class="text-caption" style="color: var(--text-muted)">
-                        {{ t('projects.detail.hourlyRateLabel') }}
-                      </div>
-                      <div style="color: var(--text-color)">
-                        {{
-                          formatBillingAmount(
-                            project.project_billing.hourly_rate,
-                            project.project_billing.currency_type,
-                          )
-                        }}
-                      </div>
-                    </div>
-
-                    <template v-if="project.project_billing.billing_type === 'retainer'">
-                      <div class="col-12 col-md-3">
-                        <div class="text-caption" style="color: var(--text-muted)">
-                          {{ t('projects.detail.retainerAmountLabel') }}
-                        </div>
-                        <div style="color: var(--text-color)">
-                          {{
-                            formatBillingAmount(
-                              project.project_billing.retainer_amount,
-                              project.project_billing.currency_type,
-                            )
-                          }}
-                        </div>
-                      </div>
-
-                      <div class="col-12 col-md-3">
-                        <div class="text-caption" style="color: var(--text-muted)">
-                          {{ t('projects.detail.paymentDayLabel') }}
-                        </div>
-                        <div style="color: var(--text-color)">
-                          {{ paymentDayLabel(project.project_billing.payment_day) }}
-                        </div>
-                      </div>
-                    </template>
-                  </div>
-
-                  <div
-                    v-else-if="project && !project.billable"
-                    class="text-h5 text-weight-bold"
-                    style="color: var(--text-color)"
-                  >
-                    {{ t('projects.detail.noCost') }}
-                  </div>
-                  <div v-else class="text-caption" style="color: var(--text-muted)">
-                    {{ t('projects.detail.billingEmpty') }}
-                  </div>
-                </div>
-              </q-card-section>
-            </q-card>
-
-            <q-card
+              <div>
+                <dt>{{ t('projects.form.categoryLabel') }}</dt>
+                <dd>{{ project.category_name || t('projects.detail.noCategory') }}</dd>
+              </div>
+            </ProjectFacts>
+          </template>
+          <template #summary>
+            <section
               id="project-description"
               tabindex="-1"
-              class="project-section-anchor"
-              flat
-              bordered
-              style="background-color: var(--card-bg); border-color: var(--border-color)"
+              class="project-section-anchor project-summary-section"
             >
-              <q-card-section>
-                <div
-                  class="text-subtitle1 q-mb-md text-weight-bold"
-                  style="color: var(--text-accent)"
-                >
-                  {{ t('projects.detail.descriptionTitle') }}
-                </div>
-                <div class="detail-content">
-                  <MarkdownRenderer
-                    :model-value="project?.description || t('projects.detail.emptyDescription')"
-                  />
-                </div>
-              </q-card-section>
-            </q-card>
+              <h2 class="summary-heading">{{ t('projects.detail.descriptionTitle') }}</h2>
+              <div class="detail-content">
+                <MarkdownRenderer
+                  :model-value="project?.description || t('projects.detail.emptyDescription')"
+                />
+              </div>
+            </section>
 
-            <q-card
+            <section
               id="project-attachments"
               tabindex="-1"
-              class="project-section-anchor q-mt-md"
-              flat
-              bordered
-              style="background-color: var(--card-bg); border-color: var(--border-color)"
+              class="project-section-anchor project-summary-section"
             >
-              <q-card-section>
-                <div class="row items-center justify-between q-mb-sm">
-                  <div class="text-subtitle1 text-weight-bold" style="color: var(--text-accent)">
-                    {{ t('attachments.table.title') }}
-                  </div>
+              <div class="row items-center justify-between q-mb-sm">
+                <h2 class="summary-heading q-mb-none">{{ t('attachments.table.title') }}</h2>
 
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    icon="refresh"
-                    :aria-label="t('common.refresh')"
-                    @click="fetchAttachments"
-                  >
-                    <q-tooltip>{{ t('common.refresh') }}</q-tooltip>
-                  </q-btn>
-                </div>
-
-                <AttachmentItemsList
-                  :items="attachmentListItems"
-                  :empty-text="t('attachments.list.empty')"
-                  :loading="isLoadingAttachments"
-                  clickable
-                  @item-click="openAttachment"
-                  item-action-icon="close"
-                  :item-action-aria-label="t('attachments.form.removeFile')"
-                  @item-action="removeAttachment"
-                />
-
-                <div
-                  v-if="attachmentTotal > 0"
-                  class="row items-center justify-between q-mt-md q-col-gutter-sm"
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="refresh"
+                  :aria-label="t('common.refresh')"
+                  @click="fetchAttachments"
                 >
-                  <div class="col-12 col-sm text-caption" style="color: var(--text-muted)">
-                    {{
-                      t('attachments.list.paginationMeta', {
-                        page: attachmentQuery.page,
-                        max: attachmentTotalPages,
-                        total: attachmentTotal,
-                      })
-                    }}
-                  </div>
+                  <q-tooltip>{{ t('common.refresh') }}</q-tooltip>
+                </q-btn>
+              </div>
 
-                  <div class="col-12 col-sm-auto row justify-end">
-                    <q-pagination
-                      :model-value="attachmentQuery.page"
-                      :max="attachmentTotalPages"
-                      :max-pages="6"
-                      direction-links
-                      boundary-numbers
-                      @update:model-value="onAttachmentsPageChange"
-                    />
-                  </div>
+              <AttachmentItemsList
+                :items="attachmentListItems"
+                :empty-text="t('attachments.list.empty')"
+                :loading="isLoadingAttachments"
+                clickable
+                @item-click="openAttachment"
+                item-action-icon="close"
+                :item-action-aria-label="t('attachments.form.removeFile')"
+                @item-action="removeAttachment"
+              />
+
+              <div
+                v-if="attachmentTotal > 0"
+                class="row items-center justify-between q-mt-md q-col-gutter-sm"
+              >
+                <div class="col-12 col-sm text-caption" style="color: var(--text-muted)">
+                  {{
+                    t('attachments.list.paginationMeta', {
+                      page: attachmentQuery.page,
+                      max: attachmentTotalPages,
+                      total: attachmentTotal,
+                    })
+                  }}
                 </div>
-              </q-card-section>
-            </q-card>
+
+                <div class="col-12 col-sm-auto row justify-end">
+                  <q-pagination
+                    :model-value="attachmentQuery.page"
+                    :max="attachmentTotalPages"
+                    :max-pages="6"
+                    direction-links
+                    boundary-numbers
+                    @update:model-value="onAttachmentsPageChange"
+                  />
+                </div>
+              </div>
+            </section>
           </template>
         </ScopeProjectPanel>
       </div>
@@ -404,7 +254,7 @@ import ConversationUnreadBadge from 'src/components/ConversationUnreadBadge.vue'
 import ContentSkeleton from 'src/components/ContentSkeleton.vue';
 const contentLoading = ref(true);
 import ScopeProjectPanel from 'src/components/ScopeProjectPanel.vue';
-import ScopeSection from 'src/components/ScopeSection.vue';
+import ProjectFacts from 'src/components/ProjectFacts.vue';
 import { computed, reactive, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -414,12 +264,9 @@ import { openAttachmentPreview } from 'src/services/attachmentPreview';
 import { AttachmentsService } from 'src/services/attachments';
 import { useUI } from 'src/composables/useUI';
 import MarkdownRenderer from 'src/components/MarkdownRenderer.vue';
-import { useUserPreferencesStore } from 'src/stores/userPreferences';
-import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 import type { AttachmentListItem, AttachmentSummaryDto } from 'src/types/attachment';
-import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import type { QueryPayload } from 'src/types/query';
-import type { ProjectBillingType, ProjectDetailDto, ProjectStatus } from 'src/types/project';
+import type { ProjectDetailDto, ProjectStatus } from 'src/types/project';
 import { normalizeId } from 'src/utils/normalizeId';
 import { useCopyClipboard } from 'src/composables/useCopyClipboard';
 import { formatStorageBytes, resolveAttachmentIcon } from 'src/utils/attachments';
@@ -428,8 +275,6 @@ const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const { notify, notifyError, confirmDelete, showLoading, hideLoading } = useUI();
-const userPreferencesStore = useUserPreferencesStore();
-const { formatCurrency } = useNumberFormatter();
 
 const { isCopied: idCopied, copyToClipboard } = useCopyClipboard();
 const scopePanel = ref<InstanceType<typeof ScopeProjectPanel> | null>(null);
@@ -439,7 +284,6 @@ const sectionIndex = computed(() => [
   { id: 'project-information', label: t('projects.detail.basicInfoTitle') },
   { id: `scope-project-${projectId}-scope`, label: t('scope.title') },
   ...(scopePanel.value?.sectionIndex ?? []),
-  { id: 'project-billing', label: t('projects.detail.billingTitle') },
   { id: 'project-description', label: t('projects.detail.descriptionTitle') },
   { id: 'project-attachments', label: t('attachments.table.title') },
 ]);
@@ -477,14 +321,6 @@ const attachmentTotalPages = computed(() => {
   if (attachmentTotal.value <= 0 || attachmentQuery.limit <= 0) return 1;
   return Math.max(1, Math.ceil(attachmentTotal.value / attachmentQuery.limit));
 });
-
-const formatDate = (value: string, fallback = t('common.empty')) =>
-  formatDateByPreferences(value, {
-    timezone: userPreferencesStore.timezone,
-    dateFormat: userPreferencesStore.dateFormat,
-    includeTime: true,
-    fallback,
-  });
 
 const loadProject = async () => {
   contentLoading.value = true;
@@ -593,25 +429,6 @@ const projectStatusLabel = (status: ProjectStatus | null | undefined) => {
   return t(`projects.status.${status}`);
 };
 
-const projectBillingTypeLabel = (billingType: ProjectBillingType | null | undefined) => {
-  if (!billingType) return t('common.empty');
-  return t(`projects.billing.type.${billingType}`);
-};
-
-const formatBillingAmount = (
-  amount: string | null | undefined,
-  currencyType: string | null | undefined,
-) => {
-  if (!amount) return t('common.empty');
-
-  return formatCurrency(amount, currencyType, amount);
-};
-
-const paymentDayLabel = (day: number | null | undefined) => {
-  if (day === null || day === undefined) return t('common.empty');
-  return t('projects.detail.paymentDayValue', { day });
-};
-
 onMounted(() => {
   void loadProject();
   void fetchAttachments();
@@ -638,9 +455,5 @@ onMounted(() => {
 }
 :deep(.project-section-anchor) {
   scroll-margin-top: 80px;
-}
-
-.project-client-empty {
-  border: 1px solid var(--q-warning);
 }
 </style>

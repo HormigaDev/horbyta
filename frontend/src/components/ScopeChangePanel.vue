@@ -19,26 +19,24 @@
           role="alert"
           >{{ t('scope.conflict') }}</q-banner
         >
-        <div class="row items-center q-gutter-sm q-mt-md">
+        <!-- Solo las ofertas son navegables; los cambios de estado viven en Historial.
+             Con una sola entrada no hay nada que elegir y el selector no se muestra. -->
+        <div v-if="offers.length > 1" class="row items-center q-gutter-sm q-mt-md">
           <q-select
-            v-model="selected"
+            :model-value="entryFor(selected)?.value ?? null"
             :disable="draftActive"
             outlined
             class="col"
-            :options="
-              data.revisions.map((r) => ({
-                label: t('scope.revision', { version: r.version }),
-                value: r.version,
-              }))
-            "
+            :options="[...offers].reverse()"
             emit-value
             map-options
-            :label="t('scope.history')"
+            :label="t('scope.offers.label')"
+            @update:model-value="(v) => (selected = v)"
           />
-          <q-badge v-if="revision" outline>{{
-            t(`changeRequests.status.${revision.snapshot.status}`)
-          }}</q-badge>
         </div>
+        <p v-if="offers.length <= 1 && entryFor(selected)" class="text-subtitle2 q-mt-md q-mb-none">
+          {{ entryFor(selected)?.label }}
+        </p>
         <q-tabs v-model="tab" align="left" active-color="primary" class="q-mt-md">
           <q-tab name="agreement" icon="description" :label="t('scope.agreementTab')" />
           <q-tab name="conversation" icon="forum" :label="t('scope.conversation')"
@@ -54,19 +52,70 @@
         <q-separator />
         <q-tab-panels v-model="tab" keep-alive class="scope-change-panels">
           <q-tab-panel name="agreement">
-            <router-link
-              v-if="data.current.source_message_id"
-              :to="{
-                path: `${client ? '/client' : ''}/projects/${data.current.project_id}`,
-                query: {
-                  conversation: '1',
-                  message: data.current.source_message_id,
-                  focus: String(Date.now()),
-                },
-              }"
-              >{{ t('scope.originalMessage') }}</router-link
-            >
             <template v-if="revision">
+              <!-- Rechazo conservado en su versión: motivo y explicación del cliente. -->
+              <div
+                v-if="revision.snapshot.status === 'declined' && revision.snapshot.decline_reason"
+                class="decline-notice q-mt-md"
+                role="note"
+              >
+                <q-icon name="block" size="20px" class="decline-notice__icon" aria-hidden="true" />
+                <div>
+                  <span class="decline-notice__label">{{
+                    t('changeRequests.form.declineReasonLabel')
+                  }}</span>
+                  <strong>{{
+                    t(`changeRequests.decline_reason.${revision.snapshot.decline_reason}`)
+                  }}</strong>
+                  <blockquote
+                    v-if="revision.snapshot.decline_comment"
+                    class="decline-notice__comment"
+                    v-text="revision.snapshot.decline_comment"
+                  />
+                </div>
+              </div>
+              <!-- Una oferta posterior a un rechazo muestra por qué se renegocia. -->
+              <div
+                v-else-if="
+                  previousDecline && ['submitted', 'assessed'].includes(revision.snapshot.status)
+                "
+                class="reopen-notice q-mt-md"
+                role="note"
+              >
+                <q-icon
+                  name="restart_alt"
+                  size="20px"
+                  class="reopen-notice__icon"
+                  aria-hidden="true"
+                />
+                <div>
+                  <strong>{{
+                    t('scope.reopened.title', { number: offerNumberFor(previousDecline.version) })
+                  }}</strong>
+                  <span class="reopen-notice__reason">
+                    {{ t('changeRequests.form.declineReasonLabel') }}
+                    {{
+                      t(`changeRequests.decline_reason.${previousDecline.snapshot.decline_reason}`)
+                    }}
+                  </span>
+                  <blockquote
+                    v-if="previousDecline.snapshot.decline_comment"
+                    class="reopen-notice__comment"
+                    v-text="previousDecline.snapshot.decline_comment"
+                  />
+                  <q-btn
+                    flat
+                    dense
+                    no-caps
+                    class="q-mt-xs"
+                    icon="history"
+                    :label="
+                      t('scope.reopened.view', { number: offerNumberFor(previousDecline.version) })
+                    "
+                    @click="selected = previousDecline.version"
+                  />
+                </div>
+              </div>
               <ScopeSection :title="t('scope.original')" icon="description"
                 ><MarkdownRenderer :model-value="revision.snapshot.client_request_description"
               /></ScopeSection>
@@ -80,15 +129,17 @@
                   )
                 "
                 icon="fact_check"
+                tone="info"
                 ><MarkdownRenderer :model-value="revision.snapshot.technical_assessment"
               /></ScopeSection>
               <ScopeSection
                 v-if="hasOffer(revision.snapshot.status)"
                 :title="t('scope.terms')"
                 icon="payments"
+                tone="warning"
               >
-                <div class="detail-facts">
-                  <div>
+                <div class="detail-facts change-terms">
+                  <div class="change-terms__cost">
                     <span>{{
                       t(
                         selected === data.current.version && data.effect
@@ -128,6 +179,7 @@
                 v-if="selected === data.current.version && data.effect"
                 :title="t('scope.invoiced')"
                 icon="receipt_long"
+                tone="success"
               >
                 <div class="detail-facts">
                   <div>
@@ -253,6 +305,64 @@ const data = ref<ScopeChange | null>(null),
   error = ref(''),
   draftActive = ref(false);
 const revision = computed(() => data.value?.revisions.find((r) => r.version === selected.value));
+// El rechazo más reciente anterior a la versión consultada, si la negociación se reabrió.
+const previousDecline = computed(
+  () =>
+    data.value?.revisions
+      .filter(
+        (r) =>
+          r.version < (selected.value ?? 0) &&
+          r.snapshot.status === 'declined' &&
+          !!r.snapshot.decline_reason,
+      )
+      .sort((a, b) => b.version - a.version)[0],
+);
+// Agrupa las versiones en ofertas: cada evaluación publicada abre una oferta y las
+// decisiones posteriores (aprobación, rechazo, implementación) pertenecen a ella.
+// Cada entrada apunta a la última versión de su grupo, que contiene todo lo anterior.
+type OfferEntry = { value: number; label: string; versions: number[]; number: number };
+const offers = computed<OfferEntry[]>(() => {
+  const groups: { kind: 'request' | 'offer'; versions: number[]; status: string }[] = [];
+  const revisions = [...(data.value?.revisions ?? [])].sort((a, b) => a.version - b.version);
+  for (const r of revisions) {
+    const status = r.snapshot.status;
+    const last = groups[groups.length - 1];
+    if (status === 'assessed') groups.push({ kind: 'offer', versions: [r.version], status });
+    else if (['draft', 'submitted'].includes(status) && last?.kind !== 'request')
+      groups.push({ kind: 'request', versions: [r.version], status });
+    else if (last) {
+      last.versions.push(r.version);
+      last.status = status;
+    } else groups.push({ kind: 'request', versions: [r.version], status });
+  }
+  // Una solicitud seguida de una oferta no es una entrada aparte: la oferta ya la contiene.
+  for (let i = groups.length - 2; i >= 0; i--) {
+    if (groups[i]!.kind === 'request' && groups[i + 1]!.kind === 'offer') {
+      groups[i + 1]!.versions.unshift(...groups[i]!.versions);
+      groups.splice(i, 1);
+    }
+  }
+  let offerNumber = 0;
+  return groups.map((group) => {
+    if (group.kind === 'offer') offerNumber++;
+    const label =
+      group.kind === 'offer'
+        ? t('scope.offers.offer', {
+            number: offerNumber,
+            status: t(`changeRequests.status.${group.status}`),
+          })
+        : t(offerNumber ? 'scope.offers.preparing' : 'scope.offers.request');
+    return {
+      value: group.versions[group.versions.length - 1]!,
+      label,
+      versions: group.versions,
+      number: group.kind === 'offer' ? offerNumber : 0,
+    };
+  });
+});
+const entryFor = (version: number | null) =>
+  offers.value.find((entry) => version !== null && entry.versions.includes(version));
+const offerNumberFor = (version: number) => entryFor(version)?.number ?? 0;
 const hasOffer = (status: string) =>
   ['assessed', 'approved', 'declined', 'implemented'].includes(status);
 const money = (value: string | number, currency: string | null) =>
@@ -291,7 +401,8 @@ async function openLinkedConversation() {
   }
   if (route.query.conversation !== '1' || !data.value) return;
   const version = Number(route.query.revision);
-  if (data.value.revisions.some((r) => r.version === version)) selected.value = version;
+  const entry = entryFor(version);
+  if (entry) selected.value = entry.value;
   await focusConversation();
 }
 async function focusConversation() {
@@ -323,6 +434,42 @@ watch(
 );
 </script>
 <style scoped>
+.reopen-notice {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-subtle);
+  border-inline-start: 3px solid var(--info-text);
+  border-radius: var(--radius-control);
+  background: var(--info-bg);
+  color: var(--text-primary);
+}
+.reopen-notice__icon {
+  color: var(--info-text);
+  margin-top: 2px;
+}
+.reopen-notice__reason {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.reopen-notice__comment {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  border-inline-start: 2px solid var(--info-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* El costo es lo primero que el cliente debe ver en las condiciones. */
+.change-terms > .change-terms__cost {
+  border: 1px solid color-mix(in srgb, var(--warning-text) 55%, transparent);
+  background: color-mix(in srgb, var(--warning-bg) 70%, var(--surface-nav));
+}
+.change-terms > .change-terms__cost strong {
+  font-size: 22px;
+  color: var(--warning-text);
+}
 .scope-document :deep(.q-badge--outline) {
   color: var(--text-accent);
 }

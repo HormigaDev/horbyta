@@ -127,6 +127,8 @@ export interface ScopeChange {
       schedule_before: string | null;
       schedule_after: string | null;
       billing_terms: string | null;
+      decline_reason?: string | null;
+      decline_comment?: string | null;
     };
   }[];
   events: {
@@ -169,6 +171,13 @@ export interface ScopeNotice {
   revision: number;
   title: string;
   created_at: string;
+}
+
+/** Aviso del cliente con su estado; los resueltos forman el historial. */
+export interface ClientNotice extends ScopeNotice {
+  resolved: boolean;
+  project_id: string | null;
+  project_name: string | null;
 }
 
 export interface ScopeConversationMessage {

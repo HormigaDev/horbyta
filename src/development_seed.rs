@@ -532,10 +532,11 @@ async fn populate(
         let (project, client, actor, milestone, currency) = accepted[i % accepted.len()];
         let id = Uuid::now_v7();
         let task = Uuid::now_v7();
+        let title = ["Explorar exportación de informes","Añadir buscador de contenidos","Configurar segunda lengua","Exportar resultados a CSV","Añadir pagos en línea","Ampliar filtros del catálogo","Campaña temporal de lanzamiento"][i];
         ScopeService::actor(tx, owner, "professional").await?;
         execute(tx,"INSERT INTO change_requests(id,user_id,project_id,client_id,title,client_request_description,origin,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,now()-($8::int*interval '1 day'))",
-            vec![id.into(),owner.into(),project.into(),client.into(),["Explorar exportación de informes","Añadir buscador de contenidos","Configurar segunda lengua","Exportar resultados a CSV","Añadir pagos en línea","Ampliar filtros del catálogo","Campaña temporal de lanzamiento"][i].into(),"Solicitud adicional fuera del alcance aceptado. Revisar costo, plazo y trabajo antes de ejecutar.".into(),if i%2==0 {"client_portal"} else {"freelancer_dashboard"}.into(),(25-i as i32*2).into()]).await?;
-        execute(tx,"INSERT INTO tasks(id,user_id,project_id,title,description) VALUES($1,$2,$3,$4,'Extra condicionado a la decisión del cliente; no amplía el acuerdo automáticamente.')",vec![task.into(),owner.into(),project.into(),format!("Trabajo adicional · {}",status).into()]).await?;
+            vec![id.into(),owner.into(),project.into(),client.into(),title.into(),"Solicitud adicional fuera del alcance aceptado. Revisar costo, plazo y trabajo antes de ejecutar.".into(),if i%2==0 {"client_portal"} else {"freelancer_dashboard"}.into(),(25-i as i32*2).into()]).await?;
+        execute(tx,"INSERT INTO tasks(id,user_id,project_id,title,description) VALUES($1,$2,$3,$4,'Extra condicionado a la decisión del cliente; no amplía el acuerdo automáticamente.')",vec![task.into(),owner.into(),project.into(),format!("Trabajo adicional: {title}").into()]).await?;
         ScopeService::classify(
             tx,
             owner,

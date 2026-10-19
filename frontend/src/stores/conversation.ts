@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { ScopeService } from 'src/services/scope';
+import type { ClientNotice } from 'src/types/scope';
 export interface ConversationNotice {
   project_id: string;
   project_name: string;
@@ -11,6 +12,9 @@ export interface ConversationNotice {
 }
 export const useConversationStore = defineStore('conversation', () => {
   const notices = ref<ConversationNotice[]>([]);
+  // Portal del cliente: acciones pendientes y su historial (persistidos en el servidor).
+  const clientNotices = ref<ClientNotice[]>([]);
+  const pendingActions = computed(() => clientNotices.value.filter((n) => !n.resolved));
   const client = ref(false);
   let generation = 0;
   let request = 0;
@@ -22,6 +26,7 @@ export const useConversationStore = defineStore('conversation', () => {
     generation++;
     client.value = portal;
     notices.value = [];
+    clientNotices.value = [];
     if (timer) clearTimeout(timer);
     void refresh();
   }
@@ -29,8 +34,14 @@ export const useConversationStore = defineStore('conversation', () => {
     const current = generation;
     const sequence = ++request;
     try {
-      const result = await ScopeService.conversationInbox(client.value);
-      if (current === generation && sequence === request) notices.value = result;
+      const [result, actions] = await Promise.all([
+        ScopeService.conversationInbox(client.value),
+        client.value ? ScopeService.notices() : Promise.resolve(null),
+      ]);
+      if (current === generation && sequence === request) {
+        notices.value = result;
+        if (actions) clientNotices.value = actions;
+      }
     } catch {
       /* Reconnection retries; do not discard unread state on network failure. */
     }
@@ -46,5 +57,15 @@ export const useConversationStore = defineStore('conversation', () => {
     await ScopeService.readConversation(project, message, client.value);
     await refresh();
   }
-  return { notices, total, unread, configure, refresh, scheduleRefresh, read };
+  return {
+    notices,
+    clientNotices,
+    pendingActions,
+    total,
+    unread,
+    configure,
+    refresh,
+    scheduleRefresh,
+    read,
+  };
 });

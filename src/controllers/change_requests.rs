@@ -415,6 +415,33 @@ pub(crate) async fn cancel_change_request(
 }
 
 #[utoipa::path(
+    patch,
+    path = "/api/v1/change-requests/{id}/reopen",
+    tag = "Change Requests",
+    params(("id" = Uuid, Path, description = "Change request id")),
+    request_body = ExpectedVersionDto,
+    responses(
+        (status = 200, description = "Declined change request reopened for a new assessment", body = crate::dtos::change_request::ChangeRequestDetailDto),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Change request not found"),
+        (status = 409, description = "The request is not declined or its version changed")
+    )
+)]
+pub(crate) async fn reopen_change_request(
+    State(state): State<AppState>,
+    user: UserDto,
+    Path(id): Path<Uuid>,
+    ValidatedJson(payload): ValidatedJson<ExpectedVersionDto>,
+) -> Result<impl IntoResponse, AppError> {
+    let tx = state.db.begin().await?;
+    ScopeService::actor(&tx, user.id, "professional").await?;
+    let change_request = ChangeRequestService::reopen(&tx, user.id, id, payload.version).await?;
+    tx.commit().await?;
+    crate::services::project_conversation::publish_latest(&state, user.id, change_request.project_id, None).await;
+    Ok(Json(change_request))
+}
+
+#[utoipa::path(
     delete,
     path = "/api/v1/change-requests/{id}",
     tag = "Change Requests",
@@ -584,4 +611,5 @@ pub fn change_requests_controller() -> Router<AppState> {
             axum::routing::patch(mark_change_request_implemented),
         )
         .route("/{id}/cancel", axum::routing::patch(cancel_change_request))
+        .route("/{id}/reopen", axum::routing::patch(reopen_change_request))
 }

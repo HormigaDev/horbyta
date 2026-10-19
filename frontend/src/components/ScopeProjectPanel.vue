@@ -33,58 +33,94 @@
         <q-tab-panels v-model="activeTab" keep-alive class="scope-tab-panels">
           <q-tab-panel name="summary" class="project-summary-content">
             <div class="project-overview">
-              <section class="project-overview__agreement">
-                <div>
-                  <h2>{{ t('scope.currentAgreement') }}</h2>
-                  <q-badge
-                    :color="data.active ? 'positive' : 'warning'"
-                    :text-color="data.active ? 'white' : 'dark'"
-                    >{{
-                      data.active
-                        ? t('scope.activeAgreement', { version: data.accepted_revision })
-                        : t(data.enforce_scope ? 'scope.blockedAgreement' : 'scope.legacyAgreement')
-                    }}</q-badge
-                  >
-                  <div v-if="nextRevision" class="row items-center q-gutter-sm q-mt-sm">
-                    <span>{{ t('scope.revision', { version: nextRevision.revision }) }}</span>
-                    <q-badge
-                      :color="statusColor(nextRevision.status)"
-                      :text-color="
-                        statusColor(nextRevision.status) === 'warning' ? 'dark' : 'white'
-                      "
-                      >{{ statusLabel(nextRevision.status) }}</q-badge
-                    >
+              <!-- Cada asunto en su propio aviso: acuerdo vigente y revisión nueva por separado. -->
+              <div class="agreement-callouts">
+                <section
+                  v-for="callout in callouts"
+                  :key="callout.key"
+                  class="agreement-callout"
+                  :class="`agreement-callout--${callout.tone}`"
+                  role="status"
+                >
+                  <q-icon
+                    :name="callout.icon"
+                    size="24px"
+                    class="agreement-callout__icon"
+                    aria-hidden="true"
+                  />
+                  <div class="agreement-callout__body">
+                    <span class="agreement-callout__eyebrow">{{ callout.eyebrow }}</span>
+                    <h2>{{ callout.title }}</h2>
+                    <p v-if="callout.detail">{{ callout.detail }}</p>
                   </div>
-                </div>
-                <q-btn outline :label="t('scope.viewAgreement')" @click="viewAgreement" />
-              </section>
-              <section v-if="pendingChanges.length" class="project-overview__list">
-                <h2>{{ t('scope.pendingChanges') }}</h2>
-                <router-link
-                  v-for="change in pendingChanges.slice(0, 3)"
-                  :key="change.id"
-                  :to="`${client ? '/client' : ''}/change-requests/${change.id}`"
-                  >{{ change.title }}</router-link
-                >
-                <router-link
-                  v-if="pendingChanges.length > 3"
-                  :to="{
-                    path: client ? '/client/change-requests' : '/change-requests',
-                    query: { project_id: projectId },
-                  }"
-                  >{{ t('scope.allPendingChanges', { count: pendingChanges.length }) }}</router-link
-                >
-              </section>
-              <section v-if="upcomingMilestones.length" class="project-overview__list">
-                <h2>{{ t('scope.upcomingMilestones') }}</h2>
-                <router-link
-                  v-for="milestone in upcomingMilestones"
-                  :key="milestone.id"
-                  :to="`${client ? '/client' : ''}/milestones/${milestone.id}`"
-                  ><span>{{ milestone.name }}</span
-                  ><span class="text-caption">{{ date(milestone.due_date) }}</span></router-link
-                >
-              </section>
+                  <q-btn
+                    :outline="!callout.primary"
+                    :color="callout.primary ? 'primary' : undefined"
+                    no-caps
+                    :label="callout.action"
+                    class="agreement-callout__action"
+                    @click="runCallout(callout)"
+                  />
+                </section>
+              </div>
+              <slot name="facts" />
+              <div
+                v-if="pendingChanges.length || upcomingMilestones.length"
+                class="project-follow-up"
+              >
+                <section v-if="pendingChanges.length" class="project-follow-up__list">
+                  <h2 class="summary-heading">{{ t('scope.pendingChanges') }}</h2>
+                  <ul>
+                    <li v-for="change in pendingChanges.slice(0, 3)" :key="change.id">
+                      <router-link
+                        :to="`${client ? '/client' : ''}/change-requests/${change.id}`"
+                        >{{ change.title }}</router-link
+                      >
+                      <span class="project-follow-up__meta">{{
+                        t(`changeRequests.status.${change.status}`)
+                      }}</span>
+                    </li>
+                  </ul>
+                  <router-link
+                    v-if="pendingChanges.length > 3"
+                    class="project-follow-up__more"
+                    :to="{
+                      path: client ? '/client/change-requests' : '/change-requests',
+                      query: { project_id: projectId },
+                    }"
+                    >{{
+                      t('scope.allPendingChanges', { count: pendingChanges.length })
+                    }}</router-link
+                  >
+                </section>
+                <section v-if="upcomingMilestones.length" class="project-follow-up__list">
+                  <h2 class="summary-heading">{{ t('scope.upcomingMilestones') }}</h2>
+                  <ul>
+                    <li v-for="milestone in upcomingMilestones" :key="milestone.id">
+                      <router-link :to="`${client ? '/client' : ''}/milestones/${milestone.id}`">{{
+                        milestone.name
+                      }}</router-link>
+                      <span
+                        class="project-follow-up__meta"
+                        :class="{ 'project-follow-up__meta--overdue': overdue(milestone.due_date) }"
+                        >{{
+                          overdue(milestone.due_date)
+                            ? t('scope.overview.overdue', { date: date(milestone.due_date) })
+                            : date(milestone.due_date)
+                        }}</span
+                      >
+                    </li>
+                  </ul>
+                  <router-link
+                    class="project-follow-up__more"
+                    :to="{
+                      path: client ? '/client/milestones' : '/milestones',
+                      query: { project_id: projectId },
+                    }"
+                    >{{ t('scope.overview.allMilestones') }}</router-link
+                  >
+                </section>
+              </div>
             </div>
             <slot name="summary" />
           </q-tab-panel>
@@ -212,12 +248,43 @@
               </div>
             </div>
             <template v-if="revision && !editing">
-              <q-banner v-if="revision.document.amendment_reason" class="q-mt-md">
-                <div class="text-subtitle2">{{ t('scope.amendmentReason') }}</div>
-                <p class="q-mb-none" style="white-space: pre-wrap">
-                  {{ revision.document.amendment_reason }}
-                </p>
-              </q-banner>
+              <!-- Una revisión corregida se identifica como tal, con su motivo visible. -->
+              <section
+                v-if="
+                  revision.document.amendment_reason &&
+                  !['accepted', 'consolidated', 'superseded'].includes(revision.status)
+                "
+                class="agreement-callout agreement-callout--info amendment-notice q-mt-md"
+                role="note"
+              >
+                <q-icon
+                  name="published_with_changes"
+                  size="24px"
+                  class="agreement-callout__icon"
+                  aria-hidden="true"
+                />
+                <div class="agreement-callout__body">
+                  <span class="agreement-callout__eyebrow">{{
+                    t('scope.correctedRevision.eyebrow')
+                  }}</span>
+                  <h2>
+                    {{
+                      revision.document.agreement_revision
+                        ? t('scope.correctedRevision.title', {
+                            version: revision.revision,
+                            agreement: revision.document.agreement_revision,
+                          })
+                        : t('scope.correctedRevision.titleShort', { version: revision.revision })
+                    }}
+                  </h2>
+                  <span class="amendment-notice__label">{{ t('scope.amendmentReason') }}</span>
+                  <!-- v-text evita espacios del formato en un bloque pre-wrap. -->
+                  <blockquote
+                    class="amendment-notice__reason"
+                    v-text="revision.document.amendment_reason"
+                  />
+                </div>
+              </section>
               <ScopeSection
                 v-if="revision.billing_snapshot"
                 :id="sectionId('originalBilling')"
@@ -337,16 +404,11 @@
                           :to="`${client ? '/client' : ''}/change-requests/${change.id}?tab=agreement`"
                           >{{ change.title }}</router-link
                         >
-                      </q-item-label>
-                      <MarkdownRenderer :model-value="change.description" />
-                      <MarkdownRenderer v-if="change.assessment" :model-value="change.assessment" />
-                      <q-item-label caption>
-                        {{ t('scope.approved') }}:
-                        {{ money(change.amount, change.currency_type) }} —
-                        {{ date(change.approved_at) }}
-                      </q-item-label>
-                      <q-item-label v-if="change.schedule_after" caption>
-                        {{ date(change.schedule_before) }} → {{ date(change.schedule_after) }}
+                        <small class="q-ml-md">
+                          {{ date(change.schedule_before) }}
+                          <q-icon size="xs" name="arrow_forward" />
+                          {{ date(change.schedule_after) }}
+                        </small>
                       </q-item-label>
                     </q-item-section>
                   </q-item>
@@ -450,18 +512,55 @@
                 ]"
               />
               <q-expansion-item
-                :label="t('scope.optionalSections')"
                 :key="document.documents?.some((d) => d.role === 'main') ? 'optional' : 'required'"
                 :default-opened="!document.documents?.some((d) => d.role === 'main')"
+                class="scope-editor-panel scope-editor-panel--collapsible"
+                header-class="scope-editor-panel__header"
               >
-                <div v-for="field in fields" :key="field" class="q-mb-md">
-                  <h3 class="text-subtitle2">{{ t(`scope.${field}`) }}</h3>
-                  <MarkdownRenderer
-                    v-model="document[field]"
-                    :edit-mode="!busy"
-                    enable-preview-toggle
-                  />
-                </div>
+                <template #header>
+                  <q-item-section avatar>
+                    <q-icon
+                      name="view_agenda"
+                      size="22px"
+                      class="scope-editor-panel__icon"
+                      aria-hidden="true"
+                    />
+                  </q-item-section>
+                  <q-item-section class="scope-editor-panel__heading">
+                    <h3>{{ t('scope.optionalSections') }}</h3>
+                    <p>{{ t('scope.editor.sectionsHint') }}</p>
+                  </q-item-section>
+                  <q-item-section side>
+                    <span class="scope-editor-panel__count">{{
+                      t('scope.editor.sectionsCount', {
+                        filled: fields.filter((f) => document[f]?.trim()).length,
+                        total: fields.length,
+                      })
+                    }}</span>
+                  </q-item-section>
+                </template>
+                <ol class="scope-editor-fields">
+                  <li v-for="(field, index) in fields" :key="field" class="scope-editor-field">
+                    <header class="scope-editor-field__header">
+                      <span class="scope-editor-field__number" aria-hidden="true">{{
+                        index + 1
+                      }}</span>
+                      <h4>{{ t(`scope.${field}`) }}</h4>
+                      <q-icon
+                        v-if="document[field]?.trim()"
+                        name="check_circle"
+                        size="18px"
+                        class="scope-editor-field__done"
+                        :aria-label="t('scope.editor.sectionFilled')"
+                      />
+                    </header>
+                    <MarkdownRenderer
+                      v-model="document[field]"
+                      :edit-mode="!busy"
+                      enable-preview-toggle
+                    />
+                  </li>
+                </ol>
               </q-expansion-item>
               <ScopeDocumentsEditor
                 :model-value="document"
@@ -511,82 +610,6 @@
             </q-form>
           </q-tab-panel>
           <q-tab-panel name="conversation">
-            <q-form
-              v-if="revision?.published && feedbackKind !== 'comment'"
-              @submit="sendFeedback"
-              class="scope-composer q-mt-md"
-            >
-              <q-banner v-if="feedbackError" class="bg-warning text-dark q-mb-sm" role="alert">{{
-                feedbackError
-              }}</q-banner>
-              <p v-if="feedbackKind !== 'comment' || feedbackDocument" class="text-weight-medium">
-                {{ feedbackKind !== 'comment' ? feedbackLabel(feedbackKind) : '' }}
-                {{
-                  feedbackDocument
-                    ? revision.document.documents?.find((d) => d.id === feedbackDocument)?.title
-                    : ''
-                }}
-              </p>
-              <p v-if="feedbackKind === 'reject' || feedbackKind === 'request_changes'">
-                {{ t('scope.withdrawalHint') }}
-              </p>
-              <q-input
-                ref="feedbackInput"
-                outlined
-                spellcheck="true"
-                v-model="feedbackText"
-                type="textarea"
-                autogrow
-                :label="
-                  t(feedbackKind === 'comment' ? 'scope.messagePlaceholder' : 'scope.explanation')
-                "
-                maxlength="4000"
-                bottom-slots
-                class="scope-message-input"
-                :disable="busy || uploading"
-                :rules="[
-                  (v) =>
-                    !!pendingFiles.length ||
-                    !!String(v ?? '').trim() ||
-                    t('scope.explanationRequired'),
-                ]"
-              />
-              <div v-if="pendingFiles.length" class="row q-gutter-sm q-mt-sm">
-                <q-chip
-                  v-for="file in pendingFiles"
-                  :key="file.id"
-                  removable
-                  :disable="busy || uploading"
-                  @remove="pendingFiles = pendingFiles.filter((f) => f.id !== file.id)"
-                  >{{ file.original_name }}</q-chip
-                >
-              </div>
-              <input
-                ref="conversationFileInput"
-                hidden
-                type="file"
-                multiple
-                accept="image/*,video/*,.md,.markdown,.pdf,.txt,.csv,.zip,.docx,.xlsx,.pptx"
-                @change="uploadMessageFiles"
-              />
-              <div class="scope-composer-actions row items-center q-gutter-sm">
-                <q-btn
-                  outline
-                  icon="attach_file"
-                  :label="t('scope.attachMessageFile')"
-                  :loading="uploading"
-                  :disable="busy || pendingFiles.length >= 10"
-                  @click="conversationFileInput?.click()"
-                />
-                <q-btn
-                  type="submit"
-                  color="primary"
-                  :disable="uploading"
-                  :label="t('scope.send')"
-                  :loading="busy"
-                /><q-btn flat :label="t('common.cancel')" :disable="busy" @click="cancelFeedback" />
-              </div>
-            </q-form>
             <ProjectConversation
               :key="projectId"
               ref="projectChat"
@@ -647,6 +670,52 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <!-- Decisión del cliente: el motivo es obligatorio y se publica en la conversación. -->
+    <q-dialog v-model="decisionDialog" :persistent="busy" @hide="cancelFeedback">
+      <q-card class="scope-decision-dialog">
+        <q-form @submit="submitDecision">
+          <q-card-section>
+            <h2 class="text-h6 q-my-none">
+              {{ t(`scope.decision.${decisionKind}.title`, { version: selected }) }}
+            </h2>
+            <p class="q-mt-sm q-mb-none scope-decision-dialog__hint">
+              {{ t(`scope.decision.${decisionKind}.hint`) }}
+            </p>
+          </q-card-section>
+          <q-card-section class="q-pt-none">
+            <q-banner v-if="feedbackError" class="bg-warning text-dark q-mb-md" role="alert">{{
+              feedbackError
+            }}</q-banner>
+            <q-input
+              ref="feedbackInput"
+              v-model="feedbackText"
+              outlined
+              autofocus
+              spellcheck="true"
+              type="textarea"
+              autogrow
+              maxlength="4000"
+              counter
+              :label="t(`scope.decision.${decisionKind}.label`)"
+              :disable="busy"
+              :rules="[(v) => !!String(v ?? '').trim() || t('scope.explanationRequired')]"
+            />
+            <p class="q-mt-md q-mb-none text-caption scope-decision-dialog__hint">
+              {{ t('scope.decision.sharedHint') }}
+            </p>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn flat :label="t('common.cancel')" :disable="busy" v-close-popup />
+            <q-btn
+              type="submit"
+              :color="decisionKind === 'reject' ? 'negative' : 'primary'"
+              :label="t(`scope.decision.${decisionKind}.confirm`)"
+              :loading="busy"
+            />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
     <q-dialog v-model="confirm" :persistent="busy"
       ><q-card style="max-width: 520px"
         ><q-card-section
@@ -694,7 +763,7 @@ const { formatCurrency } = useNumberFormatter();
 const money = (amount: string, currency: string | null) => formatCurrency(amount, currency, amount);
 const systemText = useScopeSystemText();
 import { useUI } from 'src/composables/useUI';
-const { resolveErrorMessage } = useUI();
+const { resolveErrorMessage, notify, notifyError } = useUI();
 const preferences = useDisplayPreferences();
 const date = (value: string | null) =>
   value
@@ -738,7 +807,6 @@ const conversationStore = useConversationStore();
 const feedbackError = ref('');
 const uploading = ref(false);
 const pendingFiles = ref<{ id: string; original_name: string }[]>([]);
-const conversationFileInput = ref<HTMLInputElement | null>(null);
 const feedbackInput = ref<QInput | null>(null);
 const statusLabel = (status: string) =>
   ({
@@ -768,13 +836,6 @@ const statusIcons: Record<string, string> = {
 };
 const statusColor = (status: string) => statusColors[status] ?? 'grey-7';
 const statusIcon = (status: string) => statusIcons[status] ?? 'info';
-const feedbackLabel = (kind: string) =>
-  ({
-    comment: t('scope.commentLabel'),
-    request_changes: t('scope.requestChanges'),
-    reject: t('scope.rejectProposal'),
-    prefer: t('scope.preferRevision'),
-  })[kind] ?? kind;
 watch(data, (value) => {
   if (!value) return;
   registerPreviewAttachments([
@@ -782,6 +843,18 @@ watch(data, (value) => {
     ...value.revisions.flatMap((r) => r.attachment_snapshot),
   ]);
 });
+// Decisiones del cliente (rechazo o ajustes) por revisión: dan acceso a su motivo.
+const decisions = ref<Record<number, { id: string; kind: string }>>({});
+function setProject(result: ScopeProject) {
+  const found: Record<number, { id: string; kind: string }> = {};
+  for (const event of result.events ?? []) {
+    if (event.kind === 'reject' || event.kind === 'request_changes') {
+      found[event.revision] = { id: event.id, kind: event.kind };
+    }
+  }
+  decisions.value = found;
+  data.value = { ...result, events: [] };
+}
 const revision = computed(() => data.value?.revisions.find((r) => r.revision === selected.value));
 const nextRevision = computed(() =>
   data.value?.revisions.find(
@@ -800,9 +873,127 @@ const upcomingMilestones = computed(() =>
     .sort((a, b) => (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999'))
     .slice(0, 3),
 );
-function viewAgreement() {
-  selected.value = nextRevision.value?.revision ?? data.value?.accepted_revision ?? selected.value;
+const overdue = (value: string | null) => !!value && new Date(value).getTime() < Date.now();
+type Callout = {
+  key: string;
+  eyebrow: string;
+  tone: 'success' | 'warning' | 'info' | 'error' | 'neutral';
+  icon: string;
+  title: string;
+  detail: string;
+  action: string;
+  primary: boolean;
+  revision: number | null;
+  message?: string;
+};
+// Tono por estado de la revisión: pendiente (amarillo), ajustes (azul), rechazo (rojo).
+const revisionStyles: Record<string, { tone: Callout['tone']; icon: string }> = {
+  pending: { tone: 'warning', icon: 'pending_actions' },
+  changes_requested: { tone: 'info', icon: 'edit_note' },
+  rejected: { tone: 'error', icon: 'block' },
+  draft: { tone: 'neutral', icon: 'drafts' },
+};
+// El acuerdo vigente y una revisión nueva son asuntos distintos: cada uno tiene su aviso.
+const callouts = computed<Callout[]>(() => {
+  const value = data.value;
+  if (!value) return [];
+  const next = nextRevision.value;
+  const role = props.client ? 'client' : 'pro';
+  const version = next?.revision;
+  const viewLabel = t('scope.viewAgreement');
+  const scopeEyebrow = t('scope.title');
+  if (!value.enforce_scope && !value.active) {
+    return [
+      {
+        key: 'legacy',
+        eyebrow: scopeEyebrow,
+        tone: 'neutral',
+        icon: 'history',
+        title: t('scope.legacyAgreement'),
+        detail: t('scope.historical'),
+        action: viewLabel,
+        primary: false,
+        revision: next?.revision ?? null,
+      },
+    ];
+  }
+  const list: Callout[] = [];
+  if (value.active) {
+    const current = value.revisions.find((r) => r.revision === value.accepted_revision);
+    const since = current ? (current.accepted_at ?? current.created_at) : null;
+    list.push({
+      key: 'active',
+      eyebrow: scopeEyebrow,
+      tone: 'success',
+      icon: 'verified',
+      title: t('scope.activeAgreement', { version: value.accepted_revision }),
+      detail: since ? t('scope.overview.since', { date: date(since) }) : '',
+      action: viewLabel,
+      primary: false,
+      revision: value.accepted_revision,
+    });
+  }
+  if (!next) {
+    if (!value.active) {
+      list.push({
+        key: 'pending',
+        eyebrow: scopeEyebrow,
+        tone: 'warning',
+        icon: 'pending_actions',
+        title: t('scope.overview.pendingTitle'),
+        detail: t(`scope.overview.${role}Empty`),
+        action: props.client ? viewLabel : t('scope.overview.prepare'),
+        primary: !props.client,
+        revision: null,
+      });
+    }
+    return list;
+  }
+  const status = (next.status in revisionStyles ? next.status : 'pending') as
+    | 'pending'
+    | 'changes_requested'
+    | 'rejected'
+    | 'draft';
+  const decision = decisions.value[next.revision];
+  const detail = {
+    pending: t(`scope.overview.${role}${value.active ? 'Amendment' : ''}Pending`, { version }),
+    changes_requested: t(`scope.overview.${role}ChangesRequested`, { version }),
+    rejected: t(`scope.overview.${role}Rejected`, { version }),
+    draft: t('scope.overview.draft', { version }),
+  }[status];
+  const awaitingClient = !!props.client && status === 'pending';
+  const showReason = !!decision && (status === 'rejected' || status === 'changes_requested');
+  list.push({
+    key: 'revision',
+    eyebrow: value.active ? t('scope.overview.newRevision') : scopeEyebrow,
+    ...revisionStyles[status]!,
+    title:
+      status === 'pending' && !value.active
+        ? t('scope.overview.pendingTitle')
+        : t(`scope.overview.amendment.${status}`, { version }),
+    detail: detail ?? '',
+    action: awaitingClient
+      ? t('scope.overview.review')
+      : showReason
+        ? t('scope.overview.viewReason')
+        : t('scope.overview.viewRevision', { version }),
+    primary: awaitingClient,
+    revision: next.revision,
+    ...(showReason && decision ? { message: decision.id } : {}),
+  });
+  return list;
+});
+function viewAgreement(revision: number | null) {
+  selected.value = revision ?? data.value?.accepted_revision ?? selected.value;
   activeTab.value = 'scope';
+}
+// Abre la conversación resaltando el mensaje con el motivo de la decisión.
+function runCallout(callout: Callout) {
+  if (!callout.message) return viewAgreement(callout.revision);
+  void router.push({
+    path: `${props.client ? '/client' : ''}/projects/${props.projectId}`,
+    query: { conversation: '1', message: callout.message, focus: String(Date.now()) },
+  });
 }
 const sectionId = (key: string) => `scope-project-${props.projectId}-${key}`;
 const sectionIndex = computed(() => {
@@ -826,43 +1017,6 @@ async function focusSection(id: string) {
   const target = window.document.getElementById(id);
   target?.scrollIntoView({ behavior: 'auto', block: 'start' });
   target?.focus({ preventScroll: true });
-}
-async function uploadMessageFiles(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const files = Array.from(input.files ?? []);
-  input.value = '';
-  if (!files.length || !selected.value || busy.value || uploading.value) return;
-  if (pendingFiles.value.length + files.length > 10) {
-    feedbackError.value = t('scope.fileCountLimit');
-    return;
-  }
-  if (
-    files.some(
-      (file) =>
-        file.type.startsWith('audio/') ||
-        /\.(mp3|wav|ogg|oga|opus|m4a|aac|flac|aiff|aif|amr|wma)$/i.test(file.name),
-    )
-  ) {
-    feedbackError.value = t('scope.audioUnsupported');
-    return;
-  }
-  uploading.value = true;
-  feedbackError.value = '';
-  const current = generation;
-  try {
-    const result = await ScopeService.uploadConversation(
-      props.projectId,
-      selected.value,
-      files,
-      !!props.client,
-    );
-    if (current === generation) pendingFiles.value = [...pendingFiles.value, ...result.items];
-  } catch (e) {
-    if (current === generation)
-      feedbackError.value = resolveErrorMessage(t('scope.uploadFailure'), e);
-  } finally {
-    uploading.value = false;
-  }
 }
 const { initialize, markSaved } = useFormSession(
   () => ({ ...document }),
@@ -895,7 +1049,7 @@ async function load() {
     if (current !== generation) return;
     const firstLoad = !data.value;
     const followedAgreement = selected.value === data.value?.accepted_revision;
-    data.value = { ...result, events: [] };
+    setProject(result);
     const linkedRevision = Number(route.query.revision);
     if (
       selected.value === null &&
@@ -936,8 +1090,9 @@ async function load() {
 }
 async function save(publish: boolean) {
   if (!data.value || busy.value) return;
+  // Las acciones informan junto al usuario (aviso o diálogo), no en el banner superior.
   if (data.value.active && !document.amendment_reason?.trim()) {
-    error.value = t('scope.amendmentReasonRequired');
+    notify(t('scope.amendmentReasonRequired'), 'warning');
     return;
   }
   if (
@@ -945,7 +1100,7 @@ async function save(publish: boolean) {
     !document.documents?.some((d) => d.role === 'main') &&
     fields.some((f) => !document[f].trim())
   ) {
-    error.value = t('scope.required');
+    notify(t('scope.required'), 'warning');
     return;
   }
   busy.value = true;
@@ -959,25 +1114,34 @@ async function save(publish: boolean) {
       publish,
     );
     if (current !== generation) return;
-    data.value = { ...result, events: [] };
+    setProject(result);
     selected.value = result.last_revision;
     markSaved();
     editing.value = false;
   } catch (e) {
     if (current !== generation) return;
-    error.value =
-      isApiHttpError(e) && e.status === 409
-        ? t('scope.conflict')
-        : resolveErrorMessage(t('scope.failure'), e);
+    notifyError(t('scope.failure'), e);
   } finally {
     busy.value = false;
   }
 }
+const decisionDialog = ref(false);
+// Copia estable del tipo de decisión para el diálogo (feedbackKind se reinicia al cerrar).
+const decisionKind = ref('reject');
 function openFeedback(kind: string) {
+  decisionKind.value = kind;
   feedbackKind.value = kind;
   feedbackDocument.value = null;
+  feedbackText.value = '';
+  pendingFiles.value = [];
   feedbackError.value = '';
-  void focusConversation();
+  decisionDialog.value = true;
+}
+async function submitDecision() {
+  feedbackKind.value = decisionKind.value;
+  if (!(await sendFeedback())) return;
+  decisionDialog.value = false;
+  notify(t(`scope.decision.${decisionKind.value}.done`), 'positive');
 }
 function cancelFeedback() {
   feedbackKind.value = 'comment';
@@ -1054,17 +1218,18 @@ async function editDraft(publish: boolean) {
   document.agreement_revision = agreementRevision ?? null;
   if (publish) await save(true);
 }
-async function sendFeedback() {
+// Devuelve true solo si la decisión quedó registrada.
+async function sendFeedback(): Promise<boolean> {
   if (
     !selected.value ||
     busy.value ||
     uploading.value ||
     (!feedbackText.value.trim() && !pendingFiles.value.length)
   )
-    return;
+    return false;
   if (!revision.value?.published) {
     feedbackError.value = t('scope.conversationDraft');
-    return;
+    return false;
   }
   busy.value = true;
   feedbackError.value = '';
@@ -1079,18 +1244,14 @@ async function sendFeedback() {
       feedbackDocument.value,
       pendingFiles.value.map((file) => file.id),
     );
-    if (current !== generation) return;
-    data.value = { ...result, events: [] };
+    if (current !== generation) return false;
+    setProject(result);
     cancelFeedback();
-
-    await nextTick();
-
-    feedbackInput.value?.focus();
+    return true;
   } catch (e) {
-    if (current !== generation) return;
-    if (isApiHttpError(e) && e.status === 409) {
-      feedbackError.value = resolveErrorMessage(t('scope.conflict'), e);
-    } else feedbackError.value = resolveErrorMessage(t('scope.failure'), e);
+    if (current !== generation) return false;
+    feedbackError.value = resolveErrorMessage(t('scope.failure'), e);
+    return false;
   } finally {
     busy.value = false;
   }
@@ -1102,16 +1263,15 @@ async function accept() {
   try {
     const result = await ScopeService.accept(props.projectId, selected.value);
     if (current !== generation) return;
-    data.value = { ...result, events: [] };
+    setProject(result);
     confirm.value = false;
     error.value = '';
   } catch (e) {
     if (current !== generation) return;
     confirm.value = false;
-    if (isApiHttpError(e) && e.status === 409) {
-      await load();
-      error.value = t('scope.conflict');
-    } else error.value = resolveErrorMessage(t('scope.failure'), e);
+    // Muestra el motivo real del backend; solo un conflicto justifica recargar la revisión.
+    notifyError(t('scope.failure'), e);
+    if (isApiHttpError(e) && e.status === 409) await load();
   } finally {
     busy.value = false;
   }
@@ -1180,29 +1340,122 @@ watch(
 .project-overview {
   display: grid;
   gap: 24px;
-  padding: 12px 0 24px;
+  padding: 16px 0 8px;
 }
-.project-overview h2 {
-  font-size: 14px;
-  line-height: 1.5;
+.agreement-callout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border-subtle);
+  border-inline-start: 3px solid var(--callout-accent);
+  background: var(--callout-bg);
+}
+.agreement-callout--success {
+  --callout-accent: var(--success-text);
+  --callout-bg: var(--success-bg);
+}
+.agreement-callout--warning {
+  --callout-accent: var(--warning-text);
+  --callout-bg: var(--warning-bg);
+}
+.amendment-notice {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+.amendment-notice__label {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
   font-weight: 600;
-  margin: 0 0 12px;
+  color: var(--text-secondary);
+}
+.amendment-notice__reason {
+  margin: 4px 0 0;
+  padding: 8px 12px;
+  border-inline-start: 2px solid var(--callout-accent);
+  background: color-mix(in srgb, var(--surface-panel) 55%, transparent);
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.agreement-callouts {
+  display: grid;
+  gap: 12px;
+}
+.agreement-callout--error {
+  --callout-accent: var(--error-text);
+  --callout-bg: var(--error-bg);
+}
+.agreement-callout--info {
+  --callout-accent: var(--info-text);
+  --callout-bg: var(--info-bg);
+}
+.agreement-callout--neutral {
+  --callout-accent: var(--text-secondary);
+  --callout-bg: var(--surface-nav);
+}
+.agreement-callout__icon {
+  color: var(--callout-accent);
+}
+.agreement-callout__eyebrow {
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
   color: var(--text-muted);
 }
-.project-overview__agreement {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+.agreement-callout h2 {
+  margin: 2px 0 0;
+  font-size: 17px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--text-color);
 }
-.project-overview__list {
+.agreement-callout p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.project-follow-up {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 24px 32px;
 }
-.project-overview__list a {
+.project-follow-up ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.project-follow-up li {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.project-follow-up li > a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.project-follow-up__meta {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.project-follow-up__meta--overdue {
+  color: var(--error-text);
+  font-weight: 600;
+}
+.project-follow-up__more {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 13px;
 }
 .scope-tab-panels :deep(.scope-section) {
   background: transparent;
@@ -1231,9 +1484,13 @@ watch(
   border-inline-start: 2px solid var(--border-subtle);
 }
 @media (max-width: 599px) {
-  .project-overview__agreement {
-    align-items: flex-start;
-    flex-direction: column;
+  .agreement-callout {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 16px;
+  }
+  .agreement-callout__action {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
   .scope-revision-toolbar {
     justify-content: flex-start;
@@ -1349,24 +1606,12 @@ watch(
   outline: 2px solid var(--q-primary);
   outline-offset: 3px;
 }
-.scope-composer-actions {
-  margin-top: 16px;
+.scope-decision-dialog {
+  width: 560px;
+  max-width: 92vw;
 }
-.scope-message-input :deep(.q-field__bottom) {
-  position: static;
-  transform: none;
-  min-height: 24px;
-  padding-bottom: 8px;
-}
-.scope-message-input {
-  padding-bottom: 0;
-}
-.scope-message-input :deep(.q-field__messages) {
-  line-height: 1.4;
-}
-.scope-composer {
-  border-top: 1px solid var(--border-subtle);
-  padding-top: 16px;
+.scope-decision-dialog__hint {
+  color: var(--text-secondary);
 }
 @media (max-width: 600px) {
   .scope-revision-toolbar {

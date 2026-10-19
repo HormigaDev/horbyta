@@ -17,9 +17,9 @@ Plans.md
 
 sweep.timestamp
 
-.harness-mem/
-.claude/state/
-.claude/memory/
-.claude/sessions/
+.harness-mem
+.claude
 
 out/
+
+__pycache__

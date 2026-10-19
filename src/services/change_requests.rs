@@ -203,6 +203,7 @@ impl ChangeRequestService {
             .column(change_requests::Column::Origin)
             .column(change_requests::Column::Status)
             .column(change_requests::Column::DeclineReason)
+            .column(change_requests::Column::DeclineComment)
             .column(change_requests::Column::ClientApprovedAt)
             .column(change_requests::Column::ClientSignatureIp)
             .column(change_requests::Column::CreatedAt)
@@ -243,6 +244,7 @@ impl ChangeRequestService {
             .column(change_requests::Column::Origin)
             .column(change_requests::Column::Status)
             .column(change_requests::Column::DeclineReason)
+            .column(change_requests::Column::DeclineComment)
             .column(change_requests::Column::ClientApprovedAt)
             .column(change_requests::Column::ClientSignatureIp)
             .column(change_requests::Column::CreatedAt)
@@ -508,6 +510,34 @@ impl ChangeRequestService {
         Self::get_by_id(db, user_id, updated.id).await
     }
 
+    /// Reabre un cambio rechazado para negociar nuevas condiciones. El rechazo, su
+    /// motivo y explicación permanecen en la versión anterior del historial.
+    pub async fn reopen(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        id: Uuid,
+        version: i32,
+    ) -> Result<ChangeRequestDetailDto, AppError> {
+        let model = Self::get_model_by_user(db, user_id, id).await?;
+        if model.version != version {
+            return Err(AppError::Conflict("La revisión cambió; vuelva a leerla.".into()));
+        }
+        if Self::parse_status(&model.status)? != ChangeRequestStatus::Declined {
+            return Err(AppError::Conflict(
+                "Solo una solicitud rechazada puede reabrirse.".into(),
+            ));
+        }
+
+        let expected_version = model.version;
+        let mut active_model: change_requests::ActiveModel = model.into();
+        active_model.status = Set(ChangeRequestStatus::Submitted.to_string());
+        active_model.decline_reason = Set(None);
+        active_model.decline_comment = Set(None);
+
+        let updated = Self::persist(db, active_model, expected_version).await?;
+        Self::get_by_id(db, user_id, updated.id).await
+    }
+
     pub async fn mark_implemented(
         db: &impl ConnectionTrait,
         user_id: Uuid,
@@ -619,12 +649,22 @@ impl ChangeRequestService {
         id: Uuid,
         dto: ClientDeclineChangeRequestDto,
     ) -> Result<ClientChangeRequestDetailDto, AppError> {
+        let comment = dto
+            .decline_comment
+            .as_deref()
+            .map(str::trim)
+            .filter(|text| !text.is_empty())
+            .map(str::to_owned);
+        if dto.decline_reason == ChangeRequestDeclineReason::Other && comment.is_none() {
+            return Err(AppError::BadRequest("Describa el motivo del rechazo.".into()));
+        }
         let model = Self::get_model_by_client(db, user_id, client_id, id).await?;
         let status = Self::parse_status(&model.status)?;
 
         if status == ChangeRequestStatus::Declined
             && model.version == dto.version + 1
             && model.decline_reason.as_deref() == Some(dto.decline_reason.to_string().as_str())
+            && model.decline_comment == comment
         {
             return Self::get_client_by_id(db, user_id, client_id, id).await;
         }
@@ -640,6 +680,7 @@ impl ChangeRequestService {
         active_model.client_approved_at = Set(None);
         active_model.client_signature_ip = Set(None);
         active_model.decline_reason = Set(Some(dto.decline_reason.to_string()));
+        active_model.decline_comment = Set(comment);
 
         let updated = Self::persist(db, active_model, expected_version).await?;
         Self::get_client_by_id(db, user_id, client_id, updated.id).await
@@ -986,6 +1027,7 @@ impl ChangeRequestService {
             origin: row.origin,
             status: row.status,
             decline_reason,
+            decline_comment: row.decline_comment,
             client_approved_at: row.client_approved_at,
             client_signature_ip: row.client_signature_ip,
             created_at: row.created_at,
@@ -1018,6 +1060,7 @@ impl ChangeRequestService {
             origin: row.origin,
             status: row.status,
             decline_reason,
+            decline_comment: row.decline_comment,
             client_approved_at: row.client_approved_at,
             client_signature_ip: row.client_signature_ip,
             created_at: row.created_at,

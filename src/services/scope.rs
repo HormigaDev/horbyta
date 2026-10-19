@@ -522,6 +522,19 @@ impl ScopeService {
         }
         Self::task(db, owner, id).await
     }
+    /// Avisos del cliente: primero los pendientes y después el historial resuelto reciente.
+    pub async fn notices(db: &impl ConnectionTrait, owner: Uuid, client: Uuid) -> Result<JsonValue, AppError> {
+        Self::json(db,r#"SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.resolved, x.created_at DESC),'[]') AS data FROM (
+            SELECT n.id,n.kind,n.record_id,n.revision,n.title,n.resolved,n.created_at,
+              coalesce(p.id,c.project_id) AS project_id,coalesce(p.name,pc.name) AS project_name
+            FROM scope_notices n
+            LEFT JOIN projects p ON n.kind='baseline' AND p.id=n.record_id
+            LEFT JOIN change_requests c ON n.kind='change' AND c.id=n.record_id
+            LEFT JOIN projects pc ON pc.id=c.project_id
+            WHERE n.user_id=$1 AND n.client_id=$2
+            ORDER BY n.resolved, n.created_at DESC LIMIT 50) x"#,
+          vec![owner.into(),client.into()]).await
+    }
     pub async fn pending(db: &impl ConnectionTrait, owner: Uuid, client: Uuid) -> Result<JsonValue, AppError> {
         Self::json(db,"SELECT coalesce(jsonb_agg(to_jsonb(n) ORDER BY created_at DESC),'[]') AS data FROM scope_notices n WHERE user_id=$1 AND client_id=$2 AND NOT resolved",
           vec![owner.into(),client.into()]).await

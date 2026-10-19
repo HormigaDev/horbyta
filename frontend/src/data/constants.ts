@@ -104,8 +104,8 @@ export const getChangeRequestsDeclineReasons = (t: ComposerTranslation) => {
     { label: t('changeRequests.decline_reason.roi_not_justified'), value: 'roi_not_justified' },
     { label: t('changeRequests.decline_reason.schedule_too_long'), value: 'schedule_too_long' },
     {
-      label: t('changeRequests.decline_reason.jeopardized_main_deadline'),
-      value: 'jeopardized_main_deadline',
+      label: t('changeRequests.decline_reason.jeopardizes_main_deadline'),
+      value: 'jeopardizes_main_deadline',
     },
     {
       label: t('changeRequests.decline_reason.postponed_to_next_phase'),
@@ -127,6 +127,7 @@ export const getChangeRequestsDeclineReasons = (t: ComposerTranslation) => {
       label: t('changeRequests.decline_reason.thought_it_was_included'),
       value: 'thought_it_was_included',
     },
+    { label: t('changeRequests.decline_reason.other'), value: 'other' },
   ];
 };
 

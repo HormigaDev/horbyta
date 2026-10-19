@@ -26,7 +26,7 @@
         :disable="loading"
         @click="load('older')"
       />
-      <template v-for="(message, messageIndex) in items" :key="message.id">
+      <template v-for="message in items" :key="message.id">
         <div
           v-if="message.kind !== 'message'"
           class="conversation-event"
@@ -67,6 +67,34 @@
           :data-message-id="message.id"
           :class="{ 'change-message-target': message.id === highlighted }"
         >
+          <!-- La procedencia del mensaje es un icono discreto junto a la hora, con detalle al pasar. -->
+          <template #stamp>
+            <span class="change-message-stamp">
+              <span>{{ date(message.recorded_at) }}</span>
+              <router-link
+                v-if="message.kind === 'message' && message.context?.change_request_id"
+                :to="`${prefix}/change-requests/${message.context.change_request_id}`"
+                class="change-message-origin"
+                :aria-label="
+                  t('scope.messageContext.change', { title: message.context.change_title ?? '' })
+                "
+                ><q-icon name="compare_arrows" size="16px" aria-hidden="true" /><q-tooltip>{{
+                  t('scope.messageContext.change', { title: message.context.change_title ?? '' })
+                }}</q-tooltip></router-link
+              >
+              <router-link
+                v-else-if="message.kind === 'message' && message.context?.scope_revision"
+                :to="scopeLink(message.context.scope_revision)"
+                class="change-message-origin"
+                :aria-label="originLabel(message)"
+                ><q-icon
+                  :name="message.context.document_id ? 'article' : 'description'"
+                  size="16px"
+                  aria-hidden="true"
+                /><q-tooltip>{{ originLabel(message) }}</q-tooltip></router-link
+              >
+            </span>
+          </template>
           <div>
             <p class="change-message-text">
               <template
@@ -92,36 +120,6 @@
                 ><template v-else>{{ part.text }}</template></template
               >
             </p>
-            <div
-              v-if="
-                message.kind === 'message' &&
-                (message.context?.scope_revision || message.context?.change_request_id) &&
-                contextChanged(messageIndex)
-              "
-              class="q-mt-sm"
-            >
-              <router-link
-                v-if="message.context?.scope_revision"
-                :to="scopeLink(message.context.scope_revision)"
-                >{{ t('scope.revision', { version: message.context.scope_revision }) }}</router-link
-              >
-              <router-link
-                v-if="message.context?.change_request_id"
-                :to="`${prefix}/change-requests/${message.context.change_request_id}`"
-                >{{ message.context.change_title }}</router-link
-              >
-            </div>
-            <q-btn
-              v-if="canPropose && message.kind === 'message'"
-              flat
-              dense
-              icon="add_task"
-              round
-              :aria-label="t('scope.createChangeFromMessage')"
-              class="q-mt-sm"
-              @click="prepareChange(message)"
-              ><q-tooltip>{{ t('scope.createChangeFromMessage') }}</q-tooltip></q-btn
-            >
             <div v-if="message.attachments?.length" class="row q-gutter-sm">
               <q-btn
                 v-for="file in message.attachments.filter(
@@ -266,6 +264,13 @@
           :label="t('scope.send')"
           :loading="busy"
           :disable="uploading"
+        /><q-btn
+          v-if="canPropose"
+          outline
+          icon="add_task"
+          :label="t('scope.createChange')"
+          :disable="busy || uploading || !sourceOptions.length"
+          @click="prepareChange()"
         /><q-btn flat :label="t('common.cancel')" :disable="busy || uploading" @click="cancel" />
       </div>
     </q-form>
@@ -274,13 +279,34 @@
         <q-form @submit="createChange">
           <q-card-section
             ><h3 class="text-subtitle1 q-ma-none">
-              {{ t('scope.createChangeFromMessage') }}
+              {{ t('scope.createChange') }}
             </h3></q-card-section
           >
           <q-card-section>
             <q-banner v-if="proposalError" class="bg-warning text-dark q-mb-md">{{
               proposalError
             }}</q-banner>
+            <!-- La solicitud conserva el mensaje que la origina (trazabilidad). -->
+            <q-select
+              v-model="sourceMessageId"
+              outlined
+              emit-value
+              map-options
+              :options="sourceOptions"
+              :label="t('scope.changeSource')"
+              :hint="t('scope.changeSourceHint')"
+              class="q-mb-md"
+              @update:model-value="selectSource"
+            >
+              <template #option="{ opt, itemProps }">
+                <q-item v-bind="itemProps">
+                  <q-item-section>
+                    <q-item-label lines="2">{{ opt.text }}</q-item-label>
+                    <q-item-label caption>{{ opt.caption }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
             <q-input
               v-model="proposalTitle"
               outlined
@@ -301,7 +327,7 @@
             ><q-btn flat :label="t('common.cancel')" :disable="proposalBusy" v-close-popup /><q-btn
               type="submit"
               color="primary"
-              :label="t('scope.createChangeFromMessage')"
+              :label="t('scope.createChange')"
               :loading="proposalBusy"
           /></q-card-actions>
         </q-form>
@@ -310,7 +336,7 @@
   </ScopeSection>
 </template>
 <script setup lang="ts">
-import { ref, watch, nextTick, onUnmounted } from 'vue';
+import { computed, ref, watch, nextTick, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useConversationStore } from 'src/stores/conversation';
 import { useRoute, useRouter } from 'vue-router';
@@ -360,7 +386,21 @@ const changeDialog = ref(false),
   proposalDescription = ref(''),
   proposalError = ref(''),
   proposalBusy = ref(false);
-let sourceMessage: ScopeConversationMessage | null = null;
+const sourceMessageId = ref<string | null>(null);
+// Mensajes que pueden originar una solicitud: los más recientes primero.
+const sourceOptions = computed(() =>
+  items.value
+    .filter((item) => item.kind === 'message' && item.text.trim())
+    .slice(-30)
+    .reverse()
+    .map((item) => ({
+      value: item.id,
+      label: `${item.actor_name || t('scope.actors.unknown')}: ${item.text.slice(0, 80)}`,
+      text: item.text,
+      caption: `${item.actor_name || t('scope.actors.unknown')} — ${date(item.recorded_at)}`,
+      actor: item.actor_kind,
+    })),
+);
 let resourcesGeneration = 0;
 const activeMention = ref(0);
 let mentionStart = 0,
@@ -368,16 +408,11 @@ let mentionStart = 0,
 let mentionSearchTimer: ReturnType<typeof setTimeout> | null = null;
 let lastRead = '';
 const reading = new Set<string>();
-function contextChanged(index: number) {
-  const current = items.value[index]?.context;
-  const previous = items.value[index - 1]?.context;
-  return (
-    !previous ||
-    !!current?.document_id ||
-    current?.scope_revision !== previous.scope_revision ||
-    current?.change_request_id !== previous.change_request_id ||
-    current?.change_version !== previous.change_version
-  );
+function originLabel(message: ScopeConversationMessage) {
+  const version = message.context?.scope_revision;
+  return message.context?.document_id
+    ? t('scope.messageContext.document', { version })
+    : t('scope.messageContext.revision', { version });
 }
 function resourceLink(resource: ConversationResource) {
   const segment = {
@@ -502,20 +537,32 @@ function addMention(resource: ConversationResource) {
   mentionMenu.value = false;
   input.value?.insertMention(resource, mentionStart, mentionEnd);
 }
-function prepareChange(message: ScopeConversationMessage) {
-  sourceMessage = message;
+function prepareChange() {
+  // Por defecto, el último mensaje de la otra parte; si no hay, el último del chat.
+  const own = props.client ? 'client' : 'professional';
+  const source =
+    sourceOptions.value.find((option) => option.actor !== own) ?? sourceOptions.value[0];
+  if (!source) return;
+  sourceMessageId.value = source.value;
   proposalTitle.value = '';
-  proposalDescription.value = message.text;
+  proposalDescription.value = source.text;
   proposalError.value = '';
   changeDialog.value = true;
 }
+function selectSource(id: string) {
+  const previous = sourceOptions.value.find((option) => option.text === proposalDescription.value);
+  // Solo sustituye la descripción si el usuario aún no la ha editado.
+  if (!proposalDescription.value.trim() || previous) {
+    proposalDescription.value = sourceOptions.value.find((o) => o.value === id)?.text ?? '';
+  }
+}
 async function createChange() {
-  if (!sourceMessage || proposalBusy.value) return;
+  if (!sourceMessageId.value || proposalBusy.value) return;
   proposalBusy.value = true;
   try {
     const result = await ScopeService.proposeFromMessage(
       props.projectId,
-      sourceMessage.id,
+      sourceMessageId.value,
       proposalTitle.value.trim(),
       proposalDescription.value.trim(),
       props.client,
@@ -905,6 +952,24 @@ onUnmounted(() => {
   overflow: auto;
   padding: 12px;
   overscroll-behavior: auto;
+}
+.change-message-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.change-message-origin {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 50%;
+  opacity: 0.75;
+  text-decoration: none !important;
+}
+.change-message-origin:hover,
+.change-message-origin:focus-visible {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 16%, transparent);
 }
 .change-message-text {
   white-space: pre-wrap;

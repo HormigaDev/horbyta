@@ -30,6 +30,29 @@
                 })
               }}
             </div>
+            <!-- Rechazo con su motivo y, si existe, la explicación del cliente. -->
+            <div
+              v-if="
+                changeRequest && changeRequest.status === 'declined' && changeRequest.decline_reason
+              "
+              class="decline-notice q-mt-md"
+              role="note"
+            >
+              <q-icon name="block" size="20px" class="decline-notice__icon" aria-hidden="true" />
+              <div>
+                <span class="decline-notice__label">{{
+                  t('changeRequests.form.declineReasonLabel')
+                }}</span>
+                <strong>{{
+                  t(`changeRequests.decline_reason.${changeRequest.decline_reason}`)
+                }}</strong>
+                <blockquote
+                  v-if="changeRequest.decline_comment"
+                  class="decline-notice__comment"
+                  v-text="changeRequest.decline_comment"
+                />
+              </div>
+            </div>
           </q-card-section>
         </q-card>
 
@@ -178,7 +201,7 @@
         </q-card>
       </div>
       <q-dialog v-model="showDeclineDialog" persistent>
-        <q-card flat bordered style="width: 400px">
+        <q-card flat bordered style="width: 480px; max-width: 92vw">
           <q-card-section>
             <span class="text-h6 text-weight-bold">
               {{ $t('client.changeRequests.detail.decline.title') }}
@@ -193,6 +216,20 @@
               emit-value
               :label="$t('changeRequests.detail.decline_reason')"
             />
+            <!-- "Otro" exige que el cliente explique el motivo con sus palabras. -->
+            <q-input
+              v-if="declineReason === 'other'"
+              v-model="declineComment"
+              outlined
+              autofocus
+              type="textarea"
+              autogrow
+              maxlength="2000"
+              counter
+              class="q-mt-md"
+              :label="t('changeRequests.detail.declineCommentLabel')"
+              :rules="[(v) => !!String(v ?? '').trim() || t('scope.explanationRequired')]"
+            />
           </q-card-section>
           <q-card-actions align="right">
             <q-btn
@@ -203,7 +240,9 @@
             <q-btn
               color="negative"
               :label="$t('client.changeRequests.detail.action.decline')"
-              :disable="!declineReason || deciding"
+              :disable="
+                !declineReason || (declineReason === 'other' && !declineComment.trim()) || deciding
+              "
               @click="declineChangeRequest"
             />
           </q-card-actions>
@@ -240,6 +279,7 @@ const userPreferencesStore = useDisplayPreferences();
 const changeRequest = ref<ClientChangeRequestDetailDto | null>(null);
 const showDeclineDialog = ref(false);
 const declineReason = ref('');
+const declineComment = ref('');
 const agreementReady = ref(false);
 const deciding = ref(false);
 const changeRequestId = String(route.params.id || '');
@@ -331,12 +371,9 @@ const approveChangeRequest = async () => {
     });
     notify(t('client.changeRequests.detail.approveSuccess'), 'positive');
   } catch (err: unknown) {
-    if (isApiHttpError(err) && err.status === 409) {
-      await loadChangeRequest();
-      notify(t('scope.conflict'), 'warning');
-    } else {
-      notifyError(t('client.changeRequests.detail.approveError'), err);
-    }
+    // El motivo real del backend; un conflicto además recarga la oferta vigente.
+    notifyError(t('client.changeRequests.detail.approveError'), err);
+    if (isApiHttpError(err) && err.status === 409) await loadChangeRequest();
   } finally {
     deciding.value = false;
     hideLoading();
@@ -346,6 +383,7 @@ const approveChangeRequest = async () => {
 const declineChangeRequest = async () => {
   if (!changeRequest.value) return;
   if (!declineReason.value || !agreementReady.value || deciding.value) return;
+  if (declineReason.value === 'other' && !declineComment.value.trim()) return;
   deciding.value = true;
 
   showLoading(t('client.changeRequests.detail.action.decline'));
@@ -354,15 +392,13 @@ const declineChangeRequest = async () => {
       changeRequest.value.id,
       declineReason.value,
       changeRequest.value.version,
+      declineReason.value === 'other' ? declineComment.value.trim() : null,
     );
     notify(t('client.changeRequests.detail.declineSuccess'), 'positive');
   } catch (err: unknown) {
-    if (isApiHttpError(err) && err.status === 409) {
-      await loadChangeRequest();
-      notify(t('scope.conflict'), 'warning');
-    } else {
-      notifyError(t('client.changeRequests.detail.declineError'), err);
-    }
+    // El motivo real del backend; un conflicto además recarga la oferta vigente.
+    notifyError(t('client.changeRequests.detail.declineError'), err);
+    if (isApiHttpError(err) && err.status === 409) await loadChangeRequest();
   } finally {
     showDeclineDialog.value = false;
     deciding.value = false;

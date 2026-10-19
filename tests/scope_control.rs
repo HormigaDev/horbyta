@@ -100,7 +100,7 @@ async fn run(db: &DatabaseConnection, schema: &str) {
     exec(db,&format!("INSERT INTO projects(id,user_id,client_id,name) VALUES('{project}','{owner}','{client}','Proyecto de prueba'); INSERT INTO project_billing(user_id,project_id,currency_type,billing_type,fixed_price) VALUES('{owner}','{project}','USD','fixed',100); INSERT INTO tasks(id,user_id,project_id,title) VALUES('{base_task}','{owner}','{project}','Trabajo original'); INSERT INTO milestones(id,project_id,name,due_date) VALUES('{milestone}','{project}','Entrega','2026-11-01T12:00:00Z'); INSERT INTO activities(id,user_id,name) VALUES('{activity}','{owner}','Desarrollo')")).await;
     assert_eq!(
         value(db, "SELECT count(*)::int AS data FROM horbyta_migrations").await,
-        7
+        migrations::latest_version()
     );
     assert_eq!(
         value(db, &format!("SELECT scope_task_allowed('{base_task}') AS data")).await,
@@ -339,6 +339,76 @@ async fn run(db: &DatabaseConnection, schema: &str) {
     let rejected = Uuid::now_v7();
     let zero = Uuid::now_v7();
     exec(db,&format!("SET horbyta.actor='{owner}'; SET horbyta.actor_kind='professional';INSERT INTO change_requests(id,user_id,project_id,client_id,title,client_request_description,status) VALUES('{rejected}','{owner}','{project}','{client}','Rechazar','Extra','submitted'),('{zero}','{owner}','{project}','{client}','Gratis','Extra sin costo','submitted');UPDATE change_requests SET technical_assessment='Sin costo ni plazo',status='assessed' WHERE id IN ('{rejected}','{zero}');SET horbyta.actor='{actor}';SET horbyta.actor_kind='client';UPDATE change_requests SET status='declined',decline_reason='not_necessary_anymore' WHERE id='{rejected}';UPDATE change_requests SET status='approved' WHERE id='{zero}'")).await;
+    // Rechazo del cliente: "otro" exige explicación y todos los motivos del enum son válidos en la BD.
+    {
+        use horbyta::dtos::change_request::{ChangeRequestDeclineReason as Reason, ClientDeclineChangeRequestDto};
+        use horbyta::services::change_requests::ChangeRequestService;
+        let decline = |id: Uuid, reason: Reason, comment: Option<&str>| {
+            let comment = comment.map(str::to_owned);
+            async move {
+                let tx = db.begin().await.unwrap();
+                ScopeService::actor(&tx, actor, "client").await.unwrap();
+                let result = ChangeRequestService::client_decline(
+                    &tx,
+                    owner,
+                    client,
+                    id,
+                    ClientDeclineChangeRequestDto { version: 2, decline_reason: reason, decline_comment: comment },
+                )
+                .await;
+                if result.is_ok() {
+                    tx.commit().await.unwrap();
+                } else {
+                    tx.rollback().await.unwrap();
+                }
+                result
+            }
+        };
+        let (other, internal) = (Uuid::now_v7(), Uuid::now_v7());
+        exec(db,&format!("SET horbyta.actor='{owner}'; SET horbyta.actor_kind='professional';INSERT INTO change_requests(id,user_id,project_id,client_id,title,client_request_description,status) VALUES('{other}','{owner}','{project}','{client}','Otro','Extra','submitted'),('{internal}','{owner}','{project}','{client}','Interno','Extra','submitted');UPDATE change_requests SET technical_assessment='Sin costo ni plazo',status='assessed' WHERE id IN ('{other}','{internal}')")).await;
+        assert!(matches!(
+            decline(other, Reason::Other, Some("   ")).await,
+            Err(horbyta::error::AppError::BadRequest(_))
+        ));
+        let declined = decline(other, Reason::Other, Some("  Preferimos esperar al rediseño.  ")).await.unwrap();
+        assert_eq!(declined.decline_comment.as_deref(), Some("Preferimos esperar al rediseño."));
+        // Antes fallaba: el check de la BD tenía 'will_solve_internaly'.
+        decline(internal, Reason::WillSolveInternally, None).await.unwrap();
+        assert!(
+            db.execute_unprepared(&format!("UPDATE change_requests SET decline_comment=NULL WHERE id='{other}'"))
+                .await
+                .is_err(),
+            "Un rechazo finalizado es inmutable"
+        );
+        // Renegociación: solo el freelancer reabre; el rechazo queda en el historial.
+        assert!(
+            db.execute_unprepared(&format!("SET horbyta.actor='{actor}'; SET horbyta.actor_kind='client'; UPDATE change_requests SET status='submitted' WHERE id='{other}'"))
+                .await
+                .is_err(),
+            "El cliente no puede reabrir un rechazo"
+        );
+        db.execute_unprepared("ROLLBACK").await.ok();
+        let tx = db.begin().await.unwrap();
+        ScopeService::actor(&tx, owner, "professional").await.unwrap();
+        let reopened = ChangeRequestService::reopen(&tx, owner, other, 3).await.unwrap();
+        tx.commit().await.unwrap();
+        assert_eq!(reopened.version, 4);
+        assert!(reopened.decline_reason.is_none() && reopened.decline_comment.is_none());
+        assert_eq!(
+            value(db, &format!("SELECT snapshot->'decline_comment' AS data FROM scope_change_revisions WHERE change_request_id='{other}' AND version=3")).await,
+            "Preferimos esperar al rediseño."
+        );
+        assert_eq!(
+            value(db, &format!("SELECT to_jsonb(kind) AS data FROM scope_events WHERE change_request_id='{other}' AND version=4")).await,
+            "reopened"
+        );
+        // Nueva oferta con descuento y decisión del cliente sobre ella.
+        exec(db,&format!("SET horbyta.actor='{owner}'; SET horbyta.actor_kind='professional'; SET horbyta.publish_offer='true'; UPDATE change_requests SET technical_assessment='Descuento acordado por el rediseño',status='assessed' WHERE id='{other}'; SET horbyta.publish_offer='false'; SET horbyta.actor='{actor}'; SET horbyta.actor_kind='client'; UPDATE change_requests SET status='approved' WHERE id='{other}'")).await;
+        assert_eq!(
+            value(db, &format!("SELECT to_jsonb(status) AS data FROM change_requests WHERE id='{other}'")).await,
+            "approved"
+        );
+    }
     assert_eq!(value(db, "SELECT count(*)::int AS data FROM invoices").await, 1);
     assert_eq!(
         value(
@@ -432,6 +502,7 @@ async fn run(db: &DatabaseConnection, schema: &str) {
             horbyta::dtos::change_request::ClientDeclineChangeRequestDto {
                 version: 2,
                 decline_reason: horbyta::dtos::change_request::ChangeRequestDeclineReason::NotNecessaryAnymore,
+                decline_comment: None,
             },
         )
         .await;

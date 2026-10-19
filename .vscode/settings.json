@@ -12,6 +12,8 @@
     "files.exclude": {
         "**/.aws": true,
         "**/.codex": true,
-        "**/.agents": true
+        "**/.agents": true,
+        "**/.claude": true,
+        "**/.harness-mem": true
     }
 }

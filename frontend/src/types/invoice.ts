@@ -1,5 +1,12 @@
 export type InvoiceStatus = 'draft' | 'open' | 'paid' | 'void' | 'uncollectible';
-export type InvoiceProvider = 'manual' | 'paypal' | 'stripe' | 'wise' | 'mercadopago' | 'revolut' | 'payoneer';
+export type InvoiceProvider =
+  | 'manual'
+  | 'paypal'
+  | 'stripe'
+  | 'wise'
+  | 'mercadopago'
+  | 'revolut'
+  | 'payoneer';
 
 export interface InvoiceSummaryDto {
   id: string;

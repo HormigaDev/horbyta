@@ -1,16 +1,29 @@
 <template>
-  <section>
-    <h3 class="text-subtitle1">{{ t('scope.documentsTitle') }}</h3>
-
-    <div class="row q-gutter-sm q-mb-md">
-      <q-btn outline :label="t('scope.addDocument')" :disable="disabled" @click="add()" />
-      <q-btn
-        outline
-        :label="t('scope.importMarkdown')"
-        icon="upload_file"
-        :disable="disabled"
-        @click="picker?.click()"
-      />
+  <section class="scope-editor-panel">
+    <header class="scope-editor-panel__header">
+      <q-icon name="folder_copy" size="22px" class="scope-editor-panel__icon" aria-hidden="true" />
+      <div class="scope-editor-panel__heading">
+        <h3>{{ t('scope.documentsTitle') }}</h3>
+        <p>{{ t('scope.editor.documentsHint') }}</p>
+      </div>
+      <div class="scope-editor-panel__actions">
+        <q-btn
+          outline
+          no-caps
+          icon="note_add"
+          :label="t('scope.addDocument')"
+          :disable="disabled"
+          @click="add()"
+        />
+        <q-btn
+          outline
+          no-caps
+          :label="t('scope.importMarkdown')"
+          icon="upload_file"
+          :disable="disabled"
+          @click="picker?.click()"
+        />
+      </div>
       <input
         ref="picker"
         type="file"
@@ -19,142 +32,177 @@
         hidden
         @change="importFiles"
       />
-    </div>
-    <q-banner v-if="error" class="bg-warning text-dark q-mb-md" role="alert">{{ error }}</q-banner>
-    <q-expansion-item
-      v-for="(doc, index) in docs"
-      :key="doc.id"
-      :label="doc.title || t('scope.untitled')"
-      default-opened
-      class="q-mb-md"
-      bordered
-    >
-      <div class="q-pa-md">
-        <q-input
-          v-model="doc.title"
-          :label="t('scope.documentTitle')"
-          maxlength="255"
-          :disable="disabled"
-          @update:model-value="commit"
-        />
-        <div class="row q-col-gutter-md q-my-sm">
-          <q-select
-            v-model="doc.role"
-            class="col-12 col-sm-6"
-            :label="t('scope.documentRole')"
-            :options="roles"
-            emit-value
-            map-options
-            :disable="disabled"
-            @update:model-value="commit"
-          />
-          <q-input
-            v-model="doc.requirement_id"
-            class="col-12 col-sm-6"
-            :label="t('scope.requirementId')"
-            maxlength="64"
-            :disable="disabled"
-            @update:model-value="commit"
-          />
-          <q-select
-            v-model="doc.section"
-            class="col-12"
-            clearable
-            :label="t('scope.relatedSection')"
-            :options="sections"
-            emit-value
-            map-options
-            :disable="disabled"
-            @update:model-value="commit"
-          />
-        </div>
-        <p v-if="doc.source_name" class="text-caption">
-          {{ t('scope.importedFrom', { name: doc.source_name }) }}
-        </p>
-        <MarkdownRenderer
-          v-model="doc.content"
-          :edit-mode="!disabled"
-          enable-preview-toggle
-          @update:model-value="commit"
-        />
-        <div v-if="dependencies(doc.content).length" class="q-my-sm" role="alert">
-          <p>{{ t('scope.dependenciesHint') }}</p>
-          <div
-            v-for="path in dependencies(doc.content)"
-            :key="path"
-            class="row items-center q-gutter-sm q-mb-sm"
+    </header>
+    <div class="scope-editor-panel__body">
+      <q-banner v-if="error" class="bg-warning text-dark q-mb-md" role="alert">{{
+        error
+      }}</q-banner>
+      <p v-if="!docs.length" class="scope-editor-empty">{{ t('scope.editor.noDocuments') }}</p>
+      <ol v-else class="scope-doc-list">
+        <li v-for="(doc, index) in docs" :key="doc.id">
+          <q-expansion-item
+            default-opened
+            class="scope-doc-card"
+            header-class="scope-doc-card__header"
           >
-            <code>{{ path }}</code>
-            <q-select
-              :options="files.map((f) => ({ label: f.original_name, value: f.id }))"
-              emit-value
-              map-options
-              :model-value="null"
-              :label="t('scope.linkFile')"
-              style="min-width: 200px"
-              :disable="disabled"
-              @update:model-value="(id) => resolve(doc, path, id)"
-            />
-          </div>
-        </div>
-        <q-btn
-          flat
-          color="negative"
-          :label="t('scope.removeDocument')"
-          :disable="disabled"
-          @click="remove(index)"
-        />
-      </div>
-    </q-expansion-item>
-    <q-input
-      v-if="docs.length"
-      v-model="precedence"
-      type="textarea"
-      autogrow
-      :label="t('scope.precedenceLabel')"
-      maxlength="4000"
-      :disable="disabled"
-      @update:model-value="commit"
-    />
-    <h3 class="text-subtitle2">{{ t('scope.includedAttachments') }}</h3>
+            <template #header>
+              <q-item-section avatar>
+                <span class="scope-doc-card__number" aria-hidden="true">{{ index + 1 }}</span>
+              </q-item-section>
+              <q-item-section>
+                <span class="scope-doc-card__eyebrow">{{
+                  t('scope.editor.documentNumber', { number: index + 1 })
+                }}</span>
+                <span class="scope-doc-card__title">{{ doc.title || t('scope.untitled') }}</span>
+                <span class="scope-doc-card__tags">
+                  <span class="scope-doc-card__tag" :class="`scope-doc-card__tag--${doc.role}`">{{
+                    t(`scope.roleShort.${doc.role}`)
+                  }}</span>
+                  <span v-if="doc.requirement_id" class="scope-doc-card__tag">{{
+                    doc.requirement_id
+                  }}</span>
+                  <span v-if="doc.source_name" class="scope-doc-card__source">
+                    <q-icon name="description" size="14px" aria-hidden="true" />
+                    {{ doc.source_name }}
+                  </span>
+                </span>
+              </q-item-section>
+            </template>
+            <div class="scope-doc-card__body">
+              <q-input
+                v-model="doc.title"
+                :label="t('scope.documentTitle')"
+                maxlength="255"
+                :disable="disabled"
+                @update:model-value="commit"
+              />
+              <div class="row q-col-gutter-md q-my-sm">
+                <q-select
+                  v-model="doc.role"
+                  class="col-12 col-sm-6"
+                  :label="t('scope.documentRole')"
+                  :options="roles"
+                  emit-value
+                  map-options
+                  :disable="disabled"
+                  @update:model-value="commit"
+                />
+                <q-input
+                  v-model="doc.requirement_id"
+                  class="col-12 col-sm-6"
+                  :label="t('scope.requirementId')"
+                  maxlength="64"
+                  :disable="disabled"
+                  @update:model-value="commit"
+                />
+                <q-select
+                  v-model="doc.section"
+                  class="col-12"
+                  clearable
+                  :label="t('scope.relatedSection')"
+                  :options="sections"
+                  emit-value
+                  map-options
+                  :disable="disabled"
+                  @update:model-value="commit"
+                />
+              </div>
+              <div class="scope-doc-card__content">
+                <span class="scope-doc-card__label">{{ t('scope.editor.content') }}</span>
+                <MarkdownRenderer
+                  v-model="doc.content"
+                  :edit-mode="!disabled"
+                  enable-preview-toggle
+                  @update:model-value="commit"
+                />
+              </div>
+              <div v-if="dependencies(doc.content).length" class="q-my-sm" role="alert">
+                <p>{{ t('scope.dependenciesHint') }}</p>
+                <div
+                  v-for="path in dependencies(doc.content)"
+                  :key="path"
+                  class="row items-center q-gutter-sm q-mb-sm"
+                >
+                  <code>{{ path }}</code>
+                  <q-select
+                    :options="files.map((f) => ({ label: f.original_name, value: f.id }))"
+                    emit-value
+                    map-options
+                    :model-value="null"
+                    :label="t('scope.linkFile')"
+                    style="min-width: 200px"
+                    :disable="disabled"
+                    @update:model-value="(id) => resolve(doc, path, id)"
+                  />
+                </div>
+              </div>
+            </div>
+            <footer class="scope-doc-card__footer">
+              <q-btn
+                flat
+                no-caps
+                color="negative"
+                icon="delete_outline"
+                :label="t('scope.removeDocument')"
+                :disable="disabled"
+                @click="remove(index)"
+              />
+            </footer>
+          </q-expansion-item>
+        </li>
+      </ol>
+      <q-input
+        v-if="docs.length"
+        v-model="precedence"
+        type="textarea"
+        autogrow
+        :label="t('scope.precedenceLabel')"
+        maxlength="4000"
+        :disable="disabled"
+        @update:model-value="commit"
+      />
+    </div>
+    <div class="scope-editor-panel__section">
+      <h4>{{ t('scope.includedAttachments') }}</h4>
+      <p class="scope-editor-panel__hint">{{ t('scope.editor.attachmentsHint') }}</p>
 
-    <q-select
-      v-model="selectedFiles"
-      multiple
-      use-chips
-      :options="files.map((f) => ({ label: f.original_name, value: f.id }))"
-      emit-value
-      map-options
-      :label="t('scope.includedFiles')"
-      :disable="disabled"
-      @update:model-value="commit"
-    />
-    <q-select
-      v-model="referenceFiles"
-      multiple
-      use-chips
-      :options="
-        files
-          .filter((f) => !selectedFiles.includes(f.id))
-          .map((f) => ({ label: f.original_name, value: f.id }))
-      "
-      emit-value
-      map-options
-      :label="t('scope.referenceFiles')"
-      :disable="disabled"
-      @update:model-value="commit"
-      class="q-mt-md"
-    />
-    <q-btn
-      flat
-      icon="upload"
-      :label="t('scope.uploadResources')"
-      :disable="disabled || uploading"
-      :loading="uploading"
-      @click="resources?.click()"
-    />
-    <input ref="resources" hidden type="file" multiple @change="upload" />
-
+      <q-select
+        v-model="selectedFiles"
+        multiple
+        use-chips
+        :options="files.map((f) => ({ label: f.original_name, value: f.id }))"
+        emit-value
+        map-options
+        :label="t('scope.includedFiles')"
+        :disable="disabled"
+        @update:model-value="commit"
+      />
+      <q-select
+        v-model="referenceFiles"
+        multiple
+        use-chips
+        :options="
+          files
+            .filter((f) => !selectedFiles.includes(f.id))
+            .map((f) => ({ label: f.original_name, value: f.id }))
+        "
+        emit-value
+        map-options
+        :label="t('scope.referenceFiles')"
+        :disable="disabled"
+        @update:model-value="commit"
+        class="q-mt-md"
+      />
+      <q-btn
+        flat
+        icon="upload"
+        :label="t('scope.uploadResources')"
+        :disable="disabled || uploading"
+        :loading="uploading"
+        @click="resources?.click()"
+      />
+      <input ref="resources" hidden type="file" multiple @change="upload" />
+    </div>
   </section>
 </template>
 <script setup lang="ts">

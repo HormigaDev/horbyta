@@ -642,7 +642,20 @@ La migración **7**, `database/migrations/007_scope_delivery_signals.sql`, susti
 el sondeo de entrega por señales PostgreSQL LISTEN/NOTIFY. La cola persistente
 se recupera al arrancar o reconectar; solo los pendientes activan un temporizador.
 
-Conservar los SQL y checksums de las migraciones aplicadas (actualmente 1–7);
+La migración **8**, `database/migrations/008_amendment_task_links.sql`, corrige la
+aceptación de correcciones: el trabajo ya vinculado al acuerdo conserva su origen y
+no se vuelve a vincular (antes, las subtareas ya vinculadas hacían fallar la aceptación).
+
+La migración **9**, `database/migrations/009_decline_comment.sql`, añade el motivo de
+rechazo «otro» con explicación obligatoria (`decline_comment`) y corrige el valor
+`will_solve_internally`, que la restricción anterior escribía mal y hacía fallar ese rechazo.
+
+La migración **10**, `database/migrations/010_reopen_declined_change.sql`, permite que el
+freelancer reabra un cambio rechazado (`PATCH /change-requests/{id}/reopen`) para evaluarlo
+con nuevas condiciones. El rechazo, su motivo y explicación quedan en la versión anterior
+del historial y el evento se registra como `reopened`; el cliente decide de nuevo.
+
+Conservar los SQL y checksums de las migraciones aplicadas (actualmente 1–10);
 añadir nuevas versiones para futuras ampliaciones. El ejecutor lleva los SQL embebidos: no requiere Rust ni archivos SQL
 externos en el servidor. La instalación real crea su administrador con `./create-user`.
 

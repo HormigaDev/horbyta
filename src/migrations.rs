@@ -17,6 +17,11 @@ pub const SCOPE_AMENDMENTS_MIGRATION: &str = include_str!("../database/migration
 
 pub const SCOPE_DELIVERY_SIGNALS_MIGRATION: &str =
     include_str!("../database/migrations/007_scope_delivery_signals.sql");
+pub const AMENDMENT_TASK_LINKS_MIGRATION: &str =
+    include_str!("../database/migrations/008_amendment_task_links.sql");
+pub const DECLINE_COMMENT_MIGRATION: &str = include_str!("../database/migrations/009_decline_comment.sql");
+pub const REOPEN_DECLINED_CHANGE_MIGRATION: &str =
+    include_str!("../database/migrations/010_reopen_declined_change.sql");
 
 // Cada migración tiene su reverso en database/migrations/rollback/, con el mismo nombre.
 // El checksum solo cubre el SQL de aplicación: los historiales existentes no cambian.
@@ -61,6 +66,21 @@ const MIGRATIONS: &[Migration] = &[
         version: 7,
         up: &[SCOPE_DELIVERY_SIGNALS_MIGRATION],
         down: include_str!("../database/migrations/rollback/007_scope_delivery_signals.sql"),
+    },
+    Migration {
+        version: 8,
+        up: &[AMENDMENT_TASK_LINKS_MIGRATION],
+        down: include_str!("../database/migrations/rollback/008_amendment_task_links.sql"),
+    },
+    Migration {
+        version: 9,
+        up: &[DECLINE_COMMENT_MIGRATION],
+        down: include_str!("../database/migrations/rollback/009_decline_comment.sql"),
+    },
+    Migration {
+        version: 10,
+        up: &[REOPEN_DECLINED_CHANGE_MIGRATION],
+        down: include_str!("../database/migrations/rollback/010_reopen_declined_change.sql"),
     },
 ];
 

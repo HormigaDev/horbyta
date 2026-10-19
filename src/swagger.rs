@@ -42,6 +42,7 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::controllers::change_requests::assess_change_request,
         crate::controllers::change_requests::mark_change_request_implemented,
         crate::controllers::change_requests::cancel_change_request,
+        crate::controllers::change_requests::reopen_change_request,
         crate::controllers::change_requests::delete_change_request,
         crate::controllers::change_requests::client_approve_change_request,
         crate::controllers::change_requests::client_decline_change_request,

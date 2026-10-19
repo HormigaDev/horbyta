@@ -133,6 +133,11 @@ async fn classify(
     tx.commit().await?;
     Ok(Json(data))
 }
+async fn notices(State(s): State<AppState>, u: ClientAuthDto) -> Result<Json<Value>, AppError> {
+    Ok(Json(
+        ScopeService::notices(s.db.as_ref(), u.user_id, u.client_id).await?,
+    ))
+}
 async fn pending(State(s): State<AppState>, u: ClientAuthDto) -> Result<Json<Value>, AppError> {
     Ok(Json(
         ScopeService::pending(s.db.as_ref(), u.user_id, u.client_id).await?,
@@ -396,6 +401,7 @@ pub fn scope_controller() -> Router<AppState> {
         .route("/client/changes/{id}/comments", post(client_comment))
         .route("/tasks/{id}", get(task).post(classify))
         .route("/client/pending", get(pending))
+        .route("/client/notices", get(notices))
 }
 
 fn conversation_preview(text: &str) -> Option<String> {

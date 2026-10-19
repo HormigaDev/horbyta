@@ -52,7 +52,10 @@ async fn check(db: &DatabaseConnection) {
             .values()
             .all(|n| n.as_i64().unwrap() > 0)
     );
-    assert_eq!(count(db, "SELECT count(*) AS value FROM horbyta_migrations").await, 7);
+    assert_eq!(
+        count(db, "SELECT count(*) AS value FROM horbyta_migrations").await,
+        i64::from(migrations::latest_version())
+    );
     migrations::migrate(db).await.unwrap();
     migrations::migrate(db).await.unwrap();
     migrations::require_current(db).await.unwrap();
@@ -144,12 +147,19 @@ async fn check(db: &DatabaseConnection) {
     );
     assert!(development_seed::seed(db, &storage, "development", true).await.is_err()); // --reset nunca toca public desde otro search_path.
     assert_eq!(count(db, "SELECT count(*) AS value FROM users").await, users);
-    db.execute_unprepared("INSERT INTO horbyta_migrations(version,checksum) VALUES(8,'otra-version')")
-        .await
-        .unwrap();
+    let future = migrations::latest_version() + 1;
+    db.execute_unprepared(&format!(
+        "INSERT INTO horbyta_migrations(version,checksum) VALUES({future},'otra-version')"
+    ))
+    .await
+    .unwrap();
     assert!(migrations::migrate(db).await.is_err());
     assert_eq!(count(db, "SELECT count(*) AS value FROM users").await, users);
-    db.execute_unprepared("DELETE FROM horbyta_migrations WHERE version=8; UPDATE horbyta_migrations SET checksum='alterado' WHERE version=1").await.unwrap();
+    db.execute_unprepared(&format!(
+        "DELETE FROM horbyta_migrations WHERE version={future}; UPDATE horbyta_migrations SET checksum='alterado' WHERE version=1"
+    ))
+    .await
+    .unwrap();
     assert!(migrations::migrate(db).await.is_err());
     assert!(migrations::require_current(db).await.is_err());
     assert_eq!(count(db, "SELECT count(*) AS value FROM users").await, users);

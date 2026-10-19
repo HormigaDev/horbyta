@@ -8,6 +8,7 @@ import type {
   ScopeChange,
   ScopeTask,
   ScopeNotice,
+  ClientNotice,
   ScopeConversationWindow,
 } from 'src/types/scope';
 const fetcher = (client: boolean) => (client ? apiFetchClient : apiFetch);
@@ -179,4 +180,5 @@ export const ScopeService = {
       body: JSON.stringify({ document_id, revision }),
     }),
   pending: (): Promise<ScopeNotice[]> => apiFetchClient('/scope/client/pending'),
+  notices: (): Promise<ClientNotice[]> => apiFetchClient('/scope/client/notices'),
 };

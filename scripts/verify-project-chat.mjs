@@ -24,7 +24,7 @@ export async function verifyProjectChat({evaluate,navigate,waitFor,output,accoun
  await waitFor("document.querySelectorAll('.change-chat-window [data-message-id]').length===100",'Ventana unificada');
  assert(await evaluate("document.querySelector('.change-chat .scope-section__header h3').textContent==='Conversación'"));
  checks.push('Historial único de proyecto; 100 elementos y título sin revisión');
- for (const anchor of [`#scope-project-${project}-deliverables`, '#project-billing']) {
+ for (const anchor of [`#scope-project-${project}-deliverables`, '#project-information']) {
   await evaluate(`document.querySelector('.project-section-index a[href="${anchor}"]').click()`);
   await waitFor(`document.querySelector('.scope-tabs .q-tab--active')?.textContent.includes(${JSON.stringify(anchor.startsWith('#scope-project-') ? 'Alcance' : 'Resumen')})&&document.activeElement?.id===${JSON.stringify(anchor.slice(1))}`, 'Índice activa la pestaña correspondiente y enfoca la sección');
   await evaluate("Array.from(document.querySelectorAll('.scope-tabs .q-tab')).find(t=>t.textContent.includes('Conversación')).click()");

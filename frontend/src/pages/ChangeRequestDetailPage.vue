@@ -27,15 +27,28 @@
                 {{ statusLabel(changeRequest.status) }}
               </span>
             </div>
+            <!-- Rechazo con su motivo y, si existe, la explicación del cliente. -->
             <div
-              class="text-caption q-mb-xs"
-              style="color: var(--text-muted)"
-              v-if="changeRequest && changeRequest.status === 'declined'"
+              v-if="
+                changeRequest && changeRequest.status === 'declined' && changeRequest.decline_reason
+              "
+              class="decline-notice q-mt-md"
+              role="note"
             >
-              {{ $t('changeRequests.form.declineReasonLabel') }}
-              <span style="color: var(--text-color)">
-                {{ $t(`changeRequests.decline_reason.${changeRequest.decline_reason}`) }}
-              </span>
+              <q-icon name="block" size="20px" class="decline-notice__icon" aria-hidden="true" />
+              <div>
+                <span class="decline-notice__label">{{
+                  t('changeRequests.form.declineReasonLabel')
+                }}</span>
+                <strong>{{
+                  t(`changeRequests.decline_reason.${changeRequest.decline_reason}`)
+                }}</strong>
+                <blockquote
+                  v-if="changeRequest.decline_comment"
+                  class="decline-notice__comment"
+                  v-text="changeRequest.decline_comment"
+                />
+              </div>
             </div>
             <div class="text-caption" style="color: var(--text-muted)" v-if="changeRequest">
               {{
@@ -57,7 +70,15 @@
           :version="changeRequest.version"
           @ready="scopeCanImplement = !!$event && !$event.current.legacy"
         >
-          <template v-if="canSubmit || canAssess || canMarkImplemented" #actions>
+          <template v-if="canSubmit || canAssess || canMarkImplemented || canReopen" #actions>
+            <q-btn
+              v-if="canReopen"
+              unelevated
+              color="primary"
+              icon="restart_alt"
+              :label="t('changeRequests.detail.action.reopen')"
+              @click="reopenChangeRequest"
+            />
             <q-btn
               v-if="canSubmit"
               unelevated
@@ -217,6 +238,21 @@
               </q-item-section>
               <q-item-section style="color: var(--text-color)">
                 {{ t('changeRequests.detail.action.markImplemented') }}
+              </q-item-section>
+            </q-item>
+
+            <q-item
+              v-if="canReopen"
+              clickable
+              v-ripple
+              class="q-pa-md"
+              @click="reopenChangeRequest"
+            >
+              <q-item-section avatar>
+                <q-icon name="restart_alt" style="color: var(--text-color)" />
+              </q-item-section>
+              <q-item-section style="color: var(--text-color)">
+                {{ t('changeRequests.detail.action.reopen') }}
               </q-item-section>
             </q-item>
 
@@ -416,6 +452,10 @@ const canAssess = computed(() =>
 const canMarkImplemented = computed(
   () => changeRequest.value?.status === 'approved' && scopeCanImplement.value,
 );
+// Un rechazo puede renegociarse: se reabre y se evalúa con nuevas condiciones.
+const canReopen = computed(
+  () => changeRequest.value?.status === 'declined' && scopeCanImplement.value,
+);
 const canCancel = computed(() => {
   if (!changeRequest.value) return false;
   if (changeRequest.value.origin !== 'freelancer_dashboard') return false;
@@ -561,6 +601,31 @@ const markImplemented = async () => {
     notify(t('changeRequests.detail.implementSuccess'), 'positive');
   } catch (err: unknown) {
     notifyError(t('changeRequests.detail.implementError'), err);
+  } finally {
+    hideLoading();
+  }
+};
+
+const reopenChangeRequest = async () => {
+  if (!changeRequest.value) return;
+  const confirmed = await confirmAction({
+    title: t('changeRequests.detail.reopenConfirmTitle'),
+    message: t('changeRequests.detail.reopenConfirmMessage'),
+    okLabel: t('changeRequests.detail.action.reopen'),
+  });
+  if (!confirmed) return;
+
+  showLoading(t('changeRequests.detail.action.reopen'));
+  try {
+    changeRequest.value = await ChangeRequestsService.reopen(
+      changeRequest.value.id,
+      changeRequest.value.version,
+    );
+    notify(t('changeRequests.detail.reopenSuccess'), 'positive');
+    // Siguiente paso natural: proponer las nuevas condiciones.
+    openAssessDialog();
+  } catch (err: unknown) {
+    notifyError(t('changeRequests.detail.reopenError'), err);
   } finally {
     hideLoading();
   }

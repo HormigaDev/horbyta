@@ -346,6 +346,9 @@ pub struct ClientDeclineChangeRequestDto {
     #[validate(range(min = 1))]
     pub version: i32,
     pub decline_reason: ChangeRequestDeclineReason,
+    /// Obligatorio con el motivo `other`; opcional como aclaración en los demás.
+    #[validate(length(max = 2000))]
+    pub decline_comment: Option<String>,
 }
 
 #[derive(Debug, Serialize, FromQueryResult, ToSchema)]
@@ -383,6 +386,7 @@ pub struct ChangeRequestDetailDto {
     pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
     pub decline_reason: Option<ChangeRequestDeclineReason>,
+    pub decline_comment: Option<String>,
     pub client_approved_at: Option<DateTime<FixedOffset>>,
     pub client_signature_ip: Option<String>,
     pub created_at: DateTime<FixedOffset>,
@@ -419,6 +423,7 @@ pub struct ClientChangeRequestDetailDto {
     pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
     pub decline_reason: Option<ChangeRequestDeclineReason>,
+    pub decline_comment: Option<String>,
     pub client_approved_at: Option<DateTime<FixedOffset>>,
     pub client_signature_ip: Option<String>,
     pub created_at: DateTime<FixedOffset>,
@@ -445,6 +450,7 @@ pub struct ChangeRequestDetailRow {
     pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
     pub decline_reason: Option<String>,
+    pub decline_comment: Option<String>,
     pub client_approved_at: Option<DateTime<FixedOffset>>,
     pub client_signature_ip: Option<String>,
     pub created_at: DateTime<FixedOffset>,
@@ -468,6 +474,7 @@ pub struct ClientChangeRequestDetailRow {
     pub origin: ChangeRequestOrigin,
     pub status: ChangeRequestStatus,
     pub decline_reason: Option<String>,
+    pub decline_comment: Option<String>,
     pub client_approved_at: Option<DateTime<FixedOffset>>,
     pub client_signature_ip: Option<String>,
     pub created_at: DateTime<FixedOffset>,
@@ -505,6 +512,7 @@ string_enum!(
         NotNecessaryAnymore,
         WillSolveInternally,
         ThoughtItWasIncluded,
+        Other,
     }
 );
 

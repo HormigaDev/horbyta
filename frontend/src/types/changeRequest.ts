@@ -42,6 +42,7 @@ export interface ChangeRequestDetailDto {
   origin: ChangeRequestOrigin;
   status: ChangeRequestStatus;
   decline_reason: string;
+  decline_comment: string | null;
   client_approved_at: string | null;
   client_signature_ip: string | null;
   created_at: string;
@@ -75,6 +76,8 @@ export interface ClientChangeRequestDetailDto {
   schedule_impact_days: number;
   origin: ChangeRequestOrigin;
   status: ChangeRequestStatus;
+  decline_reason: string | null;
+  decline_comment: string | null;
   client_approved_at: string | null;
   client_signature_ip: string | null;
   created_at: string;

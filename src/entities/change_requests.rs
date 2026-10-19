@@ -26,6 +26,8 @@ pub struct Model {
     pub schedule_impact_days: i32,
     pub status: String,
     pub decline_reason: Option<String>,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub decline_comment: Option<String>,
     pub client_approved_at: Option<DateTimeWithTimeZone>,
     pub client_signature_ip: Option<String>,
     pub created_at: DateTimeWithTimeZone,

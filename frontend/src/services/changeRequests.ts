@@ -67,6 +67,12 @@ export const ChangeRequestsService = {
       body: JSON.stringify({ version }),
     }),
 
+  reopen: (id: string, version: number): Promise<ChangeRequestDetailDto> =>
+    apiFetch(`/change-requests/${id}/reopen`, {
+      method: 'PATCH',
+      body: JSON.stringify({ version }),
+    }),
+
   cancel: (id: string, version: number): Promise<ChangeRequestDetailDto> =>
     apiFetch(`/change-requests/${id}/cancel`, {
       method: 'PATCH',
