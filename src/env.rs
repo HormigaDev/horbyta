@@ -1,4 +1,4 @@
-use std::{env, time::Duration};
+use std::{env, io::ErrorKind, path::PathBuf, time::Duration};
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -57,4 +57,46 @@ impl Config {
 
 fn optional_env(name: &str) -> Option<String> {
     env::var(name).ok().filter(|value| !value.trim().is_empty())
+}
+
+/// Archivo de entorno del servicio (`EnvironmentFile` en deploy/horbyta.service).
+pub const SERVICE_ENV_FILE: &str = "/etc/horbyta/horbyta.env";
+
+/// Carga el entorno de las herramientas de línea de comandos (`migrate`, `create-user`).
+///
+/// systemd solo aplica `EnvironmentFile` al proceso del servicio; ejecutadas a mano, estas
+/// herramientas no lo verían. Precedencia: variables exportadas, `.env` del directorio actual
+/// y, por último, `HORBYTA_ENV_FILE` o el archivo del servicio si existe. Ninguna fuente
+/// sobrescribe una variable ya definida. Devuelve las fuentes leídas, para los mensajes.
+pub fn load_cli_env() -> Result<Vec<String>, String> {
+    let mut sources = Vec::new();
+    match dotenvy::dotenv() {
+        Ok(path) => sources.push(path.display().to_string()),
+        Err(error) if error.not_found() => {}
+        Err(error) => return Err(format!("No se pudo leer .env: {error}")),
+    }
+    let explicit = env::var("HORBYTA_ENV_FILE").ok().filter(|value| !value.trim().is_empty());
+    let path = PathBuf::from(explicit.as_deref().unwrap_or(SERVICE_ENV_FILE));
+    match dotenvy::from_path(&path) {
+        Ok(()) => sources.push(path.display().to_string()),
+        Err(error) if error.not_found() && explicit.is_none() => {}
+        Err(dotenvy::Error::Io(error)) if error.kind() == ErrorKind::PermissionDenied => {
+            return Err(format!(
+                "Sin permiso para leer {}. Ejecute la herramienta como el usuario del servicio (horbyta) o como root.",
+                path.display()
+            ));
+        }
+        Err(error) => return Err(format!("No se pudo leer {}: {error}", path.display())),
+    }
+    Ok(sources)
+}
+
+/// Mensaje de error cuando falta una variable, indicando dónde se buscó.
+pub fn missing_env(name: &str, sources: &[String]) -> String {
+    let searched = if sources.is_empty() {
+        format!(".env del directorio actual y {SERVICE_ENV_FILE} (no encontrados)")
+    } else {
+        sources.join(", ")
+    };
+    format!("Falta {name}. Se buscó en: variables exportadas, {searched}. Use HORBYTA_ENV_FILE=/ruta/al/archivo para indicar otro.")
 }

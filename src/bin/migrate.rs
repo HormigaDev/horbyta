@@ -79,7 +79,6 @@ async fn run(db: &DatabaseConnection, command: Command) -> Result<String, String
 
 #[tokio::main(worker_threads = 1)]
 async fn main() {
-    dotenvy::dotenv().ok();
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.iter().any(|a| a == "-h" || a == "--help") {
         println!("{USAGE}");
@@ -87,7 +86,9 @@ async fn main() {
     }
     let result = async {
         let command = parse(&args)?;
-        let url = std::env::var("DATABASE_URL").map_err(|_| "Falta DATABASE_URL".to_owned())?;
+        let sources = horbyta::env::load_cli_env()?;
+        let url = std::env::var("DATABASE_URL")
+            .map_err(|_| horbyta::env::missing_env("DATABASE_URL", &sources))?;
         let db = Database::connect(url)
             .await
             .map_err(|_| "No se pudo conectar a PostgreSQL".to_owned())?;

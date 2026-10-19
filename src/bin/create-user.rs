@@ -121,13 +121,9 @@ fn run() -> Result<(), Box<dyn Error>> {
         println!("{HELP}");
         return Ok(());
     }
-    if let Err(error) = dotenvy::dotenv() {
-        if !error.not_found() {
-            return Err("Could not load .env. Check its syntax and permissions.".into());
-        }
-    }
-    let database_url =
-        env::var("DATABASE_URL").map_err(|_| "DATABASE_URL is required. Configure .env or export it.")?;
+    let sources = horbyta::env::load_cli_env()?;
+    let database_url = env::var("DATABASE_URL")
+        .map_err(|_| horbyta::env::missing_env("DATABASE_URL", &sources))?;
     let account = collect_account(options)?;
 
     tokio::runtime::Runtime::new()?.block_on(async {

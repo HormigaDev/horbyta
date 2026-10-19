@@ -202,6 +202,12 @@ A sample service is provided in `deploy/horbyta.service`. Before enabling it:
   `APP_ENV=production`, `APP_URI=127.0.0.1:8890`, and
   `UPLOAD_DIR=/var/lib/horbyta/storage`. Restrict access to this file.
 - Ensure PostgreSQL is available and apply the schema before first startup.
+- `migrate` and `create-user` read the same file as the service: exported
+  variables first, then `.env` in the current directory, then
+  `HORBYTA_ENV_FILE` or `/etc/horbyta/horbyta.env`. systemd's `EnvironmentFile`
+  only applies to the service process, so run these tools as the `horbyta` user
+  (or root) so they can read the restricted file, e.g.
+  `runuser -u horbyta -- /opt/horbyta/bin/migrate status`.
 - Install the service file at `/etc/systemd/system/horbyta.service`, then run
   `sudo systemctl daemon-reload` and `sudo systemctl enable --now horbyta`.
 
