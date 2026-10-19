@@ -1004,7 +1004,9 @@ const onDelete = () => {
     // Sin :has(), para que funcione en cualquier navegador. `&.dt-selectable`: la clase
     // está en el mismo elemento que .custom-table, no dentro de él. Ambas casillas se
     // centran, así siguen alineadas aunque la columna se estire en pantallas anchas.
-    .dt-selection-cell,
+    // Encabezado y filas con el mismo selector: así ninguna regla de Quasar (p. ej. la
+    // densidad compacta, que da 16px a th:first-child) gana solo en uno de los dos.
+    &.dt-selectable thead tr th.q-table--col-auto-width:first-child,
     &.dt-selectable tbody tr td.q-table--col-auto-width:first-child {
       width: 56px;
       min-width: 56px;
