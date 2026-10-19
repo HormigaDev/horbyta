@@ -1001,9 +1001,11 @@ const onDelete = () => {
     }
 
     // Casillas del encabezado y de las filas: mismo ancho y centradas en la misma columna.
-    // Sin :has(), para que funcione en cualquier navegador.
+    // Sin :has(), para que funcione en cualquier navegador. `&.dt-selectable`: la clase
+    // está en el mismo elemento que .custom-table, no dentro de él. Ambas casillas se
+    // centran, así siguen alineadas aunque la columna se estire en pantallas anchas.
     .dt-selection-cell,
-    .dt-selectable tbody tr td.q-table--col-auto-width:first-child {
+    &.dt-selectable tbody tr td.q-table--col-auto-width:first-child {
       width: 56px;
       min-width: 56px;
       padding-inline: 8px;
