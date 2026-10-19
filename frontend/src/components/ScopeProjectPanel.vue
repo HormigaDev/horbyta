@@ -68,57 +68,69 @@
                 v-if="pendingChanges.length || upcomingMilestones.length"
                 class="project-follow-up"
               >
-                <section v-if="pendingChanges.length" class="project-follow-up__list">
-                  <h2 class="summary-heading">{{ t('scope.pendingChanges') }}</h2>
-                  <ul>
+                <!-- Cada bloque: cabecera (título + acción), filas clicables y fecha sin hora. -->
+                <section v-if="pendingChanges.length" class="follow-card">
+                  <header class="follow-card__header">
+                    <h2 class="summary-heading">{{ t('scope.pendingChanges') }}</h2>
+                    <router-link
+                      v-if="pendingChanges.length > 3"
+                      class="follow-card__more"
+                      :to="{
+                        path: client ? '/client/change-requests' : '/change-requests',
+                        query: { project_id: projectId },
+                      }"
+                      >{{ t('scope.allPendingChanges', { count: pendingChanges.length }) }}
+                      <q-icon name="arrow_forward" size="16px" aria-hidden="true"
+                    /></router-link>
+                  </header>
+                  <ul class="follow-card__list">
                     <li v-for="change in pendingChanges.slice(0, 3)" :key="change.id">
                       <router-link
+                        class="follow-card__item"
                         :to="`${client ? '/client' : ''}/change-requests/${change.id}`"
-                        >{{ change.title }}</router-link
                       >
-                      <span class="project-follow-up__meta">{{
-                        t(`changeRequests.status.${change.status}`)
-                      }}</span>
+                        <q-icon name="compare_arrows" size="18px" aria-hidden="true" />
+                        <span class="follow-card__name">{{ change.title }}</span>
+                        <span class="follow-card__meta">{{
+                          t(`changeRequests.status.${change.status}`)
+                        }}</span>
+                      </router-link>
                     </li>
                   </ul>
-                  <router-link
-                    v-if="pendingChanges.length > 3"
-                    class="project-follow-up__more"
-                    :to="{
-                      path: client ? '/client/change-requests' : '/change-requests',
-                      query: { project_id: projectId },
-                    }"
-                    >{{
-                      t('scope.allPendingChanges', { count: pendingChanges.length })
-                    }}</router-link
-                  >
                 </section>
-                <section v-if="upcomingMilestones.length" class="project-follow-up__list">
-                  <h2 class="summary-heading">{{ t('scope.upcomingMilestones') }}</h2>
-                  <ul>
+                <section v-if="upcomingMilestones.length" class="follow-card">
+                  <header class="follow-card__header">
+                    <h2 class="summary-heading">{{ t('scope.upcomingMilestones') }}</h2>
+                    <router-link
+                      class="follow-card__more"
+                      :to="{
+                        path: client ? '/client/milestones' : '/milestones',
+                        query: { project_id: projectId },
+                      }"
+                      >{{ t('scope.overview.allMilestones') }}
+                      <q-icon name="arrow_forward" size="16px" aria-hidden="true"
+                    /></router-link>
+                  </header>
+                  <ul class="follow-card__list">
                     <li v-for="milestone in upcomingMilestones" :key="milestone.id">
-                      <router-link :to="`${client ? '/client' : ''}/milestones/${milestone.id}`">{{
-                        milestone.name
-                      }}</router-link>
-                      <span
-                        class="project-follow-up__meta"
-                        :class="{ 'project-follow-up__meta--overdue': overdue(milestone.due_date) }"
-                        >{{
-                          overdue(milestone.due_date)
-                            ? t('scope.overview.overdue', { date: date(milestone.due_date) })
-                            : date(milestone.due_date)
-                        }}</span
+                      <router-link
+                        class="follow-card__item"
+                        :to="`${client ? '/client' : ''}/milestones/${milestone.id}`"
                       >
+                        <q-icon name="flag" size="18px" aria-hidden="true" />
+                        <span class="follow-card__name">{{ milestone.name }}</span>
+                        <span
+                          class="follow-card__meta"
+                          :class="{ 'follow-card__meta--overdue': overdue(milestone.due_date) }"
+                          >{{
+                            overdue(milestone.due_date)
+                              ? t('scope.overview.overdue', { date: day(milestone.due_date) })
+                              : day(milestone.due_date)
+                          }}</span
+                        >
+                      </router-link>
                     </li>
                   </ul>
-                  <router-link
-                    class="project-follow-up__more"
-                    :to="{
-                      path: client ? '/client/milestones' : '/milestones',
-                      query: { project_id: projectId },
-                    }"
-                    >{{ t('scope.overview.allMilestones') }}</router-link
-                  >
                 </section>
               </div>
             </div>
@@ -773,6 +785,13 @@ const date = (value: string | null) =>
         includeTime: true,
       })
     : '—';
+const day = (value: string | null) =>
+  value
+    ? formatDateByPreferences(value, {
+        timezone: preferences.timezone,
+        dateFormat: preferences.dateFormat,
+      })
+    : '—';
 const fields = ['deliverables', 'criteria', 'restrictions', 'exclusions', 'requirements'] as const;
 const document = reactive<ScopeDocument>({
   deliverables: '',
@@ -1425,37 +1444,78 @@ watch(
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 24px 32px;
 }
-.project-follow-up ul {
+.follow-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface-panel);
+  overflow: hidden;
+}
+.follow-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface-nav);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.follow-card__header .summary-heading {
+  margin: 0;
+}
+.follow-card__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none !important;
+  white-space: nowrap;
+}
+.follow-card__more:hover {
+  text-decoration: underline !important;
+}
+.follow-card__list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
-.project-follow-up li {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border-subtle);
+.follow-card__list li + li {
+  border-top: 1px solid var(--border-subtle);
 }
-.project-follow-up li > a {
+.follow-card__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: var(--text-primary) !important;
+  text-decoration: none !important;
+}
+.follow-card__item:hover {
+  background: var(--surface-hover);
+}
+.follow-card__item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+.follow-card__item > .q-icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+.follow-card__name {
+  flex: 1;
   min-width: 0;
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
-.project-follow-up__meta {
+.follow-card__meta {
   flex-shrink: 0;
   font-size: 13px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
-.project-follow-up__meta--overdue {
+.follow-card__meta--overdue {
   color: var(--error-text);
   font-weight: 600;
-}
-.project-follow-up__more {
-  display: inline-block;
-  margin-top: 12px;
-  font-size: 13px;
 }
 .scope-tab-panels :deep(.scope-section) {
   background: transparent;

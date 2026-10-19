@@ -75,9 +75,13 @@
               :style="appliedFilters.length > 0 ? 'color: var(--text-accent)' : ''"
             >
               <q-tooltip>{{ t('datatable.tooltip.filters') }}</q-tooltip>
-              <q-badge v-if="appliedFilters.length > 0" color="primary" floating>{{
-                appliedFilters.length
-              }}</q-badge>
+              <q-badge
+                v-if="appliedFilters.length > 0"
+                color="primary"
+                floating
+                class="dt-filter-count"
+                >{{ appliedFilters.length }}</q-badge
+              >
             </q-btn>
 
             <q-btn
@@ -133,21 +137,6 @@
           </div>
         </div>
 
-        <div
-          v-if="appliedFilters.length"
-          class="row items-center q-gutter-xs full-width q-mb-sm"
-          :aria-label="t('ui.appliedFilters')"
-        >
-          <q-chip
-            v-for="(filter, index) in appliedFilters"
-            :key="index"
-            removable
-            @remove="removeAppliedFilter(index)"
-            class="applied-filter"
-            >{{ filterLabel(filter) }}</q-chip
-          >
-          <q-btn flat dense :label="t('datatable.filter.clearAll')" @click="clearFilters" />
-        </div>
         <div v-if="filterDraftChanged" class="text-caption text-secondary full-width" role="status">
           {{ t('ui.draftFilters') }}
         </div>
@@ -278,7 +267,7 @@
 
       <template #header="props">
         <q-tr :props="props">
-          <q-th auto-width class="text-center" v-if="selectionMode !== 'none'">
+          <q-th auto-width class="dt-selection-cell" v-if="selectionMode !== 'none'">
             <q-checkbox
               v-model="props.selected"
               :aria-label="t('datatable.selectedRows.multiple', { count: rows.length })"
@@ -553,12 +542,6 @@ const effectiveColumns = computed(() =>
 const filterDraftChanged = computed(
   () => JSON.stringify(getValidFilters()) !== JSON.stringify(appliedFilters.value),
 );
-const filterLabel = (filter: Filter) =>
-  `${filterColumnOptions.value.find((c) => c.value === filter.column)?.label ?? filter.column} ${filter.operator} ${String(filter.value)}`;
-const removeAppliedFilter = (index: number) => {
-  filters.value = appliedFilters.value.filter((_, i) => i !== index).map((f) => ({ ...f }));
-  applyFilters();
-};
 async function persistState() {
   try {
     await store.saveTableState(props.tableId, {
@@ -1016,7 +999,13 @@ const onDelete = () => {
       border-bottom: 1px solid var(--border-color) !important;
     }
 
-    tbody tr td.q-table--col-auto-width {
+    // Casillas del encabezado y de las filas: mismo ancho y centradas en la misma columna.
+    .dt-selection-cell,
+    tbody tr td.q-table--col-auto-width:first-child:has(> .q-checkbox) {
+      width: 56px;
+      min-width: 56px;
+      padding-inline: 8px;
+      text-align: center;
     }
 
     .q-table__bottom {
@@ -1129,10 +1118,6 @@ const onDelete = () => {
   white-space: normal;
   background: var(--surface-raised);
   color: var(--text-primary);
-}
-.applied-filter {
-  background: var(--surface-selected);
-  color: var(--text-accent);
 }
 .preference-error {
   background: var(--error-bg);
