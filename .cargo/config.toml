@@ -1,7 +1,3 @@
-# Leave CPU capacity available for interactive use of the development laptop.
-[build]
-jobs = 1
-
 [env]
 RAYON_NUM_THREADS = { value = "1", force = true }
 TOKIO_WORKER_THREADS = { value = "1", force = true }
