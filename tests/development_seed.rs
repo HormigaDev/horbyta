@@ -72,7 +72,22 @@ async fn check(db: &DatabaseConnection) {
         count(db, "SELECT count(DISTINCT status) AS value FROM invoices").await,
         5
     );
-    assert_eq!(count(db, "SELECT count(DISTINCT status) AS value FROM tasks").await, 4);
+    // Cinco categorías de estado (incluida "cancelled") y estados editables por usuario.
+    assert_eq!(count(db, "SELECT count(DISTINCT status) AS value FROM tasks").await, 5);
+    assert_eq!(
+        count(db, "SELECT count(*) AS value FROM users u WHERE (SELECT count(*) FROM task_statuses s WHERE s.user_id=u.id AND s.key IS NOT NULL) <> 5").await,
+        0,
+        "cada usuario recibe los cinco estados por defecto"
+    );
+    assert_eq!(
+        count(db, "SELECT count(*) AS value FROM tasks t JOIN task_statuses s ON s.id=t.status_id WHERE s.key IS NULL AND s.name='Bloqueada'").await,
+        1
+    );
+    assert_eq!(
+        count(db, "SELECT count(*) AS value FROM tasks t JOIN task_statuses s ON s.id=t.status_id WHERE s.category<>t.status").await,
+        0,
+        "status (categoría) coincide siempre con el estado elegido"
+    );
     assert_eq!(
         count(db, "SELECT count(DISTINCT activity) AS value FROM time_entries").await,
         9

@@ -196,6 +196,16 @@ impl IntoResponse for AppError {
 impl From<sea_orm::DbErr> for AppError {
     fn from(error: sea_orm::DbErr) -> Self {
         let message = error.to_string();
+        // Reglas de los estados de tarea, con el mismo formato que las del alcance.
+        if let Some((_, detail)) = message.split_once("task_status: ") {
+            return Self::Conflict(detail.lines().next().unwrap_or("Estado de tarea no válido.").to_owned());
+        }
+        if message.contains("uq_task_statuses_name") {
+            return Self::Conflict("Ya existe un estado con ese nombre.".into());
+        }
+        if message.contains("tasks_status_id_fkey") {
+            return Self::Conflict("El estado tiene tareas; muévelas a otro estado antes de eliminarlo.".into());
+        }
         if let Some((_, detail)) = message.split_once("scope_conflict: ") {
             Self::Conflict(
                 detail

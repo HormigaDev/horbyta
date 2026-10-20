@@ -10,6 +10,7 @@ pub mod notifications;
 pub mod payments;
 pub mod projects;
 pub mod tags;
+pub mod task_statuses;
 pub mod tasks;
 pub mod time_entries;
 pub mod ui_state;

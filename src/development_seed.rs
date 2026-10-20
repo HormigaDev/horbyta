@@ -644,6 +644,26 @@ async fn populate(
     ] {
         execute(tx,"INSERT INTO tasks(user_id,title,description,priority) VALUES($1,$2,'Pendiente personal del estudio sin proyecto asignado.',2)",vec![owner.into(),title.into()]).await?;
     }
+    // Estados editables: los cinco por defecto los crea la base al dar de alta al usuario;
+    // el seed añade uno propio y lo usa, junto con una tarea cancelada.
+    execute(
+        tx,
+        "INSERT INTO task_statuses(user_id,name,category,color,position) VALUES($1,'Bloqueada','in_progress','#F59E0B',6)",
+        vec![owner.into()],
+    )
+    .await?;
+    execute(
+        tx,
+        "UPDATE tasks SET status_id=(SELECT id FROM task_statuses WHERE user_id=$1 AND name='Bloqueada') WHERE user_id=$1 AND title='Revisar licencias de tipografías'",
+        vec![owner.into()],
+    )
+    .await?;
+    execute(
+        tx,
+        "UPDATE tasks SET status='cancelled' WHERE user_id=$1 AND title='Actualizar portafolio'",
+        vec![owner.into()],
+    )
+    .await?;
     execute(tx,"INSERT INTO conversation_history(user_id,session_id,title,messages,created_at) VALUES($1,$2,'Plan de la próxima entrega',$3,now()-interval '2 days')",
         vec![owner.into(),Uuid::now_v7().into(),json!([{"role":"user","content":"¿Cómo organizo las próximas entregas?"},{"role":"assistant","content":"Prioriza los acuerdos aceptados y deja los extras pendientes hasta recibir la decisión del cliente."}]).into()]).await?;
     execute(
@@ -695,6 +715,7 @@ async fn populate(
         "categories",
         "activities",
         "tags",
+        "task_statuses",
         "projects",
         "project_billing",
         "milestones",

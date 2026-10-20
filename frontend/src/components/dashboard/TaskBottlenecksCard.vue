@@ -108,6 +108,7 @@ const statusOptions = computed(() => [
   { label: t('dashboard.bottlenecks.column.inProgress'), value: 'in_progress' },
   { label: t('dashboard.bottlenecks.column.review'), value: 'review' },
   { label: t('dashboard.filters.taskBottlenecks.statusDone'), value: 'done' },
+  { label: t('dashboard.filters.taskBottlenecks.statusCancelled'), value: 'cancelled' },
 ]);
 
 const priorityOptions = computed(() => [

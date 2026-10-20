@@ -122,7 +122,7 @@ const TASK_BOTTLENECKS_SQL: &str = r#"
         sum(case when t.status = 'todo' then 1 else 0 end) as tasks_todo,
         sum(case when t.status = 'in_progress' then 1 else 0 end) as tasks_in_progress,
         sum(case when t.status = 'review' then 1 else 0 end) as tasks_in_review,
-        sum(case when t.due_date < now() and t.status != 'done' then 1 else 0 end) as overdue_tasks
+        sum(case when t.due_date < now() and t.status not in ('done', 'cancelled') then 1 else 0 end) as overdue_tasks
     from tasks t
     inner join projects p on t.project_id = p.id
     where p.status = 'open'
@@ -131,7 +131,7 @@ const TASK_BOTTLENECKS_SQL: &str = r#"
       and ($3::uuid is null or p.id = $3)
       and ($4::varchar is null or t.status = $4)
       and ($5::int is null or t.priority = $5)
-      and ($6::boolean is not true or (t.due_date < now() and t.status != 'done'))
+      and ($6::boolean is not true or (t.due_date < now() and t.status not in ('done', 'cancelled')))
     group by p.id, p.name
     order by overdue_tasks desc, tasks_in_progress desc, project_name asc
 "#;

@@ -87,8 +87,12 @@
               <div class="text-caption" style="color: var(--text-muted)">
                 {{ t('common.status') }}
               </div>
-              <div style="color: var(--text-color)">
-                {{ $t(`tasks.form.status.${task.status}`) }}
+              <div class="task-status-value">
+                <span
+                  class="task-status-dot"
+                  :style="{ background: task.status_color ?? 'var(--text-muted)' }"
+                  aria-hidden="true"
+                />{{ statusLabel(task) }}
               </div>
             </div>
             <div class="col-12 col-md-4">
@@ -225,7 +229,7 @@
                       #{{ normalizeId(subtask.record_number) }} — {{ subtask.title }}
                     </q-item-label>
                     <q-item-label caption style="color: var(--text-muted)">
-                      {{ $t(`tasks.form.status.${subtask.status}`) }}
+                      {{ statusLabel(subtask) }}
                     </q-item-label>
                   </q-item-section>
                   <q-item-section side>
@@ -443,8 +447,8 @@
               clickable
               v-ripple
               class="q-pa-md"
-              v-if="task && task.status === 'todo'"
-              @click="updateTaskStatus('in_progress')"
+              v-if="task && task.status === 'todo' && statusesStore.firstOf('in_progress')"
+              @click="startTask"
             >
               <q-item-section avatar><q-icon name="start" /></q-item-section>
               <q-item-section>{{ $t('tasks.detail.action.startTask') }}</q-item-section>
@@ -583,11 +587,15 @@ import { useCopyClipboard } from 'src/composables/useCopyClipboard';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { useTimeEntryDialog } from 'src/composables/useTimeEntryDialog';
 import { TasksService } from 'src/services/tasks';
+import { useTaskStatusesStore, useTaskStatusLabel } from 'src/stores/taskStatuses';
+const statusesStore = useTaskStatusesStore();
+const statusLabel = useTaskStatusLabel();
+void statusesStore.load().catch(() => undefined);
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import { normalizeId } from 'src/utils/normalizeId';
 import type { Filter } from 'src/types';
-import type { TaskDetailDto, TaskStatus, TaskSummaryDto } from 'src/types/task';
+import type { TaskDetailDto, TaskSummaryDto } from 'src/types/task';
 import type { PinnedTask } from 'src/types/user';
 
 const route = useRoute();
@@ -694,12 +702,25 @@ const loadTask = async (id: string) => {
   }
 };
 
-const updateTaskStatus = async (status: TaskStatus) => {
+const startTask = () => {
+  const inProgress = statusesStore.firstOf('in_progress');
+  if (inProgress) void updateTaskStatus(inProgress.id);
+};
+// Cambia a un estado concreto y refleja su nombre, color y categoría en la vista.
+const updateTaskStatus = async (statusId: string) => {
   if (!task.value) return;
+  const status = statusesStore.byId(statusId);
+  if (!status) return;
   showLoading();
   try {
-    await TasksService.changeStatus(task.value.id, status);
-    task.value.status = status;
+    await TasksService.updateTaskStatus(task.value.id, statusId);
+    Object.assign(task.value, {
+      status: status.category,
+      status_id: status.id,
+      status_name: status.name,
+      status_color: status.color,
+      status_key: status.key,
+    });
     notify(t('common.success'), 'positive');
   } catch (err) {
     notifyError(t('common.error'), err);
@@ -768,7 +789,7 @@ const persistParent = async (parentId: string | null) => {
       milestone_id: task.value.milestone_id,
       title: task.value.title,
       description: task.value.description,
-      status: task.value.status,
+      status_id: task.value.status_id,
       priority: task.value.priority,
       complexity: task.value.complexity,
       block_parent: task.value.block_parent,
@@ -831,3 +852,18 @@ watch(
   { immediate: true },
 );
 </script>
+
+<style scoped>
+.task-status-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-color);
+}
+.task-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+</style>

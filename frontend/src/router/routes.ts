@@ -132,6 +132,12 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: '/task-statuses',
+        name: 'task-statuses',
+        component: () => import('pages/TaskStatusesPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: '/payments',
         name: 'payments',
         component: () => import('pages/PaymentsPage.vue'),

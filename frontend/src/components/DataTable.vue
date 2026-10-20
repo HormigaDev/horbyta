@@ -329,6 +329,7 @@
             v-if="cell.col.name === 'status'"
             class="status-badge"
             :data-status="getRowValue(cell.row, 'status')"
+            :style="statusBadgeStyle(cell.row)"
             >{{ cell.value }}</span
           >
           <button
@@ -863,6 +864,11 @@ const onRequest = (requestProps: {
   }
 };
 
+// Estados de tarea editables: cada uno con su color; el resto usa el color de su categoría.
+const statusBadgeStyle = (row: unknown) => {
+  const color = (row as { status_color?: string | null }).status_color;
+  return color ? { color, background: `color-mix(in srgb, ${color} 16%, transparent)` } : undefined;
+};
 const getRowValue = (row: object, key: string): unknown => {
   return (row as Record<string, unknown>)[key];
 };

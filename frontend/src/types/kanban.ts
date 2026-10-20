@@ -1,8 +1,11 @@
 import type { TaskStatus, TaskSummaryDto } from './task';
 
+/** Cada columna es un estado del usuario (id del estado). */
 export interface KanbanColumnDefinition {
-  id: TaskStatus;
+  id: string;
   title: string;
+  color: string;
+  category: TaskStatus;
 }
 
 export type KanbanTask = TaskSummaryDto & {
@@ -12,5 +15,5 @@ export type KanbanTask = TaskSummaryDto & {
 
 export interface TaskMovePayload {
   taskId: string;
-  newColumnId: TaskStatus;
+  newColumnId: string;
 }

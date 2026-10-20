@@ -1,14 +1,34 @@
 import type { TagSummaryDto } from './tag';
 
-export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done';
+/** Categoría del estado: el significado que usa el sistema (alcance, tablero, panel). */
+export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled';
 
-export interface TaskSummaryDto {
+/** Estado editable del usuario. `key` marca los estados por defecto. */
+export interface TaskStatusItem {
+  id: string;
+  key: TaskStatus | null;
+  name: string;
+  category: TaskStatus;
+  color: string;
+  position: number;
+  task_count: number;
+}
+
+/** Datos del estado concreto que acompañan a cada tarea. */
+export interface TaskStatusFields {
+  status: TaskStatus;
+  status_id: string;
+  status_name: string | null;
+  status_color: string | null;
+  status_key: TaskStatus | null;
+}
+
+export interface TaskSummaryDto extends TaskStatusFields {
   id: string;
   record_number: bigint;
   project_id: string | null;
   milestone_id: string | null;
   title: string;
-  status: TaskStatus;
   priority: number;
   complexity: number;
   due_date: string | null;
@@ -18,7 +38,7 @@ export interface TaskSummaryDto {
   updated_at: string;
 }
 
-export interface TaskDetailDto {
+export interface TaskDetailDto extends TaskStatusFields {
   id: string;
   record_number: bigint;
   user_id: string;
@@ -27,7 +47,6 @@ export interface TaskDetailDto {
   milestone_id: string | null;
   title: string;
   description: string | null;
-  status: TaskStatus;
   priority: number;
   complexity: number;
   block_parent: boolean;
@@ -48,7 +67,9 @@ export interface CreateTaskDto {
   milestone_id: string | null;
   title: string;
   description: string | null;
-  status: TaskStatus;
+  /** Estado elegido; si falta, la base usa el primero de la categoría `status`. */
+  status_id?: string | null;
+  status?: TaskStatus;
   priority: number;
   complexity: number;
   block_parent: boolean;
@@ -64,7 +85,9 @@ export interface UpdateTaskDto {
   milestone_id: string | null;
   title: string;
   description: string | null;
-  status: TaskStatus;
+  /** Estado elegido; si falta, la base usa el primero de la categoría `status`. */
+  status_id?: string | null;
+  status?: TaskStatus;
   priority: number;
   complexity: number;
   block_parent: boolean;

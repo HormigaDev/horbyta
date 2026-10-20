@@ -14,6 +14,7 @@ pub mod project;
 pub mod project_billing;
 pub mod query;
 pub mod tag;
+pub mod task_status;
 pub mod task;
 pub mod time_entries;
 pub mod totp_2fa;

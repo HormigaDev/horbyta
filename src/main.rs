@@ -62,6 +62,7 @@ async fn run() {
         .nest("/milestones", controllers::milestones::milestones_controller())
         .nest("/tasks", controllers::tasks::tasks_controller())
         .nest("/tags", controllers::tags::tags_controller())
+        .nest("/task-statuses", controllers::task_statuses::task_statuses_controller())
         .nest("/invoices", controllers::invoices::invoices_controller())
         .nest("/payments", controllers::payments::payments_controller())
         .nest("/time-entries", controllers::time_entries::time_entries_controller())

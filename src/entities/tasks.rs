@@ -17,6 +17,7 @@ pub struct Model {
     #[sea_orm(column_type = "Text", nullable)]
     pub description: Option<String>,
     pub status: String,
+    pub status_id: Uuid,
     pub priority: i16,
     pub complexity: i16,
     pub block_parent: bool,

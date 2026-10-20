@@ -7,7 +7,7 @@ import { useUI } from 'src/composables/useUI';
 import { useUiStateStore } from 'src/stores/uiState';
 import type { Filter, QueryPayload } from 'src/types/query';
 import type { KanbanTask } from 'src/types/kanban';
-import type { TaskStatus } from 'src/types/task';
+import { taskStatusLabel, useTaskStatusesStore } from 'src/stores/taskStatuses';
 
 export interface KanbanBoardFilters {
   projectId: string | null;
@@ -55,6 +55,7 @@ export function useKanbanBoard() {
   const { t } = useI18n();
   const { notify, notifyError } = useUI();
   const uiState = useUiStateStore();
+  const statusesStore = useTaskStatusesStore();
 
   const filters = reactive<KanbanBoardFilters>(defaultFilters());
   const tasks = ref<KanbanTask[]>([]);
@@ -133,7 +134,7 @@ export function useKanbanBoard() {
   const loadTasks = async () => {
     isLoading.value = true;
     try {
-      await loadSavedUiFilters();
+      await Promise.all([loadSavedUiFilters(), statusesStore.load()]);
       try {
         await uiState.setValue<KanbanBoardFilters>(BOARD_SCOPE, BOARD_FILTERS_KEY, { ...filters });
       } catch {
@@ -185,8 +186,8 @@ export function useKanbanBoard() {
     return response.total > 0;
   };
 
-  const validateTaskMove = async (task: KanbanTask, newColumnId: TaskStatus) => {
-    if (newColumnId !== 'done') return true;
+  const validateTaskMove = async (task: KanbanTask, newStatusId: string) => {
+    if (statusesStore.byId(newStatusId)?.category !== 'done') return true;
 
     const hasTimeEntries = await taskHasTimeEntries(task);
     if (hasTimeEntries) return true;
@@ -200,30 +201,49 @@ export function useKanbanBoard() {
     return false;
   };
 
-  const updateTaskLocally = (taskId: string, status: TaskStatus) => {
-    tasks.value = tasks.value.map((task) => (task.id === taskId ? { ...task, status } : task));
+  type StatusSnapshot = Pick<
+    KanbanTask,
+    'status' | 'status_id' | 'status_name' | 'status_color' | 'status_key'
+  >;
+  const statusSnapshot = (task: KanbanTask): StatusSnapshot => ({
+    status: task.status,
+    status_id: task.status_id,
+    status_name: task.status_name,
+    status_color: task.status_color,
+    status_key: task.status_key,
+  });
+
+  const updateTaskLocally = (taskId: string, snapshot: StatusSnapshot) => {
+    tasks.value = tasks.value.map((task) => (task.id === taskId ? { ...task, ...snapshot } : task));
   };
 
-  const moveTask = async (taskId: string, newColumnId: TaskStatus) => {
+  const moveTask = async (taskId: string, newStatusId: string) => {
     const task = tasks.value.find((item) => item.id === taskId);
-    if (!task || task.status === newColumnId || isMovingTask.value) return;
+    const target = statusesStore.byId(newStatusId);
+    if (!task || !target || task.status_id === newStatusId || isMovingTask.value) return;
 
-    const previousColumnId = task.status;
+    const previous = statusSnapshot(task);
     isMovingTask.value = true;
-    updateTaskLocally(taskId, newColumnId);
+    updateTaskLocally(taskId, {
+      status: target.category,
+      status_id: target.id,
+      status_name: target.name,
+      status_color: target.color,
+      status_key: target.key,
+    });
 
     try {
-      const canMove = await validateTaskMove(task, newColumnId);
+      const canMove = await validateTaskMove(task, newStatusId);
       if (!canMove) {
-        updateTaskLocally(taskId, previousColumnId);
+        updateTaskLocally(taskId, previous);
         return;
       }
 
-      await TasksService.updateTaskStatus(taskId, newColumnId);
-      moveAnnouncement.value = t('ui.moved', { status: t('tasks.form.status.' + newColumnId) });
+      await TasksService.updateTaskStatus(taskId, newStatusId);
+      moveAnnouncement.value = t('ui.moved', { status: taskStatusLabel(t, target) });
       notify(moveAnnouncement.value, 'positive');
     } catch (err: unknown) {
-      updateTaskLocally(taskId, previousColumnId);
+      updateTaskLocally(taskId, previous);
       notifyError(t('board.moveError'), err);
     } finally {
       isMovingTask.value = false;

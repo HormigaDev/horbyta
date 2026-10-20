@@ -1,6 +1,6 @@
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-    QuerySelect, Set,
+    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, DbBackend, EntityTrait, NotSet, PaginatorTrait,
+    QueryFilter, QueryOrder, QuerySelect, Set, Statement, sea_query::Expr,
 };
 use std::collections::HashSet;
 use uuid::Uuid;
@@ -34,6 +34,46 @@ use crate::{
 pub struct TaskService;
 
 impl TaskService {
+    /// Estado pedido: un `status_id` del usuario (con su categoría) o solo la categoría.
+    /// Devuelve el id (si se eligió uno concreto) y la categoría resultante.
+    async fn resolve_status(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        status_id: Option<Uuid>,
+        status: Option<TaskStatus>,
+    ) -> Result<(Option<Uuid>, String), AppError> {
+        if let Some(id) = status_id {
+            let row = db
+                .query_one(Statement::from_sql_and_values(
+                    DbBackend::Postgres,
+                    "SELECT category FROM task_statuses WHERE id = $1 AND user_id = $2",
+                    [id.into(), user_id.into()],
+                ))
+                .await?
+                .ok_or_else(|| AppError::BadRequest("task status not found".to_string()))?;
+            return Ok((Some(id), row.try_get("", "category")?));
+        }
+        Ok((None, status.unwrap_or(TaskStatus::Todo).to_string()))
+    }
+
+    /// Nombre, color y clave del estado de una tarea.
+    async fn status_presentation(
+        db: &impl ConnectionTrait,
+        status_id: Uuid,
+    ) -> Result<(Option<String>, Option<String>, Option<String>), AppError> {
+        let row = db
+            .query_one(Statement::from_sql_and_values(
+                DbBackend::Postgres,
+                "SELECT name, color, key FROM task_statuses WHERE id = $1",
+                [status_id.into()],
+            ))
+            .await?;
+        Ok(match row {
+            Some(row) => (row.try_get("", "name")?, row.try_get("", "color")?, row.try_get("", "key")?),
+            None => (None, None, None),
+        })
+    }
+
     async fn get_task_model(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<TaskModel, AppError> {
         let task = Tasks::find()
             .filter(tasks::Column::Id.eq(id))
@@ -118,6 +158,8 @@ impl TaskService {
             (None, None)
         };
 
+        let (status_name, status_color, status_key) = Self::status_presentation(db, task.status_id).await?;
+
         Ok(TaskDetailDto {
             id: task.id,
             record_number: task.record_number,
@@ -128,6 +170,10 @@ impl TaskService {
             title: task.title,
             description: task.description,
             status: task.status.try_into().unwrap_or(TaskStatus::Todo),
+            status_id: task.status_id,
+            status_name,
+            status_color,
+            status_key,
             priority: task.priority,
             complexity: task.complexity,
             block_parent: task.block_parent,
@@ -311,6 +357,7 @@ impl TaskService {
         Self::ensure_project_accepts_new_tasks(db, user_id, dto.project_id).await?;
         Self::ensure_milestone_project_accepts_new_tasks(db, user_id, dto.milestone_id).await?;
         let safe_tag_ids = Self::validate_and_dedup_tags(db, user_id, &dto.tag_ids).await?;
+        let (status_id, status) = Self::resolve_status(db, user_id, dto.status_id, dto.status).await?;
 
         let task = tasks::ActiveModel {
             user_id: Set(user_id),
@@ -319,7 +366,9 @@ impl TaskService {
             milestone_id: Set(dto.milestone_id),
             title: Set(dto.title),
             description: Set(dto.description),
-            status: Set(dto.status.to_string()),
+            // La base sincroniza status (categoría) y status_id: con status_id manda el estado.
+            status: Set(status),
+            status_id: status_id.map(Set).unwrap_or(NotSet),
             priority: Set(dto.priority),
             complexity: Set(dto.complexity),
             block_parent: Set(dto.block_parent),
@@ -427,7 +476,8 @@ impl TaskService {
         Self::ensure_milestone_ownership(db, user_id, dto.milestone_id, dto.project_id).await?;
         let safe_tag_ids = Self::validate_and_dedup_tags(db, user_id, &dto.tag_ids).await?;
 
-        if dto.status == TaskStatus::Done && task.status != TaskStatus::Done.to_string() {
+        let (status_id, status) = Self::resolve_status(db, user_id, dto.status_id, dto.status).await?;
+        if status == TaskStatus::Done.to_string() && task.status != TaskStatus::Done.to_string() {
             Self::ensure_no_blocking_children(db, id).await?;
         }
 
@@ -437,7 +487,10 @@ impl TaskService {
         active_task.milestone_id = Set(dto.milestone_id);
         active_task.title = Set(dto.title);
         active_task.description = Set(dto.description);
-        active_task.status = Set(dto.status.to_string());
+        match status_id {
+            Some(status_id) => active_task.status_id = Set(status_id),
+            None => active_task.status = Set(status),
+        }
         active_task.priority = Set(dto.priority);
         active_task.complexity = Set(dto.complexity);
         active_task.block_parent = Set(dto.block_parent);
@@ -526,13 +579,17 @@ impl TaskService {
         dto: UpdateTaskStatusDto,
     ) -> Result<(), AppError> {
         let task = Self::get_task_model(db, user_id, id).await?;
+        let (status_id, status) = Self::resolve_status(db, user_id, dto.status_id, dto.status).await?;
 
-        if dto.status == TaskStatus::Done {
+        if status == TaskStatus::Done.to_string() {
             Self::ensure_no_blocking_children(db, id).await?;
         }
 
         let mut active_task: tasks::ActiveModel = task.into();
-        active_task.status = Set(dto.status.to_string());
+        match status_id {
+            Some(status_id) => active_task.status_id = Set(status_id),
+            None => active_task.status = Set(status),
+        }
         let _ = active_task.update(db).await.map_err(AppError::from)?;
 
         Ok(())
@@ -542,7 +599,7 @@ impl TaskService {
         let blocking_count = Tasks::find()
             .filter(tasks::Column::ParentId.eq(parent_id))
             .filter(tasks::Column::BlockParent.eq(true))
-            .filter(tasks::Column::Status.ne(TaskStatus::Done.to_string()))
+            .filter(tasks::Column::Status.is_not_in([TaskStatus::Done.to_string(), TaskStatus::Cancelled.to_string()]))
             .count(db)
             .await
             .map_err(AppError::from)?;
@@ -609,6 +666,10 @@ impl TaskService {
                 .column(tasks::Column::MilestoneId)
                 .column(tasks::Column::Title)
                 .column(tasks::Column::Status)
+                .column(tasks::Column::StatusId)
+                .column_as(Expr::cust("(SELECT s.name FROM task_statuses s WHERE s.id = tasks.status_id)"), "status_name")
+                .column_as(Expr::cust("(SELECT s.color FROM task_statuses s WHERE s.id = tasks.status_id)"), "status_color")
+                .column_as(Expr::cust("(SELECT s.key FROM task_statuses s WHERE s.id = tasks.status_id)"), "status_key")
                 .column(tasks::Column::Priority)
                 .column(tasks::Column::Complexity)
                 .column(tasks::Column::DueDate)

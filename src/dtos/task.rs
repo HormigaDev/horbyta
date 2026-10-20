@@ -126,7 +126,12 @@ pub struct CreateTaskDto {
     #[validate(length(max = 15000, message = "task description must be at most 15000 characters"))]
     pub description: Option<String>,
 
-    pub status: TaskStatus,
+    /// Estado elegido por el usuario. Si falta, se usa `status` (categoría) y la base
+    /// asigna el primer estado de esa categoría; sin ninguno de los dos, "todo".
+    #[serde(default)]
+    pub status_id: Option<Uuid>,
+    #[serde(default)]
+    pub status: Option<TaskStatus>,
 
     #[validate(range(min = 1, max = 4, message = "task priority must be between 1 and 4"))]
     pub priority: i16,
@@ -165,7 +170,12 @@ pub struct UpdateTaskDto {
     #[validate(length(max = 15000, message = "task description must be at most 15000 characters"))]
     pub description: Option<String>,
 
-    pub status: TaskStatus,
+    /// Estado elegido por el usuario. Si falta, se usa `status` (categoría) y la base
+    /// asigna el primer estado de esa categoría; sin ninguno de los dos, "todo".
+    #[serde(default)]
+    pub status_id: Option<Uuid>,
+    #[serde(default)]
+    pub status: Option<TaskStatus>,
 
     #[validate(range(min = 1, max = 4, message = "task priority must be between 1 and 4"))]
     pub priority: i16,
@@ -183,7 +193,10 @@ pub struct UpdateTaskDto {
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct UpdateTaskStatusDto {
-    pub status: TaskStatus,
+    #[serde(default)]
+    pub status_id: Option<Uuid>,
+    #[serde(default)]
+    pub status: Option<TaskStatus>,
 }
 
 #[derive(Debug, Serialize, FromQueryResult, ToSchema)]
@@ -194,6 +207,10 @@ pub struct TaskSummaryDto {
     pub milestone_id: Option<Uuid>,
     pub title: String,
     pub status: TaskStatus,
+    pub status_id: Uuid,
+    pub status_name: Option<String>,
+    pub status_color: Option<String>,
+    pub status_key: Option<String>,
     pub priority: i16,
     pub complexity: i16,
     pub due_date: Option<DateTime<FixedOffset>>,
@@ -214,6 +231,10 @@ pub struct TaskDetailDto {
     pub title: String,
     pub description: Option<String>,
     pub status: TaskStatus,
+    pub status_id: Uuid,
+    pub status_name: Option<String>,
+    pub status_color: Option<String>,
+    pub status_key: Option<String>,
     pub priority: i16,
     pub complexity: i16,
     pub block_parent: bool,
@@ -264,5 +285,6 @@ string_enum!(
         InProgress,
         Review,
         Done,
+        Cancelled,
     }
 );

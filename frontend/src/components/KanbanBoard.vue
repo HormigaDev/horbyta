@@ -15,7 +15,7 @@
       :label="$t('tasks.form.statusLabel')"
       class="q-mb-md"
     />
-    <div class="kanban-board">
+    <div class="kanban-board" :style="{ '--kanban-columns': displayedColumns.length }">
       <KanbanColumn
         v-for="column in displayedColumns"
         :key="column.id"
@@ -37,7 +37,6 @@ import { computed, ref } from 'vue';
 import { useQuasar } from 'quasar';
 import KanbanColumn from './KanbanColumn.vue';
 import type { KanbanColumnDefinition, KanbanTask } from 'src/types/kanban';
-import type { TaskStatus } from 'src/types/task';
 
 const props = defineProps<{
   columns: KanbanColumnDefinition[];
@@ -46,23 +45,25 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  'task-drop': [taskId: string, newColumnId: TaskStatus];
+  'task-drop': [taskId: string, newColumnId: string];
 }>();
 
 const $q = useQuasar();
-const mobileStatus = ref<TaskStatus>('todo');
-const displayedColumns = computed(() =>
-  $q.screen.lt.sm ? props.columns.filter((c) => c.id === mobileStatus.value) : props.columns,
-);
+const mobileStatus = ref<string | null>(null);
+const displayedColumns = computed(() => {
+  if (!$q.screen.lt.sm) return props.columns;
+  const selected = props.columns.find((c) => c.id === mobileStatus.value) ?? props.columns[0];
+  return selected ? [selected] : [];
+});
 const draggedTask = ref<KanbanTask | null>(null);
 
 const tasksByStatus = computed(() => {
   return props.tasks.reduce(
     (result, task) => {
-      result[task.status] = [...(result[task.status] ?? []), task];
+      result[task.status_id] = [...(result[task.status_id] ?? []), task];
       return result;
     },
-    {} as Record<TaskStatus, KanbanTask[]>,
+    {} as Record<string, KanbanTask[]>,
   );
 });
 
@@ -79,9 +80,9 @@ const findTask = (taskId: string | null) => {
   return props.tasks.find((task) => task.id === taskId) ?? draggedTask.value;
 };
 
-const handleDrop = (newColumnId: TaskStatus, taskId: string | null) => {
+const handleDrop = (newColumnId: string, taskId: string | null) => {
   const task = findTask(taskId);
-  if (!task || task.status === newColumnId) {
+  if (!task || task.status_id === newColumnId) {
     clearDragState();
     return;
   }
@@ -95,14 +96,11 @@ const handleDrop = (newColumnId: TaskStatus, taskId: string | null) => {
 .kanban-board {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* Tantas columnas como estados; si no caben, el tablero se desplaza en horizontal. */
+  grid-template-columns: repeat(var(--kanban-columns, 4), minmax(220px, 1fr));
   min-width: 100%;
-}
-
-@media (max-width: 1023px) {
-  .kanban-board {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
 @media (max-width: 599px) {

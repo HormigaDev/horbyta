@@ -1,7 +1,8 @@
 <template>
   <section
     class="kanban-column"
-    :data-status="column.id"
+    :data-status="column.category"
+    :style="{ borderTopColor: column.color }"
     :class="{ 'kanban-column--target': dragOver }"
     @dragleave="dragOver = false"
     @dragover.prevent="dragOver = true"
@@ -9,7 +10,9 @@
   >
     <div class="row items-center justify-between q-mb-sm">
       <div class="text-subtitle1 text-weight-medium">
-        <q-icon :name="statusIcon" size="18px" class="q-mr-sm" />{{ column.title }}
+        <q-icon :name="statusIcon" size="18px" class="q-mr-sm" :style="{ color: column.color }" />{{
+          column.title
+        }}
       </div>
       <q-badge class="kanban-count" rounded>{{ tasks.length }}</q-badge>
     </div>
@@ -35,7 +38,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import type { TaskStatus } from 'src/types/task';
 import KanbanTaskCard from './KanbanTaskCard.vue';
 import type { KanbanColumnDefinition, KanbanTask } from 'src/types/kanban';
 
@@ -47,7 +49,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  move: [taskId: string, status: TaskStatus];
+  move: [taskId: string, statusId: string];
   drop: [columnId: KanbanColumnDefinition['id'], taskId: string | null];
   'task-drag-start': [task: KanbanTask];
   'task-drag-end': [];
@@ -61,7 +63,8 @@ const statusIcon = computed(
       in_progress: 'timelapse',
       review: 'rate_review',
       done: 'check_circle_outline',
-    })[props.column.id],
+      cancelled: 'block',
+    })[props.column.category],
 );
 const onDrop = (event: DragEvent) => {
   dragOver.value = false;

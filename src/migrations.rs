@@ -22,6 +22,7 @@ pub const AMENDMENT_TASK_LINKS_MIGRATION: &str =
 pub const DECLINE_COMMENT_MIGRATION: &str = include_str!("../database/migrations/009_decline_comment.sql");
 pub const REOPEN_DECLINED_CHANGE_MIGRATION: &str =
     include_str!("../database/migrations/010_reopen_declined_change.sql");
+pub const TASK_STATUSES_MIGRATION: &str = include_str!("../database/migrations/011_task_statuses.sql");
 
 // Cada migración tiene su reverso en database/migrations/rollback/, con el mismo nombre.
 // El checksum solo cubre el SQL de aplicación: los historiales existentes no cambian.
@@ -81,6 +82,11 @@ const MIGRATIONS: &[Migration] = &[
         version: 10,
         up: &[REOPEN_DECLINED_CHANGE_MIGRATION],
         down: include_str!("../database/migrations/rollback/010_reopen_declined_change.sql"),
+    },
+    Migration {
+        version: 11,
+        up: &[TASK_STATUSES_MIGRATION],
+        down: include_str!("../database/migrations/rollback/011_task_statuses.sql"),
     },
 ];
 

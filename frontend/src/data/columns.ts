@@ -5,6 +5,8 @@ import { useNumberFormatter } from 'src/composables/useNumberFormatter';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
 import { normalizeId } from 'src/utils/normalizeId';
 import { formatStorageBytes } from 'src/utils/attachments';
+import { taskStatusLabel } from 'src/stores/taskStatuses';
+import type { TaskSummaryDto } from 'src/types/task';
 
 type TableColumn = NonNullable<QTableProps['columns']>[number];
 type ColumnStyle = Exclude<TableColumn['style'], undefined>;
@@ -560,7 +562,8 @@ export const getTaskColumns = (t: ComposerTranslation) => {
       field: 'status',
       sortable: true,
       align: 'center' as const,
-      format: (val: string | null) => (val ? t(`tasks.form.status.${val}`) : val),
+      // Estado editable del usuario: nombre propio o traducción del estado por defecto.
+      format: (val: string | null, row: TaskSummaryDto) => (val ? taskStatusLabel(t, row) : val),
     },
     {
       name: 'priority',

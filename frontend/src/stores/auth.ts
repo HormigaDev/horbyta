@@ -6,6 +6,7 @@ import { useDataTableStore } from 'src/stores/datatable';
 import { apiFetch } from 'src/boot/fetch';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { useUiStateStore } from 'src/stores/uiState';
+import { useTaskStatusesStore } from 'src/stores/taskStatuses';
 
 export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = ref(false);
@@ -30,6 +31,8 @@ export const useAuthStore = defineStore('auth', () => {
     useThemeStore().bindAccount(null);
     useDataTableStore().reset();
     uiStateStore.reset();
+    // Los estados son de cada cuenta.
+    useTaskStatusesStore().reset();
   }
 
   async function checkAuth() {

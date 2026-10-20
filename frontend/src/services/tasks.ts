@@ -3,7 +3,6 @@ import type { PaginatedResponse, QueryPayload } from 'src/types';
 import type {
   CreateTaskDto,
   TaskDetailDto,
-  TaskStatus,
   TaskSummaryDto,
   TasksViewResponse,
   UpdateTaskDto,
@@ -62,16 +61,11 @@ export const TasksService = {
       body: buildTaskBody(data, files),
     }),
 
-  changeStatus: (id: string, status: TaskStatus): Promise<void> =>
-    apiFetch(`/tasks/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    }),
-
-  updateTaskStatus: (taskId: string, statusId: TaskStatus): Promise<void> =>
+  /** Cambia a un estado concreto del usuario. */
+  updateTaskStatus: (taskId: string, statusId: string): Promise<void> =>
     apiFetch(`/tasks/${taskId}`, {
       method: 'PATCH',
-      body: JSON.stringify({ status: statusId }),
+      body: JSON.stringify({ status_id: statusId }),
     }),
 
   delete: (id: string): Promise<{ message: string }> =>

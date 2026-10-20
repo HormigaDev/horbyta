@@ -659,7 +659,16 @@ freelancer reabra un cambio rechazado (`PATCH /change-requests/{id}/reopen`) par
 con nuevas condiciones. El rechazo, su motivo y explicación quedan en la versión anterior
 del historial y el evento se registra como `reopened`; el cliente decide de nuevo.
 
-Conservar los SQL y checksums de las migraciones aplicadas (actualmente 1–10);
+La migración **11**, `database/migrations/011_task_statuses.sql`, convierte los estados
+de tarea en una tabla editable por usuario (`task_statuses`, API `/task-statuses`). Cada
+usuario nuevo recibe Todo, In Progress, Review, Completed y Cancelled; puede renombrarlos,
+reordenarlos, cambiar su color y crear otros (p. ej. «Bloqueada»). Cada estado tiene una
+categoría del sistema (`todo`, `in_progress`, `review`, `done`, `cancelled`) que la base
+copia en `tasks.status`, de modo que las reglas de alcance, cierre y atrasos siguen
+funcionando. Debe quedar al menos un estado «todo» y uno «done», y no se puede borrar
+un estado con tareas ni cambiar su categoría. El rollback se niega si hay tareas canceladas.
+
+Conservar los SQL y checksums de las migraciones aplicadas (actualmente 1–11);
 añadir nuevas versiones para futuras ampliaciones. El ejecutor lleva los SQL embebidos: no requiere Rust ni archivos SQL
 externos en el servidor. La instalación real crea su administrador con `./create-user`.
 

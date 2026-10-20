@@ -31,7 +31,7 @@
             <div class="col-12 col-md-4">
               <q-select
                 dense
-                v-model="form.status"
+                v-model="form.status_id"
                 :label="t('tasks.form.statusLabel')"
                 outlined
                 emit-value
@@ -265,6 +265,7 @@ import { useTasksRules } from 'src/composables/rules/tasks.rules';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { TasksService } from 'src/services/tasks';
 import { ScopeService } from 'src/services/scope';
+import { useTaskStatusesStore, useTaskStatusLabel } from 'src/stores/taskStatuses';
 import type { ScopeProject } from 'src/types/scope';
 import { ProjectsService } from 'src/services/projects';
 import { MilestonesService } from 'src/services/milestones';
@@ -343,12 +344,19 @@ watch(stayOnFormAfterSave, () => {
   markdownRef.value?.resetToEdit();
 });
 
-const statusOptions: Array<{ label: string; value: TaskStatus }> = [
-  { label: t('tasks.form.status.todo'), value: 'todo' },
-  { label: t('tasks.form.status.in_progress'), value: 'in_progress' },
-  { label: t('tasks.form.status.review'), value: 'review' },
-  { label: t('tasks.form.status.done'), value: 'done' },
-];
+// Estados editables del usuario, en el orden del tablero.
+const statusesStore = useTaskStatusesStore();
+const statusLabel = useTaskStatusLabel();
+const statusOptions = computed(() =>
+  statusesStore.sorted.map((status) => ({ label: statusLabel(status), value: status.id })),
+);
+/** Acepta un id de estado o, por compatibilidad con borradores antiguos, una categoría. */
+const resolveStatusId = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  if (statusesStore.byId(value)) return value;
+  return statusesStore.firstOf(value as TaskStatus)?.id ?? null;
+};
+const initialStatusId = () => statusesStore.firstOf('todo')?.id ?? null;
 const priorityOptions = [
   { label: t('tasks.form.priority.1'), value: 1 },
   { label: t('tasks.form.priority.2'), value: 2 },
@@ -372,7 +380,7 @@ const createEmptyTaskForm = (): CreateTaskDto => ({
   milestone_id: null,
   title: '',
   description: null,
-  status: 'todo',
+  status_id: null,
   priority: 1,
   complexity: 1,
   block_parent: true,
@@ -389,7 +397,7 @@ const currentPreferenceFields = computed(() => ({
   project_id: form.project_id,
   parent_id: form.parent_id,
   milestone_id: form.milestone_id,
-  status: form.status,
+  status_id: form.status_id ?? null,
   priority: form.priority,
   complexity: form.complexity,
   block_parent: form.block_parent,
@@ -399,7 +407,8 @@ const currentPreferenceFields = computed(() => ({
 const applyPreference = async (fields: Record<string, unknown>) => {
   isHydratingTask.value = true;
   try {
-    if (fields.status !== undefined) form.status = fields.status as typeof form.status;
+    const preferredStatus = resolveStatusId(fields.status_id ?? fields.status);
+    if (preferredStatus) form.status_id = preferredStatus;
     if (fields.priority !== undefined) form.priority = fields.priority as number;
     if (fields.complexity !== undefined) form.complexity = fields.complexity as number;
     if (fields.block_parent !== undefined) form.block_parent = fields.block_parent as boolean;
@@ -444,7 +453,7 @@ const { clearDraft, restoreDraftIfAvailable } = useFormDraft(
       milestone_id: draft.milestone_id ?? null,
       title: draft.title ?? '',
       description: draft.description ?? null,
-      status: draft.status ?? 'todo',
+      status_id: resolveStatusId(draft.status_id ?? draft.status) ?? initialStatusId(),
       priority: draft.priority ?? 1,
       complexity: draft.complexity ?? 1,
       block_parent: draft.block_parent ?? true,
@@ -472,7 +481,7 @@ const isDirty = computed(() => {
     form.project_id === ((f.project_id as string | null) ?? null) &&
     form.milestone_id === ((f.milestone_id as string | null) ?? null) &&
     form.parent_id === ((f.parent_id as string | null) ?? null) &&
-    form.status === ((f.status as string) ?? 'todo') &&
+    (form.status_id ?? null) === (resolveStatusId(f.status_id ?? f.status) ?? initialStatusId()) &&
     form.priority === ((f.priority as number) ?? 1) &&
     form.complexity === ((f.complexity as number) ?? 1) &&
     form.block_parent === ((f.block_parent as boolean) ?? true) &&
@@ -499,7 +508,7 @@ const resetTaskForm = async () => {
 
   if (isNew.value) {
     isHydratingTask.value = true;
-    Object.assign(form, createEmptyTaskForm());
+    Object.assign(form, createEmptyTaskForm(), { status_id: initialStatusId() });
     dueDateDisplay.value = '';
     markdownFiles.value = [];
     setMilestoneOptions([]);
@@ -760,7 +769,7 @@ const loadTask = async () => {
   form.milestone_id = task.milestone_id;
   form.title = task.title;
   form.description = task.description;
-  form.status = task.status;
+  form.status_id = task.status_id;
   form.priority = task.priority;
   form.complexity = task.complexity;
   form.block_parent = task.block_parent;
@@ -833,7 +842,7 @@ const saveTask = async () => {
       milestone_id: form.milestone_id,
       title: form.title.trim(),
       description: form.description,
-      status: form.status,
+      status_id: form.status_id ?? initialStatusId(),
       priority: form.priority,
       complexity: form.complexity,
       block_parent: form.block_parent,
@@ -864,7 +873,7 @@ const saveTask = async () => {
         milestone_id: payload.milestone_id,
         title: payload.title,
         description: payload.description,
-        status: payload.status,
+        status_id: payload.status_id ?? null,
         priority: payload.priority,
         complexity: payload.complexity,
         block_parent: payload.block_parent,
@@ -889,6 +898,8 @@ const saveTask = async () => {
 };
 
 onMounted(async () => {
+  await statusesStore.load().catch(() => undefined);
+  if (!form.status_id) form.status_id = initialStatusId();
   try {
     await loadReferenceData();
 

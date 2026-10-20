@@ -14,19 +14,20 @@
         v-for="item in items"
         :key="item.path"
         clickable
-        class="col-12 col-md-4 column items-center justify-center"
+        class="col-12 col-md-3 column items-center justify-center"
         :to="`/${item.path}`"
       >
         <q-icon size="lg" :name="item.icon" />
-        <span class="text-subtitle2">{{ $t(`settings.app.${item.path}`) }}</span>
+        <span class="text-subtitle2">{{ $t(`settings.app.${item.label}`) }}</span>
       </q-item>
     </q-card-section>
   </q-card>
 </template>
 <script setup lang="ts">
 const items = [
-  { icon: 'sell', path: 'tags' },
-  { icon: 'extension', path: 'categories' },
-  { icon: 'list_alt', path: 'activities' },
+  { icon: 'sell', path: 'tags', label: 'tags' },
+  { icon: 'view_kanban', path: 'task-statuses', label: 'taskStatuses' },
+  { icon: 'extension', path: 'categories', label: 'categories' },
+  { icon: 'list_alt', path: 'activities', label: 'activities' },
 ];
 </script>

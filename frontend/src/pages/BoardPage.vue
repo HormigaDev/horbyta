@@ -25,11 +25,11 @@
       />
     </PageHeader>
     <div class="row items-center q-gutter-sm q-mb-md" role="status">
-      <span class="text-caption text-secondary">{{ t('ui.tableSummary', { count: total }) }}</span
-      ><q-chip v-if="activeFilterCount" dense
-        >{{ t('ui.appliedFilters') }} — {{ activeFilterCount }}</q-chip
-      ><span v-if="isMovingTask" class="text-caption">{{ t('ui.moving') }}</span
-      ><span class="sr-only" aria-live="polite">{{ moveAnnouncement }}</span>
+      <span class="text-caption text-secondary">
+        {{ t('ui.tableSummary', { count: total }) }}
+      </span>
+      <span v-if="isMovingTask" class="text-caption"> {{ t('ui.moving') }} </span>
+      <span class="sr-only" aria-live="polite">{{ moveAnnouncement }}</span>
     </div>
     <div v-show="filtersOpen" class="board-filters q-mb-md">
       <div class="row q-col-gutter-md">
@@ -129,6 +129,7 @@ import { useSelectByTerm, type SelectByTermOption } from 'src/composables/useSel
 import { MilestonesService } from 'src/services/milestones';
 import { ProjectsService } from 'src/services/projects';
 import { TasksService } from 'src/services/tasks';
+import { useTaskStatusesStore, useTaskStatusLabel } from 'src/stores/taskStatuses';
 import type { KanbanColumnDefinition } from 'src/types/kanban';
 import type { MilestoneSummaryDto } from 'src/types/milestone';
 import type { ProjectSummaryDto } from 'src/types/project';
@@ -136,12 +137,17 @@ import type { TaskSummaryDto } from 'src/types/task';
 
 const { t } = useI18n();
 
-const columns: KanbanColumnDefinition[] = [
-  { id: 'todo', title: t('board.columns.todo') },
-  { id: 'in_progress', title: t('board.columns.inProgress') },
-  { id: 'review', title: t('board.columns.review') },
-  { id: 'done', title: t('board.columns.done') },
-];
+const statusesStore = useTaskStatusesStore();
+const statusLabel = useTaskStatusLabel();
+// Una columna por estado del usuario, en su orden.
+const columns = computed<KanbanColumnDefinition[]>(() =>
+  statusesStore.sorted.map((status) => ({
+    id: status.id,
+    title: statusLabel(status),
+    color: status.color,
+    category: status.category,
+  })),
+);
 
 const {
   filters,
@@ -149,7 +155,7 @@ const {
   total,
   isLoading,
   isMovingTask,
-  activeFilterCount,
+  activeFilterCount: _,
   moveAnnouncement,
   loadTasks,
   moveTask,

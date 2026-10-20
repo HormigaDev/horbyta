@@ -47,10 +47,14 @@
                   :key="column.id"
                   clickable
                   v-close-popup
-                  :disable="column.id === task.status"
+                  :disable="column.id === task.status_id"
                   @click="$emit('move', task.id, column.id)"
+                  ><q-item-section avatar class="kanban-move-dot-section"
+                    ><span
+                      class="kanban-move-dot"
+                      :style="{ background: column.color }" /></q-item-section
                   ><q-item-section>{{ column.title }}</q-item-section
-                  ><q-item-section side v-if="column.id === task.status"
+                  ><q-item-section side v-if="column.id === task.status_id"
                     ><q-icon name="check" /></q-item-section></q-item></q-list
             ></q-menu>
           </q-btn>
@@ -78,7 +82,6 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 import { formatDateByPreferences } from 'src/utils/dateFormatting';
-import type { TaskStatus } from 'src/types/task';
 import type { KanbanColumnDefinition } from 'src/types/kanban';
 import type { KanbanTask } from 'src/types/kanban';
 import { normalizeId } from 'src/utils/normalizeId';
@@ -90,7 +93,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  move: [taskId: string, status: TaskStatus];
+  move: [taskId: string, statusId: string];
   'drag-start': [task: KanbanTask];
   'drag-end': [];
 }>();
@@ -110,6 +113,7 @@ const overdue = computed(
   () =>
     !!props.task.due_date &&
     props.task.status !== 'done' &&
+    props.task.status !== 'cancelled' &&
     new Date(props.task.due_date).getTime() < Date.now(),
 );
 const onDragStart = (event: DragEvent) => {
@@ -194,5 +198,18 @@ const onDragStart = (event: DragEvent) => {
 }
 .task-header .task-number {
   margin-right: auto;
+}
+</style>
+
+<style scoped>
+.kanban-move-dot-section {
+  min-width: 0;
+  padding-right: 10px;
+}
+.kanban-move-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
 }
 </style>
