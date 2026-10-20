@@ -1,35 +1,67 @@
 <template>
   <q-page class="q-pa-md board-page">
-    <PageHeader :title="t('board.title')" :subtitle="t('board.subtitle')" :eyebrow="t('ui.work')">
-      <q-btn
-        flat
-        icon="filter_alt"
-        :label="t('datatable.tooltip.filters')"
-        :aria-expanded="filtersOpen"
-        @click="filtersOpen = !filtersOpen"
-      />
-      <q-btn
-        flat
-        round
-        icon="refresh"
-        :loading="isLoading"
-        :aria-label="t('common.refresh')"
-        @click="loadTasks"
-      />
-      <q-btn
-        unelevated
-        color="primary"
-        icon="add"
-        :label="t('layout.drawer.newTask')"
-        to="/tasks/new"
-      />
-    </PageHeader>
-    <div class="row items-center q-gutter-sm q-mb-md" role="status">
-      <span class="text-caption text-secondary">
-        {{ t('ui.tableSummary', { count: total }) }}
-      </span>
-      <span v-if="isMovingTask" class="text-caption"> {{ t('ui.moving') }} </span>
-      <span class="sr-only" aria-live="polite">{{ moveAnnouncement }}</span>
+    <!-- Sin cabecera: título solo para lectores de pantalla, controles en una sola barra. -->
+    <h1 class="sr-only">{{ t('board.title') }}</h1>
+    <div class="board-toolbar q-mb-md">
+      <div class="row items-center q-gutter-sm" role="status">
+        <span class="text-caption text-secondary">
+          {{ t('ui.tableSummary', { count: total }) }}
+        </span>
+        <span v-if="isMovingTask" class="text-caption"> {{ t('ui.moving') }} </span>
+        <span class="sr-only" aria-live="polite">{{ moveAnnouncement }}</span>
+      </div>
+      <div class="board-actions">
+        <div class="board-sort">
+          <q-select
+            :model-value="sort.by"
+            :options="sortOptions"
+            :label="t('board.sort.label')"
+            emit-value
+            map-options
+            dense
+            outlined
+            options-dense
+            class="board-sort__field"
+            @update:model-value="(by: KanbanSortField) => setSort({ by, desc: sort.desc })"
+          />
+          <q-btn
+            outline
+            no-caps
+            class="board-sort__direction"
+            :icon="sort.desc ? 'arrow_downward' : 'arrow_upward'"
+            :label="$q.screen.gt.sm ? directionLabel : undefined"
+            :aria-label="directionLabel"
+            @click="setSort({ by: sort.by, desc: !sort.desc })"
+          >
+            <q-tooltip>{{ t('board.sort.toggle', { direction: oppositeLabel }) }}</q-tooltip>
+          </q-btn>
+        </div>
+        <div class="board-buttons">
+          <q-btn
+            flat
+            icon="filter_alt"
+            :label="$q.screen.gt.xs ? t('datatable.tooltip.filters') : undefined"
+            :aria-label="t('datatable.tooltip.filters')"
+            :aria-expanded="filtersOpen"
+            @click="filtersOpen = !filtersOpen"
+          />
+          <q-btn
+            flat
+            round
+            icon="refresh"
+            :loading="isLoading"
+            :aria-label="t('common.refresh')"
+            @click="loadTasks"
+          />
+          <q-btn
+            unelevated
+            color="primary"
+            icon="add"
+            :label="t('layout.drawer.newTask')"
+            to="/tasks/new"
+          />
+        </div>
+      </div>
     </div>
     <div v-show="filtersOpen" class="board-filters q-mb-md">
       <div class="row q-col-gutter-md">
@@ -108,7 +140,7 @@
     <KanbanBoard
       v-else
       :columns="columns"
-      :tasks="tasks"
+      :tasks="sortedTasks"
       :busy="isMovingTask"
       @task-drop="moveTask"
     />
@@ -117,10 +149,10 @@
 
 <script setup lang="ts">
 import ContentSkeleton from 'src/components/ContentSkeleton.vue';
-import PageHeader from 'src/components/PageHeader.vue';
 const filtersOpen = ref(false);
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useQuasar } from 'quasar';
 import KanbanBoard from 'src/components/KanbanBoard.vue';
 import SelectByTerm from 'src/components/SelectByTerm.vue';
 import DashboardDateFilter from 'src/components/dashboard/DashboardDateFilter.vue';
@@ -131,11 +163,22 @@ import { ProjectsService } from 'src/services/projects';
 import { TasksService } from 'src/services/tasks';
 import { useTaskStatusesStore, useTaskStatusLabel } from 'src/stores/taskStatuses';
 import type { KanbanColumnDefinition } from 'src/types/kanban';
+import { KANBAN_SORT_FIELDS, type KanbanSortField } from 'src/utils/kanbanSort';
 import type { MilestoneSummaryDto } from 'src/types/milestone';
 import type { ProjectSummaryDto } from 'src/types/project';
 import type { TaskSummaryDto } from 'src/types/task';
 
 const { t } = useI18n();
+
+const $q = useQuasar();
+const sortOptions = computed(() =>
+  KANBAN_SORT_FIELDS.map((value) => ({ value, label: t(`board.sort.by.${value}`) })),
+);
+// La dirección se nombra según el criterio: «vence antes primero», «más recientes primero»…
+const directionText = (desc: boolean) =>
+  t(`board.sort.direction.${sort.by}.${desc ? 'desc' : 'asc'}`);
+const directionLabel = computed(() => directionText(sort.desc));
+const oppositeLabel = computed(() => directionText(!sort.desc));
 
 const statusesStore = useTaskStatusesStore();
 const statusLabel = useTaskStatusLabel();
@@ -151,7 +194,9 @@ const columns = computed<KanbanColumnDefinition[]>(() =>
 
 const {
   filters,
-  tasks,
+  sortedTasks,
+  sort,
+  setSort,
   total,
   isLoading,
   isMovingTask,
@@ -417,5 +462,54 @@ watch(parentTaskOptions, () => {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 12px;
+}
+
+.board-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.board-actions,
+.board-sort,
+.board-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.board-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.board-sort__field {
+  width: 220px;
+}
+
+.board-sort__direction {
+  height: 40px;
+  border-radius: 8px;
+  color: var(--text-color);
+}
+
+@media (max-width: 599px) {
+  .board-actions,
+  .board-sort {
+    width: 100%;
+  }
+
+  .board-buttons {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .board-sort__field {
+    flex: 1;
+    width: auto;
+  }
 }
 </style>

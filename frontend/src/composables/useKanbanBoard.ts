@@ -8,6 +8,12 @@ import { useUiStateStore } from 'src/stores/uiState';
 import type { Filter, QueryPayload } from 'src/types/query';
 import type { KanbanTask } from 'src/types/kanban';
 import { taskStatusLabel, useTaskStatusesStore } from 'src/stores/taskStatuses';
+import {
+  defaultKanbanSort,
+  isKanbanSort,
+  sortKanbanTasks,
+  type KanbanSort,
+} from 'src/utils/kanbanSort';
 
 export interface KanbanBoardFilters {
   projectId: string | null;
@@ -20,6 +26,7 @@ export interface KanbanBoardFilters {
 const BOARD_TASK_LIMIT = 100;
 const BOARD_SCOPE = 'board' as const;
 const BOARD_FILTERS_KEY = 'filters';
+const BOARD_SORT_KEY = 'sort';
 
 const toRfc3339Boundary = (date: string, boundary: 'start' | 'end') => {
   const time = boundary === 'start' ? '00:00:00.000Z' : '23:59:59.999Z';
@@ -68,6 +75,9 @@ export function useKanbanBoard() {
     () => Object.values(appliedFilters.value).filter(Boolean).length,
   );
   const hasLoadedSavedFilters = ref(false);
+  // El orden se aplica al instante (no necesita «Aplicar») y se guarda con las preferencias del tablero.
+  const sort = reactive<KanbanSort>(defaultKanbanSort());
+  const sortedTasks = computed(() => sortKanbanTasks(tasks.value, sort));
 
   const applyFilters = (next: KanbanBoardFilters) => {
     filters.projectId = next.projectId;
@@ -90,6 +100,8 @@ export function useKanbanBoard() {
       if (saved && isKanbanBoardFilters(saved)) {
         applyFilters(saved);
       }
+      const savedSort = uiState.getValue<KanbanSort | null>(BOARD_SCOPE, BOARD_SORT_KEY, null);
+      if (isKanbanSort(savedSort)) Object.assign(sort, savedSort);
     } catch (error) {
       console.error('Error loading remote board filters:', error);
     }
@@ -250,6 +262,15 @@ export function useKanbanBoard() {
     }
   };
 
+  const setSort = async (next: KanbanSort) => {
+    Object.assign(sort, next);
+    try {
+      await uiState.setValue<KanbanSort>(BOARD_SCOPE, BOARD_SORT_KEY, { ...sort });
+    } catch {
+      notify(t('ui.preferenceError'), 'warning');
+    }
+  };
+
   const resetFilters = () => {
     filters.projectId = null;
     filters.milestoneId = null;
@@ -261,6 +282,9 @@ export function useKanbanBoard() {
   return {
     filters,
     tasks,
+    sortedTasks,
+    sort,
+    setSort,
     total,
     isLoading,
     isMovingTask,

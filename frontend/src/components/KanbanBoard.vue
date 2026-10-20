@@ -2,7 +2,8 @@
   <div>
     <q-select
       v-if="$q.screen.lt.sm"
-      v-model="mobileStatus"
+      :model-value="displayedColumns[0]?.id ?? null"
+      @update:model-value="(id: string) => (mobileStatus = id)"
       :options="
         columns.map((c) => ({
           label: `${c.title} (${tasksByStatus[c.id]?.length ?? 0})`,
