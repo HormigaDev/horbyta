@@ -1,5 +1,0 @@
-[env]
-RAYON_NUM_THREADS = { value = "1", force = true }
-TOKIO_WORKER_THREADS = { value = "1", force = true }
-
-RUST_TEST_THREADS = { value = "1", force = true }
