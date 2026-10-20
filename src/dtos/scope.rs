@@ -67,7 +67,9 @@ pub struct ScopeDecisionDto {
 #[serde(deny_unknown_fields)]
 pub struct ClassifyTaskDto {
     pub change_request_id: Option<Uuid>,
-    #[validate(length(min = 1, max = 2000))]
+    /// Opcional: si falta, se registra un texto estándar según el origen.
+    #[serde(default)]
+    #[validate(length(max = 2000))]
     pub reason: String,
 }
 #[derive(Debug, Deserialize, Validate)]
@@ -98,7 +100,9 @@ pub struct ScopeFeedbackDto {
 #[derive(Debug, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct ScopePreparationDto {
-    #[validate(length(min = 1, max = 2000))]
+    /// Opcional: si falta, se registra un texto estándar.
+    #[serde(default)]
+    #[validate(length(max = 2000))]
     pub reason: String,
 }
 

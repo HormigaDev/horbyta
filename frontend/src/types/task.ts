@@ -54,6 +54,8 @@ export interface CreateTaskDto {
   block_parent: boolean;
   due_date: string | null;
   tag_ids: string[];
+  /** Origen en el alcance: null = incluida en el acuerdo; id = extra de esa solicitud. */
+  scope_origin?: { change_request_id: string | null };
 }
 
 export interface UpdateTaskDto {

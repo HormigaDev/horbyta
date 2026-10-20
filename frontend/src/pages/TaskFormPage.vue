@@ -73,6 +73,19 @@
               />
             </div>
 
+            <!-- Origen en el alcance: se decide al crear, sin paso aparte. Las subtareas lo heredan. -->
+            <div v-if="showScopeOrigin" class="col-12">
+              <q-select
+                v-model="scopeOrigin"
+                :label="t('taskOrigin.label')"
+                :options="scopeOriginOptions"
+                emit-value
+                map-options
+                :hint="scopeOriginHint"
+                :disable="isSubmitting"
+              />
+            </div>
+
             <div class="col-12 form-section-title q-mt-md">{{ t('ui.planning') }}</div>
             <div class="col-12 col-md-4">
               <q-select
@@ -251,6 +264,8 @@ import { useUnsavedChanges } from 'src/composables/useUnsavedChanges';
 import { useTasksRules } from 'src/composables/rules/tasks.rules';
 import { useSelectByTerm } from 'src/composables/useSelectByTerm';
 import { TasksService } from 'src/services/tasks';
+import { ScopeService } from 'src/services/scope';
+import type { ScopeProject } from 'src/types/scope';
 import { ProjectsService } from 'src/services/projects';
 import { MilestonesService } from 'src/services/milestones';
 import { TagsService } from 'src/services/tags';
@@ -278,6 +293,43 @@ const { notify, notifyError, showLoading, hideLoading } = useUI();
 const { titleRuleState, validateTitle } = useTasksRules();
 
 const isNew = computed(() => route.name === 'task-create');
+// Proyecto con acuerdo aceptado: la tarea nueva declara su origen en el propio formulario.
+const scopeProject = ref<ScopeProject | null>(null);
+const scopeOrigin = ref<string>('base');
+let scopeGeneration = 0;
+async function loadScopeProject(projectId: string | null) {
+  const current = ++scopeGeneration;
+  scopeProject.value = null;
+  scopeOrigin.value = 'base';
+  if (!projectId || !isNew.value) return;
+  try {
+    const project = await ScopeService.project(projectId);
+    if (current === scopeGeneration && project.active) scopeProject.value = project;
+  } catch {
+    /* Sin acuerdo legible: la tarea se clasifica después desde su detalle. */
+  }
+}
+const showScopeOrigin = computed(() => isNew.value && !!scopeProject.value && !form.parent_id);
+const scopeOriginOptions = computed(() => [
+  {
+    value: 'base',
+    label: t('taskOrigin.base', { version: scopeProject.value?.accepted_revision ?? '' }),
+  },
+  ...(scopeProject.value?.changes ?? [])
+    .filter((c) => !c.legacy && ['submitted', 'assessed', 'approved'].includes(c.status))
+    .map((c) => ({
+      value: c.id,
+      label: t('taskOrigin.change', {
+        title: c.title,
+        status: t(`changeRequests.status.${c.status}`),
+      }),
+    })),
+]);
+const scopeOriginHint = computed(() => {
+  if (scopeOrigin.value === 'base') return t('taskOrigin.baseHint');
+  const change = scopeProject.value?.changes.find((c) => c.id === scopeOrigin.value);
+  return t(change?.status === 'approved' ? 'taskOrigin.approvedHint' : 'taskOrigin.blockedHint');
+});
 const taskId = computed(() => String(route.params.id || ''));
 const isSubmitting = ref(false);
 const isHydratingTask = ref(false);
@@ -726,6 +778,12 @@ const loadTask = async () => {
 
 watch(
   () => form.project_id,
+  (projectId) => void loadScopeProject(projectId),
+  { immediate: true },
+);
+
+watch(
+  () => form.project_id,
   (newProjectId) => {
     if (isHydratingTask.value) return;
 
@@ -781,6 +839,13 @@ const saveTask = async () => {
       block_parent: form.block_parent,
       due_date: toIsoDateFromDisplay(dueDateDisplay.value),
       tag_ids: [...new Set(form.tag_ids)],
+      ...(showScopeOrigin.value
+        ? {
+            scope_origin: {
+              change_request_id: scopeOrigin.value === 'base' ? null : scopeOrigin.value,
+            },
+          }
+        : {}),
     };
 
     if (isNew.value) {

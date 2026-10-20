@@ -255,6 +255,26 @@ export const messages = {
   'scope.overview.review': 'Revisar propuesta',
   'scope.overview.prepare': 'Preparar alcance',
   'scope.overview.allMilestones': 'Ver todos los hitos',
+  'taskOrigin.label': 'Origen en el alcance',
+  'taskOrigin.base': 'Dentro del alcance aceptado (revisión {version})',
+  'taskOrigin.baseHint': 'Trabajo acordado: la tarea queda habilitada.',
+  'taskOrigin.change': 'Extra: {title} ({status})',
+  'taskOrigin.approvedHint':
+    'Extra aprobado por el cliente: la tarea queda habilitada; su tiempo no se factura aparte.',
+  'taskOrigin.blockedHint':
+    'La tarea quedará bloqueada hasta que el cliente apruebe esta solicitud.',
+  'taskOrigin.noAgreement': 'el proyecto aún no tiene un alcance aceptado.',
+  'taskOrigin.extraOf': 'extra de la solicitud «{title}»',
+  'taskOrigin.blockedUntilApproval':
+    'Bloqueada: no se puede iniciar ni registrar tiempo hasta que el cliente apruebe la solicitud.',
+  'taskOrigin.noteOptional': 'Nota (opcional)',
+  'taskOrigin.pendingAgreement':
+    'forma parte de la propuesta; podrás ejecutarla cuando el cliente acepte el alcance.',
+  'taskOrigin.preparation': 'preparación no facturable, previa al acuerdo.',
+  'taskOrigin.workAsPreparation': 'Trabajar en ella ya como preparación no facturable',
+  'taskOrigin.unclassified': 'creada antes de tener acuerdo; aún no está vinculada al alcance.',
+  'taskOrigin.includeInScope': 'Incluir en el alcance aceptado',
+  'taskOrigin.markAsExtra': 'Es un extra de una solicitud',
   'scope.offers.label': 'Ofertas',
   'scope.offers.offer': 'Oferta {number}: {status}',
   'scope.offers.request': 'Solicitud del cliente',

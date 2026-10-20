@@ -411,9 +411,13 @@ impl ScopeService {
         id: Uuid,
         dto: ClassifyTaskDto,
     ) -> Result<JsonValue, AppError> {
-        if dto.reason.trim().is_empty() {
-            return Err(AppError::BadRequest("Explique la relación con el alcance.".into()));
+        // La justificación es opcional: el origen ya explica la relación en el caso normal.
+        let reason = match dto.reason.trim() {
+            "" if dto.change_request_id.is_some() => "Trabajo adicional de la solicitud",
+            "" => "Incluida en el alcance aceptado",
+            text => text,
         }
+        .to_owned();
         let r = db
             .execute(Statement::from_sql_and_values(
                 DbBackend::Postgres,
@@ -426,7 +430,7 @@ impl ScopeService {
                     id.into(),
                     owner.into(),
                     dto.change_request_id.into(),
-                    dto.reason.trim().into(),
+                    reason.into(),
                     actor.into(),
                 ],
             ))
@@ -492,14 +496,14 @@ impl ScopeService {
         id: Uuid,
         reason: &str,
     ) -> Result<JsonValue, AppError> {
-        if reason.trim().is_empty() {
-            return Err(AppError::BadRequest(
-                "Justifique la preparación sin ejecución de entregables.".into(),
-            ));
-        }
+        // Sin justificación obligatoria: marcarla ya declara que es preparación no facturable.
+        let reason = match reason.trim() {
+            "" => "Preparación de la propuesta (no facturable)",
+            text => text,
+        };
         let r=db.execute(Statement::from_sql_and_values(DbBackend::Postgres,
           "UPDATE tasks SET scope_preparation_reason=$3 WHERE id=$1 AND user_id=$2 AND scope_preparation_reason IS NULL",
-          vec![id.into(),owner.into(),reason.trim().into()])).await?;
+          vec![id.into(),owner.into(),reason.into()])).await?;
         if r.rows_affected() != 1 {
             return Err(AppError::Conflict(
                 "La tarea ya fue clasificada o no está disponible.".into(),
@@ -521,6 +525,17 @@ impl ScopeService {
             Self::task(db, owner, id).await?;
         }
         Self::task(db, owner, id).await
+    }
+    /// Indica si el proyecto tiene un acuerdo de alcance aceptado (vigente).
+    pub async fn has_active_agreement(db: &impl ConnectionTrait, project: Uuid) -> Result<bool, AppError> {
+        Ok(db
+            .query_one(Statement::from_sql_and_values(
+                DbBackend::Postgres,
+                "SELECT 1 AS ok FROM scope_projects WHERE project_id=$1 AND accepted_revision IS NOT NULL",
+                [project.into()],
+            ))
+            .await?
+            .is_some())
     }
     /// Avisos del cliente: primero los pendientes y después el historial resuelto reciente.
     pub async fn notices(db: &impl ConnectionTrait, owner: Uuid, client: Uuid) -> Result<JsonValue, AppError> {

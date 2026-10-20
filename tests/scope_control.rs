@@ -215,6 +215,23 @@ async fn run(db: &DatabaseConnection, schema: &str) {
     .await
     .unwrap();
     tx.commit().await.unwrap();
+    // Dentro del alcance, sin justificación: se registra el texto estándar y queda habilitada.
+    let in_scope = Uuid::now_v7();
+    exec(db,&format!("INSERT INTO tasks(id,user_id,project_id,title) VALUES('{in_scope}','{owner}','{project}','Trabajo acordado')")).await;
+    let tx = db.begin().await.unwrap();
+    let classified = ScopeService::classify(
+        &tx,
+        owner,
+        owner,
+        in_scope,
+        ClassifyTaskDto { change_request_id: None, reason: "   ".into() },
+    )
+    .await
+    .unwrap();
+    tx.commit().await.unwrap();
+    assert_eq!(classified["link"]["reason"], "Incluida en el alcance aceptado");
+    assert_eq!(classified["allowed"], true);
+    exec(db, &format!("UPDATE tasks SET status='in_progress' WHERE id='{in_scope}'")).await;
     fails(db, &format!("UPDATE tasks SET status='in_progress' WHERE id='{extra}'")).await;
     fails(db, &format!("UPDATE tasks SET project_id=NULL WHERE id='{extra}'")).await;
     fails(db, &format!("DELETE FROM scope_task_links WHERE task_id='{extra}'")).await;

@@ -12,12 +12,13 @@ use uuid::Uuid;
 use crate::{
     dtos::{
         query::QueryPayload,
+        scope::ClassifyTaskDto,
         task::{CreateTaskDto, UpdateTaskDto, UpdateTaskStatusDto, task_filter_schema},
         user::UserDto,
     },
     error::AppError,
     middlewares::validator::{ValidatedJson, ValidatedSearchQuery},
-    services::{attachments::AttachmentService, tasks::TaskService},
+    services::{attachments::AttachmentService, scope::ScopeService, tasks::TaskService},
     state::AppState,
 };
 
@@ -104,8 +105,29 @@ pub(crate) async fn create_task(
         "multipart request must include a payload field with task json",
     )
     .await?;
+    let mut payload = payload;
+    let origin = payload.scope_origin.take();
     let tx = state.db.begin().await.map_err(AppError::Database)?;
     let task = TaskService::create_with_markdown_files(&tx, state.storage.as_ref(), user.id, payload, files).await?;
+
+    // Con acuerdo vigente, toda tarea nueva declara su origen en la misma transacción:
+    // dentro del alcance por defecto, o el extra elegido. Las subtareas lo heredan.
+    let classified = async {
+        let Some(project) = task.value.project_id.filter(|_| task.value.parent_id.is_none()) else {
+            return Ok(());
+        };
+        if !ScopeService::has_active_agreement(&tx, project).await? {
+            return Ok(());
+        }
+        let change_request_id = origin.and_then(|o| o.change_request_id);
+        let dto = ClassifyTaskDto { change_request_id, reason: String::new() };
+        ScopeService::classify(&tx, user.id, user.id, task.value.id, dto).await.map(|_| ())
+    }
+    .await;
+    if let Err(error) = classified {
+        AttachmentService::cleanup_storage_objects(state.storage.as_ref(), &task.storage_keys).await;
+        return Err(error);
+    }
 
     if let Err(error) = tx.commit().await {
         AttachmentService::cleanup_storage_objects(state.storage.as_ref(), &task.storage_keys).await;

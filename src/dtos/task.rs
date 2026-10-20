@@ -140,6 +140,17 @@ pub struct CreateTaskDto {
 
     #[serde(default)]
     pub tag_ids: Vec<Uuid>,
+
+    /// Origen en el alcance del proyecto, decidido al crear la tarea. Solo aplica a
+    /// proyectos con acuerdo aceptado y a tareas raíz (las subtareas heredan el origen).
+    #[serde(default)]
+    pub scope_origin: Option<TaskScopeOriginDto>,
+}
+
+/// `change_request_id` nulo: incluida en el alcance aceptado; con valor: extra de esa solicitud.
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+pub struct TaskScopeOriginDto {
+    pub change_request_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Validate, ToSchema)]
