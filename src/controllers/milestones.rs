@@ -8,6 +8,7 @@ use sea_orm::TransactionTrait;
 use serde_json::json;
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::{
         client::ClientAuthDto,
@@ -109,7 +110,7 @@ pub(crate) async fn create_milestone(
     let (payload, files) = crate::utils::multipart::parse_payload_request::<CreateMilestoneDto>(
         &state,
         request,
-        "multipart request must include a payload field with milestone json",
+        codes::MILESTONE_PAYLOAD_REQUIRED,
     )
     .await?;
     let tx = state.db.begin().await.map_err(AppError::Database)?;
@@ -146,7 +147,7 @@ pub(crate) async fn update_milestone(
     let (payload, files) = crate::utils::multipart::parse_payload_request::<UpdateMilestoneDto>(
         &state,
         request,
-        "multipart request must include a payload field with milestone json",
+        codes::MILESTONE_PAYLOAD_REQUIRED,
     )
     .await?;
     let requested_status = payload.status.clone();

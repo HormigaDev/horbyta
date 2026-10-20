@@ -1,10 +1,11 @@
 import { useQuasar } from 'quasar';
-import { type ApiHttpError, isApiHttpError } from 'src/boot/fetch';
+import { isApiHttpError } from 'src/boot/fetch';
 import { useI18n } from 'vue-i18n';
 import { useNotificationsStore } from '../stores/notifications';
-import BadRequestDialog from '../components/BadRequestDialog.vue';
+import ApiErrorDialog from '../components/ApiErrorDialog.vue';
 import ErrorDetailsDialog from '../components/ErrorDetailsDialog.vue';
 import type { NotificationType } from '../types/ui';
+import { apiErrorKind, translateApiError, type ApiErrorTranslator } from '../utils/apiErrors';
 
 interface ConfirmActionOptions {
   title: string;
@@ -21,69 +22,26 @@ const toPayloadRecord = (value: unknown): Record<string, unknown> | null => {
   return null;
 };
 
-const splitCompositeMessage = (message: string): string[] => {
-  return message
-    .split(/\r?\n|;|\|/)
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
+const STRUCTURED_ERROR_STATUSES = new Set<number>([400, 403, 404, 409, 422, 423]);
+
+/** Código y datos del error, venga como ApiHttpError o ya serializado (notificaciones guardadas). */
+const errorCodeOf = (payload: unknown): { code: string | null; params: string[] } => {
+  if (isApiHttpError(payload)) return { code: payload.code, params: payload.params };
+  const record = toPayloadRecord(payload);
+  const code = typeof record?.code === 'string' ? record.code : null;
+  const params = Array.isArray(record?.params) ? record.params.map((value) => String(value)) : [];
+  return { code, params };
 };
-
-const collectMessagesFromUnknown = (value: unknown): string[] => {
-  if (typeof value === 'string') {
-    return splitCompositeMessage(value);
-  }
-
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => collectMessagesFromUnknown(item));
-  }
-
-  if (value && typeof value === 'object') {
-    return Object.values(value as Record<string, unknown>).flatMap((item) =>
-      collectMessagesFromUnknown(item),
-    );
-  }
-
-  return [];
-};
-
-const uniqueMessages = (messages: string[]): string[] => {
-  const seen = new Set<string>();
-  const result: string[] = [];
-
-  for (const message of messages) {
-    const normalized = message.trim().toLowerCase();
-    if (!normalized || seen.has(normalized)) {
-      continue;
-    }
-
-    seen.add(normalized);
-    result.push(message.trim());
-  }
-
-  return result;
-};
-
-interface BadRequestExtraction {
-  messages: string[];
-  hasUnmappedMessages: boolean;
-}
-
-const STRUCTURED_ERROR_STATUSES = new Set<number>([400, 403, 404, 409, 422]);
 
 export function useUI() {
   const $q = useQuasar();
-  const { t } = useI18n();
+  const i18n = useI18n();
+  const { t } = i18n;
   const notificationsStore = useNotificationsStore();
-
-  const translateBackendMessage = (message: string): string | null => {
-    const translationKey = `backendErrors.${message}`;
-
-    const translated = t(translationKey);
-    if (translated.startsWith('backendErrors')) {
-      return null;
-    }
-
-    return translated;
+  const translator: ApiErrorTranslator = {
+    t: (key) => t(key),
+    has: (key) =>
+      Object.prototype.hasOwnProperty.call(i18n.getLocaleMessage(i18n.locale.value), key),
   };
 
   const buildTechnicalPayload = (payload: unknown): unknown => {
@@ -102,100 +60,31 @@ export function useUI() {
     return payload;
   };
 
-  const resolveBackendError = (payload: unknown): string | null => {
-    if (isApiHttpError(payload)) {
-      if (payload.backendError && payload.backendError.trim().length > 0) {
-        return payload.backendError.trim();
-      }
-      if (payload.message.trim().length > 0) {
-        return payload.message.trim();
-      }
-      return null;
-    }
-
-    const payloadRecord = toPayloadRecord(payload);
-    if (payloadRecord) {
-      const maybeError = payloadRecord.error;
-      if (typeof maybeError === 'string' && maybeError.trim().length > 0) {
-        return maybeError.trim();
-      }
-
-      const maybeMessage = payloadRecord.message;
-      if (typeof maybeMessage === 'string' && maybeMessage.trim().length > 0) {
-        return maybeMessage.trim();
-      }
-    }
-
-    if (payload instanceof Error && payload.message.trim().length > 0) {
-      return payload.message.trim();
-    }
-
-    return null;
-  };
-
+  /**
+   * Mensaje para el usuario: la traducción del código del backend o, si no hay (error de red,
+   * error interno), el mensaje de contexto que pasa quien llama.
+   */
   const resolveErrorMessage = (fallbackMessage: string, payload?: unknown): string => {
-    if (payload === undefined) {
-      return fallbackMessage;
-    }
-
-    const backendError = resolveBackendError(payload);
-    if (!backendError) {
-      return fallbackMessage;
-    }
-
-    const translated = translateBackendMessage(backendError);
-    if (translated) {
-      return translated;
-    }
-
-    return fallbackMessage;
+    if (payload === undefined) return fallbackMessage;
+    const { code, params } = errorCodeOf(payload);
+    if (code === 'INTERNAL_ERROR') return fallbackMessage;
+    return translateApiError(translator, code, params) ?? fallbackMessage;
   };
 
-  const extractBadRequestMessages = (error: ApiHttpError): BadRequestExtraction => {
-    const sourcePayload = toPayloadRecord(error.payload) ?? {};
-
-    const candidateMessages = [
-      error.backendError,
-      sourcePayload.error,
-      sourcePayload.errors,
-      sourcePayload.validation_errors,
-      sourcePayload.details,
-    ].flatMap((entry) => collectMessagesFromUnknown(entry));
-
-    const translated: string[] = [];
-    let hasUnmappedMessages = false;
-
-    for (const message of uniqueMessages(candidateMessages)) {
-      const translatedMessage = translateBackendMessage(message);
-      if (!translatedMessage) {
-        hasUnmappedMessages = true;
-        continue;
-      }
-
-      translated.push(translatedMessage);
-    }
-
-    const ordered = translated.sort((left, right) => left.localeCompare(right, 'es'));
-
-    if (ordered.length === 0) {
-      return {
-        messages: [t('error.badRequestDialog.defaultMessage')],
-        hasUnmappedMessages: true,
-      };
-    }
-
-    return {
-      messages: ordered,
-      hasUnmappedMessages,
-    };
-  };
-
-  const showBadRequestDialog = (summary: string, messages: string[], payload?: unknown) => {
+  const showApiErrorDialog = (
+    status: number,
+    message: string,
+    translated: boolean,
+    payload?: unknown,
+  ) => {
+    const kind = apiErrorKind(status);
     $q.dialog({
-      component: BadRequestDialog,
+      component: ApiErrorDialog,
       componentProps: {
-        summary,
-        messages,
+        kind,
+        message,
+        // Sin traducción específica se explica qué tipo de problema fue.
+        hint: translated ? null : t(`error.apiDialog.hint.${kind}`),
         payload,
       },
     });
@@ -250,10 +139,10 @@ export function useUI() {
 
     if (isApiHttpError(payload) && STRUCTURED_ERROR_STATUSES.has(payload.status)) {
       const technicalPayload = buildTechnicalPayload(payload);
-      const summaryMessage = resolveErrorMessage(message, payload);
-      const extraction = extractBadRequestMessages(payload);
+      const translated = translateApiError(translator, payload.code, payload.params);
+      const summaryMessage = translated ?? message;
 
-      showBadRequestDialog(summaryMessage, extraction.messages, technicalPayload);
+      showApiErrorDialog(payload.status, summaryMessage, translated !== null, technicalPayload);
       notificationsStore.addNotification({
         source: 'sync',
         message: summaryMessage,

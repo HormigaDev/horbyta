@@ -9,6 +9,7 @@ use sea_orm::TransactionTrait;
 use serde_json::json;
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::{
         query::QueryPayload,
@@ -99,12 +100,9 @@ pub(crate) async fn create_task(
     user: UserDto,
     request: Request,
 ) -> Result<impl IntoResponse, AppError> {
-    let (payload, files) = crate::utils::multipart::parse_payload_request::<CreateTaskDto>(
-        &state,
-        request,
-        "multipart request must include a payload field with task json",
-    )
-    .await?;
+    let (payload, files) =
+        crate::utils::multipart::parse_payload_request::<CreateTaskDto>(&state, request, codes::TASK_PAYLOAD_REQUIRED)
+            .await?;
     let mut payload = payload;
     let origin = payload.scope_origin.take();
     let tx = state.db.begin().await.map_err(AppError::Database)?;
@@ -120,8 +118,13 @@ pub(crate) async fn create_task(
             return Ok(());
         }
         let change_request_id = origin.and_then(|o| o.change_request_id);
-        let dto = ClassifyTaskDto { change_request_id, reason: String::new() };
-        ScopeService::classify(&tx, user.id, user.id, task.value.id, dto).await.map(|_| ())
+        let dto = ClassifyTaskDto {
+            change_request_id,
+            reason: String::new(),
+        };
+        ScopeService::classify(&tx, user.id, user.id, task.value.id, dto)
+            .await
+            .map(|_| ())
     }
     .await;
     if let Err(error) = classified {
@@ -156,12 +159,9 @@ pub(crate) async fn update_task(
     Path(id): Path<Uuid>,
     request: Request,
 ) -> Result<impl IntoResponse, AppError> {
-    let (payload, files) = crate::utils::multipart::parse_payload_request::<UpdateTaskDto>(
-        &state,
-        request,
-        "multipart request must include a payload field with task json",
-    )
-    .await?;
+    let (payload, files) =
+        crate::utils::multipart::parse_payload_request::<UpdateTaskDto>(&state, request, codes::TASK_PAYLOAD_REQUIRED)
+            .await?;
     let tx = state.db.begin().await.map_err(AppError::Database)?;
     let task =
         TaskService::update_with_markdown_files(&tx, state.storage.as_ref(), user.id, id, payload, files).await?;

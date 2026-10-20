@@ -1,6 +1,7 @@
 use sea_orm::{ConnectionTrait, DbBackend, Statement, Value};
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::task_status::{ReorderTaskStatusesDto, SaveTaskStatusDto, TaskStatusDto},
     error::AppError,
@@ -19,33 +20,48 @@ impl TaskStatusService {
         let full = match hex.len() {
             3 => hex.chars().flat_map(|c| [c, c]).collect::<String>(),
             6 => hex.to_owned(),
-            _ => return Err(AppError::BadRequest("invalid color".into())),
+            _ => return Err(AppError::BadRequest(codes::TASK_STATUS_COLOR_INVALID.into())),
         };
         if !full.chars().all(|c| c.is_ascii_hexdigit()) {
-            return Err(AppError::BadRequest("invalid color".into()));
+            return Err(AppError::BadRequest(codes::TASK_STATUS_COLOR_INVALID.into()));
         }
         Ok(format!("#{}", full.to_uppercase()))
     }
 
     async fn many(db: &impl ConnectionTrait, sql: String, values: Vec<Value>) -> Result<Vec<TaskStatusDto>, AppError> {
-        let rows = db.query_all(Statement::from_sql_and_values(DbBackend::Postgres, sql, values)).await?;
+        let rows = db
+            .query_all(Statement::from_sql_and_values(DbBackend::Postgres, sql, values))
+            .await?;
         rows.iter()
             .map(|row| <TaskStatusDto as sea_orm::FromQueryResult>::from_query_result(row, "").map_err(AppError::from))
             .collect()
     }
 
     pub async fn list(db: &impl ConnectionTrait, user_id: Uuid) -> Result<Vec<TaskStatusDto>, AppError> {
-        Self::many(db, format!("{SELECT} WHERE s.user_id = $1 ORDER BY s.position, s.created_at"), vec![user_id.into()]).await
+        Self::many(
+            db,
+            format!("{SELECT} WHERE s.user_id = $1 ORDER BY s.position, s.created_at"),
+            vec![user_id.into()],
+        )
+        .await
     }
 
     async fn one(db: &impl ConnectionTrait, user_id: Uuid, id: Uuid) -> Result<TaskStatusDto, AppError> {
-        Self::many(db, format!("{SELECT} WHERE s.user_id = $1 AND s.id = $2"), vec![user_id.into(), id.into()])
-            .await?
-            .pop()
-            .ok_or_else(|| AppError::NotFound("task status not found".into()))
+        Self::many(
+            db,
+            format!("{SELECT} WHERE s.user_id = $1 AND s.id = $2"),
+            vec![user_id.into(), id.into()],
+        )
+        .await?
+        .pop()
+        .ok_or_else(|| AppError::NotFound(codes::TASK_STATUS_NOT_FOUND.into()))
     }
 
-    pub async fn create(db: &impl ConnectionTrait, user_id: Uuid, dto: SaveTaskStatusDto) -> Result<TaskStatusDto, AppError> {
+    pub async fn create(
+        db: &impl ConnectionTrait,
+        user_id: Uuid,
+        dto: SaveTaskStatusDto,
+    ) -> Result<TaskStatusDto, AppError> {
         let row = db
             .query_one(Statement::from_sql_and_values(
                 DbBackend::Postgres,
@@ -84,7 +100,7 @@ impl TaskStatusService {
             ))
             .await?;
         if result.rows_affected() == 0 {
-            return Err(AppError::NotFound("task status not found".into()));
+            return Err(AppError::NotFound(codes::TASK_STATUS_NOT_FOUND.into()));
         }
         Self::one(db, user_id, id).await
     }
@@ -98,7 +114,7 @@ impl TaskStatusService {
             ))
             .await?;
         if result.rows_affected() == 0 {
-            return Err(AppError::NotFound("task status not found".into()));
+            return Err(AppError::NotFound(codes::TASK_STATUS_NOT_FOUND.into()));
         }
         Ok(())
     }
@@ -115,7 +131,7 @@ impl TaskStatusService {
         expected.sort();
         received.sort();
         if expected != received {
-            return Err(AppError::Conflict("La lista de estados cambió; vuelve a cargarla.".into()));
+            return Err(AppError::Conflict(codes::TASK_STATUS_ORDER_CHANGED.into()));
         }
         for (index, id) in dto.ids.iter().enumerate() {
             db.execute(Statement::from_sql_and_values(

@@ -4,6 +4,7 @@ use sea_orm::{
 };
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::{
         category::{CategoryDetailDto, CategorySearchField, CategorySummaryDto, CreateCategoryDto, UpdateCategoryDto},
@@ -121,7 +122,7 @@ impl CategoryService {
             .filter(categories::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("category not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::CATEGORY_NOT_FOUND.into()))?;
 
         Ok(category)
     }

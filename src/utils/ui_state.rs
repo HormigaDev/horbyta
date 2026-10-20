@@ -1,5 +1,6 @@
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{dtos::ui_state::UiStateEntryDto, error::AppError, services::ui_state::UiStateService, state::AppState};
 
 const SCOPE_MAX_LEN: usize = 40;
@@ -7,7 +8,7 @@ const KEY_MAX_LEN: usize = 120;
 
 pub fn ensure_valid_scope(scope: &str) -> Result<(), AppError> {
     if scope.is_empty() || scope.len() > SCOPE_MAX_LEN {
-        return Err(AppError::BadRequest("invalid ui state scope".to_string()));
+        return Err(AppError::BadRequest(codes::UI_STATE_SCOPE_INVALID.into()));
     }
 
     let is_valid = scope
@@ -15,7 +16,7 @@ pub fn ensure_valid_scope(scope: &str) -> Result<(), AppError> {
         .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_');
 
     if !is_valid {
-        return Err(AppError::BadRequest("invalid ui state scope".to_string()));
+        return Err(AppError::BadRequest(codes::UI_STATE_SCOPE_INVALID.into()));
     }
 
     Ok(())
@@ -23,7 +24,7 @@ pub fn ensure_valid_scope(scope: &str) -> Result<(), AppError> {
 
 pub fn ensure_valid_key(key: &str) -> Result<(), AppError> {
     if key.is_empty() || key.len() > KEY_MAX_LEN {
-        return Err(AppError::BadRequest("invalid ui state key".to_string()));
+        return Err(AppError::BadRequest(codes::UI_STATE_KEY_INVALID.into()));
     }
 
     let is_valid = key
@@ -31,7 +32,7 @@ pub fn ensure_valid_key(key: &str) -> Result<(), AppError> {
         .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.' || c == ':');
 
     if !is_valid {
-        return Err(AppError::BadRequest("invalid ui state key".to_string()));
+        return Err(AppError::BadRequest(codes::UI_STATE_KEY_INVALID.into()));
     }
 
     Ok(())

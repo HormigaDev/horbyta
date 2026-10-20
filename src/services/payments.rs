@@ -4,6 +4,7 @@ use sea_orm::{
 };
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::{
         invoice::{InvoiceStatus, UpdateInvoiceStatusDto},
@@ -116,7 +117,7 @@ impl PaymentService {
             .into_model::<PaymentDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("payment not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::PAYMENT_NOT_FOUND.into()))?;
 
         let invoice = if let Some(invoice_id) = row.invoice_id {
             Self::get_invoice_reference(db, invoice_id).await?
@@ -226,9 +227,7 @@ impl PaymentService {
         let parent = Self::find_by_id(db, user_id, dto.parent_payment_id).await?;
 
         if parent.transaction_type != "charge" {
-            return Err(AppError::BadRequest(
-                "only a charge-type payment can be refunded".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::PAYMENT_REFUND_REQUIRES_CHARGE.into()));
         }
 
         let existing_refunds_total: Decimal = Payments::find()
@@ -241,10 +240,9 @@ impl PaymentService {
 
         let remaining = parent.amount - existing_refunds_total;
         if dto.amount > remaining {
-            return Err(AppError::BadRequest(format!(
-                "refund amount ({}) exceeds the available balance ({})",
-                dto.amount, remaining
-            )));
+            return Err(AppError::BadRequest(
+                codes::PAYMENT_REFUND_EXCEEDS_BALANCE.with([dto.amount.to_string(), remaining.to_string()]),
+            ));
         }
 
         let refund_date = dto.refund_date.unwrap_or_else(|| chrono::Utc::now().date_naive());
@@ -280,9 +278,7 @@ impl PaymentService {
         let payment = Self::find_by_id(db, user_id, id).await?;
 
         if payment.provider != "manual" {
-            return Err(AppError::Conflict(
-                "only manually registered payments can be edited".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::PAYMENT_EDIT_MANUAL_ONLY.into()));
         }
 
         let mut active: payments::ActiveModel = payment.into();
@@ -298,9 +294,7 @@ impl PaymentService {
         let payment = Self::find_by_id(db, user_id, id).await?;
 
         if payment.provider != "manual" {
-            return Err(AppError::Conflict(
-                "only manually registered payments can be deleted".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::PAYMENT_DELETE_MANUAL_ONLY.into()));
         }
 
         payments::ActiveModel {
@@ -320,7 +314,7 @@ impl PaymentService {
             .filter(payments::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("payment not found".to_string()))
+            .ok_or_else(|| AppError::NotFound(codes::PAYMENT_NOT_FOUND.into()))
     }
 
     async fn ensure_project_ownership(
@@ -333,7 +327,7 @@ impl PaymentService {
             .filter(projects::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::BadRequest("invalid project or no permissions".to_string()))?;
+            .ok_or_else(|| AppError::BadRequest(codes::ATTACHMENT_PROJECT_FORBIDDEN.into()))?;
         Ok(())
     }
 
@@ -349,12 +343,10 @@ impl PaymentService {
             .filter(invoices::Column::ProjectId.eq(project_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::BadRequest("invalid invoice or does not belong to the project".to_string()))?;
+            .ok_or_else(|| AppError::BadRequest(codes::PAYMENT_INVOICE_INVALID.into()))?;
 
         if invoice.status != InvoiceStatus::Open.to_string() {
-            return Err(AppError::Conflict(
-                "payments can only be recorded for invoices in 'open' status".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::PAYMENT_INVOICE_NOT_OPEN.into()));
         }
 
         Ok(())

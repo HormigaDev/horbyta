@@ -5,6 +5,7 @@ use sea_orm::{
 use std::collections::HashSet;
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::{
         attachment::StorageBackedDbWrite,
@@ -50,7 +51,7 @@ impl TaskService {
                     [id.into(), user_id.into()],
                 ))
                 .await?
-                .ok_or_else(|| AppError::BadRequest("task status not found".to_string()))?;
+                .ok_or_else(|| AppError::BadRequest(codes::TASK_STATUS_NOT_FOUND.into()))?;
             return Ok((Some(id), row.try_get("", "category")?));
         }
         Ok((None, status.unwrap_or(TaskStatus::Todo).to_string()))
@@ -69,7 +70,11 @@ impl TaskService {
             ))
             .await?;
         Ok(match row {
-            Some(row) => (row.try_get("", "name")?, row.try_get("", "color")?, row.try_get("", "key")?),
+            Some(row) => (
+                row.try_get("", "name")?,
+                row.try_get("", "color")?,
+                row.try_get("", "key")?,
+            ),
             None => (None, None, None),
         })
     }
@@ -80,7 +85,7 @@ impl TaskService {
             .filter(tasks::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("task not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::TASK_NOT_FOUND.into()))?;
 
         Ok(task)
     }
@@ -201,7 +206,7 @@ impl TaskService {
                 .one(db)
                 .await?;
 
-            project.ok_or_else(|| AppError::BadRequest("invalid project or no permissions".to_string()))?;
+            project.ok_or_else(|| AppError::BadRequest(codes::ATTACHMENT_PROJECT_FORBIDDEN.into()))?;
         }
 
         Ok(())
@@ -218,12 +223,10 @@ impl TaskService {
                 .filter(projects::Column::UserId.eq(user_id))
                 .one(db)
                 .await?
-                .ok_or_else(|| AppError::BadRequest("invalid project or no permissions".to_string()))?;
+                .ok_or_else(|| AppError::BadRequest(codes::ATTACHMENT_PROJECT_FORBIDDEN.into()))?;
 
             if project.status == ProjectStatus::Closed.to_string() {
-                return Err(AppError::Conflict(
-                    "closed projects cannot accept new tasks".to_string(),
-                ));
+                return Err(AppError::Conflict(codes::PROJECT_CLOSED_NO_TASKS.into()));
             }
         }
 
@@ -244,15 +247,11 @@ impl TaskService {
                 .await?;
 
             let Some(parent) = parent else {
-                return Err(AppError::BadRequest(
-                    "invalid parent task or no permissions".to_string(),
-                ));
+                return Err(AppError::BadRequest(codes::TASK_PARENT_FORBIDDEN.into()));
             };
 
             if parent.project_id != project_id {
-                return Err(AppError::BadRequest(
-                    "parent task does not belong to the selected project".to_string(),
-                ));
+                return Err(AppError::BadRequest(codes::TASK_PARENT_NOT_IN_PROJECT.into()));
             }
         }
 
@@ -275,19 +274,17 @@ impl TaskService {
             match milestone_join {
                 Some((milestone, Some(project))) => {
                     if project.user_id != user_id {
-                        return Err(AppError::BadRequest("invalid milestone or no permissions".to_string()));
+                        return Err(AppError::BadRequest(codes::ATTACHMENT_MILESTONE_FORBIDDEN.into()));
                     }
 
                     if let Some(pid) = project_id {
                         if milestone.project_id != pid {
-                            return Err(AppError::BadRequest(
-                                "milestone does not belong to the selected project".to_string(),
-                            ));
+                            return Err(AppError::BadRequest(codes::TASK_MILESTONE_NOT_IN_PROJECT.into()));
                         }
                     }
                 }
                 _ => {
-                    return Err(AppError::BadRequest("invalid milestone".to_string()));
+                    return Err(AppError::BadRequest(codes::TASK_MILESTONE_INVALID.into()));
                 }
             }
         }
@@ -310,12 +307,10 @@ impl TaskService {
             match milestone_join {
                 Some((_milestone, Some(project))) if project.user_id == user_id => {
                     if project.status == ProjectStatus::Closed.to_string() {
-                        return Err(AppError::Conflict(
-                            "closed projects cannot accept new tasks".to_string(),
-                        ));
+                        return Err(AppError::Conflict(codes::PROJECT_CLOSED_NO_TASKS.into()));
                     }
                 }
-                _ => return Err(AppError::BadRequest("invalid milestone".to_string())),
+                _ => return Err(AppError::BadRequest(codes::TASK_MILESTONE_INVALID.into())),
             }
         }
 
@@ -340,7 +335,7 @@ impl TaskService {
             .await?;
 
         if found_count != deduped_ids.len() as u64 {
-            return Err(AppError::BadRequest("one or more tags are not valid".to_string()));
+            return Err(AppError::BadRequest(codes::TASK_TAGS_INVALID.into()));
         }
 
         Ok(deduped_ids)
@@ -467,7 +462,7 @@ impl TaskService {
         dto: UpdateTaskDto,
     ) -> Result<TaskModel, AppError> {
         if dto.parent_id == Some(id) {
-            return Err(AppError::BadRequest("a task cannot be its own parent".to_string()));
+            return Err(AppError::BadRequest(codes::TASK_SELF_PARENT.into()));
         }
 
         let task = Self::get_task_model(db, user_id, id).await?;
@@ -605,9 +600,7 @@ impl TaskService {
             .map_err(AppError::from)?;
 
         if blocking_count > 0 {
-            return Err(AppError::BadRequest(
-                "cannot finish task: it has blocking subtasks that are not done yet".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::TASK_BLOCKING_SUBTASKS.into()));
         }
 
         Ok(())
@@ -667,9 +660,18 @@ impl TaskService {
                 .column(tasks::Column::Title)
                 .column(tasks::Column::Status)
                 .column(tasks::Column::StatusId)
-                .column_as(Expr::cust("(SELECT s.name FROM task_statuses s WHERE s.id = tasks.status_id)"), "status_name")
-                .column_as(Expr::cust("(SELECT s.color FROM task_statuses s WHERE s.id = tasks.status_id)"), "status_color")
-                .column_as(Expr::cust("(SELECT s.key FROM task_statuses s WHERE s.id = tasks.status_id)"), "status_key")
+                .column_as(
+                    Expr::cust("(SELECT s.name FROM task_statuses s WHERE s.id = tasks.status_id)"),
+                    "status_name",
+                )
+                .column_as(
+                    Expr::cust("(SELECT s.color FROM task_statuses s WHERE s.id = tasks.status_id)"),
+                    "status_color",
+                )
+                .column_as(
+                    Expr::cust("(SELECT s.key FROM task_statuses s WHERE s.id = tasks.status_id)"),
+                    "status_key",
+                )
                 .column(tasks::Column::Priority)
                 .column(tasks::Column::Complexity)
                 .column(tasks::Column::DueDate)

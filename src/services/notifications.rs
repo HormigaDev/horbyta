@@ -3,6 +3,7 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, Query
 use serde_json::{Value, json};
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::{
         change_request::ClientChangeRequestDetailDto, invoice::InvoiceDetailDto, milestone::MilestoneStatus,
@@ -385,7 +386,7 @@ impl NotificationService {
             .one(db)
             .await
             .map_err(AppError::Database)?
-            .ok_or_else(|| AppError::NotFound("user not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::USER_NOT_FOUND.into()))?;
 
         let preferences = UserPreferences::from_json_value(user.preferences.as_ref());
         Ok(preferences.notifications.is_enabled(preference_key))

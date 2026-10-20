@@ -11,7 +11,7 @@
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
     "test": "echo \"No test specified\" && exit 0",
     "test:attachments": "node ../scripts/verify-attachment-preview.mjs",
-    "test:i18n": "node ../scripts/verify-scope-i18n.mjs",
+    "test:i18n": "node ../scripts/verify-scope-i18n.mjs && node ../scripts/verify-backend-errors.mjs",
     "dev": "quasar dev -m pwa",
     "build": "quasar build -m pwa",
     "postinstall": "quasar prepare"

@@ -1,3 +1,4 @@
+use crate::error_codes as codes;
 use crate::{dtos::scope::*, error::AppError};
 use sea_orm::{ConnectionTrait, DbBackend, Statement};
 use serde_json::{Value, json};
@@ -18,7 +19,7 @@ pub async fn authorize(
 ) -> Result<Value, AppError> {
     let row=db.query_one(Statement::from_sql_and_values(DbBackend::Postgres,
         "SELECT jsonb_build_object('id',p.id,'name',p.name,'client_id',p.client_id) AS data FROM projects p WHERE p.id=$1 AND p.user_id=$2 AND ($3::uuid IS NULL OR p.client_id=$3)",
-        [project.into(),owner.into(),client.into()])).await?.ok_or_else(||AppError::NotFound("Project not found.".into()))?;
+        [project.into(),owner.into(),client.into()])).await?.ok_or_else(||AppError::NotFound(codes::CONVERSATION_PROJECT_NOT_FOUND.into()))?;
     Ok(row.try_get("", "data")?)
 }
 pub async fn resources(
@@ -70,12 +71,12 @@ pub async fn window(
         .count()
         > 1
     {
-        return Err(AppError::BadRequest("Invalid conversation cursor.".into()));
+        return Err(AppError::BadRequest(codes::CONVERSATION_CURSOR_INVALID.into()));
     }
     let mut around = query.around;
     if let Some(notice) = query.notification {
         if client.is_some() {
-            return Err(AppError::BadRequest("Invalid conversation cursor.".into()));
+            return Err(AppError::BadRequest(codes::CONVERSATION_CURSOR_INVALID.into()));
         }
         let value=json_query(db,"SELECT coalesce((SELECT to_jsonb(coalesce((n.payload->>'message_id')::uuid,(SELECT CASE WHEN count(*)=1 THEN min(e.id::text)::uuid END FROM project_conversation_timeline e WHERE e.project_id=$3 AND e.kind='message' AND e.actor_kind='client' AND e.text=n.body AND (e.context->>'scope_revision'=n.payload->>'revision' OR e.context->>'change_request_id'=n.payload->>'change_request_id')))) FROM notifications n WHERE n.id=$1 AND n.user_id=$2 AND n.payload->>'project_id'=$3::text),'null') AS data",vec![notice.into(),owner.into(),project.into()]).await?;
         around = value.as_str().and_then(|s| Uuid::parse_str(s).ok());
@@ -90,7 +91,7 @@ pub async fn window(
             .await?
             .is_none()
         {
-            return Err(AppError::NotFound("Message not found.".into()));
+            return Err(AppError::NotFound(codes::CONVERSATION_MESSAGE_NOT_FOUND.into()));
         }
     }
     let order = if query.after.is_some() { "ASC" } else { "DESC" };
@@ -117,7 +118,7 @@ pub async fn send(
     authorize(db, owner, client, project).await?;
     let text = dto.text.trim();
     if text.is_empty() && dto.attachment_ids.is_empty() {
-        return Err(AppError::BadRequest("Empty message.".into()));
+        return Err(AppError::BadRequest(codes::CONVERSATION_MESSAGE_EMPTY.into()));
     }
     let mut context = json!({});
     let revision = match dto.scope_revision {
@@ -138,15 +139,19 @@ pub async fn send(
         if let Some(document) = dto.document_id {
             let row=db.query_one(Statement::from_sql_and_values(DbBackend::Postgres,"SELECT 1 FROM scope_revisions r WHERE r.project_id=$1 AND r.revision=$2 AND EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(r.document->'documents','[]')) d WHERE d->>'id'=$3::text)",[project.into(),revision.into(),document.into()])).await?;
             if row.is_none() {
-                return Err(AppError::BadRequest("Invalid document reference.".into()));
+                return Err(AppError::BadRequest(
+                    codes::CONVERSATION_DOCUMENT_REFERENCE_INVALID.into(),
+                ));
             }
             context["document_id"] = json!(document);
         }
     } else if dto.document_id.is_some() {
-        return Err(AppError::BadRequest("Invalid document reference.".into()));
+        return Err(AppError::BadRequest(
+            codes::CONVERSATION_DOCUMENT_REFERENCE_INVALID.into(),
+        ));
     }
     if let Some(change) = dto.change_request_id {
-        let row=db.query_one(Statement::from_sql_and_values(DbBackend::Postgres,"SELECT version,title FROM change_requests WHERE id=$1 AND project_id=$2 AND user_id=$3 AND status<>'draft' AND ($4::uuid IS NULL OR client_id=$4)",[change.into(),project.into(),owner.into(),client.into()])).await?.ok_or_else(||AppError::NotFound("Change request not found.".into()))?;
+        let row=db.query_one(Statement::from_sql_and_values(DbBackend::Postgres,"SELECT version,title FROM change_requests WHERE id=$1 AND project_id=$2 AND user_id=$3 AND status<>'draft' AND ($4::uuid IS NULL OR client_id=$4)",[change.into(),project.into(),owner.into(),client.into()])).await?.ok_or_else(||AppError::NotFound(codes::CONVERSATION_CHANGE_REQUEST_NOT_FOUND.into()))?;
         context["change_request_id"] = json!(change);
         context["change_version"] = json!(row.try_get::<i32>("", "version")?);
         context["change_title"] = json!(row.try_get::<String>("", "title")?);
@@ -167,14 +172,18 @@ pub async fn send(
                 "SELECT c.title AS label FROM change_requests c JOIN projects p ON p.id=c.project_id WHERE c.id=$1 AND p.user_id=$2 AND ($3::uuid IS NULL OR (p.client_id=$3 AND c.client_id=$3 AND c.status<>'draft')) AND c.status<>'draft' AND c.client_id=p.client_id AND (p.client_id=(SELECT client_id FROM projects WHERE id=$4) OR p.id=$4)"
             }
             "file" => FILE_REFERENCE_SQL,
-            _ => return Err(AppError::BadRequest("Invalid resource reference.".into())),
+            _ => {
+                return Err(AppError::BadRequest(
+                    codes::CONVERSATION_RESOURCE_REFERENCE_INVALID.into(),
+                ));
+            }
         };
         let mut values = vec![mention.id.into(), owner.into(), client.into()];
         values.push(project.into());
         let row = db
             .query_one(Statement::from_sql_and_values(DbBackend::Postgres, sql, values))
             .await?
-            .ok_or_else(|| AppError::NotFound("Resource not found.".into()))?;
+            .ok_or_else(|| AppError::NotFound(codes::CONVERSATION_RESOURCE_NOT_FOUND.into()))?;
         let label: String = row.try_get("", "label")?;
         match (mention.start, mention.end) {
             (Some(start), Some(end)) if start < end && end <= characters.len() => {
@@ -182,12 +191,12 @@ pub async fn send(
                 if selected != format!("{}{label}", if mention.kind == "file" { "#" } else { "@" })
                     || ranges.iter().any(|&(a, b)| start < b && end > a)
                 {
-                    return Err(AppError::BadRequest("Invalid mention position.".into()));
+                    return Err(AppError::BadRequest(codes::CONVERSATION_MENTION_INVALID.into()));
                 }
                 ranges.push((start, end));
             }
             (None, None) => {}
-            _ => return Err(AppError::BadRequest("Invalid mention position.".into())),
+            _ => return Err(AppError::BadRequest(codes::CONVERSATION_MENTION_INVALID.into())),
         }
         let mut reference =
             json!({"kind":mention.kind,"id":mention.id,"label":label,"start":mention.start,"end":mention.end});
@@ -203,13 +212,13 @@ pub async fn send(
     attachment_ids.sort_unstable();
     attachment_ids.dedup();
     if attachment_ids.len() > 10 {
-        return Err(AppError::BadRequest("At most 10 files per message.".into()));
+        return Err(AppError::BadRequest(codes::CONVERSATION_TOO_MANY_FILES.into()));
     }
     let kind = if client.is_some() { "client" } else { "professional" };
     let row=db.query_one(Statement::from_sql_and_values(DbBackend::Postgres,"INSERT INTO project_messages(project_id,actor_id,actor_kind,text,context,mentions) VALUES($1,$2,$3,$4,$5,$6) RETURNING id",vec![project.into(),actor.into(),kind.into(),text.into(),context.into(),json!(mentions).into()])).await?.ok_or(AppError::InternalError)?;
     let id: Uuid = row.try_get("", "id")?;
     for file in attachment_ids {
-        let row=db.query_one(Statement::from_sql_and_values(DbBackend::Postgres,"SELECT jsonb_build_object('original_name',original_name,'mime_type',mime_type,'size_bytes',size_bytes) AS data FROM attachments WHERE id=$1 AND user_id=$2 AND project_id=$3",[file.into(),owner.into(),project.into()])).await?.ok_or_else(||AppError::NotFound("Attachment not found.".into()))?;
+        let row=db.query_one(Statement::from_sql_and_values(DbBackend::Postgres,"SELECT jsonb_build_object('original_name',original_name,'mime_type',mime_type,'size_bytes',size_bytes) AS data FROM attachments WHERE id=$1 AND user_id=$2 AND project_id=$3",[file.into(),owner.into(),project.into()])).await?.ok_or_else(||AppError::NotFound(codes::CONVERSATION_ATTACHMENT_NOT_FOUND.into()))?;
         let metadata: Value = row.try_get("", "data")?;
         let mime = metadata["mime_type"].as_str().unwrap_or("");
         let name = metadata["original_name"].as_str().unwrap_or("").to_lowercase();
@@ -220,7 +229,7 @@ pub async fn send(
             .iter()
             .any(|ext| name.ends_with(&format!(".{ext}")))
         {
-            return Err(AppError::BadRequest("Audio is not supported in conversation.".into()));
+            return Err(AppError::BadRequest(codes::CONVERSATION_AUDIO_NOT_SUPPORTED.into()));
         }
         db.execute(Statement::from_sql_and_values(
             DbBackend::Postgres,
@@ -267,7 +276,7 @@ pub async fn read(
             .await?
             .is_none()
     {
-        return Err(AppError::NotFound("Message not found.".into()));
+        return Err(AppError::NotFound(codes::CONVERSATION_MESSAGE_NOT_FOUND.into()));
     }
     // Conversation notices and message read state must agree; unrelated notices remain untouched.
     if client.is_none() {

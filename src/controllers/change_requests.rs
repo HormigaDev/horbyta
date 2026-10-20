@@ -8,6 +8,7 @@ use sea_orm::{ConnectionTrait, TransactionTrait};
 use serde_json::json;
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::{
         change_request::{
@@ -146,7 +147,7 @@ pub(crate) async fn create_change_request(
     let (payload, files) = crate::utils::multipart::parse_payload_request::<CreateChangeRequestDto>(
         &state,
         request,
-        "multipart request must include a payload field with change request json",
+        codes::CHANGE_REQUEST_PAYLOAD_REQUIRED,
     )
     .await?;
     let tx = state.db.begin().await.map_err(AppError::Database)?;
@@ -264,7 +265,7 @@ pub(crate) async fn update_change_request(
     let (payload, files) = crate::utils::multipart::parse_payload_request::<UpdateChangeRequestDto>(
         &state,
         request,
-        "multipart request must include a payload field with change request json",
+        codes::CHANGE_REQUEST_PAYLOAD_REQUIRED,
     )
     .await?;
     let tx = state.db.begin().await.map_err(AppError::Database)?;

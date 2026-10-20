@@ -1,3 +1,4 @@
+use crate::error_codes as codes;
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -48,9 +49,9 @@ pub fn assert_value_within_limit(value: &serde_json::Value) -> Result<(), crate:
         .map_err(|_| crate::error::AppError::Internal("could not serialize ui state value".to_string()))?;
 
     if serialized.len() > MAX_VALUE_BYTES {
-        return Err(crate::error::AppError::BadRequest(format!(
-            "ui state value exceeds the {MAX_VALUE_BYTES} byte limit"
-        )));
+        return Err(crate::error::AppError::BadRequest(
+            codes::UI_STATE_VALUE_TOO_LARGE.with([MAX_VALUE_BYTES.to_string()]),
+        ));
     }
 
     Ok(())

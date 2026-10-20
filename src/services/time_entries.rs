@@ -9,6 +9,7 @@ use sea_orm::{
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::{
         query::QueryPayload,
@@ -113,28 +114,24 @@ impl TimeEntryService {
 
         let start_time = entry
             .start_time
-            .ok_or_else(|| AppError::Conflict("time entry does not correspond to a started timer".to_string()))?;
+            .ok_or_else(|| AppError::Conflict(codes::TIME_ENTRY_NOT_TIMER.into()))?;
 
         if entry.end_time.is_some() {
-            return Err(AppError::Conflict("timer was already stopped previously".to_string()));
+            return Err(AppError::Conflict(codes::TIME_ENTRY_TIMER_ALREADY_STOPPED.into()));
         }
 
         let end_time = dto.end_time.unwrap_or_else(|| Utc::now().fixed_offset());
 
         if end_time <= start_time {
-            return Err(AppError::BadRequest(
-                "end time must be after the start time".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::TIME_ENTRY_END_BEFORE_START.into()));
         }
 
         let duration_minutes_i64 = end_time.signed_duration_since(start_time).num_minutes();
         let duration_minutes = i32::try_from(duration_minutes_i64)
-            .map_err(|_| AppError::BadRequest("computed duration exceeds the allowed limit".to_string()))?;
+            .map_err(|_| AppError::BadRequest(codes::TIME_ENTRY_DURATION_EXCEEDED.into()))?;
 
         if duration_minutes <= 0 {
-            return Err(AppError::BadRequest(
-                "timer duration must be at least 1 minute".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::TIME_ENTRY_TIMER_TOO_SHORT.into()));
         }
 
         let daily_limit_minutes = Self::get_effective_daily_limit_minutes(db, user_id).await?;
@@ -162,7 +159,7 @@ impl TimeEntryService {
         let entry = Self::find_by_id(db, user_id, id).await?;
 
         if entry.start_time.is_some() && entry.end_time.is_none() {
-            return Err(AppError::Conflict("an active timer cannot be edited".to_string()));
+            return Err(AppError::Conflict(codes::TIME_ENTRY_TIMER_ACTIVE.into()));
         }
 
         let task = Self::find_owned_task(db, user_id, dto.task_id).await?;
@@ -227,7 +224,7 @@ impl TimeEntryService {
             .into_model::<TimeEntryDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("time entry not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::TIME_ENTRY_NOT_FOUND.into()))?;
 
         Ok(Self::map_detail_row(row))
     }
@@ -313,7 +310,7 @@ impl TimeEntryService {
         let user = Users::find_by_id(user_id)
             .one(db)
             .await?
-            .ok_or_else(|| AppError::Unauthorized("user not authenticated".to_string()))?;
+            .ok_or_else(|| AppError::Unauthorized(codes::AUTH_NOT_AUTHENTICATED.into()))?;
 
         let preferences = UserPreferences::from_json_value(user.preferences.as_ref());
         let limited_hours = preferences.max_daily_hours.clamp(1, MAX_DAILY_DURATION_LIMIT_HOURS);
@@ -327,7 +324,7 @@ impl TimeEntryService {
             .filter(time_entries::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("time entry not found".to_string()))
+            .ok_or_else(|| AppError::NotFound(codes::TIME_ENTRY_NOT_FOUND.into()))
     }
 
     async fn find_active_timer(db: &impl ConnectionTrait, user_id: Uuid) -> Result<Option<TimeEntryModel>, AppError> {
@@ -345,9 +342,7 @@ impl TimeEntryService {
         let active_timer = Self::find_active_timer(db, user_id).await?;
 
         if active_timer.is_some() {
-            return Err(AppError::Conflict(
-                "there is already an active timer for this user".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::TIME_ENTRY_TIMER_ALREADY_RUNNING.into()));
         }
 
         Ok(())
@@ -363,7 +358,7 @@ impl TimeEntryService {
             .filter(tasks::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::BadRequest("invalid task or no permissions".to_string()))
+            .ok_or_else(|| AppError::BadRequest(codes::ATTACHMENT_TASK_FORBIDDEN.into()))
     }
 
     async fn resolve_applied_rate(
@@ -385,7 +380,7 @@ impl TimeEntryService {
             .filter(projects::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::BadRequest("invalid project or no permissions".to_string()))?;
+            .ok_or_else(|| AppError::BadRequest(codes::ATTACHMENT_PROJECT_FORBIDDEN.into()))?;
 
         if !project.billable {
             return Ok(None);
@@ -421,7 +416,7 @@ impl TimeEntryService {
             .is_some();
 
         if !exists {
-            return Err(AppError::BadRequest("invalid activity or no permissions".to_string()));
+            return Err(AppError::BadRequest(codes::TIME_ENTRY_ACTIVITY_FORBIDDEN.into()));
         }
 
         Ok(())
@@ -503,13 +498,16 @@ impl TimeEntryService {
         daily_limit_minutes: i64,
     ) -> Result<(), AppError> {
         if current_total >= daily_limit_minutes {
-            return Err(AppError::Conflict("you cannot log more hours on this day".to_string()));
+            return Err(AppError::Conflict(codes::TIME_ENTRY_DAY_FULL.with([hours(daily_limit_minutes)])));
         }
 
         if current_total + new_duration > daily_limit_minutes {
-            return Err(AppError::Conflict(
-                "time entry exceeds the configured daily limit".to_string(),
-            ));
+            // Máximo, horas que se quieren añadir y horas ya registradas ese día.
+            return Err(AppError::Conflict(codes::TIME_ENTRY_DAILY_LIMIT_EXCEEDED.with([
+                hours(daily_limit_minutes),
+                hours(new_duration),
+                hours(current_total),
+            ])));
         }
 
         Ok(())
@@ -518,12 +516,16 @@ impl TimeEntryService {
     fn map_time_entry_write_error(error: sea_orm::DbErr) -> AppError {
         let message = error.to_string();
 
-        if message.contains("daily_limit_exceeded") {
-            return AppError::Conflict("time entry exceeds the configured daily limit".to_string());
+        // El trigger informa máximo, horas a añadir y horas ya registradas: viajan como params.
+        if let Some((_, detail)) = message.split_once("daily_limit_exceeded: ") {
+            let text = detail.lines().next().unwrap_or_default();
+            return AppError::Conflict(
+                crate::error::match_catalog(text).unwrap_or_else(|| codes::TIME_ENTRY_DAILY_LIMIT.into()),
+            );
         }
 
         if message.contains("idx_uq_time_entries_active_timer_per_user") {
-            return AppError::Conflict("there is already an active timer for this user".to_string());
+            return AppError::Conflict(codes::TIME_ENTRY_TIMER_ALREADY_RUNNING.into());
         }
 
         AppError::Database(error)
@@ -549,4 +551,10 @@ impl TimeEntryService {
             updated_at: row.updated_at,
         }
     }
+}
+
+/// Minutos como horas legibles: 480 → "8", 90 → "1.5".
+fn hours(minutes: i64) -> String {
+    let value = minutes as f64 / 60.0;
+    if value.fract() == 0.0 { format!("{value:.0}") } else { format!("{value:.1}") }
 }

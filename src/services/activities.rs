@@ -14,6 +14,7 @@ use crate::dtos::activity::ActivitySummaryDto;
 use crate::dtos::activity::UpdateActivityDto;
 use crate::dtos::query::QueryPayload;
 use crate::error::AppError;
+use crate::error_codes as codes;
 use crate::utils::search::apply_filters;
 use crate::utils::search::apply_ordering;
 use crate::utils::search::apply_pagination;
@@ -127,7 +128,7 @@ impl ActivityService {
             .filter(activities::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("activity not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::ACTIVITY_NOT_FOUND.into()))?;
 
         Ok(activity)
     }

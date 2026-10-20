@@ -6,6 +6,7 @@ use sea_orm::{
 use std::time::Duration;
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::{
         client::{
@@ -54,7 +55,7 @@ impl ClientService {
             .filter(clients::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("client not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::CLIENT_NOT_FOUND.into()))?;
 
         Ok(client)
     }
@@ -225,7 +226,7 @@ impl ClientService {
             .is_some();
 
         if email_taken {
-            return Err(AppError::Conflict("client auth email is already in use".to_string()));
+            return Err(AppError::Conflict(codes::CLIENT_AUTH_EMAIL_IN_USE.into()));
         }
 
         let mut is_insertion: bool = false;
@@ -319,7 +320,7 @@ impl ClientService {
             .filter(client_auth::Column::ClientId.eq(client_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("client authentication data not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::CLIENT_AUTH_NOT_FOUND.into()))?;
 
         Ok(client_auth)
     }

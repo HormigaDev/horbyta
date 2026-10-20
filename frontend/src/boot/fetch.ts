@@ -15,6 +15,10 @@ export class ApiHttpError extends Error {
   readonly url: string;
   readonly type: string | null;
   readonly backendError: string | null;
+  /** Código estable del catálogo de errores del backend (p. ej. `TASK_NOT_FOUND`). */
+  readonly code: string | null;
+  /** Datos variables del mensaje: reemplazan `$1`, `$2`… de la traducción. */
+  readonly params: string[];
   readonly payload: Record<string, unknown>;
 
   constructor(context: ApiHttpErrorContext) {
@@ -29,6 +33,10 @@ export class ApiHttpError extends Error {
     this.url = context.url;
     this.type = typeof context.payload.type === 'string' ? context.payload.type : null;
     this.backendError = backendError;
+    this.code = typeof context.payload.code === 'string' ? context.payload.code : null;
+    this.params = Array.isArray(context.payload.params)
+      ? context.payload.params.map((value) => String(value))
+      : [];
     this.payload = context.payload;
   }
 
@@ -40,6 +48,8 @@ export class ApiHttpError extends Error {
       method: this.method,
       url: this.url,
       type: this.type,
+      code: this.code,
+      params: this.params,
       error: this.backendError,
       payload: this.payload,
     };
@@ -77,9 +87,13 @@ async function parseErrorPayload(response: Response): Promise<Record<string, unk
 function shouldClearSessionOnUnauthorized(payload: Record<string, unknown>): boolean {
   const errorType = typeof payload.type === 'string' ? payload.type : null;
   const errorMessage = typeof payload.error === 'string' ? payload.error : null;
+  const errorCode = typeof payload.code === 'string' ? payload.code : null;
 
   return (
     errorType === 'jwt_error' ||
+    errorCode === 'AUTH_NO_SESSION' ||
+    errorCode === 'AUTH_INVALID_TOKEN' ||
+    errorCode === 'AUTH_NOT_AUTHENTICATED' ||
     errorMessage === 'no session' ||
     errorMessage === 'invalid token' ||
     errorMessage === 'user not authenticated'

@@ -1,3 +1,4 @@
+use crate::error_codes as codes;
 use object_store::ObjectStore;
 #[cfg(test)]
 use sea_orm::prelude::Decimal;
@@ -56,14 +57,12 @@ impl ProjectService {
         match dto.billing_type {
             ProjectBillingType::Fixed => {
                 if dto.hourly_rate.is_some() || dto.retainer_amount.is_some() || dto.payment_day.is_some() {
-                    return Err(AppError::BadRequest(
-                        "if billing type is fixed cant send hourly or retainer info".to_string(),
-                    ));
+                    return Err(AppError::BadRequest(codes::PROJECT_BILLING_FIXED_CONFLICT.into()));
                 }
 
                 let fixed_price = dto
                     .fixed_price
-                    .ok_or_else(|| AppError::BadRequest("fixed price must be provided".to_string()))?;
+                    .ok_or_else(|| AppError::BadRequest(codes::PROJECT_FIXED_PRICE_REQUIRED.into()))?;
 
                 Ok(NormalizedProjectBilling {
                     currency_type,
@@ -76,14 +75,12 @@ impl ProjectService {
             }
             ProjectBillingType::Hourly => {
                 if dto.fixed_price.is_some() || dto.retainer_amount.is_some() || dto.payment_day.is_some() {
-                    return Err(AppError::BadRequest(
-                        "if billing type is hourly cant send fixed price or retainer info".to_string(),
-                    ));
+                    return Err(AppError::BadRequest(codes::PROJECT_BILLING_HOURLY_CONFLICT.into()));
                 }
 
                 let hourly_rate = dto
                     .hourly_rate
-                    .ok_or_else(|| AppError::BadRequest("hourly rate must be provided".to_string()))?;
+                    .ok_or_else(|| AppError::BadRequest(codes::PROJECT_HOURLY_RATE_REQUIRED.into()))?;
 
                 Ok(NormalizedProjectBilling {
                     currency_type,
@@ -96,18 +93,16 @@ impl ProjectService {
             }
             ProjectBillingType::Retainer => {
                 if dto.hourly_rate.is_some() || dto.fixed_price.is_some() {
-                    return Err(AppError::BadRequest(
-                        "if billing type is retainer cant send hourly or fixed price info".to_string(),
-                    ));
+                    return Err(AppError::BadRequest(codes::PROJECT_BILLING_RETAINER_CONFLICT.into()));
                 }
 
                 let retainer_amount = dto
                     .retainer_amount
-                    .ok_or_else(|| AppError::BadRequest("retainer amount must be provided".to_string()))?;
+                    .ok_or_else(|| AppError::BadRequest(codes::PROJECT_RETAINER_AMOUNT_REQUIRED.into()))?;
 
                 let payment_day = dto
                     .payment_day
-                    .ok_or_else(|| AppError::BadRequest("payment day must be provided".to_string()))?;
+                    .ok_or_else(|| AppError::BadRequest(codes::PROJECT_PAYMENT_DAY_REQUIRED.into()))?;
 
                 Ok(NormalizedProjectBilling {
                     currency_type,
@@ -186,9 +181,7 @@ impl ProjectService {
         dto: CreateProjectDto,
     ) -> Result<ProjectModel, AppError> {
         if !dto.billable && dto.project_billing.is_some() {
-            return Err(AppError::BadRequest(
-                "cant send project_billing if project is not billable".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::PROJECT_BILLING_NOT_BILLABLE.into()));
         }
         Self::ensure_project_references_ownership(db, user_id, dto.category_id, dto.client_id).await?;
 
@@ -343,7 +336,7 @@ impl ProjectService {
             .into_model::<ProjectDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("project not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::PROJECT_NOT_FOUND.into()))?;
 
         let milestones = MilestoneService::list_project_milestones_preview(db, user_id, id).await?;
         let this_project_billing = project_billing::Entity::find()
@@ -395,7 +388,7 @@ impl ProjectService {
             .into_model::<ClientProjectDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("project not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::PROJECT_NOT_FOUND.into()))?;
 
         let milestones =
             MilestoneService::list_client_project_milestones_preview(db, user_id, client_id, project_id).await?;
@@ -428,9 +421,7 @@ impl ProjectService {
         dto: UpdateProjectDto,
     ) -> Result<ProjectModel, AppError> {
         if !dto.billable && dto.project_billing.is_some() {
-            return Err(AppError::BadRequest(
-                "cant send project_billing if project is not billable".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::PROJECT_BILLING_NOT_BILLABLE.into()));
         }
 
         let project = Self::find_by_id(db, user_id, id).await?;
@@ -443,9 +434,7 @@ impl ProjectService {
         if adds_milestones
             && (project.status == ProjectStatus::Closed.to_string() || dto.status == ProjectStatus::Closed)
         {
-            return Err(AppError::Conflict(
-                "closed projects cannot accept new milestones".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::PROJECT_CLOSED_NO_MILESTONES.into()));
         }
         Self::ensure_project_references_ownership(db, user_id, dto.category_id, dto.client_id).await?;
 
@@ -731,7 +720,7 @@ impl ProjectService {
             .filter(projects::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("project not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::PROJECT_NOT_FOUND.into()))?;
 
         Ok(project)
     }
@@ -761,7 +750,7 @@ impl ProjectService {
                 .is_some();
 
             if !exists {
-                return Err(AppError::BadRequest("invalid category or no permissions".to_string()));
+                return Err(AppError::BadRequest(codes::PROJECT_CATEGORY_FORBIDDEN.into()));
             }
         }
 
@@ -783,7 +772,7 @@ impl ProjectService {
                 .is_some();
 
             if !exists {
-                return Err(AppError::BadRequest("invalid client or no permissions".to_string()));
+                return Err(AppError::BadRequest(codes::PROJECT_CLIENT_FORBIDDEN.into()));
             }
         }
 

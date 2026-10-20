@@ -136,10 +136,22 @@ Responses use:
 
 ```json
 {
-    "error": "human readable message",
-    "type": "bad_request"
+    "error": "task daily limit exceeded. your maximum is 8 hours. ...",
+    "type": "conflict",
+    "code": "TIME_ENTRY_DAILY_LIMIT_EXCEEDED",
+    "params": ["8", "5", "5"]
 }
 ```
+
+`code` is a stable identifier from the catalog in `src/error_codes.rs`; the frontend translates
+`backendErrors.<code>` (es/en/pt) and replaces `$1`, `$2`… with `params`. `error` stays as a
+readable fallback. Validation errors use generic codes (`VALIDATION_LENGTH_BETWEEN`,
+`VALIDATION_REQUIRED`…) whose first param is the field path. Database rules raised by triggers
+(`scope_conflict:` / `task_status:`) are matched against the same catalog, so they also arrive
+with their code. To add an error: declare it in `src/error_codes.rs`, return
+`AppError::Conflict(codes::MY_ERROR.with([value]))` (or `.into()` without params) and add the
+translation to the three catalogs; `npm run test:i18n` fails if a code lacks a translation or
+its `$n` differ, and `cargo test` fails if a migration raises a message without a code.
 
 ## State Rules
 

@@ -7,6 +7,7 @@ use axum::{
 use sea_orm::TransactionTrait;
 use serde_json::json;
 
+use crate::error_codes as codes;
 use crate::utils::ui_state::{
     ensure_valid_key, ensure_valid_scope, evict_scope, list_scope_cached, refresh_scope_cache,
 };
@@ -68,7 +69,7 @@ pub(crate) async fn get_one(
     let entries = list_scope_cached(&state, user.id, &scope).await?;
     match entries.into_iter().find(|entry| entry.key == key) {
         Some(entry) => Ok(Json(entry).into_response()),
-        None => Err(AppError::NotFound("ui state entry not found".to_string())),
+        None => Err(AppError::NotFound(codes::UI_STATE_NOT_FOUND.into())),
     }
 }
 

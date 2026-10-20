@@ -7,6 +7,7 @@ use std::str::FromStr;
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::error_codes as codes;
 use crate::{
     auth::totp_2fa::{
         TotpPolicy, backup_codes_file_content, generate_backup_codes, generate_setup, hash_backup_codes,
@@ -24,7 +25,7 @@ use crate::{
         prelude::Users,
         users::{self, Model as UserModel},
     },
-    error::{AppError, Totp2FaError},
+    error::{AppError, ErrorCode, Totp2FaError},
     utils::{
         crypto::{compare_password, hash_password},
         search::{apply_filters, apply_ordering, apply_pagination},
@@ -101,23 +102,23 @@ impl UserService {
         Users::find_by_id(user_id)
             .one(db)
             .await?
-            .ok_or_else(|| AppError::Unauthorized("user not authenticated".to_string()))
+            .ok_or_else(|| AppError::Unauthorized(codes::AUTH_NOT_AUTHENTICATED.into()))
     }
 
     async fn find_user_by_id(db: &impl ConnectionTrait, user_id: Uuid) -> Result<UserModel, AppError> {
         Users::find_by_id(user_id)
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("user not found".to_string()))
+            .ok_or_else(|| AppError::NotFound(codes::USER_NOT_FOUND.into()))
     }
 
     async fn ensure_admin(db: &impl ConnectionTrait, user_id: Uuid) -> Result<(), AppError> {
         let user = Self::get_user_model(db, user_id).await?;
-        let role = UserRole::from_str(&user.role)
-            .map_err(|_| AppError::Forbidden("admin privileges are required".to_string()))?;
+        let role =
+            UserRole::from_str(&user.role).map_err(|_| AppError::Forbidden(codes::AUTH_ADMIN_REQUIRED.into()))?;
 
         if role != UserRole::Admin {
-            return Err(AppError::Forbidden("admin privileges are required".to_string()));
+            return Err(AppError::Forbidden(codes::AUTH_ADMIN_REQUIRED.into()));
         }
 
         Ok(())
@@ -126,15 +127,15 @@ impl UserService {
     pub fn ensure_user_can_authenticate(user: &UserModel) -> Result<(), AppError> {
         match UserStatus::from_str(&user.status).unwrap_or(UserStatus::Inactive) {
             UserStatus::Active => Ok(()),
-            UserStatus::Inactive => Err(AppError::Unauthorized("invalid credentials".to_string())),
-            UserStatus::Blocked => Err(AppError::Forbidden("account blocked".to_string())),
+            UserStatus::Inactive => Err(AppError::Unauthorized(codes::AUTH_INVALID_CREDENTIALS.into())),
+            UserStatus::Blocked => Err(AppError::Forbidden(codes::AUTH_ACCOUNT_BLOCKED.into())),
         }
     }
 
     fn normalize_name(name: &str) -> Result<String, AppError> {
         let normalized_name = name.trim().to_string();
         if normalized_name.is_empty() {
-            return Err(AppError::BadRequest("name cannot be empty".to_string()));
+            return Err(AppError::BadRequest(codes::USER_NAME_EMPTY.into()));
         }
 
         Ok(normalized_name)
@@ -148,7 +149,7 @@ impl UserService {
         db: &impl ConnectionTrait,
         email: &str,
         excluded_user_id: Option<Uuid>,
-        message: &str,
+        message: ErrorCode,
     ) -> Result<(), AppError> {
         let mut query = Users::find().filter(users::Column::Email.eq(email.to_string()));
         if let Some(user_id) = excluded_user_id {
@@ -156,7 +157,7 @@ impl UserService {
         }
 
         if query.one(db).await?.is_some() {
-            return Err(AppError::Conflict(message.to_string()));
+            return Err(AppError::Conflict(message.into()));
         }
 
         Ok(())
@@ -166,7 +167,7 @@ impl UserService {
         db: &impl ConnectionTrait,
         name: &str,
         excluded_user_id: Option<Uuid>,
-        message: &str,
+        message: ErrorCode,
     ) -> Result<(), AppError> {
         let mut query = Users::find().filter(users::Column::Name.eq(name.to_string()));
         if let Some(user_id) = excluded_user_id {
@@ -174,7 +175,7 @@ impl UserService {
         }
 
         if query.one(db).await?.is_some() {
-            return Err(AppError::Conflict(message.to_string()));
+            return Err(AppError::Conflict(message.into()));
         }
 
         Ok(())
@@ -184,8 +185,8 @@ impl UserService {
         let normalized_name = Self::normalize_name(&input.name)?;
         let normalized_email = Self::normalize_email(&input.email);
 
-        Self::ensure_email_available(db, &normalized_email, None, "email is already registered").await?;
-        Self::ensure_name_available(db, &normalized_name, None, "username is already taken").await?;
+        Self::ensure_email_available(db, &normalized_email, None, codes::USER_EMAIL_REGISTERED).await?;
+        Self::ensure_name_available(db, &normalized_name, None, codes::USER_USERNAME_TAKEN).await?;
 
         let password_hash = hash_password(input.password)?;
         let now = Utc::now().fixed_offset();
@@ -252,12 +253,8 @@ impl UserService {
     ) -> Result<UserSettingsDto, AppError> {
         dto.name = dto.name.trim().to_string();
         dto.email = Self::normalize_email(&dto.email);
-        dto.validate().map_err(|_| {
-            AppError::BadRequest(
-                "Invalid account: use a name of 2–100 characters, a valid email and a password of at least 8 characters with uppercase, lowercase, number and symbol."
-                    .to_string(),
-            )
-        })?;
+        dto.validate()
+            .map_err(|_| AppError::BadRequest(codes::USER_ACCOUNT_INVALID.into()))?;
 
         let user = Self::create_user(
             db,
@@ -356,25 +353,13 @@ impl UserService {
 
         if let Some(name) = dto.name {
             let normalized_name = Self::normalize_name(&name)?;
-            Self::ensure_name_available(
-                db,
-                &normalized_name,
-                Some(target_user_id),
-                "that name is already in use",
-            )
-            .await?;
+            Self::ensure_name_available(db, &normalized_name, Some(target_user_id), codes::USER_NAME_IN_USE).await?;
             active_user.name = Set(normalized_name);
         }
 
         if let Some(email) = dto.email {
             let normalized_email = Self::normalize_email(&email);
-            Self::ensure_email_available(
-                db,
-                &normalized_email,
-                Some(target_user_id),
-                "that email is already in use",
-            )
-            .await?;
+            Self::ensure_email_available(db, &normalized_email, Some(target_user_id), codes::USER_EMAIL_IN_USE).await?;
             active_user.email = Set(normalized_email);
         }
 
@@ -384,18 +369,14 @@ impl UserService {
 
         if let Some(role) = dto.role {
             if admin_id == target_user_id && role != UserRole::Admin {
-                return Err(AppError::BadRequest(
-                    "admin users cannot remove their own admin role".to_string(),
-                ));
+                return Err(AppError::BadRequest(codes::USER_CANNOT_DEMOTE_SELF.into()));
             }
             active_user.role = Set(role.to_string());
         }
 
         if let Some(status) = dto.status {
             if admin_id == target_user_id && status != UserStatus::Active {
-                return Err(AppError::BadRequest(
-                    "admin users cannot deactivate or block themselves".to_string(),
-                ));
+                return Err(AppError::BadRequest(codes::USER_CANNOT_BLOCK_SELF.into()));
             }
             active_user.status = Set(status.to_string());
         }
@@ -413,7 +394,7 @@ impl UserService {
     ) -> Result<(), AppError> {
         Self::ensure_admin(db, admin_id).await?;
         if admin_id == target_user_id {
-            return Err(AppError::BadRequest("admin users cannot delete themselves".to_string()));
+            return Err(AppError::BadRequest(codes::USER_CANNOT_DELETE_SELF.into()));
         }
 
         let user = Self::find_user_by_id(db, target_user_id).await?;
@@ -435,8 +416,8 @@ impl UserService {
         let normalized_name = Self::normalize_name(&dto.name)?;
         let normalized_email = Self::normalize_email(&dto.email);
 
-        Self::ensure_email_available(db, &normalized_email, Some(user_id), "that email is already in use").await?;
-        Self::ensure_name_available(db, &normalized_name, Some(user_id), "that name is already in use").await?;
+        Self::ensure_email_available(db, &normalized_email, Some(user_id), codes::USER_EMAIL_IN_USE).await?;
+        Self::ensure_name_available(db, &normalized_name, Some(user_id), codes::USER_NAME_IN_USE).await?;
 
         let user = Self::get_user_model(db, user_id).await?;
         let mut active_user: users::ActiveModel = user.into();

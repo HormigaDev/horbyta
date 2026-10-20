@@ -6,14 +6,20 @@ use sea_orm::{
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::{dtos::scope::*, error::AppError, migrations, services::scope::ScopeService, utils::crypto::hash_password};
+use crate::{
+    dtos::scope::*,
+    error::{AppError, ErrorDetail},
+    migrations,
+    services::scope::ScopeService,
+    utils::crypto::hash_password,
+};
 
 pub const ADMIN_EMAIL: &str = "admin@horbyta.test";
 pub const ADMIN_PASSWORD: &str = "Admin@123";
 pub const CLIENT_PASSWORD: &str = "Cliente@123";
 
 fn conflict(message: &str) -> AppError {
-    AppError::Conflict(message.into())
+    AppError::Conflict(ErrorDetail::plain(message))
 }
 
 pub fn require_development(mode: &str) -> Result<(), AppError> {

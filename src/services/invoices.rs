@@ -7,6 +7,7 @@ use sea_orm::{
 };
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::{
         invoice::{
@@ -121,7 +122,7 @@ impl InvoiceService {
             .into_model::<InvoiceDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("invoice not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::INVOICE_NOT_FOUND.into()))?;
 
         let time_entries = Self::get_invoice_time_entries(db, id).await?;
         let task_groups = Self::group_time_entries_by_task(time_entries);
@@ -408,7 +409,7 @@ impl InvoiceService {
             .filter(invoices::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("invoice not found".to_string()))
+            .ok_or_else(|| AppError::NotFound(codes::INVOICE_NOT_FOUND.into()))
     }
 
     async fn ensure_project_ownership(
@@ -421,7 +422,7 @@ impl InvoiceService {
             .filter(crate::entities::projects::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::BadRequest("invalid project or no permissions".to_string()))?;
+            .ok_or_else(|| AppError::BadRequest(codes::ATTACHMENT_PROJECT_FORBIDDEN.into()))?;
 
         Ok(())
     }
@@ -436,12 +437,10 @@ impl InvoiceService {
             .filter(projects::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::BadRequest("invalid project or no permissions".to_string()))?;
+            .ok_or_else(|| AppError::BadRequest(codes::ATTACHMENT_PROJECT_FORBIDDEN.into()))?;
 
         if project.status == ProjectStatus::Closed.to_string() {
-            return Err(AppError::Conflict(
-                "closed projects cannot accept new invoices".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::PROJECT_CLOSED_NO_INVOICES.into()));
         }
 
         Ok(())
@@ -449,9 +448,7 @@ impl InvoiceService {
 
     fn ensure_draft(invoice: &InvoiceModel) -> Result<(), AppError> {
         if invoice.status != "draft" {
-            return Err(AppError::Conflict(
-                "only invoices in draft status can be modified or deleted".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::INVOICE_NOT_DRAFT.into()));
         }
         Ok(())
     }
@@ -461,16 +458,16 @@ impl InvoiceService {
             "draft" => ["open", "void", "", ""],
             "open" => ["paid", "void", "uncollectible", ""],
             _ => {
-                return Err(AppError::Conflict(format!(
-                    "No se puede cambiar el estado de una factura en estado '{current}'"
-                )));
+                return Err(AppError::Conflict(
+                    codes::INVOICE_STATUS_LOCKED.with([current.to_string()]),
+                ));
             }
         };
 
         if !allowed.contains(&next) {
-            return Err(AppError::BadRequest(format!(
-                "Invalid status transition: '{current}' -> '{next}'"
-            )));
+            return Err(AppError::BadRequest(
+                codes::INVOICE_STATUS_TRANSITION_INVALID.with([current.to_string(), next.to_string()]),
+            ));
         }
 
         Ok(())
@@ -511,9 +508,7 @@ impl InvoiceService {
             .await?;
 
         if rows.len() != ids.len() {
-            return Err(AppError::BadRequest(
-                "One or more time entries are invalid, non-billable, or already linked to another invoice".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::INVOICE_TIME_ENTRIES_INVALID.into()));
         }
 
         Ok(rows)
@@ -522,9 +517,9 @@ impl InvoiceService {
     fn validate_task_count(entries: &[BillableTimeEntryWithTask]) -> Result<(), AppError> {
         let unique_tasks: std::collections::HashSet<Uuid> = entries.iter().map(|e| e.task_id).collect();
         if unique_tasks.len() > MAX_TASKS_PER_INVOICE {
-            return Err(AppError::BadRequest(format!(
-                "An invoice can contain at most {MAX_TASKS_PER_INVOICE} tasks"
-            )));
+            return Err(AppError::BadRequest(
+                codes::INVOICE_TOO_MANY_TASKS.with([MAX_TASKS_PER_INVOICE.to_string()]),
+            ));
         }
         Ok(())
     }

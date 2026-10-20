@@ -5,6 +5,7 @@ use sea_orm::{
 };
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::{
         attachment::StorageBackedDbWrite,
@@ -43,7 +44,7 @@ impl MilestoneService {
             .one(db)
             .await?;
 
-        project.ok_or_else(|| AppError::NotFound("project not found or no permission".to_string()))?;
+        project.ok_or_else(|| AppError::NotFound(codes::CHANGE_REQUEST_PROJECT_FORBIDDEN.into()))?;
 
         Ok(())
     }
@@ -58,12 +59,10 @@ impl MilestoneService {
             .filter(projects::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("project not found or no permission".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::CHANGE_REQUEST_PROJECT_FORBIDDEN.into()))?;
 
         if project.status == ProjectStatus::Closed.to_string() {
-            return Err(AppError::Conflict(
-                "closed projects cannot accept new milestones".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::PROJECT_CLOSED_NO_MILESTONES.into()));
         }
 
         Ok(())
@@ -83,7 +82,7 @@ impl MilestoneService {
             .await?;
 
         if project.is_none() {
-            return Err(AppError::NotFound("project not found or no permission".to_string()));
+            return Err(AppError::NotFound(codes::CHANGE_REQUEST_PROJECT_FORBIDDEN.into()));
         }
 
         Ok(())
@@ -104,11 +103,11 @@ impl MilestoneService {
         match milestone_opt {
             Some((milestone, Some(project))) => {
                 if project.user_id != user_id {
-                    return Err(AppError::NotFound("milestone not found or no permission".to_string()));
+                    return Err(AppError::NotFound(codes::MILESTONE_FORBIDDEN.into()));
                 }
                 Ok(milestone)
             }
-            _ => Err(AppError::NotFound("milestone not found".to_string())),
+            _ => Err(AppError::NotFound(codes::MILESTONE_NOT_FOUND.into())),
         }
     }
 

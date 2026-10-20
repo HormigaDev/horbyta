@@ -4,6 +4,7 @@ use sea_orm::{
 };
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::{
         query::QueryPayload,
@@ -110,7 +111,7 @@ impl TagService {
             .filter(tags::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("tag not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::TAG_NOT_FOUND.into()))?;
 
         Ok(tag)
     }

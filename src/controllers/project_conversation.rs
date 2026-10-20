@@ -1,3 +1,4 @@
+use crate::error_codes as codes;
 use crate::{
     dtos::{client::ClientAuthDto, scope::*, user::UserDto},
     error::AppError,
@@ -35,7 +36,9 @@ async fn resource_list(
     match kind {
         "resources" => chat::resources(db, owner, client, project, search).await,
         "files" => chat::file_resources(db, owner, client, project, search).await,
-        _ => Err(AppError::BadRequest("Invalid reference category.".into())),
+        _ => Err(AppError::BadRequest(
+            codes::CONVERSATION_REFERENCE_CATEGORY_INVALID.into(),
+        )),
     }
 }
 async fn messages(
@@ -259,7 +262,7 @@ async fn propose_for(
 ) -> Result<Json<Value>, AppError> {
     let tx = s.db.begin().await?;
     let info = chat::authorize(&tx, owner, client, project).await?;
-    let source=tx.query_one(Statement::from_sql_and_values(DbBackend::Postgres,"SELECT to_jsonb(e) AS data FROM project_conversation_timeline e WHERE e.project_id=$1 AND e.id=$2 AND e.kind='message'",[project.into(),message.into()])).await?.ok_or_else(||AppError::NotFound("Message not found.".into()))?;
+    let source=tx.query_one(Statement::from_sql_and_values(DbBackend::Postgres,"SELECT to_jsonb(e) AS data FROM project_conversation_timeline e WHERE e.project_id=$1 AND e.id=$2 AND e.kind='message'",[project.into(),message.into()])).await?.ok_or_else(||AppError::NotFound(codes::CONVERSATION_MESSAGE_NOT_FOUND.into()))?;
     let snapshot: Value = source.try_get("", "data")?;
     crate::services::scope::ScopeService::actor(&tx, actor, if client.is_some() { "client" } else { "professional" })
         .await?;
@@ -285,7 +288,7 @@ async fn propose_for(
         let client = info["client_id"]
             .as_str()
             .and_then(|s| Uuid::parse_str(s).ok())
-            .ok_or_else(|| AppError::BadRequest("A client is required.".into()))?;
+            .ok_or_else(|| AppError::BadRequest(codes::CONVERSATION_CLIENT_REQUIRED.into()))?;
         crate::services::change_requests::ChangeRequestService::create(
             &tx,
             owner,

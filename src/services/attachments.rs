@@ -10,6 +10,7 @@ use serde_json::Value;
 use std::env;
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     constants::{CLIENT_AUTH_COOKIE_NAME, USER_AUTH_COOKIE_NAME},
     dtos::{
@@ -165,10 +166,10 @@ impl AttachmentService {
         let storage_path = ObjectPath::parse(attachment.storage_key.as_str())
             .map_err(|error| AppError::Internal(format!("invalid storage key: {}", error)))?;
 
-        let object = storage
-            .get(&storage_path)
-            .await
-            .map_err(|error| AppError::NotFound(format!("file not found in storage: {}", error)))?;
+        let object = storage.get(&storage_path).await.map_err(|error| {
+            tracing::warn!("attachment missing in storage: {error}");
+            AppError::NotFound(codes::ATTACHMENT_FILE_NOT_IN_STORAGE.into())
+        })?;
 
         let bytes = object
             .bytes()
@@ -180,9 +181,7 @@ impl AttachmentService {
         if let Some(row) = preserved {
             use sha2::{Digest, Sha256};
             if hex::encode(Sha256::digest(&bytes)) != row.try_get::<String>("", "hash")? {
-                return Err(AppError::Conflict(
-                    "El archivo no coincide con el anexo publicado; revise su integridad.".into(),
-                ));
+                return Err(AppError::Conflict(codes::ATTACHMENT_PUBLISHED_MISMATCH.into()));
             }
         }
         Ok(AttachmentRawFileDto {
@@ -315,9 +314,7 @@ impl AttachmentService {
         upload_bytes: i64,
     ) -> Result<(), AppError> {
         if upload_bytes <= 0 {
-            return Err(AppError::BadRequest(
-                "you must send at least one valid file".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::ATTACHMENT_FILE_REQUIRED.into()));
         }
 
         let scope_name = if task_id.is_some() {
@@ -329,35 +326,29 @@ impl AttachmentService {
         } else if project_id.is_some() {
             "project"
         } else {
-            return Err(AppError::BadRequest(
-                "file must be associated with a markdown resource".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::ATTACHMENT_RESOURCE_REQUIRED.into()));
         };
 
         if upload_bytes > MAX_ATTACHMENT_SCOPE_BYTES {
-            return Err(AppError::BadRequest(format!(
-                "total file size cannot exceed 50mb per {}",
-                scope_name
-            )));
+            return Err(AppError::BadRequest(
+                codes::ATTACHMENT_RESOURCE_SIZE_EXCEEDED.with([scope_name.to_string()]),
+            ));
         }
 
         let current_scope_usage =
             Self::sum_scope_size_bytes(db, user_id, project_id, task_id, milestone_id, change_request_id).await?;
         let next_scope_usage = i128::from(current_scope_usage) + i128::from(upload_bytes);
         if next_scope_usage > i128::from(MAX_ATTACHMENT_SCOPE_BYTES) {
-            return Err(AppError::BadRequest(format!(
-                "this {} has reached its 50mb attachment limit",
-                scope_name
-            )));
+            return Err(AppError::BadRequest(
+                codes::ATTACHMENT_RESOURCE_LIMIT_REACHED.with([scope_name.to_string()]),
+            ));
         }
 
         let user_limit_bytes = Self::resolve_user_storage_limit_bytes()?;
         let current_user_usage = Self::sum_user_size_bytes(db, user_id).await?;
         let next_user_usage = i128::from(current_user_usage) + i128::from(upload_bytes);
         if next_user_usage > i128::from(user_limit_bytes) {
-            return Err(AppError::BadRequest(
-                "you have reached your total storage limit for attachments".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::ATTACHMENT_STORAGE_LIMIT_REACHED.into()));
         }
 
         Ok(())
@@ -382,18 +373,18 @@ impl AttachmentService {
 
         let original_name = dto.original_name.trim().to_string();
         if original_name.is_empty() {
-            return Err(AppError::BadRequest("original file name cannot be empty".to_string()));
+            return Err(AppError::BadRequest(codes::ATTACHMENT_NAME_EMPTY.into()));
         }
 
         if file_bytes.is_empty() {
-            return Err(AppError::BadRequest("file cannot be empty".to_string()));
+            return Err(AppError::BadRequest(codes::ATTACHMENT_FILE_EMPTY.into()));
         }
 
         let size_bytes = i64::try_from(file_bytes.len())
-            .map_err(|_| AppError::BadRequest("file exceeds the supported size".to_string()))?;
+            .map_err(|_| AppError::BadRequest(codes::ATTACHMENT_FILE_EXCEEDS_SIZE.into()))?;
 
         if size_bytes > MAX_ATTACHMENT_FILE_BYTES {
-            return Err(AppError::BadRequest("each file cannot exceed 50mb".to_string()));
+            return Err(AppError::BadRequest(codes::ATTACHMENT_FILE_TOO_LARGE.into()));
         }
 
         Self::guard_upload_capacity(
@@ -592,7 +583,7 @@ impl AttachmentService {
         while let Some(field) = multipart
             .next_field()
             .await
-            .map_err(|_| AppError::BadRequest("error processing multipart form".to_string()))?
+            .map_err(|_| AppError::BadRequest(codes::ATTACHMENT_MULTIPART_INVALID.into()))?
         {
             if field.name().unwrap_or_default() != FILES_FIELD_NAME {
                 continue;
@@ -610,32 +601,30 @@ impl AttachmentService {
                     ]
                     .contains(&extension.as_str())
                 {
-                    return Err(AppError::BadRequest(
-                        "Audio attachments are not supported in conversations.".into(),
-                    ));
+                    return Err(AppError::BadRequest(codes::ATTACHMENT_AUDIO_NOT_SUPPORTED.into()));
                 }
                 if files.len() >= 10 {
-                    return Err(AppError::BadRequest("At most 10 attachments per message.".into()));
+                    return Err(AppError::BadRequest(codes::CONVERSATION_TOO_MANY_ATTACHMENTS.into()));
                 }
             }
             let bytes = field
                 .bytes()
                 .await
-                .map_err(|_| AppError::BadRequest("could not read one of the files".to_string()))?;
+                .map_err(|_| AppError::BadRequest(codes::ATTACHMENT_READ_FAILED.into()))?;
 
             let file_size = i64::try_from(bytes.len())
-                .map_err(|_| AppError::BadRequest("file exceeds the supported size".to_string()))?;
+                .map_err(|_| AppError::BadRequest(codes::ATTACHMENT_FILE_EXCEEDS_SIZE.into()))?;
 
             if file_size > MAX_ATTACHMENT_FILE_BYTES {
-                return Err(AppError::BadRequest("each file cannot exceed 50mb".to_string()));
+                return Err(AppError::BadRequest(codes::ATTACHMENT_FILE_TOO_LARGE.into()));
             }
 
             total_upload_bytes = total_upload_bytes
                 .checked_add(file_size)
-                .ok_or_else(|| AppError::BadRequest("total file size exceeds the allowed limit".to_string()))?;
+                .ok_or_else(|| AppError::BadRequest(codes::ATTACHMENT_TOTAL_SIZE_EXCEEDED.into()))?;
 
             if conversation && total_upload_bytes > MAX_ATTACHMENT_SCOPE_BYTES {
-                return Err(AppError::BadRequest("total file size exceeds the allowed limit".into()));
+                return Err(AppError::BadRequest(codes::ATTACHMENT_TOTAL_SIZE_EXCEEDED.into()));
             }
             files.push(UploadedFile {
                 original_name,
@@ -645,9 +634,7 @@ impl AttachmentService {
         }
 
         if files.is_empty() {
-            return Err(AppError::BadRequest(
-                "you must send files in the files field".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::ATTACHMENT_FILES_FIELD_REQUIRED.into()));
         }
 
         Ok((files, total_upload_bytes))
@@ -681,7 +668,7 @@ impl AttachmentService {
                 &DecodingKey::from_secret(jwt_secret.as_bytes()),
                 &Validation::default(),
             )
-            .map_err(|_| AppError::Unauthorized("invalid user session".to_string()))?;
+            .map_err(|_| AppError::Unauthorized(codes::ATTACHMENT_USER_SESSION_INVALID.into()))?;
 
             return Ok(AttachmentViewer::User {
                 user_id: token.claims.sub,
@@ -694,23 +681,23 @@ impl AttachmentService {
                 &DecodingKey::from_secret(jwt_secret_client.as_bytes()),
                 &Validation::default(),
             )
-            .map_err(|_| AppError::Unauthorized("invalid client session".to_string()))?;
+            .map_err(|_| AppError::Unauthorized(codes::ATTACHMENT_CLIENT_SESSION_INVALID.into()))?;
 
             let client_auth = client_auth::Entity::find_by_id(token.claims.sub)
                 .one(db)
                 .await
                 .map_err(AppError::Database)?
-                .ok_or_else(|| AppError::Unauthorized("invalid client session".to_string()))?;
+                .ok_or_else(|| AppError::Unauthorized(codes::ATTACHMENT_CLIENT_SESSION_INVALID.into()))?;
 
             let client_profile = client_auth
                 .find_related(clients::Entity)
                 .one(db)
                 .await
                 .map_err(AppError::Database)?
-                .ok_or_else(|| AppError::Unauthorized("client not found".to_string()))?;
+                .ok_or_else(|| AppError::Unauthorized(codes::CLIENT_NOT_FOUND.into()))?;
 
             if client_profile.status != "active" {
-                return Err(AppError::Forbidden("client access is not active".to_string()));
+                return Err(AppError::Forbidden(codes::AUTH_CLIENT_ACCESS_INACTIVE.into()));
             }
 
             return Ok(AttachmentViewer::Client {
@@ -719,7 +706,7 @@ impl AttachmentService {
             });
         }
 
-        Err(AppError::Unauthorized("no session".to_string()))
+        Err(AppError::Unauthorized(codes::AUTH_NO_SESSION.into()))
     }
 
     fn build_content_disposition(file_name: &str, mime_type: &str) -> String {
@@ -810,9 +797,7 @@ impl AttachmentService {
                 .add(attachments::Column::MilestoneId.is_null())
                 .add(attachments::Column::ChangeRequestId.is_null())
         } else {
-            return Err(AppError::BadRequest(
-                "file must be associated with a markdown resource".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::ATTACHMENT_RESOURCE_REQUIRED.into()));
         };
 
         Self::sum_size_bytes(db, condition).await
@@ -846,9 +831,7 @@ impl AttachmentService {
         change_request_id: Option<Uuid>,
     ) -> Result<(Option<Uuid>, Option<Uuid>, Option<Uuid>, Option<Uuid>), AppError> {
         if project_id.is_none() && task_id.is_none() && milestone_id.is_none() && change_request_id.is_none() {
-            return Err(AppError::BadRequest(
-                "file must be associated with a markdown resource".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::ATTACHMENT_RESOURCE_REQUIRED.into()));
         }
 
         let owned_project_id = if let Some(pid) = project_id {
@@ -860,7 +843,7 @@ impl AttachmentService {
                 .map_err(AppError::Database)?;
 
             if project.is_none() {
-                return Err(AppError::BadRequest("invalid project or no permissions".to_string()));
+                return Err(AppError::BadRequest(codes::ATTACHMENT_PROJECT_FORBIDDEN.into()));
             }
 
             Some(pid)
@@ -876,13 +859,11 @@ impl AttachmentService {
                 .await
                 .map_err(AppError::Database)?;
 
-            let task = task.ok_or_else(|| AppError::BadRequest("invalid task or no permissions".to_string()))?;
+            let task = task.ok_or_else(|| AppError::BadRequest(codes::ATTACHMENT_TASK_FORBIDDEN.into()))?;
 
             if let Some(project_id_from_dto) = owned_project_id {
                 if task.project_id != Some(project_id_from_dto) {
-                    return Err(AppError::BadRequest(
-                        "task does not belong to the specified project".to_string(),
-                    ));
+                    return Err(AppError::BadRequest(codes::TASK_NOT_IN_PROJECT.into()));
                 }
             }
 
@@ -904,7 +885,7 @@ impl AttachmentService {
 
             match milestone {
                 Some((milestone, Some(project))) if project.user_id == user_id => Some(milestone),
-                _ => return Err(AppError::BadRequest("invalid milestone or no permissions".to_string())),
+                _ => return Err(AppError::BadRequest(codes::ATTACHMENT_MILESTONE_FORBIDDEN.into())),
             }
         } else {
             None
@@ -917,7 +898,7 @@ impl AttachmentService {
                 .one(db)
                 .await
                 .map_err(AppError::Database)?
-                .ok_or_else(|| AppError::BadRequest("invalid change request or no permissions".to_string()))?;
+                .ok_or_else(|| AppError::BadRequest(codes::ATTACHMENT_CHANGE_REQUEST_FORBIDDEN.into()))?;
 
             Some(change_request)
         } else {
@@ -953,7 +934,7 @@ impl AttachmentService {
             .one(db)
             .await
             .map_err(AppError::Database)?
-            .ok_or_else(|| AppError::NotFound("attachment not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::ATTACHMENT_NOT_FOUND.into()))?;
 
         Ok(attachment)
     }
@@ -969,35 +950,35 @@ impl AttachmentService {
         if let Some(project_id) = attachment.project_id {
             checked_scope = true;
             if !Self::client_can_access_project(db, user_id, client_id, project_id).await? {
-                return Err(AppError::NotFound("attachment not found".to_string()));
+                return Err(AppError::NotFound(codes::ATTACHMENT_NOT_FOUND.into()));
             }
         }
 
         if let Some(task_id) = attachment.task_id {
             checked_scope = true;
             if !Self::client_can_access_task(db, user_id, client_id, task_id).await? {
-                return Err(AppError::NotFound("attachment not found".to_string()));
+                return Err(AppError::NotFound(codes::ATTACHMENT_NOT_FOUND.into()));
             }
         }
 
         if let Some(milestone_id) = attachment.milestone_id {
             checked_scope = true;
             if !Self::client_can_access_milestone(db, user_id, client_id, milestone_id).await? {
-                return Err(AppError::NotFound("attachment not found".to_string()));
+                return Err(AppError::NotFound(codes::ATTACHMENT_NOT_FOUND.into()));
             }
         }
 
         if let Some(change_request_id) = attachment.change_request_id {
             checked_scope = true;
             if !Self::client_can_access_change_request(db, user_id, client_id, change_request_id).await? {
-                return Err(AppError::NotFound("attachment not found".to_string()));
+                return Err(AppError::NotFound(codes::ATTACHMENT_NOT_FOUND.into()));
             }
         }
 
         if checked_scope {
             Ok(())
         } else {
-            Err(AppError::NotFound("attachment not found".to_string()))
+            Err(AppError::NotFound(codes::ATTACHMENT_NOT_FOUND.into()))
         }
     }
 

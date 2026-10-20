@@ -9,13 +9,14 @@ use axum_extra::extract::CookieJar;
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use sea_orm::EntityTrait;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
     constants::USER_AUTH_COOKIE_NAME,
     dtos::user::{UserDto, UserRole, UserStatus},
     entities::users,
+    error::error_body,
+    error_codes as codes,
     state::AppState,
 };
 
@@ -34,7 +35,7 @@ impl FromRequestParts<AppState> for UserDto {
         let token = jar.get(USER_AUTH_COOKIE_NAME).map(|c| c.value()).ok_or_else(|| {
             (
                 StatusCode::UNAUTHORIZED,
-                Json(json!({"error": "no session", "type": "unauthorized"})),
+                error_body("unauthorized", codes::AUTH_NO_SESSION),
             )
         })?;
 
@@ -46,7 +47,7 @@ impl FromRequestParts<AppState> for UserDto {
         .map_err(|_| {
             (
                 StatusCode::UNAUTHORIZED,
-                Json(json!({"error": "invalid token", "type": "jwt_error"})),
+                error_body("jwt_error", codes::AUTH_INVALID_TOKEN),
             )
         })?;
 
@@ -58,13 +59,13 @@ impl FromRequestParts<AppState> for UserDto {
             .map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(json!({"error": "db error", "type": "database"})),
+                    error_body("database", codes::INTERNAL_ERROR),
                 )
             })?
             .ok_or_else(|| {
                 (
                     StatusCode::UNAUTHORIZED,
-                    Json(json!({"error": "invalid token", "type": "unauthorized"})),
+                    error_body("unauthorized", codes::AUTH_INVALID_TOKEN),
                 )
             })?;
 
@@ -74,13 +75,13 @@ impl FromRequestParts<AppState> for UserDto {
             UserStatus::Inactive => {
                 return Err((
                     StatusCode::UNAUTHORIZED,
-                    Json(json!({"error": "user not authenticated", "type": "unauthorized"})),
+                    error_body("unauthorized", codes::AUTH_NOT_AUTHENTICATED),
                 ));
             }
             UserStatus::Blocked => {
                 return Err((
                     StatusCode::FORBIDDEN,
-                    Json(json!({"error": "account blocked", "type": "forbidden"})),
+                    error_body("forbidden", codes::AUTH_ACCOUNT_BLOCKED),
                 ));
             }
         }

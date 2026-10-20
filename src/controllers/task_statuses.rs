@@ -28,7 +28,10 @@ use crate::{
         (status = 401, description = "Unauthorized")
     )
 )]
-pub(crate) async fn list_task_statuses(State(state): State<AppState>, user: UserDto) -> Result<impl IntoResponse, AppError> {
+pub(crate) async fn list_task_statuses(
+    State(state): State<AppState>,
+    user: UserDto,
+) -> Result<impl IntoResponse, AppError> {
     Ok(Json(TaskStatusService::list(state.db.as_ref(), user.id).await?))
 }
 
@@ -68,7 +71,9 @@ pub(crate) async fn update_task_status(
     Path(id): Path<Uuid>,
     ValidatedJson(dto): ValidatedJson<SaveTaskStatusDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    Ok(Json(TaskStatusService::update(state.db.as_ref(), user.id, id, dto).await?))
+    Ok(Json(
+        TaskStatusService::update(state.db.as_ref(), user.id, id, dto).await?,
+    ))
 }
 
 #[utoipa::path(

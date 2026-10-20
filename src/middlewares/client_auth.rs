@@ -7,12 +7,13 @@ use axum_extra::extract::CookieJar;
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use sea_orm::{EntityTrait, ModelTrait};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
     constants::CLIENT_AUTH_COOKIE_NAME,
     entities::{client_auth, clients},
+    error::error_body,
+    error_codes as codes,
 };
 use crate::{dtos::client::ClientAuthDto, state::AppState};
 
@@ -31,7 +32,7 @@ impl FromRequestParts<AppState> for ClientAuthDto {
         let token = jar.get(CLIENT_AUTH_COOKIE_NAME).map(|c| c.value()).ok_or_else(|| {
             (
                 StatusCode::UNAUTHORIZED,
-                Json(json!({"error": "no session", "type": "unauthorized"})),
+                error_body("unauthorized", codes::AUTH_NO_SESSION),
             )
         })?;
 
@@ -43,7 +44,7 @@ impl FromRequestParts<AppState> for ClientAuthDto {
         .map_err(|_| {
             (
                 StatusCode::UNAUTHORIZED,
-                Json(json!({"error": "invalid token", "type": "jwt_error"})),
+                error_body("jwt_error", codes::AUTH_INVALID_TOKEN),
             )
         })?;
 
@@ -56,7 +57,7 @@ impl FromRequestParts<AppState> for ClientAuthDto {
                 .map_err(|_| {
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(json!({"error": "db error", "type": "database"})),
+                        error_body("database", codes::INTERNAL_ERROR),
                     )
                 })?
                 .is_some_and(|client_profile| client_profile.status == "active");
@@ -65,7 +66,7 @@ impl FromRequestParts<AppState> for ClientAuthDto {
                 state.client_cache.invalidate(&client_id).await;
                 return Err((
                     StatusCode::FORBIDDEN,
-                    Json(json!({"error": "client access is not active", "type": "forbidden"})),
+                    error_body("forbidden", codes::AUTH_CLIENT_ACCESS_INACTIVE),
                 ));
             }
 
@@ -78,13 +79,13 @@ impl FromRequestParts<AppState> for ClientAuthDto {
             .map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(json!({"error": "db error", "type": "database"})),
+                    error_body("database", codes::INTERNAL_ERROR),
                 )
             })?
             .ok_or_else(|| {
                 (
                     StatusCode::UNAUTHORIZED,
-                    Json(json!({"error": "invalid token", "type": "unauthorized"})),
+                    error_body("unauthorized", codes::AUTH_INVALID_TOKEN),
                 )
             })?;
 
@@ -95,20 +96,20 @@ impl FromRequestParts<AppState> for ClientAuthDto {
             .map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(json!({"error": "db error", "type": "database"})),
+                    error_body("database", codes::INTERNAL_ERROR),
                 )
             })?
             .ok_or_else(|| {
                 (
                     StatusCode::UNAUTHORIZED,
-                    Json(json!({"error": "client not found", "type": "unauthorized"})),
+                    error_body("unauthorized", codes::CLIENT_NOT_FOUND),
                 )
             })?;
 
         if client_profile.status != "active" {
             return Err((
                 StatusCode::FORBIDDEN,
-                Json(json!({"error": "client access is not active", "type": "forbidden"})),
+                error_body("forbidden", codes::AUTH_CLIENT_ACCESS_INACTIVE),
             ));
         }
 

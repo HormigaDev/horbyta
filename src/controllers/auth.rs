@@ -13,6 +13,7 @@ use serde_json::json;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     auth::totp_2fa::default_totp_policy,
     constants::{CLIENT_AUTH_COOKIE_NAME, USER_AUTH_COOKIE_NAME},
@@ -60,7 +61,7 @@ pub(crate) async fn login(
         .filter(users::Column::Email.eq(&payload.email))
         .one(state.db.as_ref())
         .await?
-        .ok_or(AppError::Unauthorized("invalid credentials".to_string()))?;
+        .ok_or(AppError::Unauthorized(codes::AUTH_INVALID_CREDENTIALS.into()))?;
 
     compare_password(payload.password, user_model.password_hash.clone())?;
 
@@ -139,12 +140,12 @@ pub(crate) async fn login_client(
         .filter(client_auth::Column::Email.eq(normalized_email))
         .one(state.db.as_ref())
         .await?
-        .ok_or(AppError::Unauthorized("invalid credentials".to_string()))?;
+        .ok_or(AppError::Unauthorized(codes::AUTH_INVALID_CREDENTIALS.into()))?;
 
     let password_hash = client_model
         .password_hash
         .clone()
-        .ok_or(AppError::Unauthorized("invalid credentials".to_string()))?;
+        .ok_or(AppError::Unauthorized(codes::AUTH_INVALID_CREDENTIALS.into()))?;
     compare_password(payload.password, password_hash)?;
     handle_client_login_success(client_model, &state).await
 }
@@ -174,11 +175,11 @@ pub(crate) async fn login_magic_token(
         .filter(client_auth::Column::MagicLinkHash.eq(hash))
         .one(state.db.as_ref())
         .await?
-        .ok_or(AppError::Unauthorized("invalid credentials".to_string()))?;
+        .ok_or(AppError::Unauthorized(codes::AUTH_INVALID_CREDENTIALS.into()))?;
 
     if let Some(exp) = client_model.magic_link_exp {
         if exp.with_timezone(&Utc) < Utc::now() {
-            return Err(AppError::Unauthorized("expired token".to_string()));
+            return Err(AppError::Unauthorized(codes::AUTH_TOKEN_EXPIRED.into()));
         }
 
         let mut active_client_auth: client_auth::ActiveModel = client_model.clone().into();
@@ -188,7 +189,7 @@ pub(crate) async fn login_magic_token(
         return handle_client_login_success(client_model, &state).await;
     }
 
-    Err(AppError::Unauthorized("invalid credentials".to_string()))
+    Err(AppError::Unauthorized(codes::AUTH_INVALID_CREDENTIALS.into()))
 }
 
 #[utoipa::path(
@@ -224,7 +225,7 @@ pub(crate) async fn register(
     check_ip_rate_limit(&state.rate_limit_auth, &headers, AUTH_RATE_LIMIT)?;
 
     if !state.config.allow_registration {
-        return Err(AppError::Locked("registration is disabled".to_string()));
+        return Err(AppError::Locked(codes::AUTH_REGISTRATION_DISABLED.into()));
     }
 
     let user_model = UserService::register(state.db.as_ref(), payload).await?;
@@ -374,10 +375,10 @@ pub(crate) async fn handle_client_login_success(
         .find_related(clients::Entity)
         .one(state.db.as_ref())
         .await?
-        .ok_or_else(|| AppError::NotFound("client not found".to_string()))?;
+        .ok_or_else(|| AppError::NotFound(codes::CLIENT_NOT_FOUND.into()))?;
 
     if client_profile.status != "active" {
-        return Err(AppError::Forbidden("client access is not active".to_string()));
+        return Err(AppError::Forbidden(codes::AUTH_CLIENT_ACCESS_INACTIVE.into()));
     }
 
     let claims = ClientClaims {

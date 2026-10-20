@@ -3,7 +3,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
-use crate::error::AppError;
+use crate::error::{AppError, ErrorDetail};
 
 // La primera migración apunta al esquema base, en su ubicación original.
 pub const INITIAL_MIGRATION: &str = include_str!("../database/schema.sql");
@@ -17,8 +17,7 @@ pub const SCOPE_AMENDMENTS_MIGRATION: &str = include_str!("../database/migration
 
 pub const SCOPE_DELIVERY_SIGNALS_MIGRATION: &str =
     include_str!("../database/migrations/007_scope_delivery_signals.sql");
-pub const AMENDMENT_TASK_LINKS_MIGRATION: &str =
-    include_str!("../database/migrations/008_amendment_task_links.sql");
+pub const AMENDMENT_TASK_LINKS_MIGRATION: &str = include_str!("../database/migrations/008_amendment_task_links.sql");
 pub const DECLINE_COMMENT_MIGRATION: &str = include_str!("../database/migrations/009_decline_comment.sql");
 pub const REOPEN_DECLINED_CHANGE_MIGRATION: &str =
     include_str!("../database/migrations/010_reopen_declined_change.sql");
@@ -90,6 +89,13 @@ const MIGRATIONS: &[Migration] = &[
     },
 ];
 
+/// SQL de aplicación de cada versión (lo usa la prueba que exige un código para cada error de la base).
+pub fn up_scripts() -> impl Iterator<Item = (i32, &'static str)> {
+    MIGRATIONS
+        .iter()
+        .flat_map(|m| m.up.iter().map(move |sql| (m.version, *sql)))
+}
+
 pub fn latest_version() -> i32 {
     MIGRATIONS.last().map_or(0, |m| m.version)
 }
@@ -147,10 +153,10 @@ pub(crate) async fn apply(tx: &DatabaseTransaction) -> Result<(), AppError> {
 
 fn check_target(target: i32) -> Result<(), AppError> {
     if target < 0 || target > latest_version() {
-        return Err(AppError::BadRequest(format!(
+        return Err(AppError::BadRequest(ErrorDetail::plain(format!(
             "Versión {target} desconocida; las migraciones disponibles van de 1 a {}.",
             latest_version()
-        )));
+        ))));
     }
     Ok(())
 }
@@ -178,9 +184,9 @@ async fn apply_to(tx: &DatabaseTransaction, target: i32) -> Result<Vec<i32>, App
         .await?
         .ok_or(AppError::InternalError)?;
     if unknown.try_get::<bool>("", "present")? {
-        return Err(AppError::Conflict(
-            "El historial pertenece a otra versión del esquema; no se altera automáticamente.".into(),
-        ));
+        return Err(AppError::Conflict(ErrorDetail::plain(
+            "El historial pertenece a otra versión del esquema; no se altera automáticamente.",
+        )));
     }
     let mut applied = Vec::new();
     for (migration, (_, checksum)) in MIGRATIONS.iter().zip(migration_checksums()) {
@@ -194,7 +200,9 @@ async fn apply_to(tx: &DatabaseTransaction, target: i32) -> Result<Vec<i32>, App
             .await?;
         if let Some(row) = existing {
             if row.try_get::<String>("", "checksum")? != checksum {
-                return Err(AppError::Conflict("La migración aplicada tiene otro checksum. No se reetiquetan historiales ni se modifican migraciones publicadas; la consolidación experimental de desarrollo requiere --reset.".into()));
+                return Err(AppError::Conflict(ErrorDetail::plain(
+                    "La migración aplicada tiene otro checksum. No se reetiquetan historiales ni se modifican migraciones publicadas; la consolidación experimental de desarrollo requiere --reset.",
+                )));
             }
         } else {
             if *version > target {
@@ -270,9 +278,9 @@ pub async fn rollback_to(db: &DatabaseConnection, target: i32) -> Result<Vec<i32
         // El reverso solo es válido para el SQL exacto que se aplicó.
         let expected = checksums.iter().find(|(v, _)| *v == version).map(|(_, c)| c);
         if expected != Some(&row.try_get::<String>("", "checksum")?) {
-            return Err(AppError::Conflict(format!(
+            return Err(AppError::Conflict(ErrorDetail::plain(format!(
                 "La migración {version} no corresponde a esta versión de Horbyta; no se revierte automáticamente."
-            )));
+            ))));
         }
         let migration = MIGRATIONS
             .iter()
@@ -321,9 +329,9 @@ async fn verify_existing_base(tx: &DatabaseTransaction) -> Result<(), AppError> 
     let actual = normalize_catalog(actual, &[&expected_schema, &actual_schema]);
     for (name, definition) in expected.as_object().ok_or(AppError::InternalError)? {
         if actual.get(name) != Some(definition) {
-            return Err(AppError::Conflict(format!(
+            return Err(AppError::Conflict(ErrorDetail::plain(format!(
                 "El esquema existente no coincide con el base en {name}. No se aplicaron cambios; revise la estructura antes de migrar."
-            )));
+            ))));
         }
     }
     tx.execute(Statement::from_sql_and_values(
@@ -383,9 +391,9 @@ pub async fn require_current(db: &DatabaseConnection) -> Result<(), AppError> {
         .await?
         .ok_or(AppError::InternalError)?;
     if !row.try_get::<bool>("", "present")? {
-        return Err(AppError::Unavailable(
-            "Ejecute cargo run --locked --bin migrate antes de iniciar el backend.".into(),
-        ));
+        return Err(AppError::Unavailable(ErrorDetail::plain(
+            "Ejecute cargo run --locked --bin migrate antes de iniciar el backend.",
+        )));
     }
     let supported = MIGRATIONS
         .iter()
@@ -400,9 +408,9 @@ pub async fn require_current(db: &DatabaseConnection) -> Result<(), AppError> {
         .await?
         .ok_or(AppError::InternalError)?;
     if unknown.try_get::<bool>("", "present")? {
-        return Err(AppError::Unavailable(
-            "La base requiere otra versión del backend.".into(),
-        ));
+        return Err(AppError::Unavailable(ErrorDetail::plain(
+            "La base requiere otra versión del backend.",
+        )));
     }
     for (version, checksum) in migration_checksums() {
         let row = db
@@ -413,9 +421,9 @@ pub async fn require_current(db: &DatabaseConnection) -> Result<(), AppError> {
             ))
             .await?;
         if row.as_ref().map(|r| r.try_get::<String>("", "checksum")).transpose()? != Some(checksum) {
-            return Err(AppError::Unavailable(
-                "El esquema no corresponde a esta versión; ejecute el binario migrate.".into(),
-            ));
+            return Err(AppError::Unavailable(ErrorDetail::plain(
+                "El esquema no corresponde a esta versión; ejecute el binario migrate.",
+            )));
         }
     }
     Ok(())

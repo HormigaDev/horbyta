@@ -8,6 +8,7 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 
 use crate::error::AppError;
+use crate::error_codes as codes;
 
 pub fn hash_password(password: String) -> Result<String, AppError> {
     let salt = SaltString::generate(&mut OsRng);
@@ -23,7 +24,7 @@ pub fn compare_password(password: String, hashed_password: String) -> Result<boo
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_err()
     {
-        return Err(AppError::Unauthorized("invalid credentials".to_string()));
+        return Err(AppError::Unauthorized(codes::AUTH_INVALID_CREDENTIALS.into()));
     } else {
         return Ok(true);
     }
@@ -40,7 +41,7 @@ pub fn generate_magic_link_token() -> (String, Vec<u8>) {
 }
 
 pub fn verify_magic_link_token(token: &str) -> Result<Vec<u8>, AppError> {
-    let token_bytes = hex::decode(token).map_err(|_| AppError::Unauthorized("invalid token".to_string()))?;
+    let token_bytes = hex::decode(token).map_err(|_| AppError::Unauthorized(codes::AUTH_INVALID_TOKEN.into()))?;
 
     let hash = Sha256::digest(token_bytes);
 

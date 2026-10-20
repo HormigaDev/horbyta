@@ -2,6 +2,7 @@ use sea_orm::{ConnectionTrait, DbBackend, Statement};
 use serde_json::{Value, json};
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{dtos::scope::ConversationWindowQuery, error::AppError};
 
 pub async fn authorize(
@@ -15,7 +16,7 @@ pub async fn authorize(
         "SELECT 1 AS allowed FROM projects p JOIN scope_revisions r ON r.project_id=p.id WHERE p.id=$1 AND p.user_id=$2 AND ($3::uuid IS NULL OR p.client_id=$3) AND r.revision=$4 AND r.published",
         vec![project.into(),owner.into(),client.into(),revision.into()])).await?;
     if row.is_none() {
-        return Err(AppError::NotFound("Registro de alcance no encontrado.".into()));
+        return Err(AppError::NotFound(codes::SCOPE_RECORD_NOT_FOUND.into()));
     }
     Ok(())
 }
@@ -40,12 +41,12 @@ pub async fn window(
     .count()
         > 1
     {
-        return Err(AppError::BadRequest("Invalid conversation cursor.".into()));
+        return Err(AppError::BadRequest(codes::CONVERSATION_CURSOR_INVALID.into()));
     }
     let mut around = query.around;
     if let Some(notice) = query.notification {
         if client.is_some() {
-            return Err(AppError::BadRequest("Invalid conversation cursor.".into()));
+            return Err(AppError::BadRequest(codes::CONVERSATION_CURSOR_INVALID.into()));
         }
         // Recuperar avisos anteriores únicamente cuando el texto identifica un mensaje único.
         let row = db.query_one(Statement::from_sql_and_values(DbBackend::Postgres,
@@ -63,7 +64,7 @@ pub async fn window(
             .await?
             .is_none()
         {
-            return Err(AppError::NotFound("Registro de alcance no encontrado.".into()));
+            return Err(AppError::NotFound(codes::SCOPE_RECORD_NOT_FOUND.into()));
         }
     }
     let order = if query.after.is_some() { "ASC" } else { "DESC" };
@@ -128,7 +129,7 @@ pub async fn authorize_change(
 ) -> Result<Uuid, AppError> {
     let row=db.query_one(Statement::from_sql_and_values(DbBackend::Postgres,
         "SELECT c.project_id FROM change_requests c JOIN scope_change_revisions r ON r.change_request_id=c.id WHERE c.id=$1 AND c.user_id=$2 AND ($3::uuid IS NULL OR c.client_id=$3) AND r.version=$4 AND ($3::uuid IS NULL OR r.snapshot->>'status'<>'draft')",
-        [id.into(),owner.into(),client.into(),version.into()])).await?.ok_or_else(||AppError::NotFound("Registro de alcance no encontrado.".into()))?;
+        [id.into(),owner.into(),client.into(),version.into()])).await?.ok_or_else(||AppError::NotFound(codes::SCOPE_RECORD_NOT_FOUND.into()))?;
     Ok(row.try_get("", "project_id")?)
 }
 pub async fn change_window(
@@ -141,7 +142,7 @@ pub async fn change_window(
 ) -> Result<Value, AppError> {
     authorize_change(db, owner, client, project, revision).await?;
     if query.notification.is_some() {
-        return Err(AppError::BadRequest("Invalid conversation cursor.".into()));
+        return Err(AppError::BadRequest(codes::CONVERSATION_CURSOR_INVALID.into()));
     }
     if [
         query.before.is_some(),
@@ -154,7 +155,7 @@ pub async fn change_window(
     .count()
         > 1
     {
-        return Err(AppError::BadRequest("Invalid conversation cursor.".into()));
+        return Err(AppError::BadRequest(codes::CONVERSATION_CURSOR_INVALID.into()));
     }
     let around = query.around;
     if let Some(anchor) = around {
@@ -167,7 +168,7 @@ pub async fn change_window(
             .await?
             .is_none()
         {
-            return Err(AppError::NotFound("Registro de alcance no encontrado.".into()));
+            return Err(AppError::NotFound(codes::SCOPE_RECORD_NOT_FOUND.into()));
         }
     }
     let order = if query.after.is_some() { "ASC" } else { "DESC" };

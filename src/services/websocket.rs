@@ -13,6 +13,7 @@ use serde_json::json;
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     constants::USER_AUTH_COOKIE_NAME,
     dtos::{
@@ -151,7 +152,7 @@ impl WebSocketService {
         sender: &mut futures::stream::SplitSink<WebSocket, Message>,
     ) -> Result<bool, AppError> {
         let ws_msg: WsMessage =
-            serde_json::from_str(text).map_err(|_| AppError::BadRequest("invalid message format".to_string()))?;
+            serde_json::from_str(text).map_err(|_| AppError::BadRequest(codes::WEBSOCKET_MESSAGE_INVALID.into()))?;
 
         tracing::debug!("WebSocket message received: {:?}", ws_msg);
 
@@ -172,9 +173,9 @@ impl WebSocketService {
             "notification.read" => {
                 let data = ws_msg
                     .data
-                    .ok_or_else(|| AppError::BadRequest("missing notification read payload".to_string()))?;
+                    .ok_or_else(|| AppError::BadRequest(codes::WEBSOCKET_READ_PAYLOAD_MISSING.into()))?;
                 let payload: NotificationReadPayload = serde_json::from_value(data)
-                    .map_err(|_| AppError::BadRequest("invalid notification read payload".to_string()))?;
+                    .map_err(|_| AppError::BadRequest(codes::WEBSOCKET_READ_PAYLOAD_INVALID.into()))?;
 
                 NotificationService::mark_as_read(self.db.as_ref(), _user_id, payload.id).await?;
                 Ok(true)
@@ -187,7 +188,7 @@ impl WebSocketService {
                 NotificationService::delete_all(self.db.as_ref(), _user_id).await?;
                 Ok(true)
             }
-            _ => Err(AppError::BadRequest("unknown message type".to_string())),
+            _ => Err(AppError::BadRequest(codes::WEBSOCKET_MESSAGE_TYPE_UNKNOWN.into())),
         }
     }
 

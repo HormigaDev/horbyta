@@ -1,3 +1,4 @@
+use crate::error_codes as codes;
 use crate::{
     dtos::{client::ClientAuthDto, scope::*, user::UserDto},
     error::AppError,
@@ -302,9 +303,7 @@ async fn upload_change_files_for(
         .await?
         .ok_or(AppError::InternalError)?;
     if row.try_get::<i32>("", "version")? != revision {
-        return Err(AppError::Conflict(
-            "La revisión cambió o no es accesible; vuelva a leerla.".into(),
-        ));
+        return Err(AppError::Conflict(codes::SCOPE_REVISION_UNAVAILABLE.into()));
     }
     let result = crate::services::attachments::AttachmentService::upload_conversation_files(
         &tx,

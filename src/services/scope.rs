@@ -4,6 +4,7 @@ use serde_json::Value as JsonValue;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::scope::{ClassifyTaskDto, PublishScopeDto, ScopeCommentDto, ScopeFeedbackDto},
     error::AppError,
@@ -25,7 +26,7 @@ impl ScopeService {
         let row = db
             .query_one(Statement::from_sql_and_values(DbBackend::Postgres, sql, values))
             .await?
-            .ok_or_else(|| AppError::NotFound("Registro de alcance no encontrado.".into()))?;
+            .ok_or_else(|| AppError::NotFound(codes::SCOPE_RECORD_NOT_FOUND.into()))?;
         Ok(row.try_get("", "data")?)
     }
     pub async fn project(
@@ -77,20 +78,14 @@ impl ScopeService {
             || dto.document.attachment_ids.len() + dto.document.reference_attachment_ids.len() > 100
             || dto.document.precedence.len() > 4000
         {
-            return Err(AppError::BadRequest(
-                "El alcance excede los límites de documentos/anexos.".into(),
-            ));
+            return Err(AppError::BadRequest(codes::SCOPE_LIMITS_EXCEEDED.into()));
         }
         let main = dto.document.documents.iter().filter(|d| d.role == "main").count();
         if dto.publish && (main > 1 || (main == 0 && sections.iter().any(|v| v.trim().is_empty()))) {
-            return Err(AppError::BadRequest(
-                "Complete las cinco secciones o incluya un documento principal completo.".into(),
-            ));
+            return Err(AppError::BadRequest(codes::SCOPE_SECTIONS_INCOMPLETE.into()));
         }
         if dto.publish && !dto.document.documents.is_empty() && dto.document.precedence.trim().is_empty() {
-            return Err(AppError::BadRequest(
-                "Indique cómo resolver contradicciones entre secciones y documentos.".into(),
-            ));
+            return Err(AppError::BadRequest(codes::SCOPE_PRECEDENCE_REQUIRED.into()));
         }
         let included_ids: Vec<Uuid> = dto
             .document
@@ -120,16 +115,14 @@ impl ScopeService {
                     .as_ref()
                     .is_some_and(|s| s.trim().is_empty() || s.len() > 64 || !requirements.insert(s.clone()))
             {
-                return Err(AppError::BadRequest(
-                    "Revise título, contenido, tipo e identificadores únicos de los documentos.".into(),
-                ));
+                return Err(AppError::BadRequest(codes::SCOPE_DOCUMENTS_INVALID.into()));
             }
             if dto.publish {
                 validate_scope_links(&doc.content, &included_ids)?;
             }
         }
         if total > 1_000_000 {
-            return Err(AppError::BadRequest("El conjunto de documentos supera 1 MB.".into()));
+            return Err(AppError::BadRequest(codes::SCOPE_DOCUMENTS_TOO_LARGE.into()));
         }
         if dto.publish {
             for section in sections {
@@ -144,18 +137,16 @@ impl ScopeService {
                 [id.into(), owner.into()],
             ))
             .await?
-            .ok_or_else(|| AppError::NotFound("Proyecto no encontrado.".into()))?;
+            .ok_or_else(|| AppError::NotFound(codes::SCOPE_PROJECT_NOT_FOUND.into()))?;
         if dto.publish {
             let running=Self::json(db,"SELECT to_jsonb(EXISTS(SELECT 1 FROM time_entries e JOIN tasks t ON t.id=e.task_id WHERE t.project_id=$1 AND t.scope_preparation_reason IS NULL AND e.start_time IS NOT NULL AND e.end_time IS NULL)) AS data",vec![id.into()]).await?;
             if running == true {
-                return Err(AppError::Conflict(
-                    "Finalice los timers de ejecución antes de publicar el alcance inicial.".into(),
-                ));
+                return Err(AppError::Conflict(codes::SCOPE_ACTIVE_TIMERS.into()));
             }
         }
         let client = p
             .try_get::<Option<Uuid>>("", "client_id")?
-            .ok_or_else(|| AppError::Conflict("Asigne un cliente antes de publicar el alcance.".into()))?;
+            .ok_or_else(|| AppError::Conflict(codes::SCOPE_CLIENT_REQUIRED.into()))?;
         db.execute(Statement::from_sql_and_values(
             DbBackend::Postgres,
             "INSERT INTO scope_projects(project_id,user_id,client_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING",
@@ -172,17 +163,15 @@ impl ScopeService {
             .ok_or(AppError::InternalError)?;
         let accepted_revision = state.try_get::<Option<i32>>("", "accepted_revision")?;
         if state.try_get::<i32>("", "last_revision")? != dto.expected_revision {
-            return Err(AppError::Conflict("El alcance cambió; vuelva a leerlo.".into()));
+            return Err(AppError::Conflict(codes::SCOPE_CHANGED.into()));
         }
         if accepted_revision.is_some()
             && (dto.document.agreement_revision != accepted_revision || dto.document.amendment_reason.trim().is_empty())
         {
-            return Err(AppError::Conflict(
-                "Indique el motivo de la corrección y la revisión vigente del acuerdo.".into(),
-            ));
+            return Err(AppError::Conflict(codes::SCOPE_AMENDMENT_REASON_REQUIRED.into()));
         }
         if dto.document.amendment_reason.chars().count() > 2000 {
-            return Err(AppError::BadRequest("El motivo supera 2000 caracteres.".into()));
+            return Err(AppError::BadRequest(codes::SCOPE_REASON_TOO_LONG.into()));
         }
         let approved_changes = Self::json(db,
             "SELECT coalesce((SELECT approved_changes FROM scope_revisions WHERE project_id=$1 AND revision=$2),'[]') AS data",
@@ -225,7 +214,7 @@ impl ScopeService {
             let attachment =
                 Uuid::parse_str(item.as_str().ok_or(AppError::InternalError)?).map_err(|_| AppError::InternalError)?;
             if !selected_ids.insert(attachment) {
-                return Err(AppError::BadRequest("Hay anexos duplicados.".into()));
+                return Err(AppError::BadRequest(codes::SCOPE_DUPLICATE_ATTACHMENTS.into()));
             }
             let mut metadata=Self::json(db,"SELECT to_jsonb(a) AS data FROM attachments a WHERE a.id=$1 AND a.user_id=$2 AND (a.project_id=$3 OR a.task_id IN(SELECT id FROM tasks WHERE project_id=$3) OR a.milestone_id IN(SELECT id FROM milestones WHERE project_id=$3)) FOR UPDATE",vec![attachment.into(),owner.into(),id.into()]).await?;
             metadata["scope_role"] = if referenced.contains(item) {
@@ -235,16 +224,12 @@ impl ScopeService {
             }
             .into();
             if dto.publish {
-                let storage = storage.ok_or_else(|| {
-                    AppError::BadRequest("La publicación con anexos necesita verificar el almacenamiento.".into())
-                })?;
+                let storage = storage.ok_or_else(|| AppError::BadRequest(codes::SCOPE_STORAGE_UNAVAILABLE.into()))?;
                 let key = metadata["storage_key"].as_str().ok_or(AppError::InternalError)?;
                 let data = storage
                     .get(&ObjectPath::from(key))
                     .await
-                    .map_err(|_| {
-                        AppError::Conflict("No se puede leer un anexo; revise los archivos antes de publicar.".into())
-                    })?
+                    .map_err(|_| AppError::Conflict(codes::SCOPE_ATTACHMENT_UNREADABLE.into()))?
                     .bytes()
                     .await
                     .map_err(|_| AppError::InternalError)?;
@@ -279,16 +264,12 @@ impl ScopeService {
                 let bytes = storage
                     .get(&ObjectPath::from(key))
                     .await
-                    .map_err(|_| {
-                        AppError::Conflict("Falta un anexo publicado; recupere el archivo antes de aceptar.".into())
-                    })?
+                    .map_err(|_| AppError::Conflict(codes::SCOPE_ATTACHMENT_MISSING.into()))?
                     .bytes()
                     .await
                     .map_err(|_| AppError::InternalError)?;
                 if hex::encode(Sha256::digest(&bytes)) != expected {
-                    return Err(AppError::Conflict(
-                        "Un anexo no coincide con el publicado; revise su integridad antes de aceptar.".into(),
-                    ));
+                    return Err(AppError::Conflict(codes::SCOPE_ATTACHMENT_MISMATCH.into()));
                 }
             }
         }
@@ -308,10 +289,10 @@ impl ScopeService {
             [id.into(), owner.into(), client.into()],
         ))
         .await?
-        .ok_or_else(|| AppError::NotFound("Proyecto no encontrado.".into()))?;
+        .ok_or_else(|| AppError::NotFound(codes::SCOPE_PROJECT_NOT_FOUND.into()))?;
         let state=db.query_one(Statement::from_sql_and_values(DbBackend::Postgres,
             "SELECT accepted_revision FROM scope_projects WHERE project_id=$1 AND user_id=$2 AND client_id=$3 FOR UPDATE",
-            [id.into(),owner.into(),client.into()])).await?.ok_or_else(||AppError::NotFound("Alcance no encontrado.".into()))?;
+            [id.into(),owner.into(),client.into()])).await?.ok_or_else(||AppError::NotFound(codes::SCOPE_NOT_FOUND.into()))?;
         if state.try_get::<Option<i32>>("", "accepted_revision")? == Some(revision) {
             return Self::project(db, owner, Some(client), id).await;
         }
@@ -319,9 +300,7 @@ impl ScopeService {
             "UPDATE scope_revisions SET accepted_at=now(),accepted_by=$3,accepted_ip=nullif(current_setting('horbyta.accepted_ip',true),'')::inet,accepted_ip_source=coalesce(nullif(current_setting('horbyta.ip_source',true),''),'unavailable'),acceptance_statement='Acepto el alcance y los documentos incluidos de esta revisión, sus condiciones económicas y fechas. Los materiales de referencia no amplían los entregables.' WHERE project_id=$1 AND revision=$2 AND published AND accepted_at IS NULL",
             [id.into(),revision.into(),actor.into()])).await?;
         if result.rows_affected() != 1 {
-            return Err(AppError::Conflict(
-                "Esta revisión no está disponible para aceptar.".into(),
-            ));
+            return Err(AppError::Conflict(codes::SCOPE_REVISION_NOT_ACCEPTABLE.into()));
         }
         Self::project(db, owner, Some(client), id).await
     }
@@ -360,19 +339,17 @@ impl ScopeService {
             ))
             .await?;
         if locked.is_none() {
-            return Err(AppError::Conflict(
-                "La revisión cambió o no es accesible; vuelva a leerla.".into(),
-            ));
+            return Err(AppError::Conflict(codes::SCOPE_REVISION_UNAVAILABLE.into()));
         }
         if (dto.text.trim().is_empty() && dto.attachment_ids.is_empty()) || dto.attachment_ids.len() > 10 {
-            return Err(AppError::BadRequest("Escriba la aclaración.".into()));
+            return Err(AppError::BadRequest(codes::SCOPE_CLARIFICATION_REQUIRED.into()));
         }
         let text = if dto.text.trim().is_empty() {
             let row=db.query_one(Statement::from_sql_and_values(DbBackend::Postgres,
                 "SELECT string_agg(a.original_name, ', ' ORDER BY a.id) AS text FROM attachments a JOIN change_requests c ON c.project_id=a.project_id AND c.user_id=a.user_id WHERE c.id=$1 AND a.id IN(SELECT value::uuid FROM jsonb_array_elements_text($2::jsonb))",
                 [id.into(),serde_json::json!(dto.attachment_ids).into()])).await?.ok_or(AppError::InternalError)?;
             row.try_get::<Option<String>>("", "text")?
-                .ok_or_else(|| AppError::BadRequest("Escriba la aclaración.".into()))?
+                .ok_or_else(|| AppError::BadRequest(codes::SCOPE_CLARIFICATION_REQUIRED.into()))?
         } else {
             dto.text.trim().to_owned()
         };
@@ -380,9 +357,7 @@ impl ScopeService {
             "INSERT INTO scope_events(change_request_id,version,kind,actor_id,actor_kind,body) SELECT id,version,'comment',$4,$5,jsonb_build_object('text',$6::text) FROM change_requests WHERE id=$1 AND user_id=$2 AND ($3::uuid IS NULL OR client_id=$3) AND version=$7 RETURNING id",
             vec![id.into(),owner.into(),client.into(),actor.into(),if client.is_some(){"client"}else{"professional"}.into(),text.chars().take(4000).collect::<String>().into(),dto.version.into()])).await?;
         let Some(row) = row else {
-            return Err(AppError::Conflict(
-                "La revisión cambió o no es accesible; vuelva a leerla.".into(),
-            ));
+            return Err(AppError::Conflict(codes::SCOPE_REVISION_UNAVAILABLE.into()));
         };
         let event: Uuid = row.try_get("", "id")?;
         for file in dto.attachment_ids {
@@ -436,9 +411,7 @@ impl ScopeService {
             ))
             .await?;
         if r.rows_affected() != 1 {
-            return Err(AppError::Conflict(
-                "La tarea necesita un alcance inicial aceptado.".into(),
-            ));
+            return Err(AppError::Conflict(codes::SCOPE_TASK_REQUIRES_ACCEPTED_SCOPE.into()));
         }
         Self::task(db, owner, id).await
     }
@@ -456,9 +429,7 @@ impl ScopeService {
             || !["comment", "request_changes", "reject", "prefer"].contains(&dto.kind.as_str())
             || (client.is_none() && dto.kind != "comment")
         {
-            return Err(AppError::BadRequest(
-                "Indique una acción válida y su explicación.".into(),
-            ));
+            return Err(AppError::BadRequest(codes::SCOPE_ACTION_INVALID.into()));
         }
         // El texto de mensajes solo con archivos usa sus nombres, nunca un aviso ficticio.
         let text = if dto.text.trim().is_empty() {
@@ -466,7 +437,7 @@ impl ScopeService {
                 "SELECT string_agg(original_name, ', ' ORDER BY id) AS names FROM attachments WHERE id IN(SELECT value::uuid FROM jsonb_array_elements_text($1::jsonb)) AND user_id=$2 AND project_id=$3",
                 [serde_json::json!(dto.attachment_ids).into(), owner.into(), id.into()])).await?.ok_or(AppError::InternalError)?;
             row.try_get::<Option<String>>("", "names")?
-                .ok_or_else(|| AppError::BadRequest("Indique una acción válida y su explicación.".into()))?
+                .ok_or_else(|| AppError::BadRequest(codes::SCOPE_ACTION_INVALID.into()))?
         } else {
             dto.text.trim().to_owned()
         };
@@ -505,9 +476,7 @@ impl ScopeService {
           "UPDATE tasks SET scope_preparation_reason=$3 WHERE id=$1 AND user_id=$2 AND scope_preparation_reason IS NULL",
           vec![id.into(),owner.into(),reason.into()])).await?;
         if r.rows_affected() != 1 {
-            return Err(AppError::Conflict(
-                "La tarea ya fue clasificada o no está disponible.".into(),
-            ));
+            return Err(AppError::Conflict(codes::SCOPE_TASK_ALREADY_CLASSIFIED.into()));
         }
         Self::task(db, owner, id).await
     }
@@ -539,7 +508,9 @@ impl ScopeService {
     }
     /// Avisos del cliente: primero los pendientes y después el historial resuelto reciente.
     pub async fn notices(db: &impl ConnectionTrait, owner: Uuid, client: Uuid) -> Result<JsonValue, AppError> {
-        Self::json(db,r#"SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.resolved, x.created_at DESC),'[]') AS data FROM (
+        Self::json(
+            db,
+            r#"SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.resolved, x.created_at DESC),'[]') AS data FROM (
             SELECT n.id,n.kind,n.record_id,n.revision,n.title,n.resolved,n.created_at,
               coalesce(p.id,c.project_id) AS project_id,coalesce(p.name,pc.name) AS project_name
             FROM scope_notices n
@@ -548,7 +519,9 @@ impl ScopeService {
             LEFT JOIN projects pc ON pc.id=c.project_id
             WHERE n.user_id=$1 AND n.client_id=$2
             ORDER BY n.resolved, n.created_at DESC LIMIT 50) x"#,
-          vec![owner.into(),client.into()]).await
+            vec![owner.into(), client.into()],
+        )
+        .await
     }
     pub async fn pending(db: &impl ConnectionTrait, owner: Uuid, client: Uuid) -> Result<JsonValue, AppError> {
         Self::json(db,"SELECT coalesce(jsonb_agg(to_jsonb(n) ORDER BY created_at DESC),'[]') AS data FROM scope_notices n WHERE user_id=$1 AND client_id=$2 AND NOT resolved",
@@ -564,9 +537,7 @@ fn validate_scope_links(content: &str, attachments: &[Uuid]) -> Result<(), AppEr
             Event::Start(Tag::Link { dest_url, .. }) => (dest_url, false),
             Event::Start(Tag::Image { dest_url, .. }) => (dest_url, true),
             Event::Html(html) | Event::InlineHtml(html) if html.to_lowercase().contains("<img") => {
-                return Err(AppError::BadRequest(
-                    "Use imágenes Markdown vinculadas a anexos incluidos, para conservar su contenido.".into(),
-                ));
+                return Err(AppError::BadRequest(codes::SCOPE_IMAGES_REQUIRE_ATTACHMENTS.into()));
             }
             _ => continue,
         };
@@ -585,7 +556,7 @@ fn validate_scope_links(content: &str, attachments: &[Uuid]) -> Result<(), AppEr
             .and_then(|s| Uuid::parse_str(s).ok())
             .is_some_and(|id| attachments.contains(&id));
         if !included {
-            return Err(AppError::BadRequest("Hay recursos pendientes: suba imágenes/archivos, vincule sus anexos y sustituya los enlaces locales antes de publicar. Las imágenes remotas también deben incorporarse.".into()));
+            return Err(AppError::BadRequest(codes::SCOPE_PENDING_RESOURCES.into()));
         }
     }
     Ok(())

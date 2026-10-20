@@ -8,6 +8,7 @@ use sea_orm::TransactionTrait;
 use serde_json::json;
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::{
         client::ClientAuthDto,
@@ -142,7 +143,7 @@ pub(crate) async fn create_project(
     let (payload, files) = crate::utils::multipart::parse_payload_request::<CreateProjectDto>(
         &state,
         request,
-        "multipart request must include a payload field with project json",
+        codes::PROJECT_PAYLOAD_REQUIRED,
     )
     .await?;
     let tx = state.db.begin().await.map_err(AppError::Database)?;
@@ -179,7 +180,7 @@ pub(crate) async fn update_project(
     let (payload, files) = crate::utils::multipart::parse_payload_request::<UpdateProjectDto>(
         &state,
         request,
-        "multipart request must include a payload field with project json",
+        codes::PROJECT_PAYLOAD_REQUIRED,
     )
     .await?;
     let tx = state.db.begin().await.map_err(AppError::Database)?;

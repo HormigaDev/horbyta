@@ -8,6 +8,7 @@ use sea_orm::{
 };
 use uuid::Uuid;
 
+use crate::error_codes as codes;
 use crate::{
     dtos::scope::ClassifyTaskDto,
     dtos::{
@@ -56,9 +57,7 @@ impl ChangeRequestService {
             .exec(db)
             .await?;
         if result.rows_affected != 1 {
-            return Err(AppError::Conflict(
-                "La propuesta cambió; vuelva a leerla antes de continuar.".into(),
-            ));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_PROPOSAL_CHANGED.into()));
         }
         ChangeRequests::find_by_id(id)
             .one(db)
@@ -214,7 +213,7 @@ impl ChangeRequestService {
             .into_model::<ChangeRequestDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("change request not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::CHANGE_REQUEST_NOT_FOUND.into()))?;
 
         Ok(Self::map_detail_row(row)?)
     }
@@ -254,7 +253,7 @@ impl ChangeRequestService {
             .into_model::<ClientChangeRequestDetailRow>()
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("change request not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::CHANGE_REQUEST_NOT_FOUND.into()))?;
 
         Ok(Self::map_client_detail_row(row)?)
     }
@@ -270,7 +269,7 @@ impl ChangeRequestService {
         let origin = Self::parse_origin(&model.origin)?;
 
         if model.version != dto.version {
-            return Err(AppError::Conflict("the client updated the change record".to_string()));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_UPDATED_BY_CLIENT.into()));
         }
 
         if status == ChangeRequestStatus::Approved {
@@ -284,9 +283,7 @@ impl ChangeRequestService {
                 || dto.schedule_impact_days != model.schedule_impact_days;
 
             if non_task_fields_changed {
-                return Err(AppError::Conflict(
-                    "an approved request only allows updating the related task".to_string(),
-                ));
+                return Err(AppError::Conflict(codes::CHANGE_REQUEST_APPROVED_TASK_ONLY.into()));
             }
 
             Self::ensure_task_ownership(db, user_id, model.project_id, dto.task_id).await?;
@@ -300,18 +297,14 @@ impl ChangeRequestService {
         }
 
         if origin == ChangeRequestOrigin::ClientPortal {
-            return Err(AppError::Forbidden(
-                "request was created by the client and only the client can edit it".to_string(),
-            ));
+            return Err(AppError::Forbidden(codes::CHANGE_REQUEST_CLIENT_OWNED.into()));
         }
 
         if !matches!(
             status,
             ChangeRequestStatus::Draft | ChangeRequestStatus::Submitted | ChangeRequestStatus::Assessed
         ) {
-            return Err(AppError::Conflict(
-                "a finalized change request cannot be edited".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_FINALIZED_NOT_EDITABLE.into()));
         }
 
         Self::ensure_project_client_pair(db, user_id, dto.project_id, dto.client_id).await?;
@@ -398,15 +391,11 @@ impl ChangeRequestService {
         let status = Self::parse_status(&model.status)?;
 
         if model.version != dto.version {
-            return Err(AppError::Conflict(
-                "the freelancer updated the change request, reload to continue".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_UPDATED_BY_FREELANCER.into()));
         }
 
         if !matches!(status, ChangeRequestStatus::Draft | ChangeRequestStatus::Submitted) {
-            return Err(AppError::Conflict(
-                "request cannot be edited in its current status".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_NOT_EDITABLE.into()));
         }
 
         let expected_version = model.version;
@@ -428,18 +417,16 @@ impl ChangeRequestService {
         let status = Self::parse_status(&model.status)?;
 
         if model.version != dto.version {
-            return Err(AppError::Conflict("the client updated the change record".to_string()));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_UPDATED_BY_CLIENT.into()));
         }
 
         if status != ChangeRequestStatus::Approved {
-            return Err(AppError::Conflict(
-                "only an approved request allows updating the related task".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_TASK_REQUIRES_APPROVAL.into()));
         }
 
         let task_id = dto
             .task_id
-            .ok_or_else(|| AppError::Conflict("No se permite quitar el origen del trabajo.".into()))?;
+            .ok_or_else(|| AppError::Conflict(codes::CHANGE_REQUEST_ORIGIN_REQUIRED.into()))?;
         ScopeService::classify(
             db,
             user_id,
@@ -462,12 +449,12 @@ impl ChangeRequestService {
     ) -> Result<ChangeRequestDetailDto, AppError> {
         let model = Self::get_model_by_user(db, user_id, id).await?;
         if model.version != version {
-            return Err(AppError::Conflict("La revisión cambió; vuelva a leerla.".into()));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_REVISION_CHANGED.into()));
         }
         let status = Self::parse_status(&model.status)?;
 
         if status != ChangeRequestStatus::Draft {
-            return Err(AppError::Conflict("only a draft request can be submitted".to_string()));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_SUBMIT_REQUIRES_DRAFT.into()));
         }
 
         let expected_version = model.version;
@@ -490,9 +477,7 @@ impl ChangeRequestService {
         if !matches!(status, ChangeRequestStatus::Submitted | ChangeRequestStatus::Assessed)
             || model.version != dto.version
         {
-            return Err(AppError::Conflict(
-                "La revisión cambió o no admite evaluación; vuelva a leerla.".into(),
-            ));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_REVISION_NOT_ASSESSABLE.into()));
         }
         db.execute_unprepared("SELECT set_config('horbyta.publish_offer','true',true)")
             .await?;
@@ -520,11 +505,11 @@ impl ChangeRequestService {
     ) -> Result<ChangeRequestDetailDto, AppError> {
         let model = Self::get_model_by_user(db, user_id, id).await?;
         if model.version != version {
-            return Err(AppError::Conflict("La revisión cambió; vuelva a leerla.".into()));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_REVISION_CHANGED.into()));
         }
         if Self::parse_status(&model.status)? != ChangeRequestStatus::Declined {
             return Err(AppError::Conflict(
-                "Solo una solicitud rechazada puede reabrirse.".into(),
+                codes::CHANGE_REQUEST_REOPEN_REQUIRES_DECLINED.into(),
             ));
         }
 
@@ -546,13 +531,13 @@ impl ChangeRequestService {
     ) -> Result<ChangeRequestDetailDto, AppError> {
         let model = Self::get_model_by_user(db, user_id, id).await?;
         if model.version != version {
-            return Err(AppError::Conflict("La revisión cambió; vuelva a leerla.".into()));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_REVISION_CHANGED.into()));
         }
         let status = Self::parse_status(&model.status)?;
 
         if status != ChangeRequestStatus::Approved {
             return Err(AppError::Conflict(
-                "only an approved request can be marked as implemented".to_string(),
+                codes::CHANGE_REQUEST_IMPLEMENT_REQUIRES_APPROVAL.into(),
             ));
         }
 
@@ -572,15 +557,13 @@ impl ChangeRequestService {
     ) -> Result<ChangeRequestDetailDto, AppError> {
         let model = Self::get_model_by_user(db, user_id, id).await?;
         if model.version != version {
-            return Err(AppError::Conflict("La revisión cambió; vuelva a leerla.".into()));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_REVISION_CHANGED.into()));
         }
         let status = Self::parse_status(&model.status)?;
         let origin = Self::parse_origin(&model.origin)?;
 
         if origin != ChangeRequestOrigin::FreelancerDashboard {
-            return Err(AppError::Forbidden(
-                "you can only cancel requests created by the freelancer".to_string(),
-            ));
+            return Err(AppError::Forbidden(codes::CHANGE_REQUEST_CANCEL_FREELANCER_ONLY.into()));
         }
 
         if matches!(
@@ -591,7 +574,7 @@ impl ChangeRequestService {
                 | ChangeRequestStatus::Cancelled
         ) {
             return Err(AppError::Conflict(
-                "request is already finalized and cannot be cancelled".to_string(),
+                codes::CHANGE_REQUEST_FINALIZED_NOT_CANCELLABLE.into(),
             ));
         }
 
@@ -627,9 +610,7 @@ impl ChangeRequestService {
             }
         }
         if status != ChangeRequestStatus::Assessed || model.version != dto.version {
-            return Err(AppError::Conflict(
-                "La oferta cambió o ya fue decidida; vuelva a leerla.".into(),
-            ));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_OFFER_CHANGED.into()));
         }
 
         let expected_version = model.version;
@@ -656,7 +637,9 @@ impl ChangeRequestService {
             .filter(|text| !text.is_empty())
             .map(str::to_owned);
         if dto.decline_reason == ChangeRequestDeclineReason::Other && comment.is_none() {
-            return Err(AppError::BadRequest("Describa el motivo del rechazo.".into()));
+            return Err(AppError::BadRequest(
+                codes::CHANGE_REQUEST_DECLINE_COMMENT_REQUIRED.into(),
+            ));
         }
         let model = Self::get_model_by_client(db, user_id, client_id, id).await?;
         let status = Self::parse_status(&model.status)?;
@@ -669,9 +652,7 @@ impl ChangeRequestService {
             return Self::get_client_by_id(db, user_id, client_id, id).await;
         }
         if status != ChangeRequestStatus::Assessed || model.version != dto.version {
-            return Err(AppError::Conflict(
-                "La oferta cambió o ya fue decidida; vuelva a leerla.".into(),
-            ));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_OFFER_CHANGED.into()));
         }
 
         let expected_version = model.version;
@@ -698,26 +679,20 @@ impl ChangeRequestService {
         let origin = Self::parse_origin(&model.origin)?;
 
         if model.version != dto.version {
-            return Err(AppError::Conflict(
-                "the freelancer updated the change request, reload to continue".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_UPDATED_BY_FREELANCER.into()));
         }
 
         if origin != ChangeRequestOrigin::ClientPortal {
-            return Err(AppError::Forbidden(
-                "you can only cancel requests created by the client".to_string(),
-            ));
+            return Err(AppError::Forbidden(codes::CHANGE_REQUEST_CANCEL_CLIENT_ONLY.into()));
         }
 
         if status == ChangeRequestStatus::Assessed {
-            return Err(AppError::Conflict(
-                "an assessed request can only be approved or declined".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::CHANGE_REQUEST_ASSESSED_DECIDE_ONLY.into()));
         }
 
         if !matches!(status, ChangeRequestStatus::Draft | ChangeRequestStatus::Submitted) {
             return Err(AppError::Conflict(
-                "request is already finalized and cannot be cancelled".to_string(),
+                codes::CHANGE_REQUEST_FINALIZED_NOT_CANCELLABLE.into(),
             ));
         }
 
@@ -735,7 +710,7 @@ impl ChangeRequestService {
 
         if status != ChangeRequestStatus::Cancelled {
             return Err(AppError::Conflict(
-                "only a cancelled request can be deleted".to_string(),
+                codes::CHANGE_REQUEST_DELETE_REQUIRES_CANCELLED.into(),
             ));
         }
 
@@ -869,7 +844,7 @@ impl ChangeRequestService {
             .filter(change_requests::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("change request not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::CHANGE_REQUEST_NOT_FOUND.into()))?;
 
         Ok(model)
     }
@@ -886,7 +861,7 @@ impl ChangeRequestService {
             .filter(change_requests::Column::ClientId.eq(client_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("change request not found".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::CHANGE_REQUEST_NOT_FOUND.into()))?;
 
         Ok(model)
     }
@@ -902,7 +877,7 @@ impl ChangeRequestService {
             .filter(projects::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("project not found or no permission".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::CHANGE_REQUEST_PROJECT_FORBIDDEN.into()))?;
 
         let client_exists = Clients::find()
             .filter(clients::Column::Id.eq(client_id))
@@ -912,13 +887,11 @@ impl ChangeRequestService {
             .is_some();
 
         if !client_exists {
-            return Err(AppError::NotFound("client not found or no permission".to_string()));
+            return Err(AppError::NotFound(codes::CHANGE_REQUEST_CLIENT_FORBIDDEN.into()));
         }
 
         if project.client_id != Some(client_id) {
-            return Err(AppError::BadRequest(
-                "project is not assigned to the specified client".to_string(),
-            ));
+            return Err(AppError::BadRequest(codes::PROJECT_NOT_ASSIGNED_TO_CLIENT.into()));
         }
 
         Ok(())
@@ -936,7 +909,7 @@ impl ChangeRequestService {
             .filter(projects::Column::ClientId.eq(client_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("project not found or no permission".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::CHANGE_REQUEST_PROJECT_FORBIDDEN.into()))?;
 
         Ok(())
     }
@@ -951,12 +924,10 @@ impl ChangeRequestService {
             .filter(projects::Column::UserId.eq(user_id))
             .one(db)
             .await?
-            .ok_or_else(|| AppError::NotFound("project not found or no permission".to_string()))?;
+            .ok_or_else(|| AppError::NotFound(codes::CHANGE_REQUEST_PROJECT_FORBIDDEN.into()))?;
 
         if project.status == ProjectStatus::Closed.to_string() {
-            return Err(AppError::Conflict(
-                "closed projects cannot accept new change requests".to_string(),
-            ));
+            return Err(AppError::Conflict(codes::PROJECT_CLOSED_NO_CHANGE_REQUESTS.into()));
         }
 
         Ok(())
@@ -974,12 +945,10 @@ impl ChangeRequestService {
                 .filter(tasks::Column::UserId.eq(user_id))
                 .one(db)
                 .await?
-                .ok_or_else(|| AppError::BadRequest("invalid task or no permissions".to_string()))?;
+                .ok_or_else(|| AppError::BadRequest(codes::ATTACHMENT_TASK_FORBIDDEN.into()))?;
 
             if task.project_id != Some(project_id) {
-                return Err(AppError::BadRequest(
-                    "task does not belong to the specified project".to_string(),
-                ));
+                return Err(AppError::BadRequest(codes::TASK_NOT_IN_PROJECT.into()));
             }
         }
 

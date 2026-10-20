@@ -20,195 +20,586 @@ export const messages = {
   'scope.acceptanceStatement':
     'Acepto el alcance y los documentos incluidos de esta revisión, sus condiciones económicas y fechas. Los materiales de referencia no amplían los entregables.',
 
-  'backendErrors.El acuerdo vigente cambió; vuelva a leerlo.':
-    'El acuerdo vigente cambió; vuelva a leerlo.',
-  'backendErrors.Indique el motivo de la corrección y la revisión vigente del acuerdo.':
-    'Indique el motivo de la corrección y la revisión vigente del acuerdo.',
-  'backendErrors.El motivo supera 2000 caracteres.': 'El motivo supera 2000 caracteres.',
-  'backendErrors.La consolidación requiere un cambio aprobado verificable.':
-    'La consolidación requiere un cambio aprobado verificable.',
-  'backendErrors.Consolidar no permite reescribir el acuerdo original.':
-    'Consolidar no permite reescribir el acuerdo original.',
-  'backendErrors.Los suplementos aprobados deben conservarse.':
-    'Los suplementos aprobados deben conservarse.',
-  'backendErrors.Declare el motivo de la corrección y el acuerdo vigente.':
-    'Declare el motivo de la corrección y el acuerdo vigente.',
-  'backendErrors.Acci\u00f3n de negociaci\u00f3n no permitida.':
-    'Acción de negociación no permitida.',
-  'backendErrors.Asigne un cliente antes de publicar el alcance.':
-    'Asigne un cliente antes de publicar el alcance.',
-  'backendErrors.Cancele la solicitud; su historial debe conservarse.':
-    'Cancele la solicitud; su historial debe conservarse.',
-  'backendErrors.Clasificar o mover la tarea no permite salir del proyecto con alcance activo.':
-    'Clasificar o mover la tarea no permite salir del proyecto con alcance activo.',
-  'backendErrors.Clasifique nuevas tareas con el v\u00ednculo de alcance sin alterar la oferta.':
-    'Clasifique nuevas tareas con el vínculo de alcance sin alterar la oferta.',
-  'backendErrors.Complete las cinco secciones o incluya un documento principal completo.':
-    'Complete las cinco secciones o incluya un documento principal completo.',
-  'backendErrors.Cree la tarea pendiente y clasifique su alcance antes de ejecutarla.':
-    'Cree la tarea pendiente y clasifique su alcance antes de ejecutarla.',
-  'backendErrors.Cree la tarea pendiente y justifique su preparaci\u00f3n desde el control de alcance.':
-    'Cree la tarea pendiente y justifique su preparación desde el control de alcance.',
-  'backendErrors.Declare evaluaci\u00f3n, horas, costo y d\u00edas no negativos.':
-    'Declare evaluación, horas, costo y días no negativos.',
-  'backendErrors.El actor no pertenece al cliente del proyecto.':
-    'El actor no pertenece al cliente del proyecto.',
-  'backendErrors.El acuerdo finalizado es inmutable; cree otro cambio.':
-    'El acuerdo finalizado es inmutable; cree otro cambio.',
-  'backendErrors.El acuerdo ya est\u00e1 activo; solicite un cambio.':
-    'El acuerdo ya está activo; solicite un cambio.',
-  'backendErrors.El alcance cambi\u00f3 o ya fue aceptado.': 'El alcance cambió o ya fue aceptado.',
-  'backendErrors.El alcance cambi\u00f3 o ya se acept\u00f3; vuelva a leerlo.':
-    'El alcance cambió o ya se aceptó; vuelva a leerlo.',
-  'backendErrors.El alcance cambi\u00f3; vuelva a leerlo.': 'El alcance cambió; vuelva a leerlo.',
-  'backendErrors.El alcance excede los l\u00edmites de documentos/anexos.':
-    'El alcance excede los límites de documentos/anexos.',
-  'backendErrors.El alcance original ya est\u00e1 aceptado; documente una solicitud de cambio.':
-    'El alcance original ya está aceptado; documente una solicitud de cambio.',
-  'backendErrors.El archivo no coincide con el anexo publicado; revise su integridad.':
+  'backendErrors.ACTIVITY_NOT_FOUND': 'Actividad no encontrada.',
+  'backendErrors.ADMIN_USER_PATCH_EMPTY': 'Indica al menos un dato del usuario para actualizar.',
+  'backendErrors.ATTACHMENT_AUDIO_NOT_SUPPORTED': 'Los adjuntos de audio aún no están disponibles.',
+  'backendErrors.ATTACHMENT_CHANGE_REQUEST_FORBIDDEN':
+    'La solicitud de cambio no existe o no tienes permiso sobre ella.',
+  'backendErrors.ATTACHMENT_CLIENT_SESSION_INVALID':
+    'Tu sesión de cliente no es válida. Vuelve a iniciar sesión.',
+  'backendErrors.ATTACHMENT_FILES_FIELD_REQUIRED': 'Debes enviar archivos en el campo files.',
+  'backendErrors.ATTACHMENT_FILE_EMPTY': 'El archivo no puede estar vacío.',
+  'backendErrors.ATTACHMENT_FILE_EXCEEDS_SIZE': 'El archivo excede el tamaño soportado.',
+  'backendErrors.ATTACHMENT_FILE_NOT_IN_STORAGE': 'El archivo ya no está en el almacenamiento.',
+  'backendErrors.ATTACHMENT_FILE_REQUIRED': 'Debes enviar al menos un archivo válido.',
+  'backendErrors.ATTACHMENT_FILE_TOO_LARGE': 'Cada archivo no puede exceder 50MB.',
+  'backendErrors.ATTACHMENT_MILESTONE_FORBIDDEN': 'Milestone inválido o sin permisos.',
+  'backendErrors.ATTACHMENT_MULTIPART_INVALID': 'Error al procesar el formulario multipart.',
+  'backendErrors.ATTACHMENT_NAME_EMPTY': 'El nombre original del archivo no puede estar vacío.',
+  'backendErrors.ATTACHMENT_NOT_FOUND': 'Adjunto no encontrado.',
+  'backendErrors.ATTACHMENT_PROJECT_FORBIDDEN': 'Proyecto inválido o sin permisos.',
+  'backendErrors.ATTACHMENT_PUBLISHED_MISMATCH':
     'El archivo no coincide con el anexo publicado; revise su integridad.',
-  'backendErrors.El calendario cambi\u00f3; solicite una evaluaci\u00f3n nueva.':
-    'El calendario cambió; solicite una evaluación nueva.',
-  'backendErrors.El cambio pertenece a otro proyecto o cliente.':
-    'El cambio pertenece a otro proyecto o cliente.',
-  'backendErrors.El cliente forma parte del acuerdo; use otro proyecto para otro cliente.':
-    'El cliente forma parte del acuerdo; use otro proyecto para otro cliente.',
-  'backendErrors.El cliente pertenece a la negociaci\u00f3n conservada; cree otro proyecto para otro cliente.':
-    'El cliente pertenece a la negociación conservada; cree otro proyecto para otro cliente.',
-  'backendErrors.El conjunto de documentos supera 1 MB.': 'El conjunto de documentos supera 1 MB.',
-  'backendErrors.El documento no pertenece a esta revisi\u00f3n.':
-    'El documento no pertenece a esta revisión.',
-  'backendErrors.El extra pendiente debe ser una tarea nueva sin ejecuci\u00f3n ni tiempo.':
-    'El extra pendiente debe ser una tarea nueva sin ejecución ni tiempo.',
-  'backendErrors.El extra tiene precio fijo; registre su tiempo como no facturable.':
-    'El extra tiene precio fijo; registre su tiempo como no facturable.',
-  'backendErrors.El importe y moneda del suplemento aceptado son inmutables.':
-    'El importe y moneda del suplemento aceptado son inmutables.',
-  'backendErrors.El proyecto ahora no es facturable; solicite una evaluaci\u00f3n nueva.':
-    'El proyecto ahora no es facturable; solicite una evaluación nueva.',
-  'backendErrors.El requisito debe ser un documento incluido en el alcance aceptado de esta tarea.':
-    'El requisito debe ser un documento incluido en el alcance aceptado de esta tarea.',
-  'backendErrors.El tiempo de un suplemento conserva su origen; no se traslada para facturarlo otra vez.':
-    'El tiempo de un suplemento conserva su origen; no se traslada para facturarlo otra vez.',
-  'backendErrors.Elija un hito pendiente del proyecto con fecha para aplicar la extensi\u00f3n.':
-    'Elija un hito pendiente del proyecto con fecha para aplicar la extensión.',
-  'backendErrors.Escriba la aclaraci\u00f3n.': 'Escriba la aclaración.',
-  'backendErrors.Esta revisi\u00f3n no est\u00e1 disponible para aceptar.':
-    'Esta revisión no está disponible para aceptar.',
-  'backendErrors.Esta revisi\u00f3n no est\u00e1 publicada.': 'Esta revisión no está publicada.',
-  'backendErrors.Esta revisi\u00f3n ya no est\u00e1 pendiente de aceptaci\u00f3n.':
-    'Esta revisión ya no está pendiente de aceptación.',
-  'backendErrors.Este adjunto forma parte de un registro conservado; no se reemplaza ni elimina.':
-    'Este adjunto forma parte de un registro conservado; no se reemplaza ni elimina.',
-  'backendErrors.Este registro conserva un acuerdo; debe archivarse o corregirse con una nueva revisi\u00f3n.':
-    'Este registro conserva un acuerdo; debe archivarse o corregirse con una nueva revisión.',
-  'backendErrors.Explique la relaci\u00f3n con el alcance.': 'Explique la relación con el alcance.',
-  'backendErrors.Falta aceptar el alcance original; la ejecuci\u00f3n est\u00e1 bloqueada.':
-    'Falta aceptar el alcance original; la ejecución está bloqueada.',
-  'backendErrors.Falta un anexo publicado; recupere el archivo antes de aceptar.':
-    'Falta un anexo publicado; recupere el archivo antes de aceptar.',
-  'backendErrors.Finalice los timers de ejecuci\u00f3n antes de publicar el alcance inicial.':
-    'Finalice los timers de ejecución antes de publicar el alcance inicial.',
-  'backendErrors.Hay anexos duplicados.': 'Hay anexos duplicados.',
-  'backendErrors.Hay recursos pendientes: suba im\u00e1genes/archivos, vincule sus anexos y sustituya los enlaces locales antes de publicar. Las im\u00e1genes remotas tambi\u00e9n deben incorporarse.':
-    'Hay recursos pendientes: suba imágenes/archivos, vincule sus anexos y sustituya los enlaces locales antes de publicar. Las imágenes remotas también deben incorporarse.',
-  'backendErrors.Indique c\u00f3mo resolver contradicciones entre secciones y documentos.':
-    'Indique cómo resolver contradicciones entre secciones y documentos.',
-  'backendErrors.Indique una acci\u00f3n v\u00e1lida y su explicaci\u00f3n.':
-    'Indique una acción válida y su explicación.',
-  'backendErrors.Justifique la preparaci\u00f3n sin ejecuci\u00f3n de entregables.':
-    'Justifique la preparación sin ejecución de entregables.',
-  'backendErrors.La factura conserva un suplemento aceptado.':
-    'La factura conserva un suplemento aceptado.',
-  'backendErrors.La identidad no pertenece al cliente.': 'La identidad no pertenece al cliente.',
-  'backendErrors.La oferta cambi\u00f3 o ya fue decidida; vuelva a leerla.':
+  'backendErrors.ATTACHMENT_READ_FAILED': 'No se pudo leer uno de los archivos.',
+  'backendErrors.ATTACHMENT_RESOURCE_LIMIT_REACHED':
+    'Este registro ($1) ya alcanzó el límite de 50 MB de adjuntos.',
+  'backendErrors.ATTACHMENT_RESOURCE_REQUIRED':
+    'El archivo debe pertenecer a un registro con descripción.',
+  'backendErrors.ATTACHMENT_RESOURCE_SIZE_EXCEEDED':
+    'Los archivos de este registro ($1) no pueden superar 50 MB en total.',
+  'backendErrors.ATTACHMENT_STORAGE_LIMIT_REACHED':
+    'Has alcanzado tu límite total de almacenamiento para adjuntos.',
+  'backendErrors.ATTACHMENT_TASK_FORBIDDEN': 'Tarea inválida o sin permisos.',
+  'backendErrors.ATTACHMENT_TOTAL_SIZE_EXCEEDED':
+    'El tamaño total de archivos excede el límite permitido.',
+  'backendErrors.ATTACHMENT_USER_SESSION_INVALID':
+    'Tu sesión no es válida. Vuelve a iniciar sesión.',
+  'backendErrors.AUTH_ACCOUNT_BLOCKED': 'Tu cuenta está bloqueada. Contacta al administrador.',
+  'backendErrors.AUTH_ADMIN_REQUIRED': 'Esta acción requiere permisos de administrador.',
+  'backendErrors.AUTH_CLIENT_ACCESS_INACTIVE': 'El acceso al portal del cliente no está activo.',
+  'backendErrors.AUTH_CREDENTIALS_PROCESSING_FAILED':
+    'No se pudieron verificar las credenciales. Inténtalo de nuevo.',
+  'backendErrors.AUTH_INVALID_CREDENTIALS': 'Credenciales inválidas.',
+  'backendErrors.AUTH_INVALID_TOKEN': 'Token inválido.',
+  'backendErrors.AUTH_NOT_AUTHENTICATED': 'Usuario no autenticado.',
+  'backendErrors.AUTH_NO_SESSION': 'No hay una sesión activa. Inicia sesión para continuar.',
+  'backendErrors.AUTH_REGISTRATION_DISABLED': 'El registro de cuentas está deshabilitado.',
+  'backendErrors.AUTH_SESSION_EXPIRED': 'Tu sesión expiró. Vuelve a iniciar sesión.',
+  'backendErrors.AUTH_TOKEN_EXPIRED': 'Token expirado.',
+  'backendErrors.CATEGORY_NOT_FOUND': 'Categoría no encontrada.',
+  'backendErrors.CHANGE_REQUEST_APPROVED_TASK_ONLY':
+    'Una solicitud aprobada solo permite actualizar la tarea relacionada.',
+  'backendErrors.CHANGE_REQUEST_ASSESSED_DECIDE_ONLY':
+    'Una solicitud evaluada solo puede aprobarse o rechazarse.',
+  'backendErrors.CHANGE_REQUEST_ASSESSED_TEXT_LOCKED':
+    'La solicitud ya fue evaluada: su título y descripción ya no se pueden editar.',
+  'backendErrors.CHANGE_REQUEST_CANCEL_CLIENT_ONLY':
+    'Solo puedes cancelar solicitudes creadas por el cliente.',
+  'backendErrors.CHANGE_REQUEST_CANCEL_FREELANCER_ONLY':
+    'Solo puedes cancelar solicitudes creadas por el freelancer.',
+  'backendErrors.CHANGE_REQUEST_CLIENT_FORBIDDEN': 'Cliente no encontrado o no tienes permiso.',
+  'backendErrors.CHANGE_REQUEST_CLIENT_OWNED':
+    'La solicitud fue creada por el cliente y solo el cliente puede editarla.',
+  'backendErrors.CHANGE_REQUEST_DECLINE_COMMENT_REQUIRED': 'Describe el motivo del rechazo.',
+  'backendErrors.CHANGE_REQUEST_DELETE_REQUIRES_CANCELLED':
+    'Solo se puede eliminar una solicitud cancelada.',
+  'backendErrors.CHANGE_REQUEST_FINALIZED_NOT_CANCELLABLE':
+    'La solicitud ya está finalizada y no puede cancelarse.',
+  'backendErrors.CHANGE_REQUEST_FINALIZED_NOT_EDITABLE':
+    'No se puede editar una solicitud de cambio finalizada.',
+  'backendErrors.CHANGE_REQUEST_IMPLEMENT_REQUIRES_APPROVAL':
+    'Solo una solicitud aprobada puede marcarse como implementada.',
+  'backendErrors.CHANGE_REQUEST_NOT_EDITABLE':
+    'No se puede editar la solicitud en su estado actual.',
+  'backendErrors.CHANGE_REQUEST_NOT_FOUND': 'Solicitud de cambio no encontrada.',
+  'backendErrors.CHANGE_REQUEST_OFFER_CHANGED':
     'La oferta cambió o ya fue decidida; vuelva a leerla.',
-  'backendErrors.La preparaci\u00f3n conserva su origen y justificaci\u00f3n.':
-    'La preparación conserva su origen y justificación.',
-  'backendErrors.La preparaci\u00f3n de propuesta se registra como no facturable; no ejecuta entregables acordados.':
-    'La preparación de propuesta se registra como no facturable; no ejecuta entregables acordados.',
-  'backendErrors.La propuesta cambi\u00f3 o ya recibi\u00f3 una decisi\u00f3n.':
-    'La propuesta cambió o ya recibió una decisión.',
-  'backendErrors.La propuesta cambi\u00f3; vuelva a leerla antes de continuar.':
+  'backendErrors.CHANGE_REQUEST_ORIGIN_REQUIRED': 'No se permite quitar el origen del trabajo.',
+  'backendErrors.CHANGE_REQUEST_PAYLOAD_REQUIRED':
+    'Faltan los datos de la solicitud de cambio en el formulario enviado.',
+  'backendErrors.CHANGE_REQUEST_PROJECT_FORBIDDEN': 'Proyecto no encontrado o no tienes permiso.',
+  'backendErrors.CHANGE_REQUEST_PROPOSAL_CHANGED':
     'La propuesta cambió; vuelva a leerla antes de continuar.',
-  'backendErrors.La publicaci\u00f3n con anexos necesita verificar el almacenamiento.':
-    'La publicación con anexos necesita verificar el almacenamiento.',
-  'backendErrors.La revisi\u00f3n cambi\u00f3 o no admite evaluaci\u00f3n; vuelva a leerla.':
+  'backendErrors.CHANGE_REQUEST_REOPEN_REQUIRES_DECLINED':
+    'Solo una solicitud rechazada puede reabrirse.',
+  'backendErrors.CHANGE_REQUEST_REVISION_CHANGED': 'La revisión cambió; vuelva a leerla.',
+  'backendErrors.CHANGE_REQUEST_REVISION_NOT_ASSESSABLE':
     'La revisión cambió o no admite evaluación; vuelva a leerla.',
-  'backendErrors.La revisi\u00f3n cambi\u00f3 o no es accesible; vuelva a leerla.':
-    'La revisión cambió o no es accesible; vuelva a leerla.',
-  'backendErrors.La revisi\u00f3n cambi\u00f3; vuelva a leerla.':
-    'La revisión cambió; vuelva a leerla.',
-  'backendErrors.La revisi\u00f3n de alcance es inmutable.': 'La revisión de alcance es inmutable.',
-  'backendErrors.La tarea debe referenciar el alcance aceptado.':
-    'La tarea debe referenciar el alcance aceptado.',
-  'backendErrors.La tarea necesita un alcance inicial aceptado.':
-    'La tarea necesita un alcance inicial aceptado.',
-  'backendErrors.La tarea y el acuerdo deben pertenecer al mismo proyecto activo.':
-    'La tarea y el acuerdo deben pertenecer al mismo proyecto activo.',
-  'backendErrors.La tarea ya fue clasificada o no est\u00e1 disponible.':
-    'La tarea ya fue clasificada o no está disponible.',
-  'backendErrors.Las subtareas deben conservar el mismo origen; separe el trabajo adicional.':
-    'Las subtareas deben conservar el mismo origen; separe el trabajo adicional.',
-  'backendErrors.Las tareas de la propuesta cambiaron; publique otra revisi\u00f3n.':
-    'Las tareas de la propuesta cambiaron; publique otra revisión.',
-  'backendErrors.Las tareas de la propuesta cambiaron; publique un alcance nuevo.':
-    'Las tareas de la propuesta cambiaron; publique un alcance nuevo.',
-  'backendErrors.No se a\u00f1ade trabajo a un cambio rechazado, cancelado o implementado.':
-    'No se añade trabajo a un cambio rechazado, cancelado o implementado.',
-  'backendErrors.No se desactiva la protecci\u00f3n del alcance.':
-    'No se desactiva la protección del alcance.',
-  'backendErrors.No se permite fabricar una aceptaci\u00f3n.':
-    'No se permite fabricar una aceptación.',
-  'backendErrors.No se permite quitar el origen del trabajo.':
-    'No se permite quitar el origen del trabajo.',
-  'backendErrors.No se puede cambiar el origen de trabajo clasificado.':
-    'No se puede cambiar el origen de trabajo clasificado.',
-  'backendErrors.No se puede leer un anexo; revise los archivos antes de publicar.':
-    'No se puede leer un anexo; revise los archivos antes de publicar.',
-  'backendErrors.No se puede trasladar una negociaci\u00f3n a otro acuerdo.':
-    'No se puede trasladar una negociación a otro acuerdo.',
-  'backendErrors.No se registra desarrollo antes de aceptar el cambio.':
-    'No se registra desarrollo antes de aceptar el cambio.',
-  'backendErrors.No se traslada ejecuci\u00f3n para eludir el acuerdo.':
-    'No se traslada ejecución para eludir el acuerdo.',
-  'backendErrors.Publique y obtenga el aceite del alcance original antes de evaluar extras.':
+  'backendErrors.CHANGE_REQUEST_SUBMIT_REQUIRES_DRAFT':
+    'Solo una solicitud en borrador puede enviarse.',
+  'backendErrors.CHANGE_REQUEST_TASK_REQUIRES_APPROVAL':
+    'Solo una solicitud aprobada permite actualizar la tarea relacionada.',
+  'backendErrors.CHANGE_REQUEST_UPDATED_BY_CLIENT': 'El cliente actualizó el registro de cambio.',
+  'backendErrors.CHANGE_REQUEST_UPDATED_BY_FREELANCER':
+    'El freelancer actualizó la solicitud. Recarga para continuar.',
+  'backendErrors.CLIENT_AUTH_EMAIL_IN_USE': 'Ese correo ya se usa para el acceso de otro cliente.',
+  'backendErrors.CLIENT_AUTH_NOT_FOUND': 'Datos de autenticación del cliente no encontrados.',
+  'backendErrors.CLIENT_NOT_FOUND': 'Cliente no encontrado.',
+  'backendErrors.CONVERSATION_ATTACHMENT_FOREIGN': 'El archivo no pertenece a esta conversación.',
+  'backendErrors.CONVERSATION_ATTACHMENT_NOT_FOUND':
+    'El adjunto no existe o ya no está disponible.',
+  'backendErrors.CONVERSATION_AUDIO_NOT_SUPPORTED': 'La conversación no admite archivos de audio.',
+  'backendErrors.CONVERSATION_CHANGE_REQUEST_NOT_FOUND':
+    'La solicitud de cambio no existe o no está disponible.',
+  'backendErrors.CONVERSATION_CLIENT_REQUIRED':
+    'El proyecto necesita un cliente para usar la conversación.',
+  'backendErrors.CONVERSATION_CURSOR_INVALID': 'Cursor de conversación inválido.',
+  'backendErrors.CONVERSATION_DOCUMENT_REFERENCE_INVALID':
+    'El documento citado no existe en el acuerdo.',
+  'backendErrors.CONVERSATION_MENTION_INVALID':
+    'Una mención del mensaje no es válida; vuelve a insertarla.',
+  'backendErrors.CONVERSATION_MESSAGE_EMPTY': 'Escribe un mensaje o adjunta un archivo.',
+  'backendErrors.CONVERSATION_MESSAGE_NOT_FOUND': 'El mensaje no existe o fue eliminado.',
+  'backendErrors.CONVERSATION_PROJECT_NOT_FOUND': 'El proyecto no existe o no tienes acceso.',
+  'backendErrors.CONVERSATION_REFERENCE_CATEGORY_INVALID': 'El tipo de referencia no es válido.',
+  'backendErrors.CONVERSATION_RESOURCE_NOT_FOUND':
+    'El elemento citado no existe o no está disponible.',
+  'backendErrors.CONVERSATION_RESOURCE_REFERENCE_INVALID':
+    'La referencia al elemento no es válida.',
+  'backendErrors.CONVERSATION_TOO_MANY_ATTACHMENTS': 'Máximo 10 archivos por mensaje.',
+  'backendErrors.CONVERSATION_TOO_MANY_FILES':
+    'Puedes adjuntar como máximo 10 archivos por mensaje.',
+  'backendErrors.INTERNAL_ERROR':
+    'Ocurrió un error inesperado en el servidor. Inténtalo de nuevo en unos minutos.',
+  'backendErrors.INVOICE_NOT_DRAFT':
+    'Solo se pueden modificar o eliminar facturas en estado borrador.',
+  'backendErrors.INVOICE_NOT_FOUND': 'Factura no encontrada.',
+  'backendErrors.INVOICE_PROVIDER_ID_REQUIRED':
+    'Indica el identificador externo del proveedor de pago.',
+  'backendErrors.INVOICE_STATUS_LOCKED':
+    'Una factura en estado «$1» ya no puede cambiar de estado.',
+  'backendErrors.INVOICE_STATUS_TRANSITION_INVALID': 'Una factura no puede pasar de «$1» a «$2».',
+  'backendErrors.INVOICE_TIME_ENTRIES_INVALID':
+    'Algún registro de tiempo no es válido, no es facturable o ya está en otra factura.',
+  'backendErrors.INVOICE_TOO_MANY_TASKS': 'Una factura puede incluir como máximo $1 tareas.',
+  'backendErrors.INVOICE_VOID_HAS_PAYMENTS':
+    'La factura tiene pagos registrados y no se puede anular. Reembolsa los pagos primero.',
+  'backendErrors.MILESTONE_FORBIDDEN': 'Hito no encontrado o no tienes permiso.',
+  'backendErrors.MILESTONE_NOT_FOUND': 'Hito no encontrado.',
+  'backendErrors.MILESTONE_PAYLOAD_REQUIRED': 'Faltan los datos del hito en el formulario enviado.',
+  'backendErrors.NOTIFICATIONS_PATCH_EMPTY':
+    'Debes enviar al menos una preferencia de notificación para actualizar.',
+  'backendErrors.PASSWORD_ADMIN_POLICY':
+    'La contraseña debe tener al menos 8 caracteres e incluir mayúsculas, minúsculas y números.',
+  'backendErrors.PASSWORD_LOWERCASE_REQUIRED':
+    'La contraseña debe incluir al menos una letra minúscula.',
+  'backendErrors.PASSWORD_MIN_LENGTH': 'La contraseña debe tener al menos 8 caracteres.',
+  'backendErrors.PASSWORD_MISMATCH': 'La nueva contraseña y su confirmación deben coincidir.',
+  'backendErrors.PASSWORD_NUMBER_REQUIRED': 'La contraseña debe incluir al menos un número.',
+  'backendErrors.PASSWORD_SYMBOL_REQUIRED': 'La contraseña debe incluir al menos un símbolo.',
+  'backendErrors.PASSWORD_UNCHANGED':
+    'La nueva contraseña debe ser diferente de la contraseña actual.',
+  'backendErrors.PASSWORD_UPPERCASE_REQUIRED':
+    'La contraseña debe incluir al menos una letra mayúscula.',
+  'backendErrors.PAYMENT_DELETE_MANUAL_ONLY':
+    'Solo se pueden eliminar pagos registrados manualmente.',
+  'backendErrors.PAYMENT_EDIT_MANUAL_ONLY': 'Solo se pueden editar pagos registrados manualmente.',
+  'backendErrors.PAYMENT_IMMUTABLE':
+    'Los pagos registrados no se modifican. Si hay un error, registra un reembolso o un ajuste.',
+  'backendErrors.PAYMENT_INVOICE_INVALID': 'Factura inválida o no pertenece al proyecto.',
+  'backendErrors.PAYMENT_INVOICE_NOT_OPEN':
+    'Solo se pueden registrar pagos para facturas en estado emitida (open).',
+  'backendErrors.PAYMENT_NOT_FOUND': 'Pago no encontrado.',
+  'backendErrors.PAYMENT_REFUND_EXCEEDS_BALANCE':
+    'El reembolso ($1) supera el saldo disponible ($2).',
+  'backendErrors.PAYMENT_REFUND_REQUIRES_CHARGE': 'Solo se puede reembolsar un pago de tipo cargo.',
+  'backendErrors.PREFERENCES_PATCH_EMPTY': 'Debes enviar al menos una preferencia para actualizar.',
+  'backendErrors.PROJECT_BILLING_FIXED_CONFLICT':
+    'Con precio fijo no se indican tarifa por hora ni retainer.',
+  'backendErrors.PROJECT_BILLING_HOURLY_CONFLICT':
+    'Con cobro por hora no se indican precio fijo ni retainer.',
+  'backendErrors.PROJECT_BILLING_NOT_BILLABLE':
+    'Un proyecto no facturable no lleva datos de facturación.',
+  'backendErrors.PROJECT_BILLING_RETAINER_CONFLICT':
+    'Con retainer no se indican tarifa por hora ni precio fijo.',
+  'backendErrors.PROJECT_CATEGORY_FORBIDDEN':
+    'La categoría no existe o no tienes permiso sobre ella.',
+  'backendErrors.PROJECT_CLIENT_FORBIDDEN': 'El cliente no existe o no tienes permiso sobre él.',
+  'backendErrors.PROJECT_CLOSED_NO_CHANGE_REQUESTS':
+    'El proyecto está cerrado y no admite nuevas solicitudes de cambio.',
+  'backendErrors.PROJECT_CLOSED_NO_INVOICES':
+    'El proyecto está cerrado y no admite nuevas facturas.',
+  'backendErrors.PROJECT_CLOSED_NO_MILESTONES':
+    'El proyecto está cerrado y no admite nuevos hitos.',
+  'backendErrors.PROJECT_CLOSED_NO_TASKS': 'El proyecto está cerrado y no admite nuevas tareas.',
+  'backendErrors.PROJECT_FIXED_PRICE_REQUIRED': 'Indica el precio fijo del proyecto.',
+  'backendErrors.PROJECT_HOURLY_RATE_REQUIRED': 'Indica la tarifa por hora del proyecto.',
+  'backendErrors.PROJECT_NOT_ASSIGNED_TO_CLIENT':
+    'El proyecto no está asignado al cliente indicado.',
+  'backendErrors.PROJECT_NOT_FOUND': 'Proyecto no encontrado.',
+  'backendErrors.PROJECT_PAYLOAD_REQUIRED':
+    'Faltan los datos del proyecto en el formulario enviado.',
+  'backendErrors.PROJECT_PAYMENT_DAY_REQUIRED': 'Indica el día de pago del proyecto.',
+  'backendErrors.PROJECT_RETAINER_AMOUNT_REQUIRED': 'Indica el monto del retainer.',
+  'backendErrors.QUERY_BETWEEN_TEXT_VALUE': 'El valor del filtro de «$1» debe ser un texto.',
+  'backendErrors.QUERY_FIELD_BOOLEAN': 'El filtro de «$1» debe ser sí o no.',
+  'backendErrors.QUERY_FILTER_FIELD_NOT_ALLOWED': 'No se puede filtrar por «$1».',
+  'backendErrors.QUERY_FILTER_FIELD_NOT_SUPPORTED': 'El filtro por «$1» no está disponible.',
+  'backendErrors.QUERY_OPERATOR_INVALID': 'El operador «$1» no sirve para «$2».',
+  'backendErrors.QUERY_OPERATOR_NOT_SUPPORTED': 'El operador «$1» no está disponible para «$2».',
+  'backendErrors.QUERY_OPERATOR_TEXT_ONLY':
+    'El operador «$1» solo sirve para campos de texto («$2»).',
+  'backendErrors.QUERY_PARAMETERS_INVALID': 'Los parámetros de búsqueda son inválidos.',
+  'backendErrors.QUERY_PAYLOAD_INVALID': 'La consulta de búsqueda contiene un JSON inválido.',
+  'backendErrors.QUERY_RANGE_ARRAY': 'El rango de «$1» necesita una lista de valores.',
+  'backendErrors.QUERY_RANGE_END_DATETIME_STRING': 'La fecha final de «$1» necesita fecha y hora.',
+  'backendErrors.QUERY_RANGE_END_DATE_INVALID': 'La fecha final de «$1» no es válida.',
+  'backendErrors.QUERY_RANGE_END_DATE_STRING': 'La fecha final de «$1» no tiene formato de fecha.',
+  'backendErrors.QUERY_RANGE_OPERATOR_TYPE':
+    'El filtro por rango solo sirve para fechas o números («$1»).',
+  'backendErrors.QUERY_RANGE_START_DATETIME_STRING':
+    'La fecha inicial de «$1» necesita fecha y hora.',
+  'backendErrors.QUERY_RANGE_START_DATE_INVALID': 'La fecha inicial de «$1» no es válida.',
+  'backendErrors.QUERY_RANGE_START_DATE_STRING':
+    'La fecha inicial de «$1» no tiene formato de fecha.',
+  'backendErrors.QUERY_RANGE_TWO_DATES': 'El rango de «$1» necesita exactamente dos fechas.',
+  'backendErrors.QUERY_RANGE_TWO_VALUES': 'El rango de «$1» necesita exactamente dos valores.',
+  'backendErrors.QUERY_SORT_COLUMN_NOT_ALLOWED': 'No se puede ordenar por «$1».',
+  'backendErrors.QUERY_SORT_COLUMN_NOT_SUPPORTED': 'El orden por «$1» no está disponible.',
+  'backendErrors.QUERY_VALUE_BOOLEAN': 'El filtro de «$1» debe ser sí o no.',
+  'backendErrors.QUERY_VALUE_DATE': 'El filtro de «$1» necesita una fecha válida.',
+  'backendErrors.QUERY_VALUE_DATETIME': 'El filtro de «$1» necesita una fecha y hora válidas.',
+  'backendErrors.QUERY_VALUE_NUMBER': 'El filtro de «$1» debe ser un número.',
+  'backendErrors.QUERY_VALUE_OUT_OF_RANGE': 'El filtro de «$1» está fuera del rango permitido.',
+  'backendErrors.QUERY_VALUE_STRING': 'El filtro de «$1» debe ser un texto.',
+  'backendErrors.QUERY_VALUE_UUID': 'El filtro de «$1» necesita un identificador válido.',
+  'backendErrors.RATE_LIMITED':
+    'Demasiadas solicitudes seguidas. Espera unos segundos y vuelve a intentarlo.',
+  'backendErrors.REQUEST_JSON_INVALID': 'El cuerpo JSON es inválido o está mal formado.',
+  'backendErrors.SCOPE_ACCEPTANCE_FORGED': 'No se permite fabricar una aceptación.',
+  'backendErrors.SCOPE_ACTION_INVALID': 'Indique una acción válida y su explicación.',
+  'backendErrors.SCOPE_ACTIVE_TIMERS':
+    'Finalice los timers de ejecución antes de publicar el alcance inicial.',
+  'backendErrors.SCOPE_ACTOR_NOT_CLIENT': 'El actor no pertenece al cliente del proyecto.',
+  'backendErrors.SCOPE_AGREEMENT_ACTIVE': 'El acuerdo ya está activo; solicite un cambio.',
+  'backendErrors.SCOPE_AGREEMENT_CHANGED': 'El acuerdo vigente cambió; vuelva a leerlo.',
+  'backendErrors.SCOPE_AGREEMENT_CHANGED_REASSESS':
+    'El acuerdo cambió; vuelva a evaluar esta solicitud.',
+  'backendErrors.SCOPE_AGREEMENT_FINALIZED':
+    'El acuerdo finalizado es inmutable; cree otro cambio.',
+  'backendErrors.SCOPE_ALREADY_ACCEPTED':
+    'El alcance original ya está aceptado; documente una solicitud de cambio.',
+  'backendErrors.SCOPE_AMENDMENT_DECLARATION_REQUIRED':
+    'Declare el motivo de la corrección y el acuerdo vigente.',
+  'backendErrors.SCOPE_AMENDMENT_REASON_REQUIRED':
+    'Indique el motivo de la corrección y la revisión vigente del acuerdo.',
+  'backendErrors.SCOPE_ASSESSMENT_INVALID': 'Declare evaluación, horas, costo y días no negativos.',
+  'backendErrors.SCOPE_ASSESS_REQUIRES_ACCEPTED':
     'Publique y obtenga el aceite del alcance original antes de evaluar extras.',
-  'backendErrors.Revise t\u00edtulo, contenido, tipo e identificadores \u00fanicos de los documentos.':
-    'Revise título, contenido, tipo e identificadores únicos de los documentos.',
-  'backendErrors.Se requiere la decisi\u00f3n del cliente autenticado.':
-    'Se requiere la decisión del cliente autenticado.',
-  'backendErrors.Se requiere una oferta vigente y decisi\u00f3n del cliente autenticado.':
-    'Se requiere una oferta vigente y decisión del cliente autenticado.',
-  'backendErrors.Solo se justifica preparaci\u00f3n pendiente anterior al acuerdo.':
-    'Solo se justifica preparación pendiente anterior al acuerdo.',
-  'backendErrors.Solo se traslada una propuesta pendiente sin ejecuci\u00f3n a un proyecto controlado.':
-    'Solo se traslada una propuesta pendiente sin ejecución a un proyecto controlado.',
-  'backendErrors.Trabajo adicional bloqueado hasta aceptar y aplicar el cambio.':
-    'Trabajo adicional bloqueado hasta aceptar y aplicar el cambio.',
-  'backendErrors.Transici\u00f3n de solicitud no permitida.':
-    'Transición de solicitud no permitida.',
-  'backendErrors.Transici\u00f3n final no permitida.': 'Transición final no permitida.',
-  'backendErrors.Un cambio hist\u00f3rico requiere conciliaci\u00f3n, no habilita trabajo nuevo.':
-    'Un cambio histórico requiere conciliación, no habilita trabajo nuevo.',
-  'backendErrors.Un suplemento con costo necesita proyecto facturable y moneda.':
-    'Un suplemento con costo necesita proyecto facturable y moneda.',
-  'backendErrors.Una subtarea conserva el origen de su padre; separe el extra.':
-    'Una subtarea conserva el origen de su padre; separe el extra.',
-  'backendErrors.Use im\u00e1genes Markdown vinculadas a anexos incluidos, para conservar su contenido.':
-    'Use imágenes Markdown vinculadas a anexos incluidos, para conservar su contenido.',
-  'backendErrors.Vincule y termine todas las tareas del cambio antes de cerrar su implementaci\u00f3n.':
+  'backendErrors.SCOPE_ATTACHMENT_HAS_AGREEMENT':
+    'Este archivo forma parte del historial de un acuerdo y no se puede eliminar.',
+  'backendErrors.SCOPE_ATTACHMENT_MISMATCH':
+    'Un anexo no coincide con el publicado; revise su integridad antes de aceptar.',
+  'backendErrors.SCOPE_ATTACHMENT_MISSING':
+    'Falta un anexo publicado; recupere el archivo antes de aceptar.',
+  'backendErrors.SCOPE_ATTACHMENT_PRESERVED':
+    'Este adjunto forma parte de un registro conservado; no se reemplaza ni elimina.',
+  'backendErrors.SCOPE_ATTACHMENT_UNREADABLE':
+    'No se puede leer un anexo; revise los archivos antes de publicar.',
+  'backendErrors.SCOPE_CHANGED': 'El alcance cambió; vuelva a leerlo.',
+  'backendErrors.SCOPE_CHANGED_OR_ACCEPTED': 'El alcance cambió o ya fue aceptado.',
+  'backendErrors.SCOPE_CHANGE_CLOSED_FOR_WORK':
+    'No se añade trabajo a un cambio rechazado, cancelado o implementado.',
+  'backendErrors.SCOPE_CHANGE_MUST_BE_CANCELLED':
+    'Cancele la solicitud; su historial debe conservarse.',
+  'backendErrors.SCOPE_CHANGE_NOT_ACCEPTED':
+    'No se registra desarrollo antes de aceptar el cambio.',
+  'backendErrors.SCOPE_CHANGE_OTHER_PROJECT': 'El cambio pertenece a otro proyecto o cliente.',
+  'backendErrors.SCOPE_CHANGE_REQUEST_HAS_HISTORY':
+    'Esta solicitud de cambio forma parte del historial del acuerdo y no se puede eliminar. Cancélala para conservarla.',
+  'backendErrors.SCOPE_CHANGE_TASKS_PENDING':
     'Vincule y termine todas las tareas del cambio antes de cerrar su implementación.',
-  'backendErrors.El acuerdo cambi\u00f3; vuelva a leerlo.': 'El acuerdo cambió; vuelva a leerlo.',
-  'backendErrors.Este registro conserva acuerdos; ci\u00e9rrelo o canc\u00e9lelo sin eliminar su historial.':
+  'backendErrors.SCOPE_CLARIFICATION_REQUIRED': 'Escriba la aclaración.',
+  'backendErrors.SCOPE_CLIENT_DECISION_REQUIRED':
+    'Se requiere la decisión del cliente autenticado.',
+  'backendErrors.SCOPE_CLIENT_HAS_AGREEMENT':
+    'Este cliente tiene acuerdos registrados y no se puede eliminar.',
+  'backendErrors.SCOPE_CLIENT_LOCKED':
+    'El cliente forma parte del acuerdo; use otro proyecto para otro cliente.',
+  'backendErrors.SCOPE_CLIENT_REQUIRED': 'Asigne un cliente antes de publicar el alcance.',
+  'backendErrors.SCOPE_CONFLICT': 'El acuerdo cambió; vuelva a leerlo.',
+  'backendErrors.SCOPE_CONSOLIDATION_REQUIRES_APPROVED':
+    'La consolidación requiere un cambio aprobado verificable.',
+  'backendErrors.SCOPE_CONSOLIDATION_REWRITE':
+    'Consolidar no permite reescribir el acuerdo original.',
+  'backendErrors.SCOPE_DOCUMENTS_INVALID':
+    'Revise título, contenido, tipo e identificadores únicos de los documentos.',
+  'backendErrors.SCOPE_DOCUMENTS_TOO_LARGE': 'El conjunto de documentos supera 1 MB.',
+  'backendErrors.SCOPE_DOCUMENT_NOT_IN_REVISION': 'El documento no pertenece a esta revisión.',
+  'backendErrors.SCOPE_DUPLICATE_ATTACHMENTS': 'Hay anexos duplicados.',
+  'backendErrors.SCOPE_EXECUTION_BLOCKED':
+    'Falta aceptar el alcance original; la ejecución está bloqueada.',
+  'backendErrors.SCOPE_EXECUTION_MOVE': 'No se traslada ejecución para eludir el acuerdo.',
+  'backendErrors.SCOPE_EXTENSION_MILESTONE_REQUIRED':
+    'Elija un hito pendiente del proyecto con fecha para aplicar la extensión.',
+  'backendErrors.SCOPE_EXTRA_BLOCKED':
+    'Trabajo adicional bloqueado hasta aceptar y aplicar el cambio.',
+  'backendErrors.SCOPE_FINAL_TRANSITION_INVALID': 'Transición final no permitida.',
+  'backendErrors.SCOPE_FIXED_PRICE_EXTRA_TIME':
+    'El extra tiene precio fijo; registre su tiempo como no facturable.',
+  'backendErrors.SCOPE_HISTORICAL_CHANGE':
+    'Un cambio histórico requiere conciliación, no habilita trabajo nuevo.',
+  'backendErrors.SCOPE_IDENTITY_NOT_CLIENT': 'La identidad no pertenece al cliente.',
+  'backendErrors.SCOPE_IMAGES_REQUIRE_ATTACHMENTS':
+    'Use imágenes Markdown vinculadas a anexos incluidos, para conservar su contenido.',
+  'backendErrors.SCOPE_INVOICE_HAS_SUPPLEMENT': 'La factura conserva un suplemento aceptado.',
+  'backendErrors.SCOPE_LIMITS_EXCEEDED': 'El alcance excede los límites de documentos/anexos.',
+  'backendErrors.SCOPE_MILESTONE_HAS_AGREEMENT':
+    'Este hito está vinculado a un acuerdo con el cliente y no se puede eliminar.',
+  'backendErrors.SCOPE_MOVE_REQUIRES_PENDING_PROPOSAL':
+    'Solo se traslada una propuesta pendiente sin ejecución a un proyecto controlado.',
+  'backendErrors.SCOPE_NEGOTIATION_ACTION_INVALID': 'Acción de negociación no permitida.',
+  'backendErrors.SCOPE_NEGOTIATION_CLIENT_LOCKED':
+    'El cliente pertenece a la negociación conservada; cree otro proyecto para otro cliente.',
+  'backendErrors.SCOPE_NEGOTIATION_MOVE': 'No se puede trasladar una negociación a otro acuerdo.',
+  'backendErrors.SCOPE_NOT_FOUND': 'El alcance no existe o no está disponible.',
+  'backendErrors.SCOPE_OFFER_DECISION_REQUIRED':
+    'Se requiere una oferta vigente y decisión del cliente autenticado.',
+  'backendErrors.SCOPE_OFFER_TASKS_LOCKED':
+    'Clasifique nuevas tareas con el vínculo de alcance sin alterar la oferta.',
+  'backendErrors.SCOPE_ORIGIN_LOCKED': 'No se puede cambiar el origen de trabajo clasificado.',
+  'backendErrors.SCOPE_PENDING_EXTRA_MUST_BE_NEW':
+    'El extra pendiente debe ser una tarea nueva sin ejecución ni tiempo.',
+  'backendErrors.SCOPE_PENDING_RESOURCES':
+    'Hay recursos pendientes: suba imágenes/archivos, vincule sus anexos y sustituya los enlaces locales antes de publicar. Las imágenes remotas también deben incorporarse.',
+  'backendErrors.SCOPE_PRECEDENCE_REQUIRED':
+    'Indique cómo resolver contradicciones entre secciones y documentos.',
+  'backendErrors.SCOPE_PREPARATION_BEFORE_AGREEMENT':
+    'Solo se justifica preparación pendiente anterior al acuerdo.',
+  'backendErrors.SCOPE_PREPARATION_FROM_SCOPE':
+    'Cree la tarea pendiente y justifique su preparación desde el control de alcance.',
+  'backendErrors.SCOPE_PREPARATION_LOCKED': 'La preparación conserva su origen y justificación.',
+  'backendErrors.SCOPE_PREPARATION_NOT_BILLABLE':
+    'La preparación de propuesta se registra como no facturable; no ejecuta entregables acordados.',
+  'backendErrors.SCOPE_PROJECT_HAS_AGREEMENT':
+    'Este proyecto tiene un acuerdo con el cliente y no se puede eliminar. Ciérralo o cancélalo para conservar su historial.',
+  'backendErrors.SCOPE_PROJECT_NOT_BILLABLE':
+    'El proyecto ahora no es facturable; solicite una evaluación nueva.',
+  'backendErrors.SCOPE_PROJECT_NOT_FOUND': 'El proyecto no existe o no tienes acceso.',
+  'backendErrors.SCOPE_PROPOSAL_DECIDED': 'La propuesta cambió o ya recibió una decisión.',
+  'backendErrors.SCOPE_PROPOSAL_TASKS_CHANGED':
+    'Las tareas de la propuesta cambiaron; publique un alcance nuevo.',
+  'backendErrors.SCOPE_PROPOSAL_TASKS_CHANGED_REPUBLISH':
+    'Las tareas de la propuesta cambiaron; publique otra revisión.',
+  'backendErrors.SCOPE_PROTECTION_LOCKED': 'No se desactiva la protección del alcance.',
+  'backendErrors.SCOPE_REASON_TOO_LONG': 'El motivo supera 2000 caracteres.',
+  'backendErrors.SCOPE_RECORD_HAS_AGREEMENT':
     'Este registro conserva acuerdos; ciérrelo o cancélelo sin eliminar su historial.',
-
-  'backendErrors.Invalid conversation cursor.': 'Cursor de conversación inválido.',
-  'backendErrors.Attachment does not belong to this conversation.':
-    'El archivo no pertenece a esta conversación.',
-  'backendErrors.At most 10 attachments per message.': 'Máximo 10 archivos por mensaje.',
-  'backendErrors.Audio attachments are not supported in conversations.':
-    'Los adjuntos de audio aún no están disponibles.',
+  'backendErrors.SCOPE_RECORD_NOT_FOUND': 'El registro del acuerdo no existe o no está disponible.',
+  'backendErrors.SCOPE_RECORD_PRESERVED':
+    'Este registro conserva un acuerdo; debe archivarse o corregirse con una nueva revisión.',
+  'backendErrors.SCOPE_REOPEN_FREELANCER_ONLY':
+    'Solo el freelancer puede reabrir la negociación de un cambio rechazado.',
+  'backendErrors.SCOPE_REOPEN_UNCHANGED':
+    'Reabra la solicitud sin cambios y proponga las nuevas condiciones al evaluarla.',
+  'backendErrors.SCOPE_REQUIREMENT_INVALID':
+    'El requisito debe ser un documento incluido en el alcance aceptado de esta tarea.',
+  'backendErrors.SCOPE_REVISION_IMMUTABLE': 'La revisión de alcance es inmutable.',
+  'backendErrors.SCOPE_REVISION_NOT_ACCEPTABLE': 'Esta revisión no está disponible para aceptar.',
+  'backendErrors.SCOPE_REVISION_NOT_PENDING': 'Esta revisión ya no está pendiente de aceptación.',
+  'backendErrors.SCOPE_REVISION_NOT_PUBLISHED': 'Esta revisión no está publicada.',
+  'backendErrors.SCOPE_REVISION_UNAVAILABLE':
+    'La revisión cambió o no es accesible; vuelva a leerla.',
+  'backendErrors.SCOPE_SCHEDULE_CHANGED': 'El calendario cambió; solicite una evaluación nueva.',
+  'backendErrors.SCOPE_SECTIONS_INCOMPLETE':
+    'Complete las cinco secciones o incluya un documento principal completo.',
+  'backendErrors.SCOPE_STORAGE_UNAVAILABLE':
+    'La publicación con anexos necesita verificar el almacenamiento.',
+  'backendErrors.SCOPE_SUBTASKS_SAME_ORIGIN':
+    'Las subtareas deben conservar el mismo origen; separe el trabajo adicional.',
+  'backendErrors.SCOPE_SUBTASK_INHERITS_ORIGIN':
+    'Una subtarea conserva el origen de su padre; separe el extra.',
+  'backendErrors.SCOPE_SUPPLEMENTS_PRESERVED': 'Los suplementos aprobados deben conservarse.',
+  'backendErrors.SCOPE_SUPPLEMENT_AMOUNT_LOCKED':
+    'El importe y moneda del suplemento aceptado son inmutables.',
+  'backendErrors.SCOPE_SUPPLEMENT_REQUIRES_BILLING':
+    'Un suplemento con costo necesita proyecto facturable y moneda.',
+  'backendErrors.SCOPE_SUPPLEMENT_TIME_LOCKED':
+    'El tiempo de un suplemento conserva su origen; no se traslada para facturarlo otra vez.',
+  'backendErrors.SCOPE_TASK_ALREADY_CLASSIFIED':
+    'La tarea ya fue clasificada o no está disponible.',
+  'backendErrors.SCOPE_TASK_CANNOT_LEAVE_PROJECT':
+    'Clasificar o mover la tarea no permite salir del proyecto con alcance activo.',
+  'backendErrors.SCOPE_TASK_HAS_AGREEMENT':
+    'Esta tarea forma parte del acuerdo con el cliente y no se puede eliminar. Si ya no se hará, cámbiala a un estado cancelado: así se conserva su historial.',
+  'backendErrors.SCOPE_TASK_PROJECT_MISMATCH':
+    'La tarea y el acuerdo deben pertenecer al mismo proyecto activo.',
+  'backendErrors.SCOPE_TASK_REQUIRES_ACCEPTED_REVISION':
+    'La tarea debe referenciar el alcance aceptado.',
+  'backendErrors.SCOPE_TASK_REQUIRES_ACCEPTED_SCOPE':
+    'La tarea necesita un alcance inicial aceptado.',
+  'backendErrors.SCOPE_TASK_UNCLASSIFIED':
+    'Cree la tarea pendiente y clasifique su alcance antes de ejecutarla.',
+  'backendErrors.SCOPE_TRANSITION_INVALID': 'Transición de solicitud no permitida.',
+  'backendErrors.SCOPE_USER_HAS_AGREEMENT':
+    'Este usuario tiene acuerdos registrados y no se puede eliminar.',
+  'backendErrors.TAG_NOT_FOUND': 'Etiqueta no encontrada.',
+  'backendErrors.TASK_BLOCKING_SUBTASKS':
+    'No puedes finalizar esta tarea: tiene subtareas bloqueantes que aún no están finalizadas.',
+  'backendErrors.TASK_MILESTONE_INVALID': 'Milestone inválido.',
+  'backendErrors.TASK_MILESTONE_NOT_IN_PROJECT': 'El hito no pertenece al proyecto seleccionado.',
+  'backendErrors.TASK_NOT_FOUND': 'Tarea no encontrada.',
+  'backendErrors.TASK_NOT_IN_PROJECT': 'La tarea no pertenece al proyecto indicado.',
+  'backendErrors.TASK_PARENT_FORBIDDEN': 'Tarea padre inválida o sin permisos.',
+  'backendErrors.TASK_PARENT_NOT_IN_PROJECT':
+    'La tarea padre no pertenece al proyecto seleccionado.',
+  'backendErrors.TASK_PAYLOAD_REQUIRED': 'Faltan los datos de la tarea en el formulario enviado.',
+  'backendErrors.TASK_SELF_PARENT': 'Una tarea no puede ser padre de sí misma.',
+  'backendErrors.TASK_STATUS_CATEGORY_LOCKED':
+    'El estado tiene tareas; muévelas a otro estado para cambiar su comportamiento.',
+  'backendErrors.TASK_STATUS_CATEGORY_MISSING':
+    'No hay ningún estado con el comportamiento «$1»; créalo en Estados de tarea.',
+  'backendErrors.TASK_STATUS_CATEGORY_REQUIRED':
+    'Debe existir al menos un estado con el comportamiento «$1».',
+  'backendErrors.TASK_STATUS_COLOR_INVALID': 'Usa un color hexadecimal, por ejemplo #F59E0B.',
+  'backendErrors.TASK_STATUS_FOREIGN': 'El estado elegido no pertenece a tu cuenta.',
+  'backendErrors.TASK_STATUS_INVALID': 'El estado de la tarea no es válido.',
+  'backendErrors.TASK_STATUS_IN_USE':
+    'El estado tiene tareas; muévelas a otro estado antes de eliminarlo.',
+  'backendErrors.TASK_STATUS_NAME_TAKEN': 'Ya existe un estado con ese nombre.',
+  'backendErrors.TASK_STATUS_NOT_FOUND': 'El estado no existe o fue eliminado.',
+  'backendErrors.TASK_STATUS_ORDER_CHANGED': 'La lista de estados cambió; vuelve a cargarla.',
+  'backendErrors.TASK_STATUS_OWNER_LOCKED': 'Un estado no puede cambiar de propietario.',
+  'backendErrors.TASK_TAGS_INVALID': 'Una o más etiquetas no son válidas.',
+  'backendErrors.TIME_ENTRY_ACTIVITY_FORBIDDEN': 'Actividad inválida o sin permisos.',
+  'backendErrors.TIME_ENTRY_DAILY_LIMIT':
+    'La entrada de tiempo excede el límite diario configurado.',
+  'backendErrors.TIME_ENTRY_DAILY_LIMIT_EXCEEDED':
+    'Superas el límite diario de la tarea: tu máximo es $1 h, ya hay $3 h registradas ese día y quieres añadir $2 h. Revisa si dejaste un cronómetro activo o ajusta tu máximo en Preferencias.',
+  'backendErrors.TIME_ENTRY_DAY_FULL': 'Ya alcanzaste el máximo de $1 h para este día.',
+  'backendErrors.TIME_ENTRY_DURATION_EXCEEDED': 'La duración calculada excede el límite permitido.',
+  'backendErrors.TIME_ENTRY_END_BEFORE_START':
+    'La hora de finalización debe ser posterior al inicio.',
+  'backendErrors.TIME_ENTRY_NOT_FOUND': 'Registro de tiempo no encontrado.',
+  'backendErrors.TIME_ENTRY_NOT_TIMER':
+    'El registro de tiempo no corresponde a un cronómetro iniciado.',
+  'backendErrors.TIME_ENTRY_TIMER_ACTIVE': 'No se puede editar un cronómetro activo.',
+  'backendErrors.TIME_ENTRY_TIMER_ALREADY_RUNNING':
+    'Ya existe un cronómetro activo para este usuario.',
+  'backendErrors.TIME_ENTRY_TIMER_ALREADY_STOPPED': 'El cronómetro ya fue detenido previamente.',
+  'backendErrors.TIME_ENTRY_TIMER_TOO_SHORT':
+    'La duración del cronómetro debe ser de al menos 1 minuto.',
+  'backendErrors.TWO_FACTOR_ALREADY_ENABLED': 'La autenticación de dos factores ya está activa.',
+  'backendErrors.TWO_FACTOR_CODE_INVALID': 'El código de autenticación no es válido.',
+  'backendErrors.TWO_FACTOR_CODE_REPLAYED': 'Ese código de autenticación o respaldo ya fue usado.',
+  'backendErrors.TWO_FACTOR_CODE_REQUIRED': 'Debes ingresar un código de autenticación.',
+  'backendErrors.TWO_FACTOR_MULTIPLE_CODES':
+    'Envía solo un código: el de la app o uno de respaldo.',
+  'backendErrors.TWO_FACTOR_NOT_ENABLED': 'La autenticación de dos factores no está activa.',
+  'backendErrors.TWO_FACTOR_PROCESSING_FAILED': 'No se pudo procesar la verificación en dos pasos.',
+  'backendErrors.TWO_FACTOR_QR_FAILED':
+    'No se pudo generar el código QR de la verificación en dos pasos.',
+  'backendErrors.TWO_FACTOR_SETUP_NOT_STARTED':
+    'Primero inicia la configuración de autenticación de dos factores.',
+  'backendErrors.UI_STATE_KEY_INVALID': 'No se pudo guardar la preferencia de la pantalla.',
+  'backendErrors.UI_STATE_NOT_FOUND': 'La preferencia de la pantalla no existe.',
+  'backendErrors.UI_STATE_SCOPE_INVALID': 'No se pudo guardar la preferencia de la pantalla.',
+  'backendErrors.UI_STATE_VALUE_TOO_LARGE': 'La preferencia supera el tamaño máximo de $1 bytes.',
+  'backendErrors.UPLOAD_FILE_READ_FAILED': 'No se pudo leer uno de los archivos enviados.',
+  'backendErrors.UPLOAD_LOCAL_ID_REQUIRED':
+    'A un archivo de la descripción le falta su identificador; vuelve a adjuntarlo.',
+  'backendErrors.UPLOAD_MULTIPART_INVALID': 'No se pudo procesar el formulario enviado.',
+  'backendErrors.UPLOAD_PAYLOAD_DUPLICATED': 'El formulario enviado tiene datos duplicados.',
+  'backendErrors.UPLOAD_PAYLOAD_INVALID': 'El formulario multipart es inválido o está mal formado.',
+  'backendErrors.UPLOAD_PAYLOAD_JSON_INVALID':
+    'Los datos del formulario no tienen un formato válido.',
+  'backendErrors.UPLOAD_PAYLOAD_READ_FAILED': 'No se pudieron leer los datos del formulario.',
+  'backendErrors.UPLOAD_TOTAL_SIZE_50MB': 'Los archivos enviados no pueden superar 50 MB en total.',
+  'backendErrors.UPLOAD_TOTAL_SIZE_EXCEEDED': 'Los archivos enviados superan el tamaño permitido.',
+  'backendErrors.USER_ACCOUNT_INVALID':
+    'Cuenta no válida: usa un nombre de 2 a 100 caracteres, un correo válido y una contraseña de al menos 8 caracteres con mayúsculas, minúsculas, números y símbolos.',
+  'backendErrors.USER_CANNOT_BLOCK_SELF': 'No puedes desactivar ni bloquear tu propia cuenta.',
+  'backendErrors.USER_CANNOT_DELETE_SELF': 'No puedes eliminar tu propia cuenta de administrador.',
+  'backendErrors.USER_CANNOT_DEMOTE_SELF': 'No puedes quitarte el rol de administrador.',
+  'backendErrors.USER_EMAIL_IN_USE': 'Ese correo ya está en uso.',
+  'backendErrors.USER_EMAIL_REGISTERED': 'Ese correo ya está registrado.',
+  'backendErrors.USER_NAME_EMPTY': 'El nombre no puede estar vacío.',
+  'backendErrors.USER_NAME_IN_USE': 'Ese nombre ya está en uso.',
+  'backendErrors.USER_NOT_FOUND': 'El usuario no existe.',
+  'backendErrors.USER_USERNAME_TAKEN': 'Ese nombre de usuario ya está en uso.',
+  'backendErrors.VALIDATION_CHARACTERS': 'El campo «$1» contiene caracteres no permitidos.',
+  'backendErrors.VALIDATION_COUNT_BETWEEN': '«$1» debe tener entre $2 y $3 elementos.',
+  'backendErrors.VALIDATION_COUNT_MAX': '«$1» admite como máximo $2 elementos.',
+  'backendErrors.VALIDATION_COUNT_MIN': '«$1» debe tener al menos $2 elementos.',
+  'backendErrors.VALIDATION_DECIMAL_QUANTITY': 'La cantidad de decimales debe estar entre 1 y 4.',
+  'backendErrors.VALIDATION_DIGITS_ONLY': 'El campo «$1» solo admite números.',
+  'backendErrors.VALIDATION_EMAIL': 'El campo «$1» debe ser un correo electrónico válido.',
+  'backendErrors.VALIDATION_FAILED': 'Los datos enviados no son válidos.',
+  'backendErrors.VALIDATION_INVALID': 'El campo «$1» no es válido.',
+  'backendErrors.VALIDATION_IP_ADDRESS': 'El campo «$1» debe ser una dirección IP válida.',
+  'backendErrors.VALIDATION_LENGTH_BETWEEN': 'El campo «$1» debe tener entre $2 y $3 caracteres.',
+  'backendErrors.VALIDATION_LENGTH_INVALID': 'El campo «$1» tiene una longitud no válida.',
+  'backendErrors.VALIDATION_LENGTH_MAX': 'El campo «$1» admite como máximo $2 caracteres.',
+  'backendErrors.VALIDATION_LENGTH_MIN': 'El campo «$1» debe tener al menos $2 caracteres.',
+  'backendErrors.VALIDATION_NON_NEGATIVE': 'El campo «$1» no puede ser negativo.',
+  'backendErrors.VALIDATION_NUMBER_SEPARATOR':
+    'El campo «$1» debe usar coma o punto como separador.',
+  'backendErrors.VALIDATION_NUMBER_SEPARATORS_EQUAL':
+    'El separador de miles y el decimal deben ser distintos.',
+  'backendErrors.VALIDATION_OUT_OF_RANGE': 'El campo «$1» está fuera del rango permitido.',
+  'backendErrors.VALIDATION_PATTERN': 'El campo «$1» no tiene el formato esperado.',
+  'backendErrors.VALIDATION_POSITIVE': 'El campo «$1» debe ser mayor que 0.',
+  'backendErrors.VALIDATION_RANGE_BETWEEN': 'El campo «$1» debe estar entre $2 y $3.',
+  'backendErrors.VALIDATION_RANGE_MAX': 'El campo «$1» debe ser como máximo $2.',
+  'backendErrors.VALIDATION_RANGE_MIN': 'El campo «$1» debe ser como mínimo $2.',
+  'backendErrors.VALIDATION_REQUIRED': 'El campo «$1» es obligatorio.',
+  'backendErrors.VALIDATION_TIMEZONE': 'El campo «$1» debe ser una zona horaria válida.',
+  'backendErrors.WEBSOCKET_MESSAGE_INVALID': 'Formato de mensaje inválido.',
+  'backendErrors.WEBSOCKET_MESSAGE_TYPE_UNKNOWN': 'Tipo de mensaje desconocido.',
+  'backendErrors.WEBSOCKET_READ_PAYLOAD_INVALID': 'No se pudo marcar la notificación como leída.',
+  'backendErrors.WEBSOCKET_READ_PAYLOAD_MISSING': 'No se pudo marcar la notificación como leída.',
+  'backendFields.address_line': 'dirección',
+  'backendFields.amendment_reason': 'motivo de la corrección',
+  'backendFields.amount': 'monto',
+  'backendFields.appearance': 'apariencia',
+  'backendFields.attachment_ids': 'adjuntos',
+  'backendFields.billing': 'facturación',
+  'backendFields.client_portal': 'portal del cliente',
+  'backendFields.client_request_description': 'descripción de la solicitud',
+  'backendFields.client_signature_ip': 'IP de la firma',
+  'backendFields.code': 'código',
+  'backendFields.color': 'color',
+  'backendFields.company': 'empresa',
+  'backendFields.complexity': 'complejidad',
+  'backendFields.confirm_password': 'confirmar contraseña',
+  'backendFields.criteria': 'criterios de aceptación',
+  'backendFields.currency_type': 'moneda',
+  'backendFields.current_password': 'contraseña actual',
+  'backendFields.decline_comment': 'explicación del rechazo',
+  'backendFields.deliverables': 'entregables',
+  'backendFields.description': 'descripción',
+  'backendFields.document': 'documento',
+  'backendFields.duration_minutes': 'duración',
+  'backendFields.email': 'correo electrónico',
+  'backendFields.entries': 'registros',
+  'backendFields.exclusions': 'exclusiones',
+  'backendFields.expected_revision': 'revisión esperada',
+  'backendFields.filters': 'filtros',
+  'backendFields.fixed_price': 'precio fijo',
+  'backendFields.freelancer_notes': 'notas',
+  'backendFields.hourly_rate': 'tarifa por hora',
+  'backendFields.ids': 'elementos',
+  'backendFields.impact_cost': 'costo del impacto',
+  'backendFields.impact_hours': 'horas del impacto',
+  'backendFields.key': 'clave',
+  'backendFields.limit': 'límite',
+  'backendFields.magic_token': 'enlace de acceso',
+  'backendFields.max_daily_hours': 'máximo de horas diarias',
+  'backendFields.mentions': 'menciones',
+  'backendFields.milestones': 'hitos',
+  'backendFields.mime_type': 'tipo de archivo',
+  'backendFields.name': 'nombre',
+  'backendFields.new_milestones': 'hitos nuevos',
+  'backendFields.new_password': 'contraseña nueva',
+  'backendFields.notes': 'notas',
+  'backendFields.number_format': 'formato numérico',
+  'backendFields.original_name': 'nombre del archivo',
+  'backendFields.page': 'página',
+  'backendFields.password': 'contraseña',
+  'backendFields.payment_day': 'día de pago',
+  'backendFields.payment_link': 'enlace de pago',
+  'backendFields.payment_method': 'método de pago',
+  'backendFields.phone': 'teléfono',
+  'backendFields.priority': 'prioridad',
+  'backendFields.project_billing': 'facturación del proyecto',
+  'backendFields.provider_external_id': 'identificador del proveedor',
+  'backendFields.reason': 'motivo',
+  'backendFields.reference_code': 'código de referencia',
+  'backendFields.request': 'solicitud',
+  'backendFields.requirements': 'requisitos',
+  'backendFields.restrictions': 'restricciones',
+  'backendFields.retainer_amount': 'monto del retainer',
+  'backendFields.revision': 'revisión',
+  'backendFields.schedule_impact_days': 'días de impacto en el calendario',
+  'backendFields.scope': 'ámbito',
+  'backendFields.technical_assessment': 'evaluación técnica',
+  'backendFields.text': 'texto',
+  'backendFields.timezone': 'zona horaria',
+  'backendFields.title': 'título',
+  'backendFields.two_factor_auth_backup_code': 'código de respaldo',
+  'backendFields.two_factor_auth_code': 'código de verificación',
+  'backendFields.version': 'versión',
+  'backendFields.work': 'trabajo',
 
   'scope.originalBilling': 'Condiciones económicas originales',
   'scope.originalDates': 'Fechas pactadas en esta revisión',
@@ -1540,9 +1931,12 @@ export const messages = {
   'taskStatuses.color': 'Color',
   'taskStatuses.colorInvalid': 'Usa un color hexadecimal, p. ej. #F59E0B',
   'taskStatuses.categoryLabel': 'Comportamiento',
-  'taskStatuses.categoryHelp': 'Indica cómo cuenta el sistema las tareas en este estado (progreso, atrasos, cierre).',
-  'taskStatuses.categoryLocked': 'Tiene tareas: mueve sus tareas a otro estado para cambiar el comportamiento.',
-  'taskStatuses.categoryHint': 'El comportamiento decide qué significa cada estado: «Completada» cierra la tarea y «Cancelada» la deja fuera de los atrasos. Siempre debe existir al menos un estado «Por hacer» y uno «Completada».',
+  'taskStatuses.categoryHelp':
+    'Indica cómo cuenta el sistema las tareas en este estado (progreso, atrasos, cierre).',
+  'taskStatuses.categoryLocked':
+    'Tiene tareas: mueve sus tareas a otro estado para cambiar el comportamiento.',
+  'taskStatuses.categoryHint':
+    'El comportamiento decide qué significa cada estado: «Completada» cierra la tarea y «Cancelada» la deja fuera de los atrasos. Siempre debe existir al menos un estado «Por hacer» y uno «Completada».',
   'taskStatuses.category.todo': 'Por hacer',
   'taskStatuses.category.in_progress': 'En progreso',
   'taskStatuses.category.review': 'En revisión',
@@ -1824,301 +2218,49 @@ export const messages = {
 
   'error.dialog.title': 'Detalles del error',
   'error.dialog.titleWithStatus': 'Detalles del error ({status})',
-  'error.dialog.subtitle': 'Payload técnico recibido:',
-  'error.dialog.clientSubtitle':
-    'La solicitud fue rechazada por validación o datos inválidos. Payload técnico:',
-  'error.dialog.serverSubtitle': 'El servidor devolvió un error interno. Payload técnico:',
   'error.dialog.reportButton': 'Reportar error',
   'error.dialog.reportSuccess': 'Reporte interno de error enviado correctamente (TODO)',
 
-  'error.badRequestDialog.title': 'Revisa los datos ingresados',
-  'error.badRequestDialog.subtitle': 'Corrige los siguientes puntos para continuar:',
   'error.badRequestDialog.accept': 'Entendido',
-  'error.badRequestDialog.defaultMessage': 'Hay datos inválidos en la solicitud.',
+  'error.apiDialog.title.validation': 'Revisa los datos ingresados',
+  'error.apiDialog.title.conflict': 'No se pudo completar la acción',
+  'error.apiDialog.title.forbidden': 'Acción no permitida',
+  'error.apiDialog.title.notFound': 'No se encontró el registro',
+  'error.apiDialog.title.auth': 'Sesión no válida',
+  'error.apiDialog.title.server': 'Algo salió mal',
+  'error.apiDialog.hint.validation':
+    'Algún dato enviado no es válido. Revísalo e inténtalo de nuevo.',
+  'error.apiDialog.hint.conflict': 'El estado actual del registro no permite esta acción.',
+  'error.apiDialog.hint.forbidden': 'No tienes permiso para realizar esta acción.',
+  'error.apiDialog.hint.notFound':
+    'Es posible que el registro se haya eliminado. Actualiza la página.',
+  'error.apiDialog.hint.auth': 'Vuelve a iniciar sesión para continuar.',
+  'error.apiDialog.hint.server': 'Inténtalo de nuevo en unos minutos.',
+  'error.details.hint':
+    'Información técnica de la respuesta. Despliega cada dato para ver su contenido.',
+  'error.details.serverHint':
+    'El servidor devolvió un error interno. Despliega cada dato para ver su contenido.',
+  'error.details.showJson': 'Ver JSON',
+  'error.details.copyJson': 'Copiar JSON',
+  'error.details.copy': 'Copiar',
+  'error.details.copied': 'Copiado al portapapeles',
+  'error.details.copyFailed': 'No se pudo copiar',
+  'error.details.empty': 'Vacío',
+  'error.details.items': 'Sin elementos | 1 elemento | {count} elementos',
+  'error.details.fields': 'Sin campos | 1 campo | {count} campos',
+  'error.details.request': 'Solicitud',
+  'error.details.key.name': 'Tipo de error',
+  'error.details.key.message': 'Mensaje',
+  'error.details.key.status': 'Código HTTP',
+  'error.details.key.method': 'Método',
+  'error.details.key.url': 'Dirección',
+  'error.details.key.type': 'Categoría',
+  'error.details.key.code': 'Código de error',
+  'error.details.key.params': 'Datos del mensaje',
+  'error.details.key.error': 'Mensaje del servidor',
+  'error.details.key.payload': 'Respuesta completa',
+  'error.details.key.stack': 'Traza',
   'error.rateLimited': 'Demasiadas solicitudes. Espera un momento antes de volver a intentarlo.',
-
-  'backendErrors.password must be at least 8 characters':
-    'La contraseña debe tener al menos 8 caracteres.',
-  'backendErrors.password must include at least one lowercase letter':
-    'La contraseña debe incluir al menos una letra minúscula.',
-  'backendErrors.password must include at least one uppercase letter':
-    'La contraseña debe incluir al menos una letra mayúscula.',
-  'backendErrors.password must include at least one number':
-    'La contraseña debe incluir al menos un número.',
-  'backendErrors.password must include at least one symbol':
-    'La contraseña debe incluir al menos un símbolo.',
-  'backendErrors.new password and confirm password must match':
-    'La nueva contraseña y su confirmación deben coincidir.',
-  'backendErrors.new password must be different from current password':
-    'La nueva contraseña debe ser diferente de la contraseña actual.',
-  'backendErrors.invalid json payload': 'El cuerpo JSON es inválido o está mal formado.',
-  'backendErrors.invalid multipart payload':
-    'El formulario multipart es inválido o está mal formado.',
-  'backendErrors.invalid search query parameters': 'Los parámetros de búsqueda son inválidos.',
-  'backendErrors.invalid search query payload':
-    'La consulta de búsqueda contiene un JSON inválido.',
-  'backendErrors.request must include at least one preference field':
-    'Debes enviar al menos una preferencia para actualizar.',
-  'backendErrors.request must include at least one notification preference field':
-    'Debes enviar al menos una preferencia de notificación para actualizar.',
-  'backendErrors.email must be a valid email address': 'El correo electrónico no es válido.',
-  'backendErrors.password is required': 'La contraseña es obligatoria.',
-  'backendErrors.current password is required': 'La contraseña actual es obligatoria.',
-  'backendErrors.magic token is required': 'Debes ingresar el token mágico.',
-  'backendErrors.original file name must be between 1 and 255 characters':
-    'El nombre original del archivo debe tener entre 1 y 255 caracteres.',
-  'backendErrors.mime type must be between 1 and 100 characters':
-    'El tipo MIME debe tener entre 1 y 100 caracteres.',
-  'backendErrors.category name must be between 1 and 100 characters':
-    'El nombre de la categoría debe tener entre 1 y 100 caracteres.',
-  'backendErrors.chat title must be between 1 and 255 characters':
-    'El título del chat debe tener entre 1 y 255 caracteres.',
-  'backendErrors.tag name must be between 1 and 50 characters':
-    'El nombre de la etiqueta debe tener entre 1 y 50 caracteres.',
-  'backendErrors.at most 5 filters are allowed': 'Solo se permiten hasta 5 filtros.',
-  'backendErrors.page must be at least 1': 'La página debe ser mayor o igual a 1.',
-  'backendErrors.limit must be between 1 and 100': 'El límite debe estar entre 1 y 100.',
-  'backendErrors.milestone name must be between 1 and 100 characters':
-    'El nombre del hito debe tener entre 1 y 100 caracteres.',
-  'backendErrors.milestone description must be at most 10000 characters':
-    'La descripción del hito debe tener máximo 10000 caracteres.',
-  'backendErrors.project name must be between 1 and 255 characters':
-    'El nombre del proyecto debe tener entre 1 y 255 caracteres.',
-  'backendErrors.project description must be at most 100000 characters':
-    'La descripción del proyecto debe tener máximo 100000 caracteres.',
-  'backendErrors.task title must be between 1 and 255 characters':
-    'El título de la tarea debe tener entre 1 y 255 caracteres.',
-  'backendErrors.task description must be at most 15000 characters':
-    'La descripción de la tarea debe tener máximo 15000 caracteres.',
-  'backendErrors.task priority must be between 1 and 4':
-    'La prioridad de la tarea debe estar entre 1 y 4.',
-  'backendErrors.task complexity must be between 1 and 4':
-    'La complejidad de la tarea debe estar entre 1 y 4.',
-  'backendErrors.duration_minutes must be at least 1':
-    'La duración en minutos debe ser mayor o igual a 1.',
-  'backendErrors.notes must be at most 1000 characters':
-    'Las observaciones deben tener máximo 1000 caracteres.',
-  'backendErrors.there is already an active timer for this user':
-    'Ya existe un cronómetro activo para este usuario.',
-  'backendErrors.time entry does not correspond to a started timer':
-    'El registro de tiempo no corresponde a un cronómetro iniciado.',
-  'backendErrors.timer was already stopped previously':
-    'El cronómetro ya fue detenido previamente.',
-  'backendErrors.end time must be after the start time':
-    'La hora de finalización debe ser posterior al inicio.',
-  'backendErrors.timer duration must be at least 1 minute':
-    'La duración del cronómetro debe ser de al menos 1 minuto.',
-  'backendErrors.you cannot log more hours on this day':
-    'No puedes registrar más horas en este día.',
-  'backendErrors.time entry exceeds the configured daily limit':
-    'La entrada de tiempo excede el límite diario configurado.',
-  'backendErrors.an active timer cannot be edited': 'No se puede editar un cronómetro activo.',
-  'backendErrors.max daily hours must be between 1 and 14':
-    'El máximo diario debe estar entre 1 y 14 horas.',
-  'backendErrors.computed duration exceeds the allowed limit':
-    'La duración calculada excede el límite permitido.',
-  'backendErrors.time entry not found': 'Registro de tiempo no encontrado.',
-  'backendErrors.invalid task or no permissions': 'Tarea inválida o sin permisos.',
-  'backendErrors.invalid parent task or no permissions': 'Tarea padre inválida o sin permisos.',
-  'backendErrors.invalid activity or no permissions': 'Actividad inválida o sin permisos.',
-  'backendErrors.invalid project or no permissions': 'Proyecto inválido o sin permisos.',
-  'backendErrors.invalid milestone': 'Milestone inválido.',
-  'backendErrors.invalid milestone or no permissions': 'Milestone inválido o sin permisos.',
-  'backendErrors.milestone does not belong to the selected project':
-    'El hito no pertenece al proyecto seleccionado.',
-  'backendErrors.one or more tags are not valid': 'Una o más etiquetas no son válidas.',
-  'backendErrors.a task cannot be its own parent': 'Una tarea no puede ser padre de sí misma.',
-  'backendErrors.parent task does not belong to the selected project':
-    'La tarea padre no pertenece al proyecto seleccionado.',
-  'backendErrors.cannot finish task: it has blocking subtasks that are not done yet':
-    'No puedes finalizar esta tarea: tiene subtareas bloqueantes que aún no están finalizadas.',
-  'backendErrors.task not found': 'Tarea no encontrada.',
-  'backendErrors.project not found': 'Proyecto no encontrado.',
-  'backendErrors.project not found or no permission': 'Proyecto no encontrado o no tienes permiso.',
-  'backendErrors.client not found': 'Cliente no encontrado.',
-  'backendErrors.client not found or no permission': 'Cliente no encontrado o no tienes permiso.',
-  'backendErrors.client authentication data not found':
-    'Datos de autenticación del cliente no encontrados.',
-  'backendErrors.invalid client authentication state':
-    'Estado de autenticación del cliente inválido.',
-  'backendErrors.project is not assigned to the specified client':
-    'El proyecto no está asignado al cliente indicado.',
-  'backendErrors.task does not belong to the specified project':
-    'La tarea no pertenece al proyecto indicado.',
-  'backendErrors.invoice not found': 'Factura no encontrada.',
-  'backendErrors.invalid invoice or does not belong to the project':
-    'Factura inválida o no pertenece al proyecto.',
-  'backendErrors.invalid status': 'Estado inválido.',
-  'backendErrors.only invoices in draft status can be modified or deleted':
-    'Solo se pueden modificar o eliminar facturas en estado borrador.',
-  'backendErrors.payment not found': 'Pago no encontrado.',
-  'backendErrors.only a charge-type payment can be refunded':
-    'Solo se puede reembolsar un pago de tipo cargo.',
-  'backendErrors.only manually registered payments can be edited':
-    'Solo se pueden editar pagos registrados manualmente.',
-  'backendErrors.only manually registered payments can be deleted':
-    'Solo se pueden eliminar pagos registrados manualmente.',
-  "backendErrors.payments can only be recorded for invoices in 'open' status":
-    'Solo se pueden registrar pagos para facturas en estado emitida (open).',
-  'backendErrors.milestone not found': 'Hito no encontrado.',
-  'backendErrors.milestone not found or no permission': 'Hito no encontrado o no tienes permiso.',
-  'backendErrors.tag not found': 'Etiqueta no encontrada.',
-  'backendErrors.category not found': 'Categoría no encontrada.',
-  'backendErrors.activity not found': 'Actividad no encontrada.',
-  'backendErrors.attachment not found': 'Adjunto no encontrado.',
-  'backendErrors.chat not found': 'Chat no encontrado.',
-  'backendErrors.change request not found': 'Solicitud de cambio no encontrada.',
-  'backendErrors.the client updated the change record':
-    'El cliente actualizó el registro de cambio.',
-  'backendErrors.an approved request only allows updating the related task':
-    'Una solicitud aprobada solo permite actualizar la tarea relacionada.',
-  'backendErrors.request was created by the client and only the client can edit it':
-    'La solicitud fue creada por el cliente y solo el cliente puede editarla.',
-  'backendErrors.a finalized change request cannot be edited':
-    'No se puede editar una solicitud de cambio finalizada.',
-  'backendErrors.the freelancer updated the change request, reload to continue':
-    'El freelancer actualizó la solicitud. Recarga para continuar.',
-  'backendErrors.request cannot be edited in its current status':
-    'No se puede editar la solicitud en su estado actual.',
-  'backendErrors.only an approved request allows updating the related task':
-    'Solo una solicitud aprobada permite actualizar la tarea relacionada.',
-  'backendErrors.only a draft request can be submitted':
-    'Solo una solicitud en borrador puede enviarse.',
-  'backendErrors.only a submitted request can be assessed':
-    'Solo una solicitud enviada puede evaluarse.',
-  'backendErrors.only an approved request can be marked as implemented':
-    'Solo una solicitud aprobada puede marcarse como implementada.',
-  'backendErrors.you can only cancel requests created by the freelancer':
-    'Solo puedes cancelar solicitudes creadas por el freelancer.',
-  'backendErrors.request is already finalized and cannot be cancelled':
-    'La solicitud ya está finalizada y no puede cancelarse.',
-  'backendErrors.only an assessed request can be approved':
-    'Solo una solicitud evaluada puede aprobarse.',
-  'backendErrors.only an assessed request can be declined':
-    'Solo una solicitud evaluada puede rechazarse.',
-  'backendErrors.you can only cancel requests created by the client':
-    'Solo puedes cancelar solicitudes creadas por el cliente.',
-  'backendErrors.an assessed request can only be approved or declined':
-    'Una solicitud evaluada solo puede aprobarse o rechazarse.',
-  'backendErrors.only a cancelled request can be deleted':
-    'Solo se puede eliminar una solicitud cancelada.',
-  'backendErrors.invalid credentials': 'Credenciales inválidas.',
-  'backendErrors.invalid token': 'Token inválido.',
-  'backendErrors.expired token': 'Token expirado.',
-  'backendErrors.user not authenticated': 'Usuario no autenticado.',
-  'backendErrors.authenticated user not found': 'Usuario autenticado no encontrado.',
-  'backendErrors.registration is disabled, personal-use system':
-    'El registro está deshabilitado. Sistema de uso personal.',
-  'backendErrors.name cannot be empty': 'El nombre no puede estar vacío.',
-  'backendErrors.that email is already in use': 'Ese correo ya está en uso.',
-  'backendErrors.that name is already in use': 'Ese nombre ya está en uso.',
-  'backendErrors.ai api key cannot be empty': 'La API key de IA no puede estar vacía.',
-  'backendErrors.configure your ai api key in preferences':
-    'Configura tu API key de IA en preferencias.',
-  'backendErrors.configure an ai model in preferences':
-    'Configura un modelo de IA en preferencias.',
-  'backendErrors.configured model is not allowed': 'El modelo configurado no está permitido.',
-  'backendErrors.configured model is not available': 'El modelo configurado no está disponible.',
-  'backendErrors.ai service unavailable at this moment':
-    'El servicio de IA no está disponible en este momento.',
-  'backendErrors.ai service unavailable at this moment, try again in a few seconds':
-    'El servicio de IA no está disponible. Intenta nuevamente en unos segundos.',
-  'backendErrors.openrouter api key invalid or not configured':
-    'API key de OpenRouter inválida o no configurada.',
-  'backendErrors.openrouter applied a rate limit, try again in a few seconds':
-    'OpenRouter aplicó un límite de tasa. Intenta nuevamente en unos segundos.',
-  'backendErrors.ai provider took too long to respond':
-    'El proveedor de IA tardó demasiado en responder.',
-  'backendErrors.an error occurred processing the model response':
-    'Ocurrió un error procesando la respuesta del modelo.',
-  'backendErrors.file cannot be empty': 'El archivo no puede estar vacío.',
-  'backendErrors.file exceeds the supported size': 'El archivo excede el tamaño soportado.',
-  'backendErrors.each file cannot exceed 50mb': 'Cada archivo no puede exceder 50MB.',
-  'backendErrors.total file size exceeds the allowed limit':
-    'El tamaño total de archivos excede el límite permitido.',
-  'backendErrors.you must send at least one valid file': 'Debes enviar al menos un archivo válido.',
-  'backendErrors.you must send files in the files field':
-    'Debes enviar archivos en el campo files.',
-  'backendErrors.file must be associated with a project or a task':
-    'Debes asociar el archivo a un proyecto o una tarea.',
-  'backendErrors.original file name cannot be empty':
-    'El nombre original del archivo no puede estar vacío.',
-  'backendErrors.you have reached your total storage limit for attachments':
-    'Has alcanzado tu límite total de almacenamiento para adjuntos.',
-  'backendErrors.error processing multipart form': 'Error al procesar el formulario multipart.',
-  'backendErrors.could not read one of the files': 'No se pudo leer uno de los archivos.',
-  'backendErrors.unknown message type': 'Tipo de mensaje desconocido.',
-  'backendErrors.invalid message format': 'Formato de mensaje inválido.',
-  'backendErrors.missing data field': 'Falta el campo data.',
-  'backendErrors.invalid chat payload': 'Payload de chat inválido.',
-  'backendErrors.invalid chat_id format': 'Formato de chat_id inválido.',
-  'backendErrors.client name must be between 1 and 255 characters':
-    'El nombre del cliente debe tener entre 1 y 255 caracteres.',
-  'backendErrors.client email must be a valid email address': 'El correo del cliente no es válido.',
-  'backendErrors.client email must be at most 255 characters':
-    'El correo del cliente debe tener máximo 255 caracteres.',
-  'backendErrors.client phone must be at most 20 characters':
-    'El teléfono del cliente debe tener máximo 20 caracteres.',
-  'backendErrors.client address must be at most 512 characters':
-    'La dirección del cliente debe tener máximo 512 caracteres.',
-  'backendErrors.client company must be at most 255 characters':
-    'La empresa del cliente debe tener máximo 255 caracteres.',
-  'backendErrors.client notes must be at most 5000 characters':
-    'Las notas del cliente deben tener máximo 5000 caracteres.',
-  'backendErrors.client auth email must be a valid email address':
-    'El correo de autenticación del cliente no es válido.',
-  'backendErrors.name must be between 2 and 100 characters':
-    'El nombre debe tener entre 2 y 100 caracteres.',
-  'backendErrors.email must be at most 255 characters':
-    'El correo electrónico debe tener máximo 255 caracteres.',
-  'backendErrors.current password must be between 1 and 128 characters':
-    'La contraseña actual debe tener entre 1 y 128 caracteres.',
-  'backendErrors.new password must be between 12 and 128 characters':
-    'La nueva contraseña debe tener entre 12 y 128 caracteres.',
-  'backendErrors.confirm password must be between 12 and 128 characters':
-    'La confirmación de contraseña debe tener entre 12 y 128 caracteres.',
-  'backendErrors.two-factor authentication code must be between 6 and 8 digits':
-    'El código de autenticación debe tener entre 6 y 8 dígitos.',
-  'backendErrors.two-factor authentication backup code must be between 8 and 32 characters':
-    'El código de respaldo debe tener entre 8 y 32 caracteres.',
-  'backendErrors.two-factor authentication is already enabled':
-    'La autenticación de dos factores ya está activa.',
-  'backendErrors.two-factor authentication is not enabled':
-    'La autenticación de dos factores no está activa.',
-  'backendErrors.two-factor authentication setup has not been started':
-    'Primero inicia la configuración de autenticación de dos factores.',
-  'backendErrors.invalid two-factor authentication code':
-    'El código de autenticación no es válido.',
-  'backendErrors.two-factor authentication code is required':
-    'Debes ingresar un código de autenticación.',
-  'backendErrors.two-factor authentication code was already used':
-    'Ese código de autenticación o respaldo ya fue usado.',
-  'backendErrors.timezone must be between 1 and 64 characters':
-    'La timezone debe tener entre 1 y 64 caracteres.',
-  'backendErrors.ai model must be between 1 and 128 characters':
-    'El modelo de IA debe tener entre 1 y 128 caracteres.',
-  'backendErrors.ai api key must be between 8 and 4096 characters':
-    'La API key de IA debe tener entre 8 y 4096 caracteres.',
-  'backendErrors.change request title must be between 1 and 255 characters':
-    'El título de la solicitud de cambio debe tener entre 1 y 255 caracteres.',
-  'backendErrors.client request description must be between 1 and 20000 characters':
-    'La descripción de la solicitud del cliente debe tener entre 1 y 20000 caracteres.',
-  'backendErrors.technical assessment must be at most 20000 characters':
-    'La evaluación técnica debe tener máximo 20000 caracteres.',
-  'backendErrors.technical assessment must be between 1 and 20000 characters':
-    'La evaluación técnica debe tener entre 1 y 20000 caracteres.',
-  'backendErrors.schedule impact days must be at least 0':
-    'El impacto en días debe ser mayor o igual a 0.',
-  'backendErrors.version must be at least 1': 'La versión debe ser mayor o igual a 1.',
-  'backendErrors.phone must contain only digits': 'El teléfono debe contener solo dígitos.',
-  'backendErrors.impact hours must be greater than or equal to 0':
-    'El impacto en horas debe ser mayor o igual a 0.',
-  'backendErrors.impact cost must be greater than or equal to 0':
-    'El impacto en costo debe ser mayor o igual a 0.',
-  'backendErrors.client signature ip must be a valid ip address':
-    'La IP de firma del cliente debe ser válida.',
-  'backendErrors.timezone must be a valid timezone': 'La timezone debe ser válida.',
-  'backendErrors.ai model is not a supported model': 'El modelo de IA no está soportado.',
 
   'error.notFound.message': 'Oops. Nada por aquí...',
   'error.notFound.backHome': 'Volver al inicio',

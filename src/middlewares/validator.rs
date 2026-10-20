@@ -1,5 +1,6 @@
 use crate::dtos::query::SearchQuery;
-use crate::error::AppError;
+use crate::error::{AppError, ErrorCode, ErrorDetail};
+use crate::error_codes as codes;
 use axum::{
     Json,
     extract::{FromRequest, FromRequestParts, Query, Request},
@@ -118,34 +119,110 @@ fn format_custom_message(field: &str, code: &str) -> Option<String> {
         "empty_notifications_patch" => "request must include at least one notification preference field".to_string(),
         "empty_admin_user_patch" => "request must include at least one user field".to_string(),
         "non_negative_decimal" => "decimal must be greater than or equal to 0".to_string(),
+        "strict_positive_decimal" => format!("{field} must be greater than 0"),
+        "provider_external_id_required" => "provider external id is required for this provider".to_string(),
+        "multiple_two_factor_auth_codes" => "send only one two-factor authentication code".to_string(),
+        "two_factor_auth_code_required" => "two-factor authentication code is required".to_string(),
         _ => return None,
     };
 
     Some(message)
 }
 
-fn format_field_error(path: &str, error: &ValidationError) -> String {
-    if let Some(message) = error.message.as_ref() {
-        return normalize_message(message);
-    }
-
+fn format_field_error(path: &str, error: &ValidationError) -> ErrorDetail {
     let field = format_field_label(path);
     let code = error.code.as_ref();
-
-    let message = match code {
-        "required" => format!("{field} is required"),
-        "email" => format!("{field} must be a valid email address"),
-        "length" => format_length_message(&field, error),
-        "range" => format_range_message(&field, error),
-        "must_match" => format!("{field} does not match the expected pattern"),
-        "contains" => format!("{field} contains invalid characters"),
-        _ => format_custom_message(&field, code).unwrap_or_else(|| format!("{field} is invalid")),
+    let message = match error.message.as_ref() {
+        Some(message) => normalize_message(message),
+        None => normalize_message(&match code {
+            "required" => format!("{field} is required"),
+            "email" => format!("{field} must be a valid email address"),
+            "length" => format_length_message(&field, error),
+            "range" => format_range_message(&field, error),
+            "must_match" => format!("{field} does not match the expected pattern"),
+            "contains" => format!("{field} contains invalid characters"),
+            _ => format_custom_message(&field, code).unwrap_or_else(|| format!("{field} is invalid")),
+        }),
     };
-
-    normalize_message(&message)
+    let (catalog, params) = validation_code(path, error);
+    ErrorDetail::new(catalog, message, params)
 }
 
-fn collect_error_messages(errors: &ValidationErrors, current_path: &str, output: &mut Vec<(String, String)>) {
+/// Código del catálogo para un error de validación: `params[0]` es la ruta del campo y el
+/// resto, los límites (mínimo y máximo) cuando los hay.
+fn validation_code(path: &str, error: &ValidationError) -> (ErrorCode, Vec<String>) {
+    let field = if path.is_empty() || path == "__all__" {
+        "request"
+    } else {
+        path
+    }
+    .to_string();
+    let min = param_as_string(error, "min");
+    let max = param_as_string(error, "max");
+    let items = matches!(error.params.get("value"), Some(value) if value.is_array());
+    let bounded = |between: ErrorCode, at_least: ErrorCode, at_most: ErrorCode, other: ErrorCode| match (&min, &max) {
+        (Some(min), Some(max)) => (between, vec![field.clone(), min.clone(), max.clone()]),
+        (Some(min), None) => (at_least, vec![field.clone(), min.clone()]),
+        (None, Some(max)) => (at_most, vec![field.clone(), max.clone()]),
+        (None, None) => (other, vec![field.clone()]),
+    };
+    let code = match error.code.as_ref() {
+        "length" if items => {
+            return bounded(
+                codes::VALIDATION_COUNT_BETWEEN,
+                codes::VALIDATION_COUNT_MIN,
+                codes::VALIDATION_COUNT_MAX,
+                codes::VALIDATION_LENGTH_INVALID,
+            );
+        }
+        "length" => {
+            return bounded(
+                codes::VALIDATION_LENGTH_BETWEEN,
+                codes::VALIDATION_LENGTH_MIN,
+                codes::VALIDATION_LENGTH_MAX,
+                codes::VALIDATION_LENGTH_INVALID,
+            );
+        }
+        "range" => {
+            return bounded(
+                codes::VALIDATION_RANGE_BETWEEN,
+                codes::VALIDATION_RANGE_MIN,
+                codes::VALIDATION_RANGE_MAX,
+                codes::VALIDATION_OUT_OF_RANGE,
+            );
+        }
+        "required" => codes::VALIDATION_REQUIRED,
+        "email" => codes::VALIDATION_EMAIL,
+        "must_match" => codes::VALIDATION_PATTERN,
+        "contains" => codes::VALIDATION_CHARACTERS,
+        "must_be_numeric" => codes::VALIDATION_DIGITS_ONLY,
+        "password_min_length" => codes::PASSWORD_MIN_LENGTH,
+        "password_requires_lowercase" => codes::PASSWORD_LOWERCASE_REQUIRED,
+        "password_requires_uppercase" => codes::PASSWORD_UPPERCASE_REQUIRED,
+        "password_requires_number" => codes::PASSWORD_NUMBER_REQUIRED,
+        "password_requires_symbol" => codes::PASSWORD_SYMBOL_REQUIRED,
+        "admin_managed_password_policy" => codes::PASSWORD_ADMIN_POLICY,
+        "invalid_decimal_range" | "non_negative_decimal" => codes::VALIDATION_NON_NEGATIVE,
+        "strict_positive_decimal" => codes::VALIDATION_POSITIVE,
+        "invalid_signature_ip" => codes::VALIDATION_IP_ADDRESS,
+        "invalid_timezone" => codes::VALIDATION_TIMEZONE,
+        "invalid_number_separator" => codes::VALIDATION_NUMBER_SEPARATOR,
+        "number_separators_must_differ" => codes::VALIDATION_NUMBER_SEPARATORS_EQUAL,
+        "invalid_decimal_quantity" => codes::VALIDATION_DECIMAL_QUANTITY,
+        "password_mismatch" => codes::PASSWORD_MISMATCH,
+        "new_password_must_change" => codes::PASSWORD_UNCHANGED,
+        "empty_preferences_patch" => codes::PREFERENCES_PATCH_EMPTY,
+        "empty_notifications_patch" => codes::NOTIFICATIONS_PATCH_EMPTY,
+        "empty_admin_user_patch" => codes::ADMIN_USER_PATCH_EMPTY,
+        "provider_external_id_required" => codes::INVOICE_PROVIDER_ID_REQUIRED,
+        "multiple_two_factor_auth_codes" => codes::TWO_FACTOR_MULTIPLE_CODES,
+        "two_factor_auth_code_required" => codes::TWO_FACTOR_CODE_REQUIRED,
+        _ => codes::VALIDATION_INVALID,
+    };
+    (code, vec![field])
+}
+
+fn collect_error_messages(errors: &ValidationErrors, current_path: &str, output: &mut Vec<(String, ErrorDetail)>) {
     let mut entries: Vec<_> = errors.errors().iter().collect();
     entries.sort_by(|(left, _), (right, _)| left.cmp(right));
 
@@ -176,16 +253,21 @@ fn collect_error_messages(errors: &ValidationErrors, current_path: &str, output:
     }
 }
 
-pub fn first_validation_error_message(errors: &ValidationErrors) -> String {
+/// Primer error de validación (por ruta del campo), con su código y parámetros.
+pub fn first_validation_error(errors: &ValidationErrors) -> ErrorDetail {
     let mut messages = Vec::new();
     collect_error_messages(errors, "", &mut messages);
     messages.sort_by(|(left, _), (right, _)| left.cmp(right));
 
     messages
         .into_iter()
-        .map(|(_, message)| message)
+        .map(|(_, detail)| detail)
         .next()
-        .unwrap_or_else(|| "invalid request payload".to_string())
+        .unwrap_or_else(|| codes::VALIDATION_FAILED.into())
+}
+
+pub fn first_validation_error_message(errors: &ValidationErrors) -> String {
+    first_validation_error(errors).message
 }
 
 pub struct ValidatedJson<T>(pub T);
@@ -200,11 +282,11 @@ where
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         let Json(value) = Json::<T>::from_request(req, state)
             .await
-            .map_err(|_| AppError::Unprocessable("invalid json payload".to_string()))?;
+            .map_err(|_| AppError::Unprocessable(codes::REQUEST_JSON_INVALID.into()))?;
 
         value
             .validate()
-            .map_err(|errors| AppError::BadRequest(first_validation_error_message(&errors)))?;
+            .map_err(|errors| AppError::BadRequest(first_validation_error(&errors)))?;
 
         Ok(ValidatedJson(value))
     }
@@ -224,14 +306,14 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let Query(search_query) = Query::<SearchQuery>::from_request_parts(parts, state)
             .await
-            .map_err(|_| AppError::BadRequest("invalid search query parameters".to_string()))?;
+            .map_err(|_| AppError::BadRequest(codes::QUERY_PARAMETERS_INVALID.into()))?;
 
         let value: T = serde_json::from_str(&search_query.q)
-            .map_err(|_| AppError::BadRequest("invalid search query payload".to_string()))?;
+            .map_err(|_| AppError::BadRequest(codes::QUERY_PAYLOAD_INVALID.into()))?;
 
         value
             .validate()
-            .map_err(|errors| AppError::BadRequest(first_validation_error_message(&errors)))?;
+            .map_err(|errors| AppError::BadRequest(first_validation_error(&errors)))?;
 
         Ok(ValidatedSearchQuery(value))
     }
