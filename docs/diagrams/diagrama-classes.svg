@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="2725px" preserveAspectRatio="none" style="width:1528px;height:2725px;" version="1.1" viewBox="0 0 1528 2725" width="1528.125px" zoomAndPan="magnify"><defs/><g><!--MD5=[ed6624c6556d5e7b1bd23032162d20b7]
+class Client--><rect fill="#FFFFFF" height="228.9533" id="Client" rx="3.125" ry="3.125" style="stroke: #000000; stroke-width: 2.34375;" width="154.6875" x="873.4375" y="12.5"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="53.125" x="924.2188" y="48.2766">Client</text><line style="stroke: #000000; stroke-width: 2.34375;" x1="875" x2="1026.5625" y1="68.2907" y2="68.2907"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="71.875" x="889.0625" y="102.5047">id: Uuid</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="118.75" x="889.0625" y="142.6704">name: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="115.625" x="889.0625" y="182.836">email: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="123.4375" x="889.0625" y="223.0017">status: String</text><!--MD5=[79d378210367c0c6ec62ef762ddfbd1b]
+class Project--><rect fill="#FFFFFF" height="228.9533" id="Project" rx="3.125" ry="3.125" style="stroke: #000000; stroke-width: 2.34375;" width="154.6875" x="873.4375" y="337.5"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="65.625" x="917.9688" y="373.2766">Project</text><line style="stroke: #000000; stroke-width: 2.34375;" x1="875" x2="1026.5625" y1="393.2907" y2="393.2907"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="71.875" x="889.0625" y="427.5047">id: Uuid</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="118.75" x="889.0625" y="467.6704">name: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="123.4375" x="889.0625" y="507.836">status: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="117.1875" x="889.0625" y="548.0017">billable: bool</text><!--MD5=[364c85e62507125d173dc99b7c495d42]
+class ScopeRevision--><rect fill="#FFFFFF" height="309.2846" id="ScopeRevision" rx="3.125" ry="3.125" style="stroke: #000000; stroke-width: 2.34375;" width="242.1875" x="304.6875" y="783.5938"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="134.375" x="358.5938" y="819.3703">ScopeRevision</text><line style="stroke: #000000; stroke-width: 2.34375;" x1="306.25" x2="545.3125" y1="839.3844" y2="839.3844"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="109.375" x="320.3125" y="873.5985">revision: i32</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="146.875" x="320.3125" y="913.7641">document: Json</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="143.75" x="320.3125" y="953.9298">published: bool</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="189.0625" x="320.3125" y="994.0954">revision_kind: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="210.9375" x="320.3125" y="1034.2611">accepted_at: DateTime</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="171.875" x="320.3125" y="1074.4267">accepted_by: Uuid</text><!--MD5=[b538d110bfc22bb9867b10b2eec2821c]
+class ChangeRequest--><rect fill="#FFFFFF" height="550.2785" id="ChangeRequest" rx="3.125" ry="3.125" style="stroke: #000000; stroke-width: 2.34375;" width="342.1875" x="640.625" y="1309.375"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="148.4375" x="737.5" y="1345.1516">ChangeRequest</text><line style="stroke: #000000; stroke-width: 2.34375;" x1="642.1875" x2="981.25" y1="1365.1657" y2="1365.1657"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="71.875" x="656.25" y="1399.3797">id: Uuid</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="120.3125" x="656.25" y="1439.5454">origin: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="101.5625" x="656.25" y="1479.711">title: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="310.9375" x="656.25" y="1519.8767">client_request_description: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="267.1875" x="656.25" y="1560.0423">technical_assessment: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="210.9375" x="656.25" y="1600.208">impact_hours: Decimal</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="195.3125" x="656.25" y="1640.3736">impact_cost: Decimal</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="245.3125" x="656.25" y="1680.5393">schedule_impact_days: i32</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="275" x="656.25" y="1720.7049">status: ChangeRequestStatus</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="204.6875" x="656.25" y="1760.8706">decline_reason: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="276.5625" x="656.25" y="1801.0362">client_approved_at: DateTime</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="104.6875" x="656.25" y="1841.2019">version: i32</text><!--MD5=[ead9c42fddb0d92eae354339e1b0b4e6]
+class ChangeRequestStatus--><rect fill="#FFFFFF" height="389.6159" id="ChangeRequestStatus" rx="3.125" ry="3.125" style="stroke: #000000; stroke-width: 2.34375;" width="229.6875" x="696.875" y="1995.3125"/><text fill="#000000" font-family="Arial" font-size="20.3125" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="132.8125" x="745.3125" y="2031.0891">«enumeration»</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="207.8125" x="707.8125" y="2071.2547">ChangeRequestStatus</text><line style="stroke: #000000; stroke-width: 2.34375;" x1="698.4375" x2="925" y1="2091.2688" y2="2091.2688"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="46.875" x="712.5" y="2125.4829">Draft</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="98.4375" x="712.5" y="2165.6485">Submitted</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="84.375" x="712.5" y="2205.8142">Assessed</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="92.1875" x="712.5" y="2245.9798">Approved</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="79.6875" x="712.5" y="2286.1455">Declined</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="126.5625" x="712.5" y="2326.3111">Implemented</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="89.0625" x="712.5" y="2366.4768">Cancelled</text><!--MD5=[800d3f6706c3969d18194d0db3d63192]
+class ChangeRequestService--><rect fill="#FFFFFF" height="469.9472" id="ChangeRequestService" rx="3.125" ry="3.125" style="stroke: #000000; stroke-width: 2.34375;" width="342.1875" x="640.625" y="703.125"/><text fill="#000000" font-family="Arial" font-size="20.3125" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="78.125" x="772.6563" y="738.9016">«service»</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="214.0625" x="704.6875" y="779.0672">ChangeRequestService</text><line style="stroke: #000000; stroke-width: 2.34375;" x1="642.1875" x2="981.25" y1="799.0813" y2="799.0813"/><ellipse cx="657.8125" cy="816.2688" fill="#A6A6A6" rx="4.6875" ry="4.6875" style="stroke: #545454; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="103.125" x="676.5625" y="833.2954">create(dto)</text><ellipse cx="657.8125" cy="856.4345" fill="#A6A6A6" rx="4.6875" ry="4.6875" style="stroke: #545454; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="195.3125" x="676.5625" y="873.461">create_by_client(dto)</text><ellipse cx="657.8125" cy="896.6001" fill="#A6A6A6" rx="4.6875" ry="4.6875" style="stroke: #545454; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="173.4375" x="676.5625" y="913.6267">submit(id, version)</text><ellipse cx="657.8125" cy="936.7658" fill="#A6A6A6" rx="4.6875" ry="4.6875" style="stroke: #545454; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="131.25" x="676.5625" y="953.7923">assess(id, dto)</text><ellipse cx="657.8125" cy="976.9314" fill="#A6A6A6" rx="4.6875" ry="4.6875" style="stroke: #545454; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="209.375" x="676.5625" y="993.958">client_approve(id, dto)</text><ellipse cx="657.8125" cy="1017.0971" fill="#A6A6A6" rx="4.6875" ry="4.6875" style="stroke: #545454; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="196.875" x="676.5625" y="1034.1236">client_decline(id, dto)</text><ellipse cx="657.8125" cy="1057.2627" fill="#A6A6A6" rx="4.6875" ry="4.6875" style="stroke: #545454; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="175" x="676.5625" y="1074.2893">reopen(id, version)</text><ellipse cx="657.8125" cy="1097.4284" fill="#A6A6A6" rx="4.6875" ry="4.6875" style="stroke: #545454; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="290.625" x="676.5625" y="1114.4549">mark_implemented(id, version)</text><ellipse cx="657.8125" cy="1137.594" fill="#A6A6A6" rx="4.6875" ry="4.6875" style="stroke: #545454; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="165.625" x="676.5625" y="1154.6206">cancel(id, version)</text><!--MD5=[74f5dda3ab74eab7f50baea631f54800]
+class ScopeChangeRevision--><rect fill="#FFFFFF" height="228.9533" id="ScopeChangeRevision" rx="3.125" ry="3.125" style="stroke: #000000; stroke-width: 2.34375;" width="242.1875" x="1020.3125" y="2075"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="206.25" x="1038.2813" y="2110.7766">ScopeChangeRevision</text><line style="stroke: #000000; stroke-width: 2.34375;" x1="1021.875" x2="1260.9375" y1="2130.7907" y2="2130.7907"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="104.6875" x="1035.9375" y="2165.0047">version: i32</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="137.5" x="1035.9375" y="2205.1704">snapshot: Json</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="164.0625" x="1035.9375" y="2245.336">actor_kind: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="210.9375" x="1035.9375" y="2285.5017">recorded_at: DateTime</text><!--MD5=[b253775a39d7bd6e7e067bcf5b23f6d5]
+class ScopeEffect--><rect fill="#FFFFFF" height="228.9533" id="ScopeEffect" rx="3.125" ry="3.125" style="stroke: #000000; stroke-width: 2.34375;" width="282.8125" x="320.3125" y="2075"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="107.8125" x="407.8125" y="2110.7766">ScopeEffect</text><line style="stroke: #000000; stroke-width: 2.34375;" x1="321.875" x2="601.5625" y1="2130.7907" y2="2130.7907"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="157.8125" x="335.9375" y="2165.0047">offer_version: i32</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="157.8125" x="335.9375" y="2205.1704">amount: Decimal</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="251.5625" x="335.9375" y="2245.336">schedule_before: DateTime</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="234.375" x="335.9375" y="2285.5017">schedule_after: DateTime</text><!--MD5=[ec985dcf73df3d36d991516967517412]
+class Milestone--><rect fill="#FFFFFF" height="228.9533" id="Milestone" rx="3.125" ry="3.125" style="stroke: #000000; stroke-width: 2.34375;" width="217.1875" x="9.375" y="2075"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="92.1875" x="71.875" y="2110.7766">Milestone</text><line style="stroke: #000000; stroke-width: 2.34375;" x1="10.9375" x2="225" y1="2130.7907" y2="2130.7907"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="71.875" x="25" y="2165.0047">id: Uuid</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="118.75" x="25" y="2205.1704">name: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="123.4375" x="25" y="2245.336">status: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="185.9375" x="25" y="2285.5017">due_date: DateTime</text><!--MD5=[894442645724153f40a9f7a43026dbfc]
+class Invoice--><rect fill="#FFFFFF" height="228.9533" id="Invoice" rx="3.125" ry="3.125" style="stroke: #000000; stroke-width: 2.34375;" width="229.6875" x="346.875" y="2479.6875"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="67.1875" x="428.125" y="2515.4641">Invoice</text><line style="stroke: #000000; stroke-width: 2.34375;" x1="348.4375" x2="575" y1="2535.4782" y2="2535.4782"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="71.875" x="362.5" y="2569.6922">id: Uuid</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="157.8125" x="362.5" y="2609.8579">amount: Decimal</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="198.4375" x="362.5" y="2650.0235">currency_type: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="123.4375" x="362.5" y="2690.1892">status: String</text><!--MD5=[b34797a66dc35cbf1d65f7e3ca75530e]
+class Task--><rect fill="#FFFFFF" height="188.7876" id="Task" rx="3.125" ry="3.125" style="stroke: #000000; stroke-width: 2.34375;" width="154.6875" x="1356.25" y="2095.3125"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="42.1875" x="1412.5" y="2131.0891">Task</text><line style="stroke: #000000; stroke-width: 2.34375;" x1="1357.8125" x2="1509.375" y1="2151.1032" y2="2151.1032"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="71.875" x="1371.875" y="2185.3172">id: Uuid</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="101.5625" x="1371.875" y="2225.4829">title: String</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="123.4375" x="1371.875" y="2265.6485">status: String</text><!--MD5=[6b2acc82a3194ae575a1bc8fc2525f94]
+link Client to Project--><path d="M950.7813,242.3906 C950.7813,273.25 950.7813,306.6094 950.7813,337.4531 " fill="none" id="Client-Project" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="10.9375" x="932.5867" y="281.999">1</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="911.0254" y="312.5872">0..*</text><!--MD5=[4a42f8576220968d1a91c7bddb042108]
+reverse link Project to ScopeRevision--><path d="M853,490.625 C853,490.625 425.7813,490.625 425.7813,490.625 C425.7813,490.625 425.7813,653.6719 425.7813,782.9687 " fill="none" id="Project&lt;-ScopeRevision" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="873.3125,490.625,863.9375,484.375,854.5625,490.625,863.9375,496.875,873.3125,490.625" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="121.875" x="608.5938" y="643.5891">linha de base</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="10.9375" x="843.583" y="482.2925">1</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="386.6748" y="759.0741">0..*</text><!--MD5=[142138028832ef84fa12b99099576552]
+link Project to ChangeRequest--><path d="M1001.5625,567.2656 C1001.5625,838.1094 1001.5625,1493.75 1001.5625,1493.75 C1001.5625,1493.75 994.6094,1493.75 983.3594,1493.75 " fill="none" id="Project-ChangeRequest" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="10.9375" x="987.7319" y="606.8632">1</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="1001.4017" y="1475.9641">0..*</text><!--MD5=[7da4864a19c8dd432ea4497ab7c2f44a]
+reverse link Project to Milestone--><path d="M852.5781,414.0625 C852.5781,414.0625 81.7656,414.0625 81.7656,414.0625 C81.7656,414.0625 81.7656,1681.1875 81.7656,2074.7031 " fill="none" id="Project&lt;-Milestone" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="872.8906,414.0625,863.5156,407.8125,854.1406,414.0625,863.5156,420.3125,872.8906,414.0625" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="10.9375" x="843.6619" y="395.319">1</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="38.5486" y="2050.4384">0..*</text><!--MD5=[d2c2363b7bdb2ef90d73c21b4293bde0]
+link Project to Task--><path d="M1028.5781,453.125 C1171.0469,453.125 1459.375,453.125 1459.375,453.125 C1459.375,453.125 1459.375,1732.8281 1459.375,2095.2344 " fill="none" id="Project-Task" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="10.9375" x="1046.8568" y="439.6305">1</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="1422.3511" y="2070.309">0..*</text><!--MD5=[eb24eb68e6ded7538141ba25fba7e46d]
+link ScopeRevision to ChangeRequest--><path d="M433.5938,1093.0156 C433.5938,1257.375 433.5938,1493.75 433.5938,1493.75 C433.5938,1493.75 540.3125,1493.75 640.3594,1493.75 " fill="none" id="ScopeRevision-ChangeRequest" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="134.375" x="500.7813" y="1249.8391">avaliada sobre</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="10.9375" x="416.1316" y="1133.2747">1</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="590.4803" y="1475.6211">0..*</text><!--MD5=[6e7c429aaae004d5b0ef247eac0a22c1]
+reverse link ChangeRequest to ScopeChangeRevision--><path d="M954.6875,1879.875 C954.6875,1879.875 954.6875,2190.625 954.6875,2190.625 C954.6875,2190.625 984.3281,2190.625 1020,2190.625 " fill="none" id="ChangeRequest&lt;-ScopeChangeRevision" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="954.6875,1859.5625,948.4375,1868.9375,954.6875,1878.3125,960.9375,1868.9375,954.6875,1859.5625" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="81.25" x="1044.5313" y="1935.7766">histórico</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="10.9375" x="943.0371" y="1899.9774">1</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="970.1868" y="2177.9942">1..*</text><!--MD5=[adf0e91ce7c7e1526348c1be6f813afa]
+link ChangeRequest to ScopeEffect--><path d="M668.75,1859.5625 C668.75,2019.8438 668.75,2190.625 668.75,2190.625 C668.75,2190.625 639.6406,2190.625 603.25,2190.625 " fill="none" id="ChangeRequest-ScopeEffect" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="148.4375" x="592.9688" y="1935.7766">gera ao aprovar</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="10.9375" x="645.0366" y="1899.9774">1</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="622.0108" y="2178.1614">0..1</text><!--MD5=[3a3f2b2c55cb8a170674c263fc950ee5]
+link ScopeEffect to Invoice--><path d="M461.7188,2304.7344 C461.7188,2359.4063 461.7188,2424.6406 461.7188,2479.3594 " fill="none" id="ScopeEffect-Invoice" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="422.3389" y="2344.3293">0..1</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="422.0654" y="2455.0916">0..1</text><!--MD5=[ed984a4f378c081d7127fbd0ec05918c]
+link ChangeRequest to Milestone--><path d="M640.25,1676.5625 C445.4063,1676.5625 154.1719,1676.5625 154.1719,1676.5625 C154.1719,1676.5625 154.1719,1923.3281 154.1719,2074.6563 " fill="none" id="ChangeRequest-Milestone" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="135.9375" x="327.3438" y="1935.7766">marco afetado</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="590.3639" y="1670.145">0..*</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="118.0823" y="2050.3869">0..1</text><!--MD5=[ae05c053fb65d85354b3f987d9a8107e]
+link ChangeRequest to Task--><path d="M982.9375,1676.5625 C1159.0625,1676.5625 1407.8125,1676.5625 1407.8125,1676.5625 C1407.8125,1676.5625 1407.8125,1946.7969 1407.8125,2095.1094 " fill="none" id="ChangeRequest-Task" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="126.5625" x="1242.9688" y="1935.7766">tarefas extras</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="1001.5576" y="1670.145">0..1</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="31.25" x="1364.8022" y="2070.8787">0..*</text><!--MD5=[729af39b6068fb15162987c011849727]
+link ChangeRequest to ChangeRequestStatus--><path d="M811.7188,1859.6562 C811.7188,1859.6562 811.7188,1987.4375 811.7188,1987.4375 " fill="none" id="ChangeRequest-&gt;ChangeRequestStatus" style="stroke: #000000; stroke-width: 1.5625; stroke-dasharray: 7.0,7.0;"/><polygon fill="#000000" points="811.7188,1995.25,817.9688,1981.1875,811.7188,1987.4375,805.4688,1981.1875,811.7188,1995.25" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[e658dbd79c7b60eab52b3e2048145d52]
+link ChangeRequestService to ChangeRequest--><path d="M811.7188,1173.8281 C811.7188,1173.8281 811.7188,1301.4219 811.7188,1301.4219 " fill="none" id="ChangeRequestService-&gt;ChangeRequest" style="stroke: #000000; stroke-width: 1.5625; stroke-dasharray: 7.0,7.0;"/><polygon fill="#000000" points="811.7188,1309.2344,817.9688,1295.1719,811.7188,1301.4219,805.4688,1295.1719,811.7188,1309.2344" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="53.125" x="819.5313" y="1249.8391">altera</text><!--MD5=[ebddfb191cc363022edbc7833132ae18]
+@startuml diagrama-classes
+
+skinparam dpi 150
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam roundCorner 4
+skinparam padding 4
+skinparam ArrowColor #000000
+skinparam BackgroundColor #FFFFFF
+
+hide circle
+hide empty members
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 60
+skinparam class {
+  BorderColor #000000
+  BackgroundColor #FFFFFF
+}
+
+class Client {
+  id: Uuid
+  name: String
+  email: String
+  status: String
+}
+
+class Project {
+  id: Uuid
+  name: String
+  status: String
+  billable: bool
+}
+
+class ScopeRevision {
+  revision: i32
+  document: Json
+  published: bool
+  revision_kind: String
+  accepted_at: DateTime
+  accepted_by: Uuid
+}
+
+class ChangeRequest {
+  id: Uuid
+  origin: String
+  title: String
+  client_request_description: String
+  technical_assessment: String
+  impact_hours: Decimal
+  impact_cost: Decimal
+  schedule_impact_days: i32
+  status: ChangeRequestStatus
+  decline_reason: String
+  client_approved_at: DateTime
+  version: i32
+}
+
+enum ChangeRequestStatus <<enumeration>> {
+  Draft
+  Submitted
+  Assessed
+  Approved
+  Declined
+  Implemented
+  Cancelled
+}
+
+class ChangeRequestService <<service>> {
+  + create(dto)
+  + create_by_client(dto)
+  + submit(id, version)
+  + assess(id, dto)
+  + client_approve(id, dto)
+  + client_decline(id, dto)
+  + reopen(id, version)
+  + mark_implemented(id, version)
+  + cancel(id, version)
+}
+
+class ScopeChangeRevision {
+  version: i32
+  snapshot: Json
+  actor_kind: String
+  recorded_at: DateTime
+}
+
+class ScopeEffect {
+  offer_version: i32
+  amount: Decimal
+  schedule_before: DateTime
+  schedule_after: DateTime
+}
+
+class Milestone {
+  id: Uuid
+  name: String
+  status: String
+  due_date: DateTime
+}
+
+class Invoice {
+  id: Uuid
+  amount: Decimal
+  currency_type: String
+  status: String
+}
+
+class Task {
+  id: Uuid
+  title: String
+  status: String
+}
+
+Client "1" - - "0..*" Project
+Project "1" *- - "0..*" ScopeRevision : linha de base
+Project "1" - - "0..*" ChangeRequest
+Project "1" *- - "0..*" Milestone
+Project "1" - - "0..*" Task
+ScopeRevision "1" - - "0..*" ChangeRequest : avaliada sobre
+ChangeRequest "1" *- - "1..*" ScopeChangeRevision : histórico
+ChangeRequest "1" - - "0..1" ScopeEffect : gera ao aprovar
+ScopeEffect "0..1" - - "0..1" Invoice
+ChangeRequest "0..*" - - "0..1" Milestone : marco afetado
+ChangeRequest "0..1" - - "0..*" Task : tarefas extras
+ChangeRequest ..> ChangeRequestStatus
+ChangeRequestService ..> ChangeRequest : altera
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 07:22:07 BRT 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 21.0.13.0.3+1-1-24.04.1-Ubuntu
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

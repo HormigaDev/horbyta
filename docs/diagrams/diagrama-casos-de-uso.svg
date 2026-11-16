@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="1854.6875px" preserveAspectRatio="none" style="width:964px;height:1854px;" version="1.1" viewBox="0 0 964 1854" width="964.0625px" zoomAndPan="magnify"><defs/><g><!--MD5=[d65e610f03b44f0da904fdad88fde389]
+cluster Controle formal de mudanças de escopo--><rect fill="#FFFFFF" height="1800" rx="3.125" ry="3.125" style="stroke: #000000; stroke-width: 2.34375;" width="506.25" x="295.3125" y="37.5"/><text fill="#000000" font-family="Arial" font-size="20.3125" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="407.8125" x="344.5313" y="68.5891">Controle formal de mudanças de escopo</text><ellipse cx="548.4259" cy="139.3727" fill="#FFFFFF" rx="146.8634" ry="33.1227" style="stroke: #000000; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="248.4375" x="424.2071" y="147.7367">Publicar revisão do escopo</text><ellipse cx="548.4164" cy="281.1286" fill="#FFFFFF" rx="96.8539" ry="54.5661" style="stroke: #000000; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="135.9375" x="480.4477" y="269.6378">Aceitar escopo</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="134.375" x="481.2289" y="309.8034">(linha de base)</text><ellipse cx="548.7545" cy="441.9318" fill="#FFFFFF" rx="119.8482" ry="51.3068" style="stroke: #000000; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="185.9375" x="455.7857" y="436.6164">Registrar solicitação</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="115.625" x="490.942" y="476.7821">de mudança</text><ellipse cx="548.4083" cy="601.4442" fill="#FFFFFF" rx="130.4395" ry="52.2255" style="stroke: #000000; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="143.75" x="476.5333" y="584.6334">Avaliar impacto</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="200" x="448.4083" y="624.7991">(horas, custo e prazo)</text><ellipse cx="548.49" cy="759.293" fill="#FFFFFF" rx="121.9275" ry="50.6993" style="stroke: #000000; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="192.1875" x="452.3962" y="755.1303">Consultar solicitação</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="101.5625" x="497.7087" y="795.296">e impactos</text><ellipse cx="548.5383" cy="893.5613" fill="#FFFFFF" rx="108.6946" ry="27.9363" style="stroke: #000000; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="167.1875" x="464.9446" y="901.9253">Aprovar mudança</text><ellipse cx="548.4864" cy="1029.6179" fill="#FFFFFF" rx="110.2052" ry="52.2742" style="stroke: #000000; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="165.625" x="465.6739" y="1022.3243">Recusar mudança</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="125" x="485.9864" y="1062.4899">(com motivo)</text><ellipse cx="548.3744" cy="1190.4402" fill="#FFFFFF" rx="228.0619" ry="52.9402" style="stroke: #000000; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="260.9375" x="417.9057" y="1173.4706">Aplicar efeitos da aprovação</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="359.375" x="368.6869" y="1213.6362">(fatura suplementar e prazo do marco)</text><ellipse cx="548.4259" cy="1331.5602" fill="#FFFFFF" rx="146.8634" ry="33.1227" style="stroke: #000000; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="248.4375" x="424.2071" y="1339.9242">Reabrir mudança recusada</text><ellipse cx="548.2305" cy="1452.9274" fill="#FFFFFF" rx="148.2305" ry="33.3961" style="stroke: #000000; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="251.5625" x="422.4493" y="1461.2914">Vincular tarefas à mudança</text><ellipse cx="548.5985" cy="1648.4441" fill="#FFFFFF" rx="129.0672" ry="53.1316" style="stroke: #000000; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="157.8125" x="469.6922" y="1633.1934">Marcar mudança</text><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="193.75" x="451.7235" y="1673.359">como implementada</text><ellipse cx="548.4777" cy="1784.2678" fill="#FFFFFF" rx="117.2277" ry="28.0178" style="stroke: #000000; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="181.25" x="457.8527" y="1792.6319">Cancelar solicitação</text><!--MD5=[22029b2902cbfefb11350e8ee6e306b3]
+entity F--><ellipse cx="64.0625" cy="928.9063" fill="#F8F8F8" rx="12.5" ry="12.5" style="stroke: #383838; stroke-width: 2.34375;"/><path d="M64.0625,941.4063 L64.0625,983.5938 M43.75,953.9063 L84.375,953.9063 M64.0625,983.5938 L43.75,1007.0313 M64.0625,983.5938 L84.375,1007.0313 " fill="none" style="stroke: #383838; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="96.875" x="15.625" y="1038.9016">Freelancer</text><!--MD5=[16fab723be418f7eaf2ea4bd895a8e51]
+entity C--><ellipse cx="913.2813" cy="774.2188" fill="#F8F8F8" rx="12.5" ry="12.5" style="stroke: #383838; stroke-width: 2.34375;"/><path d="M913.2813,786.7188 L913.2813,828.9063 M892.9688,799.2188 L933.5938,799.2188 M913.2813,828.9063 L892.9688,852.3438 M913.2813,828.9063 L933.5938,852.3438 " fill="none" style="stroke: #383838; stroke-width: 2.34375;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="64.0625" x="881.25" y="884.2141">Cliente</text><!--MD5=[4c1bd5404674f28cd4f3e3ad49c16181]
+link F to UC01--><path d="M68.5938,913.625 C75.3281,800.2656 97.0156,569.4062 165.625,387.5 C200.5156,295 202.2656,255.7656 282.8125,198.4375 C319.1875,172.5469 364.9219,157.7031 408.0625,149.2656 " fill="none" id="F-UC01" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[e34641739101d35400f80cca27405be1]
+link F to UC03--><path d="M68.1719,913.5781 C74.5625,783.1563 96.1563,508.8594 165.625,450 C243.0313,384.4219 364.3906,394.5469 449.3281,413.25 " fill="none" id="F-UC03" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[8e11582a813d2b09dcb776f58e3d93fb]
+link F to UC04--><path d="M97.8594,913.4688 C133.5156,844.3906 197.3906,740.3594 282.8125,681.25 C325.3438,651.8281 378.9844,633.0469 426.7969,621.1563 " fill="none" id="F-UC04" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[0ef680d0f7ec2b06e1eb9963647eff3b]
+link F to UC05--><path d="M119.125,940.2969 C161.4844,908.3438 223.2656,865.4375 282.8125,837.5 C332.5938,814.1562 390.9219,796.0156 440.0938,783.1094 " fill="none" id="F-UC05" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[2f8553185b12d7ec01a21b3bc5a0192b]
+link F to UC09--><path d="M99.5938,1052.0469 C135.7969,1118.3906 199.3594,1216.2031 282.8125,1270.3125 C321.1094,1295.1406 368.2813,1309.9062 412.125,1318.6719 " fill="none" id="F-UC09" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[e8d90b72c63501af37723db7e560629d]
+link F to UC10--><path d="M78.6875,1051.7969 C101.1875,1148.4375 157.4844,1320.1563 282.8125,1390.625 C323.6719,1413.5938 372.6563,1428.1563 417.2813,1437.375 " fill="none" id="F-UC10" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[b823b8fc548e3074b9615d93f48a8378]
+link F to UC11--><path d="M71.6094,1051.6563 C81.3281,1136.0156 105.875,1281.2188 165.625,1390.625 C226.625,1502.2969 359.2656,1574.7969 450.8125,1613.6563 " fill="none" id="F-UC11" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[97f0f0c74893b9d03c8720604dc6dfbe]
+link F to UC12--><path d="M71.5156,1051.9219 C81.9063,1155.3281 108.0469,1355.2969 165.625,1515.625 C202.0781,1617.125 196.2031,1663.8594 282.8125,1728.125 C325.3438,1759.6875 381.7813,1774.3438 431.5625,1780.875 " fill="none" id="F-UC12" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[235249a862d208b7fda617bda330cde5]
+link UC02 to C--><path d="M645.1719,286.9531 C702,295.4375 771.2344,315.5469 814.0625,362.5 C866.3906,419.8594 894.5313,644.0938 905.7813,759.1563 " fill="none" id="UC02-C" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[c8d920f4d9d39ec901a6319e74e228d1]
+link UC03 to C--><path d="M665.7031,452.7812 C717.0469,463.0625 774.6563,483.0781 814.0625,521.875 C878.0938,584.9063 900.2031,689.7813 907.8125,758.9531 " fill="none" id="UC03-C" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[98d64380be6f1329e2aaf08ce491355a]
+link UC05 to C--><path d="M660,780.2813 C733.1719,794.1875 824.7031,811.5937 874.7656,821.1094 " fill="none" id="UC05-C" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[6f3dd3e0f3827e8d84e75ed80858665d]
+link UC06 to C--><path d="M638.0313,877.7813 C713.9375,864.0156 819.7813,844.8125 874.9531,834.7969 " fill="none" id="UC06-C" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[b65ef58bfdca43d6b4f9450614f7dca5]
+link UC07 to C--><path d="M653.3594,1012.6719 C704.8438,1000.6719 766.1563,980.7656 814.0625,948.4375 C837.7031,932.4844 858.5,909.1094 874.7656,887.2031 " fill="none" id="UC07-C" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[16ccd2c4e1793decfb0839a3562d0a4d]
+link UC12 to C--><path d="M664.4844,1788.7969 C717.5,1784.4531 776.8281,1769.3438 814.0625,1728.125 C869.5,1666.7344 899.7969,1097.7969 908.8125,897.5 " fill="none" id="UC12-C" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[47b43cb7fb241d7b5d736672014a6873]
+link UC06 to UC08--><path d="M439.8125,894.2031 C358.5313,901.4063 255.5781,927.1875 220.3125,1008.5938 C187.375,1084.6094 268.1406,1130.0313 357.7656,1156.4844 " fill="none" id="UC06-&gt;UC08" style="stroke: #000000; stroke-width: 1.5625; stroke-dasharray: 7.0,7.0;"/><polygon fill="#000000" points="365.3438,1158.6719,353.5665,1148.7667,357.8378,1156.505,350.0995,1160.7762,365.3438,1158.6719" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="89.0625" x="173.4375" y="1038.1203">«include»</text><!--MD5=[6dad351048b6aee8b963f049a2b07cbc]
+link UC04 to UC02--><path d="M418.6719,596.0156 C347.3281,585.3281 264.9375,558.6406 222.6563,494.5313 C187.1563,440.7031 231.0469,400.9531 282.8125,362.5 C330.4063,327.1406 393.5625,307.0156 446.3438,295.625 " fill="none" id="UC04-&gt;UC02" style="stroke: #000000; stroke-width: 1.5625; stroke-dasharray: 7.0,7.0;"/><polygon fill="#000000" points="454.0625,294.0156,439.016,290.7879,446.4166,295.6206,441.5839,303.0213,454.0625,294.0156" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="84.375" x="175.7813" y="481.8703">«requer»</text><!--MD5=[b8a252d62ca6d882903346eea88d9887]
+link UC11 to UC10--><path d="M548.4375,1595.0625 C548.4375,1563.4688 548.4375,1524.0469 548.4375,1494.7656 " fill="none" id="UC11-&gt;UC10" style="stroke: #000000; stroke-width: 1.5625; stroke-dasharray: 7.0,7.0;"/><polygon fill="#000000" points="548.4375,1486.7813,542.1875,1500.8438,548.4375,1494.5938,554.6875,1500.8438,548.4375,1486.7813" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Arial" font-size="20.3125" lengthAdjust="spacingAndGlyphs" textLength="84.375" x="480.4688" y="1549.4485">«requer»</text><!--MD5=[6c3110ee0d49ffbd22768209d4914768]
+@startuml diagrama-casos-de-uso
+
+skinparam dpi 150
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam roundCorner 4
+skinparam padding 4
+skinparam ArrowColor #000000
+skinparam BackgroundColor #FFFFFF
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam usecase {
+  BorderColor #000000
+  BackgroundColor #FFFFFF
+}
+
+actor "Freelancer" as F
+actor "Cliente" as C
+
+rectangle "Controle formal de mudanças de escopo" {
+  usecase "Publicar revisão do escopo" as UC01
+  usecase "Aceitar escopo\n(linha de base)" as UC02
+  usecase "Registrar solicitação\nde mudança" as UC03
+  usecase "Avaliar impacto\n(horas, custo e prazo)" as UC04
+  usecase "Consultar solicitação\ne impactos" as UC05
+  usecase "Aprovar mudança" as UC06
+  usecase "Recusar mudança\n(com motivo)" as UC07
+  usecase "Aplicar efeitos da aprovação\n(fatura suplementar e prazo do marco)" as UC08
+  usecase "Reabrir mudança recusada" as UC09
+  usecase "Vincular tarefas à mudança" as UC10
+  usecase "Marcar mudança\ncomo implementada" as UC11
+  usecase "Cancelar solicitação" as UC12
+}
+
+F - - UC01
+F - - UC03
+F - - UC04
+F - - UC05
+F - - UC09
+F - - UC10
+F - - UC11
+F - - UC12
+
+UC02 - - C
+UC03 - - C
+UC05 - - C
+UC06 - - C
+UC07 - - C
+UC12 - - C
+
+UC06 .[norank].> UC08 : <<include>>
+UC04 .[norank].> UC02 : <<requer>>
+UC11 .[norank].> UC10 : <<requer>>
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 07:22:07 BRT 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 21.0.13.0.3+1-1-24.04.1-Ubuntu
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

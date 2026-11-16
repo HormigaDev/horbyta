@@ -1,0 +1,130 @@
+@startuml diagrama-classes
+
+skinparam dpi 150
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam roundCorner 4
+skinparam padding 4
+skinparam ArrowColor #000000
+skinparam BackgroundColor #FFFFFF
+
+hide circle
+hide empty members
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 60
+skinparam class {
+  BorderColor #000000
+  BackgroundColor #FFFFFF
+}
+
+class Client {
+  id: Uuid
+  name: String
+  email: String
+  status: String
+}
+
+class Project {
+  id: Uuid
+  name: String
+  status: String
+  billable: bool
+}
+
+class ScopeRevision {
+  revision: i32
+  document: Json
+  published: bool
+  revision_kind: String
+  accepted_at: DateTime
+  accepted_by: Uuid
+}
+
+class ChangeRequest {
+  id: Uuid
+  origin: String
+  title: String
+  client_request_description: String
+  technical_assessment: String
+  impact_hours: Decimal
+  impact_cost: Decimal
+  schedule_impact_days: i32
+  status: ChangeRequestStatus
+  decline_reason: String
+  client_approved_at: DateTime
+  version: i32
+}
+
+enum ChangeRequestStatus <<enumeration>> {
+  Draft
+  Submitted
+  Assessed
+  Approved
+  Declined
+  Implemented
+  Cancelled
+}
+
+class ChangeRequestService <<service>> {
+  + create(dto)
+  + create_by_client(dto)
+  + submit(id, version)
+  + assess(id, dto)
+  + client_approve(id, dto)
+  + client_decline(id, dto)
+  + reopen(id, version)
+  + mark_implemented(id, version)
+  + cancel(id, version)
+}
+
+class ScopeChangeRevision {
+  version: i32
+  snapshot: Json
+  actor_kind: String
+  recorded_at: DateTime
+}
+
+class ScopeEffect {
+  offer_version: i32
+  amount: Decimal
+  schedule_before: DateTime
+  schedule_after: DateTime
+}
+
+class Milestone {
+  id: Uuid
+  name: String
+  status: String
+  due_date: DateTime
+}
+
+class Invoice {
+  id: Uuid
+  amount: Decimal
+  currency_type: String
+  status: String
+}
+
+class Task {
+  id: Uuid
+  title: String
+  status: String
+}
+
+Client "1" -- "0..*" Project
+Project "1" *-- "0..*" ScopeRevision : linha de base
+Project "1" -- "0..*" ChangeRequest
+Project "1" *-- "0..*" Milestone
+Project "1" -- "0..*" Task
+ScopeRevision "1" -- "0..*" ChangeRequest : avaliada sobre
+ChangeRequest "1" *-- "1..*" ScopeChangeRevision : histórico
+ChangeRequest "1" -- "0..1" ScopeEffect : gera ao aprovar
+ScopeEffect "0..1" -- "0..1" Invoice
+ChangeRequest "0..*" -- "0..1" Milestone : marco afetado
+ChangeRequest "0..1" -- "0..*" Task : tarefas extras
+ChangeRequest ..> ChangeRequestStatus
+ChangeRequestService ..> ChangeRequest : altera
+@enduml

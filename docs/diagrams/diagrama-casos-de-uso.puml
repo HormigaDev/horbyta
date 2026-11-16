@@ -1,0 +1,57 @@
+@startuml diagrama-casos-de-uso
+
+skinparam dpi 150
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam roundCorner 4
+skinparam padding 4
+skinparam ArrowColor #000000
+skinparam BackgroundColor #FFFFFF
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam usecase {
+  BorderColor #000000
+  BackgroundColor #FFFFFF
+}
+
+actor "Freelancer" as F
+actor "Cliente" as C
+
+rectangle "Controle formal de mudanças de escopo" {
+  usecase "Publicar revisão do escopo" as UC01
+  usecase "Aceitar escopo\n(linha de base)" as UC02
+  usecase "Registrar solicitação\nde mudança" as UC03
+  usecase "Avaliar impacto\n(horas, custo e prazo)" as UC04
+  usecase "Consultar solicitação\ne impactos" as UC05
+  usecase "Aprovar mudança" as UC06
+  usecase "Recusar mudança\n(com motivo)" as UC07
+  usecase "Aplicar efeitos da aprovação\n(fatura suplementar e prazo do marco)" as UC08
+  usecase "Reabrir mudança recusada" as UC09
+  usecase "Vincular tarefas à mudança" as UC10
+  usecase "Marcar mudança\ncomo implementada" as UC11
+  usecase "Cancelar solicitação" as UC12
+}
+
+F -- UC01
+F -- UC03
+F -- UC04
+F -- UC05
+F -- UC09
+F -- UC10
+F -- UC11
+F -- UC12
+
+UC02 -- C
+UC03 -- C
+UC05 -- C
+UC06 -- C
+UC07 -- C
+UC12 -- C
+
+UC06 .[norank].> UC08 : <<include>>
+UC04 .[norank].> UC02 : <<requer>>
+UC11 .[norank].> UC10 : <<requer>>
+@enduml

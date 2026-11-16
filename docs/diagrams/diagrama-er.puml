@@ -1,0 +1,149 @@
+@startuml diagrama-er
+
+skinparam dpi 150
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam roundCorner 4
+skinparam padding 4
+skinparam ArrowColor #000000
+skinparam BackgroundColor #FFFFFF
+
+hide circle
+hide empty members
+skinparam linetype ortho
+skinparam nodesep 50
+skinparam ranksep 70
+skinparam class {
+  BorderColor #000000
+  BackgroundColor #FFFFFF
+}
+
+entity "clients" as clients {
+  * id : uuid <<PK>>
+  --
+  name : varchar(255)
+  email : varchar(255)
+  status : varchar(50)
+}
+
+entity "projects" as projects {
+  * id : uuid <<PK>>
+  --
+  client_id : uuid <<FK>>
+  name : varchar(255)
+  status : varchar(20)
+  billable : boolean
+}
+
+entity "scope_projects" as scope_projects {
+  * project_id : uuid <<PK, FK>>
+  --
+  client_id : uuid <<FK>>
+  last_revision : integer
+  accepted_revision : integer
+  activated_at : timestamptz
+}
+
+entity "scope_revisions" as scope_revisions {
+  * project_id : uuid <<PK, FK>>
+  * revision : integer <<PK>>
+  --
+  document : jsonb
+  published : boolean
+  revision_kind : text
+  accepted_at : timestamptz
+  accepted_by : uuid
+}
+
+entity "change_requests" as change_requests {
+  * id : uuid <<PK>>
+  --
+  project_id : uuid <<FK>>
+  client_id : uuid <<FK>>
+  scope_revision : integer <<FK>>
+  target_milestone_id : uuid <<FK>>
+  origin : varchar(30)
+  title : varchar(255)
+  client_request_description : text
+  technical_assessment : text
+  impact_hours : numeric(6,2)
+  impact_cost : numeric(15,4)
+  schedule_impact_days : integer
+  status : varchar(30)
+  decline_reason : varchar(100)
+  client_approved_at : timestamptz
+  version : integer
+}
+
+entity "scope_change_revisions" as scope_change_revisions {
+  * change_request_id : uuid <<PK, FK>>
+  * version : integer <<PK>>
+  --
+  snapshot : jsonb
+  actor_kind : text
+  recorded_at : timestamptz
+}
+
+entity "scope_effects" as scope_effects {
+  * change_request_id : uuid <<PK, FK>>
+  --
+  invoice_id : uuid <<FK>>
+  milestone_id : uuid <<FK>>
+  offer_version : integer
+  amount : numeric(15,4)
+  schedule_before : timestamptz
+  schedule_after : timestamptz
+}
+
+entity "milestones" as milestones {
+  * id : uuid <<PK>>
+  --
+  project_id : uuid <<FK>>
+  name : varchar(255)
+  status : varchar(20)
+  due_date : timestamptz
+}
+
+entity "invoices" as invoices {
+  * id : uuid <<PK>>
+  --
+  project_id : uuid <<FK>>
+  amount : numeric(15,4)
+  currency_type : varchar(3)
+  status : varchar(30)
+}
+
+entity "tasks" as tasks {
+  * id : uuid <<PK>>
+  --
+  project_id : uuid <<FK>>
+  title : varchar(255)
+  status : varchar(50)
+}
+
+entity "scope_task_links" as scope_task_links {
+  * task_id : uuid <<PK, FK>>
+  --
+  project_id : uuid <<FK>>
+  baseline_revision : integer <<FK>>
+  change_request_id : uuid <<FK>>
+  reason : text
+}
+
+clients ||--o{ projects
+projects ||--o| scope_projects
+scope_projects ||--|{ scope_revisions
+projects ||--o{ change_requests
+scope_revisions ||--o{ change_requests
+change_requests ||--|{ scope_change_revisions
+change_requests ||--o| scope_effects
+scope_effects |o--o| invoices
+projects ||--o{ milestones
+milestones |o--o{ change_requests
+projects ||--o{ invoices
+projects ||--o{ tasks
+tasks ||--o| scope_task_links
+change_requests |o--o{ scope_task_links
+@enduml

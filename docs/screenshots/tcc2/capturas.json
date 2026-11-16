@@ -1,0 +1,30 @@
+[
+  {
+    "arquivo": "01-freelancer-dashboard.png",
+    "descricao": "Painel do freelancer"
+  },
+  {
+    "arquivo": "02-freelancer-projeto-escopo.png",
+    "descricao": "Detalhe do projeto com escopo aceito"
+  },
+  {
+    "arquivo": "03-freelancer-solicitacoes.png",
+    "descricao": "Listagem de solicitações de mudança"
+  },
+  {
+    "arquivo": "04-freelancer-avaliacao-impacto.png",
+    "descricao": "Diálogo de avaliação de impacto"
+  },
+  {
+    "arquivo": "05-freelancer-solicitacao-aprovada.png",
+    "descricao": "Detalhe de solicitação aprovada"
+  },
+  {
+    "arquivo": "06-cliente-dashboard.png",
+    "descricao": "Painel do cliente"
+  },
+  {
+    "arquivo": "07-cliente-decisao-mudanca.png",
+    "descricao": "Solicitação avaliada no portal do cliente"
+  }
+]
